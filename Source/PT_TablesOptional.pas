@@ -990,10 +990,10 @@ begin
     for RangeIndex := 0 to Length(FGaspRanges) - 1 do
     begin
       // read MaxPPEM
-      FGaspRanges[RangeIndex].MaxPPEM := ReadSwappedWord(Stream);
+      FGaspRanges[RangeIndex].MaxPPEM := Byte(ReadSwappedWord(Stream));
 
       // read GaspFlag
-      FGaspRanges[RangeIndex].GaspFlag := ReadSwappedWord(Stream);
+      FGaspRanges[RangeIndex].GaspFlag := Byte(ReadSwappedWord(Stream));
     end;
   end;
 end;
@@ -1754,24 +1754,35 @@ begin
     if Position + 4 > Size then
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
+    // clear eventually existing tables
+    FKerningSubtableList.Clear;
+
     // read version
     FVersion := ReadSwappedWord(Stream);
 
+    // For now we only support version 0 (same as Windows).
+    // At time of writing, Apple has defined 3 additional versions.
+    // https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6kern.html
+    // TODO : Support for more kerning table versions
     if FVersion <> 0 then
-      raise EPascalTypeError.Create(RCStrUnsupportedVersion);
+      exit;
+      // raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
     // read number of glyphs
     SubTableCount := ReadSwappedWord(Stream);
 
-    // clear eventually existing tables
-    FKerningSubtableList.Clear;
-
     for SubTableIndex := 0 to SubTableCount - 1 do
     begin
       SubTable := TPascalTypeKerningSubTable.Create;
+      try
 
       // load from stream
       SubTable.LoadFromStream(Stream);
+
+      except
+        SubTable.Free;
+        raise;
+      end;
 
       FKerningSubtableList.Add(SubTable);
     end;

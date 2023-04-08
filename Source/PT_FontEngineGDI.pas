@@ -671,11 +671,8 @@ end;
 procedure TPascalTypeFontEngineGDI.RasterizeGlyph(GlyphIndex: Integer;
   Canvas: TCanvas; X, Y: Integer);
 begin
-  with Canvas, Storage do
-  begin
-    if GlyphData[GlyphIndex] is TTrueTypeFontSimpleGlyphData then
-      RasterizeSimpleGlyph(TTrueTypeFontSimpleGlyphData(GlyphData[GlyphIndex]), Canvas, X, Y);
-  end;
+  if Storage.GlyphData[GlyphIndex] is TTrueTypeFontSimpleGlyphData then
+    RasterizeSimpleGlyph(TTrueTypeFontSimpleGlyphData(Storage.GlyphData[GlyphIndex]), Canvas, X, Y);
 end;
 
 procedure TPascalTypeFontEngineGDI.RasterizeSimpleGlyph(

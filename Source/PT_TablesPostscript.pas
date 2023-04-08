@@ -1086,7 +1086,7 @@ var
   OperandIndex: Integer;
 begin
   for OperandIndex := 0 to Length(FOperands) - 1 do
-    FreeAndNil(FOperands);
+    FreeAndNil(FOperands[OperandIndex]);
 end;
 
 destructor TPascalTypePostscriptDictPair.Destroy;

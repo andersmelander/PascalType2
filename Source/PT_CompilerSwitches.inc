@@ -23,7 +23,7 @@
   font file is valid this should be enabled. However some older fonts contain
   invalid checksums, which will result in an exception.
   * Default: Enabled }
-{$DEFINE ChecksumTest}
+{-$DEFINE ChecksumTest}
 
 { Enable this option, if you want to enable using floating points where
   applicable. If this is disabled you may be able to use this library on
@@ -42,3 +42,6 @@
   but loading of the fonts should still be possible.
   * Default: Disabled }
 {$DEFINE IgnoreIncompleteOptionalTables}
+
+{$DEFINE PUREPASCAL}
+

@@ -126,7 +126,7 @@ begin
 {$ELSE}
   Stream.Read(Result, SizeOf(SmallInt));
 {$ENDIF}
-  Result := Swap16(Result);
+  Result := SmallInt(Swap16(Word(Result)));
 end;
 
 function ReadSwappedCardinal(Stream: TStream): Cardinal;

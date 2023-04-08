@@ -1442,6 +1442,16 @@ begin
   Result.Fixed := Lhs.Fixed - Rhs.Fixed;
 end;
 
+const
+  FixedPI  = Round(PI * $10000);
+  FixedOne = $10000;
+  FixedHalf = $7FFF;
+  // Fixed point math constants
+  CFixed16Dot16One: TFixedPoint = (Fixed: FixedOne);
+  CFixed16Dot16Half: TFixedPoint = (Fixed: FixedHalf);
+  CFixed16Dot16PI: TFixedPoint = (Fixed: FixedPI);
+  CFixed16Dot16ToFloat = 1 / FixedOne;
+
 function FixedMul(A, B: TFixedPoint): TFixedPoint;
 {$IFDEF PUREPASCAL}
 var
@@ -1486,6 +1496,21 @@ asm
 {$ENDIF}
 end;
 
+function FixedRoundHalfUp(Value: TFixedPoint): Integer;
+{$IFDEF PUREPASCAL}
+begin
+  Value.Fixed := Value.Fixed + $8000;
+  Result := Integer((((Value.Fixed) shr 16) or -((Value.Fixed) shr 31) shl 16));
+{$ELSE}
+asm
+    ADD     Value, $8000
+    SAR     Value, 16
+    {$IFDEF CPUx86_64}
+    MOV     Result, Value
+    {$ENDIF}
+{$ENDIF}
+end;
+
 function FixedRound(Value: TFixedPoint): Integer;
 {$IFDEF PUREPASCAL}
 begin
@@ -1500,21 +1525,6 @@ asm
     ADD     EDX, 1
     SHR     EDX, $11
     SUB     Value, EDX
-    {$IFDEF CPUx86_64}
-    MOV     Result, Value
-    {$ENDIF}
-{$ENDIF}
-end;
-
-function FixedRoundHalfUp(Value: TFixedPoint): Integer;
-{$IFDEF PUREPASCAL}
-begin
-  Value.Fixed := Value.Fixed + $8000;
-  Result := Integer((((Value.Fixed) shr 16) or -((Value.Fixed) shr 31) shl 16));
-{$ELSE}
-asm
-    ADD     Value, $8000
-    SAR     Value, 16
     {$IFDEF CPUx86_64}
     MOV     Result, Value
     {$ENDIF}

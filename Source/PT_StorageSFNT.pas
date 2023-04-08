@@ -155,8 +155,7 @@ type
     property MaximumProfile;
     property NameTable;
     property PostScriptTable;
-    property HorizontalMetrics: TPascalTypeHorizontalMetricsTable
-      read FHorizontalMetrics;
+    property HorizontalMetrics: TPascalTypeHorizontalMetricsTable read FHorizontalMetrics;
     property CharacterMap: TPascalTypeCharacterMapTable read FCharacterMap;
     property OS2Table: TPascalTypeOS2Table read FOS2Table;
 
@@ -180,7 +179,15 @@ begin
   // read subsequent cardinals
   for I := 1 to Size - 1 do
   begin
+{$IFOPT Q+}
+{$DEFINE Q_PLUS}
+{$OVERFLOWCHECKS OFF}
+{$ENDIF}
     Result := Result + Swap32(PCardinal(Data)^);
+{$IFDEF Q_PLUS}
+{$OVERFLOWCHECKS ON}
+{$UNDEF Q_PLUS}
+{$ENDIF}
     Inc(PCardinal(Data));
   end;
 {$ELSE}
@@ -521,7 +528,15 @@ begin
   begin
     // ignore checksum adjustment
     Stream.Position := 8;
+{$IFOPT Q+}
+{$DEFINE Q_PLUS}
+{$OVERFLOWCHECKS OFF}
+{$ENDIF}
     Checksum := Checksum - ReadSwappedCardinal(Stream);
+{$IFDEF Q_PLUS}
+{$OVERFLOWCHECKS ON}
+{$UNDEF Q_PLUS}
+{$ENDIF}
   end;
 
   // check checksum
@@ -696,8 +711,7 @@ begin
   Result := FMaximumProfile.NumGlyphs;
 end;
 
-function TPascalTypeStorage.GetGlyphData(Index: Integer)
-  : TCustomPascalTypeGlyphDataTable;
+function TPascalTypeStorage.GetGlyphData(Index: Integer): TCustomPascalTypeGlyphDataTable;
 var
   GlyphDataTable: TTrueTypeFontGlyphDataTable;
 begin
@@ -877,24 +891,30 @@ begin
             // assign tables
             if TableClass = TPascalTypeHeaderTable then
               FHeaderTable.Assign(CurrentTable)
-            else if TableClass = TPascalTypeHorizontalHeaderTable then
+            else
+            if TableClass = TPascalTypeHorizontalHeaderTable then
               FHorizontalHeader.Assign(CurrentTable)
-            else if TableClass = TPascalTypeHorizontalMetricsTable then
+            else
+            if TableClass = TPascalTypeHorizontalMetricsTable then
               FHorizontalMetrics.Assign(CurrentTable)
-            else if TableClass = TPascalTypePostscriptTable then
+            else
+            if TableClass = TPascalTypePostscriptTable then
               FPostScriptTable.Assign(CurrentTable)
-            else if TableClass = TPascalTypeMaximumProfileTable then
+            else
+            if TableClass = TPascalTypeMaximumProfileTable then
               FMaximumProfile.Assign(CurrentTable)
-            else if TableClass = TPascalTypeNameTable then
+            else
+            if TableClass = TPascalTypeNameTable then
               FNameTable.Assign(CurrentTable)
-            else if TableClass = TPascalTypeCharacterMapTable then
+            else
+            if TableClass = TPascalTypeCharacterMapTable then
               FCharacterMap.Assign(CurrentTable)
-            else if TableClass = TPascalTypeOS2Table then
+            else
+            if TableClass = TPascalTypeOS2Table then
             begin
               FOS2Table := TPascalTypeOS2Table(CurrentTable);
               CurrentTable := nil;
-            end
-            else
+            end else
             begin
               FOptionalTables.ADD(CurrentTable);
               CurrentTable := nil;
@@ -911,9 +931,7 @@ begin
                 (TableClass = TPascalTypeMaximumProfileTable) or
                 (TableClass = TPascalTypeNameTable) then
                 raise;
-            end
-            else
-              raise;
+            end;
 {$ELSE}
             raise
 {$ENDIF}

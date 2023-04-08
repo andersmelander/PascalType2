@@ -72,7 +72,7 @@ type
   private
     FVersion            : TFixedPoint; // = $00010000
     FFontRevision       : TFixedPoint; // set by font manufacturer
-    FCheckSumAdjustment : Longint; // To compute: set it to 0, calculate the checksum for the 'head' table and put it in the table directory, sum the entire font as uint32, then store B1B0AFBA - sum. The checksum for the 'head' table will not be wrong. That is OK.
+    FCheckSumAdjustment : Cardinal; // To compute: set it to 0, calculate the checksum for the 'head' table and put it in the table directory, sum the entire font as uint32, then store B1B0AFBA - sum. The checksum for the 'head' table will not be wrong. That is OK.
     FMagicNumber        : Cardinal; // set to $5F0F3CF5
     FFlags              : TFontHeaderTableFlags;
     FUnitsPerEm         : Word; // range from 64 to 16384
@@ -87,7 +87,7 @@ type
     FFontDirectionHint  : TFontDirectionHint;
     FIndexToLocFormat   : TIndexToLocationFormat;
     FGlyphDataFormat    : Word; // 0 for current format
-    procedure SetCheckSumAdjustment(const Value: Longint);
+    procedure SetCheckSumAdjustment(const Value: Cardinal);
     procedure SetCreatedDate(const Value: Int64);
     procedure SetFlags(const Value: TFontHeaderTableFlags);
     procedure SetFontDirectionHint(const Value: TFontDirectionHint);
@@ -131,36 +131,21 @@ type
 
     // table data
     property Version: TFixedPoint read FVersion write SetVersion; // = $00010000
-    property FontRevision: TFixedPoint read FFontRevision write SetFontRevision;
-    // set by font manufacturer
-    property CheckSumAdjustment: Longint read FCheckSumAdjustment
-      write SetCheckSumAdjustment;
-    // To compute: set it to 0, calculate the checksum for the 'head' table and put it in the table directory, sum the entire font as uint32, then store B1B0AFBA - sum. The checksum for the 'head' table will not be wrong. That is OK.
+    property FontRevision: TFixedPoint read FFontRevision write SetFontRevision; // set by font manufacturer
+    property CheckSumAdjustment: Cardinal read FCheckSumAdjustment write SetCheckSumAdjustment; // To compute: set it to 0, calculate the checksum for the 'head' table and put it in the table directory, sum the entire font as uint32, then store B1B0AFBA - sum. The checksum for the 'head' table will not be wrong. That is OK.
     property Flags: TFontHeaderTableFlags read FFlags write SetFlags;
-    property UnitsPerEm: Word read FUnitsPerEm write SetUnitsPerEm;
-    // range from 64 to 16384
-    property CreatedDate: Int64 read FCreatedDate write SetCreatedDate;
-    // created international date
-    property ModifiedDate: Int64 read FModifiedDate write SetModifiedDate;
-    // modified international date
-    property XMin: SmallInt read FxMin write SetXMin;
-    // for all glyph bounding boxes
-    property YMin: SmallInt read FyMin write SetYMin;
-    // for all glyph bounding boxes
-    property XMax: SmallInt read FxMax write SetXMax;
-    // for all glyph bounding boxes
-    property YMax: SmallInt read FyMax write SetYMax;
-    // for all glyph bounding boxes
+    property UnitsPerEm: Word read FUnitsPerEm write SetUnitsPerEm; // range from 64 to 16384
+    property CreatedDate: Int64 read FCreatedDate write SetCreatedDate; // created international date
+    property ModifiedDate: Int64 read FModifiedDate write SetModifiedDate; // modified international date
+    property XMin: SmallInt read FxMin write SetXMin; // for all glyph bounding boxes
+    property YMin: SmallInt read FyMin write SetYMin; // for all glyph bounding boxes
+    property XMax: SmallInt read FxMax write SetXMax; // for all glyph bounding boxes
+    property YMax: SmallInt read FyMax write SetYMax; // for all glyph bounding boxes
     property MacStyle: TMacStyles read FMacStyle write SetMacStyle;
-    property LowestRecPPEM: Word read FLowestRecPPEM write SetLowestRecPPEM;
-    // smallest readable size in pixels
-    property FontDirectionHint: TFontDirectionHint read FFontDirectionHint
-      write SetFontDirectionHint; // 0 Mixed directional glyphs
-    property IndexToLocationFormat: TIndexToLocationFormat
-      read FIndexToLocFormat write SetIndexToLocFormat;
-    // 0 for short offsets, 1 for long
-    property GlyphDataFormat: Word read FGlyphDataFormat
-      write SetGlyphDataFormat; // 0 for current format
+    property LowestRecPPEM: Word read FLowestRecPPEM write SetLowestRecPPEM; // smallest readable size in pixels
+    property FontDirectionHint: TFontDirectionHint read FFontDirectionHint write SetFontDirectionHint; // 0 Mixed directional glyphs
+    property IndexToLocationFormat: TIndexToLocationFormat read FIndexToLocFormat write SetIndexToLocFormat; // 0 for short offsets, 1 for long
+    property GlyphDataFormat: Word read FGlyphDataFormat write SetGlyphDataFormat; // 0 for current format
   end;
 
 
@@ -170,8 +155,7 @@ type
   protected
     class function GetFormat: Word; virtual; abstract;
   public
-    function CharacterToGlyph(CharacterIndex: Integer): Integer;
-      virtual; abstract;
+    function CharacterToGlyph(CharacterIndex: Integer): Integer; virtual; abstract;
 
     property Format: Word read GetFormat;
   end;
@@ -191,8 +175,7 @@ type
 
     function GetPlatformID: TPlatformID; virtual; abstract;
     procedure EncodingIDChanged; virtual;
-    property PlatformSpecificID: Word read GetEncodingIDAsWord
-      write SetEncodingIDAsWord;
+    property PlatformSpecificID: Word read GetEncodingIDAsWord write SetEncodingIDAsWord;
   public
     constructor Create(EncodingID: Word); reintroduce; virtual;
     destructor Destroy; override;
@@ -207,47 +190,39 @@ type
     property CharacterMap: TCustomPascalTypeCharacterMap read FCharacterMap;
   end;
 
-  TPascalTypeCharacterMapDirectoryClass = class of
-    TCustomPascalTypeCharacterMapDirectory;
+  TPascalTypeCharacterMapDirectoryClass = class of TCustomPascalTypeCharacterMapDirectory;
 
-  TPascalTypeCharacterMapUnicodeDirectory = class
-    (TCustomPascalTypeCharacterMapDirectory)
+  TPascalTypeCharacterMapUnicodeDirectory = class(TCustomPascalTypeCharacterMapDirectory)
   private
     procedure SetEncodingID(const Value: TUnicodeEncodingID);
     function GetEncodingID: TUnicodeEncodingID;
   protected
     function GetPlatformID: TPlatformID; override;
   public
-    property PlatformSpecificID: TUnicodeEncodingID read GetEncodingID
-      write SetEncodingID;
+    property PlatformSpecificID: TUnicodeEncodingID read GetEncodingID write SetEncodingID;
   end;
 
-  TPascalTypeCharacterMapMacintoshDirectory = class
-    (TCustomPascalTypeCharacterMapDirectory)
+  TPascalTypeCharacterMapMacintoshDirectory = class(TCustomPascalTypeCharacterMapDirectory)
   private
     procedure SetEncodingID(const Value: TAppleEncodingID);
     function GetEncodingID: TAppleEncodingID;
   protected
     function GetPlatformID: TPlatformID; override;
   public
-    property PlatformSpecificID: TAppleEncodingID read GetEncodingID
-      write SetEncodingID;
+    property PlatformSpecificID: TAppleEncodingID read GetEncodingID write SetEncodingID;
   end;
 
-  TPascalTypeCharacterMapMicrosoftDirectory = class
-    (TCustomPascalTypeCharacterMapDirectory)
+  TPascalTypeCharacterMapMicrosoftDirectory = class(TCustomPascalTypeCharacterMapDirectory)
   private
     procedure SetEncodingID(const Value: TMicrosoftEncodingID);
     function GetEncodingID: TMicrosoftEncodingID;
   protected
     function GetPlatformID: TPlatformID; override;
   public
-    property PlatformSpecificID: TMicrosoftEncodingID read GetEncodingID
-      write SetEncodingID;
+    property PlatformSpecificID: TMicrosoftEncodingID read GetEncodingID write SetEncodingID;
   end;
 
-  TPascalTypeCharacterMapDirectoryGenericEntry = class
-    (TCustomPascalTypeCharacterMapDirectory)
+  TPascalTypeCharacterMapDirectoryGenericEntry = class(TCustomPascalTypeCharacterMapDirectory)
   protected
     function GetPlatformID: TPlatformID; override;
   public
@@ -259,8 +234,7 @@ type
     FVersion: Word; // Version number (Set to zero)
     FMaps   : array of TCustomPascalTypeCharacterMapDirectory;
     function GetCharacterMapSubtableCount: Word;
-    function GetCharacterMapSubtable(Index: Integer)
-      : TCustomPascalTypeCharacterMapDirectory;
+    function GetCharacterMapSubtable(Index: Integer): TCustomPascalTypeCharacterMapDirectory;
     procedure SetVersion(const Value: Word);
   protected
     procedure AssignTo(Dest: TPersistent); override;
@@ -278,8 +252,7 @@ type
 
     property Version: Word read FVersion write SetVersion;
     property CharacterMapSubtableCount: Word read GetCharacterMapSubtableCount;
-    property CharacterMapSubtable[Index: Integer]
-      : TCustomPascalTypeCharacterMapDirectory read GetCharacterMapSubtable;
+    property CharacterMapSubtable[Index: Integer]: TCustomPascalTypeCharacterMapDirectory read GetCharacterMapSubtable;
   end;
 
 
@@ -347,26 +320,17 @@ type
     property NumGlyphs         : Word read FNumGlyphs write SetNumGlyphs;
     property MaxPoints         : Word read FMaxPoints write SetMaxPoints;
     property MaxContours       : Word read FMaxContours write SetMaxContours;
-    property MaxCompositePoints: Word read FMaxCompositePoints
-      write SetMaxCompositePoints;
-    property MaxCompositeContours: Word read FMaxCompositeContours
-      write SetMaxCompositeContours;
+    property MaxCompositePoints: Word read FMaxCompositePoints write SetMaxCompositePoints;
+    property MaxCompositeContours: Word read FMaxCompositeContours write SetMaxCompositeContours;
     property MaxZones         : Word read FMaxZones write SetMaxZones;
-    property MaxTwilightPoints: Word read FMaxTwilightPoints
-      write SetMaxTwilightPoints;
+    property MaxTwilightPoints: Word read FMaxTwilightPoints write SetMaxTwilightPoints;
     property MaxStorage     : Word read FMaxStorage write SetMaxStorage;
-    property MaxFunctionDefs: Word read FMaxFunctionDefs
-      write SetMaxFunctionDefs;
-    property MaxInstructionDefs: Word read FMaxInstructionDefs
-      write SetMaxInstructionDefs;
-    property MaxStackElements: Word read FMaxStackElements
-      write SetMaxStackElements;
-    property MaxSizeOfInstruction: Word read FMaxSizeOfInstructions
-      write SetMaxSizeOfInstructions;
-    property MaxComponentElements: Word read FMaxComponentElements
-      write SetMaxComponentElements;
-    property MaxComponentDepth: Word read FMaxComponentDepth
-      write SetMaxComponentDepth;
+    property MaxFunctionDefs: Word read FMaxFunctionDefs write SetMaxFunctionDefs;
+    property MaxInstructionDefs: Word read FMaxInstructionDefs write SetMaxInstructionDefs;
+    property MaxStackElements: Word read FMaxStackElements write SetMaxStackElements;
+    property MaxSizeOfInstruction: Word read FMaxSizeOfInstructions write SetMaxSizeOfInstructions;
+    property MaxComponentElements: Word read FMaxComponentElements write SetMaxComponentElements;
+    property MaxComponentDepth: Word read FMaxComponentDepth write SetMaxComponentDepth;
   end;
 
 
@@ -427,21 +391,15 @@ type
     property Ascent         : SmallInt read FAscent write SetAscent;
     property Descent        : SmallInt read FDescent write SetDescent;
     property LineGap        : SmallInt read FLineGap write SetLineGap;
-    property AdvanceWidthMax: Word read FAdvanceWidthMax
-      write SetAdvanceWidthMax;
-    property MinLeftSideBearing: SmallInt read FMinLeftSideBearing
-      write SetMinLeftSideBearing;
-    property MinRightSideBearing: SmallInt read FMinRightSideBearing
-      write SetMinRightSideBearing;
+    property AdvanceWidthMax: Word read FAdvanceWidthMax write SetAdvanceWidthMax;
+    property MinLeftSideBearing: SmallInt read FMinLeftSideBearing write SetMinLeftSideBearing;
+    property MinRightSideBearing: SmallInt read FMinRightSideBearing write SetMinRightSideBearing;
     property XMaxExtent    : SmallInt read FXMaxExtent write SetXMaxExtent;
-    property CaretSlopeRise: SmallInt read FCaretSlopeRise
-      write SetCaretSlopeRise;
+    property CaretSlopeRise: SmallInt read FCaretSlopeRise write SetCaretSlopeRise;
     property CaretSlopeRun: SmallInt read FCaretSlopeRun write SetCaretSlopeRun;
     property CaretOffset     : SmallInt read FCaretOffset write SetCaretOffset;
-    property MetricDataFormat: SmallInt read FMetricDataFormat
-      write SetMetricDataFormat;
-    property NumOfLongHorMetrics: Word read FNumOfLongHorMetrics
-      write SetNumOfLongHorMetrics;
+    property MetricDataFormat: SmallInt read FMetricDataFormat write SetMetricDataFormat;
+    property NumOfLongHorMetrics: Word read FNumOfLongHorMetrics write SetNumOfLongHorMetrics;
   end;
 
 
@@ -1590,7 +1548,7 @@ begin
     FFontRevision.Fixed := Swap32(Value32);
 
     // read check sum adjust
-    Read(Value32, SizeOf(Longint));
+    Read(Value32, SizeOf(Cardinal));
     FCheckSumAdjustment := Swap32(Value32);
 
     // read magic number
@@ -1718,7 +1676,7 @@ begin
   WriteSwappedWord(Stream, FGlyphDataFormat);
 end;
 
-procedure TPascalTypeHeaderTable.SetCheckSumAdjustment(const Value: Longint);
+procedure TPascalTypeHeaderTable.SetCheckSumAdjustment(const Value: Cardinal);
 begin
   if FCheckSumAdjustment <> Value then
   begin
@@ -2966,7 +2924,8 @@ begin
 
     // actually read the string
     SetLength(str, Length);
-    Read(str[1], Length);
+    if (Length <> 0) then
+      Read(str[1], Length);
     FNameString := WideString(str);
   end;
 end;
@@ -5171,6 +5130,10 @@ begin
   FUnicodeRangeTable.ResetToDefaults;
 end;
 
+{$IFOPT R+}
+{$DEFINE R_PLUS}
+{$RANGECHECKS OFF}
+{$ENDIF}
 procedure TPascalTypeOS2Table.LoadFromStream(Stream: TStream);
 var
   PanoseFamilyKind : Byte;
@@ -5179,183 +5142,183 @@ var
   HorizontalHeader: TPascalTypeHorizontalHeaderTable;
 {$ENDIF}
 begin
-  with Stream do
+  // check (minimum) table size
+  if Stream.Position + 68 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  // read version
+  FVersion := ReadSwappedWord(Stream);
+
+  // check version
+  if not(Version in [0..3]) then
+    raise EPascalTypeError.Create(RCStrUnsupportedVersion);
+
+  // read average horizontal character width
+  FAverageCharacterWidth := ReadSwappedWord(Stream);
+
+  // read weight
+  FWeight := ReadSwappedWord(Stream);
+
+  // read width type
+  FWidthType := ReadSwappedWord(Stream);
+
+  // read font embedding right flags
+  FFontEmbeddingFlags := ReadSwappedWord(Stream);
+
+  // read SubscriptSizeX
+  FSubscriptSizeX := ReadSwappedWord(Stream);
+
+  // read SubscriptSizeY
+  FSubscriptSizeY := ReadSwappedWord(Stream);
+
+  // read SubScriptOffsetX
+  FSubScriptOffsetX := ReadSwappedWord(Stream);
+
+  // read SubscriptOffsetX
+  FSubscriptYOffsetY := ReadSwappedWord(Stream);
+
+  // read SuperscriptSizeX
+  FSuperscriptSizeX := ReadSwappedWord(Stream);
+
+  // read SuperscriptSizeY
+  FSuperscriptSizeY := ReadSwappedWord(Stream);
+
+  // read SuperscriptOffsetX
+  FSuperscriptOffsetX := ReadSwappedWord(Stream);
+
+  // read SuperscriptOffsetY
+  FSuperscriptOffsetY := ReadSwappedWord(Stream);
+
+  // read StrikeoutSize
+  FStrikeoutSize := ReadSwappedWord(Stream);
+
+  // read StrikeoutPosition
+  FStrikeoutPosition := ReadSwappedWord(Stream);
+
+  // read font family type
+  FFontFamilyType := ReadSwappedWord(Stream);
+
+  // read panose
+  Stream.Read(PanoseFamilyKind, 1);
+
+  // find panose family class by type
+  PanoseFamilyClass := FindPascalTypePanoseByType(PanoseFamilyKind);
+
+  if not Assigned(PanoseFamilyClass) then
   begin
-    // check (minimum) table size
-    if Position + 68 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-    // read version
-    FVersion := ReadSwappedWord(Stream);
-
-    // check version
-    if not(Version in [0..3]) then
-      raise EPascalTypeError.Create(RCStrUnsupportedVersion);
-
-    // read average horizontal character width
-    FAverageCharacterWidth := ReadSwappedWord(Stream);
-
-    // read weight
-    FWeight := ReadSwappedWord(Stream);
-
-    // read width type
-    FWidthType := ReadSwappedWord(Stream);
-
-    // read font embedding right flags
-    FFontEmbeddingFlags := ReadSwappedWord(Stream);
-
-    // read SubscriptSizeX
-    FSubscriptSizeX := ReadSwappedWord(Stream);
-
-    // read SubscriptSizeY
-    FSubscriptSizeY := ReadSwappedWord(Stream);
-
-    // read SubScriptOffsetX
-    FSubScriptOffsetX := ReadSwappedWord(Stream);
-
-    // read SubscriptOffsetX
-    FSubscriptYOffsetY := ReadSwappedWord(Stream);
-
-    // read SuperscriptSizeX
-    FSuperscriptSizeX := ReadSwappedWord(Stream);
-
-    // read SuperscriptSizeY
-    FSuperscriptSizeY := ReadSwappedWord(Stream);
-
-    // read SuperscriptOffsetX
-    FSuperscriptOffsetX := ReadSwappedWord(Stream);
-
-    // read SuperscriptOffsetY
-    FSuperscriptOffsetY := ReadSwappedWord(Stream);
-
-    // read StrikeoutSize
-    FStrikeoutSize := ReadSwappedWord(Stream);
-
-    // read StrikeoutPosition
-    FStrikeoutPosition := ReadSwappedWord(Stream);
-
-    // read font family type
-    FFontFamilyType := ReadSwappedWord(Stream);
-
-    // read panose
-    Read(PanoseFamilyKind, 1);
-
-    // find panose family class by type
-    PanoseFamilyClass := FindPascalTypePanoseByType(PanoseFamilyKind);
-
-    if not Assigned(PanoseFamilyClass) then
-    begin
-      if not(FPanose is TPascalTypeDefaultPanoseTable) then
-      begin
-        // free other panose object
-        FreeAndNil(FPanose);
-
-        // create new latin text panose object
-        FPanose := TPascalTypeDefaultPanoseTable.Create;
-      end;
-
-      // rewind current position to read the family type as well
-      Seek(-1, soFromCurrent);
-    end
-    else if not(FPanose is PanoseFamilyClass) then
+    if not(FPanose is TPascalTypeDefaultPanoseTable) then
     begin
       // free other panose object
       FreeAndNil(FPanose);
 
       // create new latin text panose object
-      FPanose := PanoseFamilyClass.Create;
+      FPanose := TPascalTypeDefaultPanoseTable.Create;
     end;
 
-    // load panose object from stream
-    FPanose.LoadFromStream(Stream);
+    // rewind current position to read the family type as well
+    Stream.Seek(-1, soFromCurrent);
+  end
+  else if not(FPanose is PanoseFamilyClass) then
+  begin
+    // free other panose object
+    FreeAndNil(FPanose);
 
-    // read unicode range
-    FUnicodeRangeTable.LoadFromStream(Stream);
+    // create new latin text panose object
+    FPanose := PanoseFamilyClass.Create;
+  end;
 
-    // read font vendor identification
-    Read(FFontVendorID, 4);
+  // load panose object from stream
+  FPanose.LoadFromStream(Stream);
 
-    // read font selection flags
-    FFontSelection := ReadSwappedWord(Stream);
-    if FVersion < 4 then
-      FFontSelection := FFontSelection and $7F
+  // read unicode range
+  FUnicodeRangeTable.LoadFromStream(Stream);
+
+  // read font vendor identification
+  Stream.Read(FFontVendorID, 4);
+
+  // read font selection flags
+  FFontSelection := ReadSwappedWord(Stream);
+  if FVersion < 4 then
+    FFontSelection := FFontSelection and $7F
 {$IFDEF AmbigiousExceptions}
-    else if FVersion = 4 then
-      if (FFontSelection and $FF80) <> 0 then
-        raise EPascalTypeError.Create(RCStrReservedValueError)
+  else if FVersion = 4 then
+    if (FFontSelection and $FF80) <> 0 then
+      raise EPascalTypeError.Create(RCStrReservedValueError)
 {$ENDIF};
 
-    // read UnicodeFirstCharacterIndex
-    FUnicodeFirstCharIndex := ReadSwappedWord(Stream);
+  // read UnicodeFirstCharacterIndex
+  FUnicodeFirstCharIndex := ReadSwappedWord(Stream);
 
-    // read UnicodeLastCharacterIndex
-    FUnicodeLastCharIndex := ReadSwappedWord(Stream);
+  // read UnicodeLastCharacterIndex
+  FUnicodeLastCharIndex := ReadSwappedWord(Stream);
 
-    // read TypographicAscent
-    FTypographicAscent := ReadSwappedWord(Stream);
+  // read TypographicAscent
+  FTypographicAscent := ReadSwappedWord(Stream);
 
-    // read TypographicDescent
-    FTypographicDescent := ReadSwappedWord(Stream);
+  // read TypographicDescent
+  FTypographicDescent := ReadSwappedWord(Stream);
 
-    // read TypographicLineGap
-    FTypographicLineGap := ReadSwappedWord(Stream);
+  // read TypographicLineGap
+  FTypographicLineGap := ReadSwappedWord(Stream);
 
-    // read WindowsAscent
-    FWindowsAscent := ReadSwappedWord(Stream);
+  // read WindowsAscent
+  FWindowsAscent := ReadSwappedWord(Stream);
 
-    // read WindowsDescent
-    FWindowsDescent := ReadSwappedWord(Stream);
+  // read WindowsDescent
+  FWindowsDescent := ReadSwappedWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
-    HorizontalHeader := TPascalTypeHorizontalHeaderTable
-      (FStorage.GetTableByTableName('hhea'));
-    Assert(Assigned(HorizontalHeader));
-    with HorizontalHeader do
-    begin
-      if fsfUseTypoMetrics in FontSelectionFlags then
-      begin
-        if Abs(Ascent) <> Abs(FTypographicAscent) then
-          raise EPascalTypeError.Create(RCStrErrorAscender);
+  HorizontalHeader := TPascalTypeHorizontalHeaderTable(FStorage.GetTableByTableName('hhea'));
+  Assert(Assigned(HorizontalHeader));
 
-        if Abs(Descent) <> Abs(FTypographicDescent) then
-          raise EPascalTypeError.Create(RCStrErrorDescender);
+  if fsfUseTypoMetrics in FontSelectionFlags then
+  begin
+    if Abs(HorizontalHeader.Ascent) <> Abs(FTypographicAscent) then
+      raise EPascalTypeError.Create(RCStrErrorAscender);
 
-        if Abs(LineGap) <> Abs(FTypographicLineGap) then
-          raise EPascalTypeError.Create(RCStrErrorLineGap);
-      end
-      else
-      begin
-        if Abs(Ascent) <> Abs(FWindowsAscent) then
-          raise EPascalTypeError.Create(RCStrErrorWindowsAscender);
+    if Abs(HorizontalHeader.Descent) <> Abs(FTypographicDescent) then
+      raise EPascalTypeError.Create(RCStrErrorDescender);
 
-        if Abs(Descent) <> Abs(FDescent) then
-          raise EPascalTypeError.Create(RCStrErrorWindowsDescender);
-      end;
-    end;
+    if Abs(HorizontalHeader.LineGap) <> Abs(FTypographicLineGap) then
+      raise EPascalTypeError.Create(RCStrErrorLineGap);
+  end
+  else
+  begin
+    // TODO : Handle WindowsAscender/Descender errors as warnings
+    // These errors are very commons so the checks has been disabled for now
+    if Abs(HorizontalHeader.Ascent) <> Abs(FWindowsAscent) then
+      ; //raise EPascalTypeError.Create(RCStrErrorWindowsAscender);
+
+    if Abs(HorizontalHeader.Descent) <> Abs(FWindowsDescent) then
+      ; // raise EPascalTypeError.Create(RCStrErrorWindowsDescender);
+  end;
 {$ENDIF}
-    // eventually load further tables
-    if Version > 0 then
+  // eventually load further tables
+  if Version > 0 then
+  begin
+    // check if codepage range exists
+    if not Assigned(FCodePageRange) then
+      FCodePageRange := TPascalTypeOS2CodePageRangeTable.Create;
+
+    // load codepage range from stream
+    FCodePageRange.LoadFromStream(Stream);
+
+    // eventually load addendum table
+    if Version >= 2 then
     begin
-      // check if codepage range exists
-      if not Assigned(FCodePageRange) then
-        FCodePageRange := TPascalTypeOS2CodePageRangeTable.Create;
+      // check if addendum table exists
+      if not Assigned(FAddendumTable) then
+        FAddendumTable := TPascalTypeOS2AddendumTable.Create;
 
-      // load codepage range from stream
-      FCodePageRange.LoadFromStream(Stream);
-
-      // eventually load addendum table
-      if Version >= 2 then
-      begin
-        // check if addendum table exists
-        if not Assigned(FAddendumTable) then
-          FAddendumTable := TPascalTypeOS2AddendumTable.Create;
-
-        // load addendum table from stream
-        FAddendumTable.LoadFromStream(Stream);
-      end;
+      // load addendum table from stream
+      FAddendumTable.LoadFromStream(Stream);
     end;
   end;
 end;
+{$IFDEF R_PLUS}
+{$RANGECHECKS ON}
+{$UNDEF R_PLUS}
+{$ENDIF}
 
 procedure TPascalTypeOS2Table.SaveToStream(Stream: TStream);
 begin
@@ -6041,6 +6004,10 @@ begin
   FMaxMemType1 := 0;
 end;
 
+{$IFOPT R+}
+{$DEFINE R_PLUS}
+{$RANGECHECKS OFF}
+{$ENDIF}
 procedure TPascalTypePostscriptTable.LoadFromStream(Stream: TStream);
 var
   Value32: Cardinal;
@@ -6093,6 +6060,10 @@ begin
     end;
   end;
 end;
+{$IFDEF R_PLUS}
+{$RANGECHECKS ON}
+{$UNDEF R_PLUS}
+{$ENDIF}
 
 procedure TPascalTypePostscriptTable.SaveToStream(Stream: TStream);
 begin

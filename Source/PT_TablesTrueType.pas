@@ -150,8 +150,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    property NumberOfContours: SmallInt read FNumberOfContours
-      write SetNumberOfContours;
+    property NumberOfContours: SmallInt read FNumberOfContours write SetNumberOfContours;
     property XMin: SmallInt read FXMin write SetXMin;
     property YMin: SmallInt read FYMin write SetYMin;
     property XMax: SmallInt read FXMax write SetXMax;
@@ -159,8 +158,7 @@ type
 
     property GlyphIndex: Integer read GetGlyphIndex;
 
-    property Instructions: TTrueTypeFontGlyphInstructionTable
-      read FInstructions;
+    property Instructions: TTrueTypeFontGlyphInstructionTable read FInstructions;
     property ContourCount: Integer read GetContourCount;
   end;
 
@@ -170,6 +168,8 @@ type
     XPos: SmallInt;
     YPos: SmallInt;
     Flags: Byte;
+
+    function FlagIsOnCurve: boolean;
   end;
 
   TPascalTypeTrueTypeContour = class(TPersistent)
@@ -187,8 +187,7 @@ type
   public
     property Area                 : Integer read GetArea;
     property IsClockwise          : Boolean read GetIsClockwise;
-    property Point[Index: Integer]: TContourPointRecord read GetPoint
-      write SetPoint;
+    property Point[Index: Integer]: TContourPointRecord read GetPoint write SetPoint;
     property PointCount: Integer read GetPointCount write SetPointCount;
   end;
 
@@ -277,8 +276,7 @@ type
     procedure SaveToStream(Stream: TStream); override;
 
     property GlyphDataCount: Integer read GetGlyphDataCount;
-    property GlyphData[Index: Integer]: TCustomTrueTypeFontGlyphData
-      read GetGlyphData;
+    property GlyphData[Index: Integer]: TCustomTrueTypeFontGlyphData read GetGlyphData;
   end;
 
 
@@ -500,29 +498,28 @@ var
   Value16   : Word;
   MaxProfile: TPascalTypeMaximumProfileTable;
 begin
-  MaxProfile := TPascalTypeMaximumProfileTable
-    (FStorage.GetTableByTableName('maxp'));
-  Assert(Assigned(MaxProfile));
+  MaxProfile := TPascalTypeMaximumProfileTable(FStorage.GetTableByTableName('maxp'));
+  Assert(MaxProfile <> nil);
 
-  with Stream do
-  begin
-    // read instruction size
-    Value16 := ReadSwappedWord(Stream);
+  // read instruction size
+  Value16 := ReadSwappedWord(Stream);
 
-    // check if instructions shall be ignored
-    if Value16 = $FFFF then
-      Exit;
+  // check if instructions shall be ignored
+  if Value16 = $FFFF then
+    Exit;
 
-    // check if too many instuctions are present -> possible stream error
-    if Value16 > MaxProfile.MaxSizeOfInstruction then
-      raise EPascalTypeError.CreateFmt(RCStrTooManyInstructions, [Value16]);
+  // check if too many instuctions are present -> possible stream error
+  if Value16 > MaxProfile.MaxSizeOfInstruction then
+    // Probably just an error in the font - ignore for now
+    // TODO : Handle too many instructions
+    ; //raise EPascalTypeError.CreateFmt(RCStrTooManyInstructions, [Value16]);
 
-    // set instruction length
-    SetLength(FInstructions, Value16);
+  // set instruction length
+  SetLength(FInstructions, Value16);
 
-    // read instructions
-    Read(FInstructions[0], Length(FInstructions));
-  end;
+  // read instructions
+  if (Value16 > 0) then
+    Stream.Read(FInstructions[0], Length(FInstructions));
 end;
 
 procedure TTrueTypeFontGlyphInstructionTable.SaveToStream(Stream: TStream);
@@ -732,6 +729,16 @@ begin
 end;
 
 
+{ TContourPointRecord }
+
+const
+  GLYF_ON_CURVE         = $01;  // Data point is on curve (i.e. not a control point)
+
+function TContourPointRecord.FlagIsOnCurve: boolean;
+begin
+  Result := (Flags and GLYF_ON_CURVE <> 0);
+end;
+
 { TPascalTypeTrueTypeContour }
 
 procedure TPascalTypeTrueTypeContour.AssignTo(Dest: TPersistent);
@@ -768,12 +775,12 @@ begin
   Result := Area >= 0;
 end;
 
-function TPascalTypeTrueTypeContour.GetPoint(Index: Integer)
-  : TContourPointRecord;
+function TPascalTypeTrueTypeContour.GetPoint(Index: Integer): TContourPointRecord;
 begin
   if (Index = Length(FPoints)) then
     Result := FPoints[0]
-  else if (Index >= 0) and (Index < Length(FPoints)) then
+  else
+  if (Index >= 0) and (Index < Length(FPoints)) then
     Result := FPoints[Index]
   else
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);

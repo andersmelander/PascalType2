@@ -343,110 +343,101 @@ var
   Value16: Word;
 {$ENDIF}
 begin
-  with Stream do
-  begin
-    StartPos := Position;
+  StartPos := Stream.Position;
 
-    // check (minimum) table size
-    if StartPos + 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if StartPos + 4 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read length
-    FLength := ReadSwappedWord(Stream);
+  // read length
+  FLength := ReadSwappedWord(Stream);
 
-    // check (minimum) table size
-    if StartPos + FLength - 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if StartPos + FLength - 4 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read language
-    FLanguage := ReadSwappedWord(Stream);
+  // read language
+  FLanguage := ReadSwappedWord(Stream);
 
-    // read segCountX2
-    FSegCountX2 := ReadSwappedWord(Stream);
+  // read segCountX2
+  FSegCountX2 := ReadSwappedWord(Stream);
 
-    // read search range
-    FSearchRange := ReadSwappedWord(Stream);
+  // read search range
+  FSearchRange := ReadSwappedWord(Stream);
 
-    // confirm search range has a valid value
-    if FSearchRange <> 2 * (1 shl FloorLog2(FSegCountX2 div 2)) then
-      raise EPascalTypeError.Create(RCStrCharMapError + ': ' +
-        'wrong search range!');
+  // confirm search range has a valid value
+  if FSearchRange <> 2 * (1 shl FloorLog2(FSegCountX2 div 2)) then
+    raise EPascalTypeError.Create(RCStrCharMapError + ': ' + 'wrong search range!');
 
-    // read entry selector
-    FEntrySelector := ReadSwappedWord(Stream);
+  // read entry selector
+  FEntrySelector := ReadSwappedWord(Stream);
 
-    // confirm entry selector has a valid value
-    if 2 shl FEntrySelector <> FSearchRange then
-      raise EPascalTypeError.Create(RCStrCharMapError + ': ' +
-        'wrong entry selector!');
+  // confirm entry selector has a valid value
+  if 2 shl FEntrySelector <> FSearchRange then
+    raise EPascalTypeError.Create(RCStrCharMapError + ': ' + 'wrong entry selector!');
 
-    // read range shift
-    FRangeShift := ReadSwappedWord(Stream);
+  // read range shift
+  FRangeShift := ReadSwappedWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
-    // confirm range shift has a valid value
-    if FRangeShift <> FSegCountX2 - FSearchRange then
-      raise EPascalTypeError.Create(RCStrCharMapError + ': ' +
-        'wrong range shift!');
+  // confirm range shift has a valid value
+  if FRangeShift <> FSegCountX2 - FSearchRange then
+    raise EPascalTypeError.Create(RCStrCharMapError + ': ' + 'wrong range shift!');
 {$ENDIF}
-    SetLength(FEndCount, FSegCountX2 div 2);
-    SetLength(FStartCount, FSegCountX2 div 2);
-    SetLength(FIdDelta, FSegCountX2 div 2);
-    SetLength(FIdRangeOffset, FSegCountX2 div 2);
+  SetLength(FEndCount, FSegCountX2 div 2);
+  SetLength(FStartCount, FSegCountX2 div 2);
+  SetLength(FIdDelta, FSegCountX2 div 2);
+  SetLength(FIdRangeOffset, FSegCountX2 div 2);
 
-    // read end count
-    for SegIndex := 0 to Length(FEndCount) - 1 do
-      FEndCount[SegIndex] := ReadSwappedWord(Stream);
+  // read end count
+  for SegIndex := 0 to Length(FEndCount) - 1 do
+    FEndCount[SegIndex] := ReadSwappedWord(Stream);
 
-    // confirm end count is valid
-    if FEndCount[Length(FEndCount) - 1] <> $FFFF then
-      raise EPascalTypeError.CreateFmt(RCStrCharMapErrorEndCount,
-        [FEndCount[Length(FEndCount) - 1]]);
+  // confirm end count is valid
+  if FEndCount[Length(FEndCount) - 1] <> $FFFF then
+    raise EPascalTypeError.CreateFmt(RCStrCharMapErrorEndCount, [FEndCount[Length(FEndCount) - 1]]);
 
 {$IFDEF AmbigiousExceptions}
-    // read reserved
-    Value16 := ReadSwappedWord(Stream);
+  // read reserved
+  Value16 := ReadSwappedWord(Stream);
 
-    // confirm reserved value is valid
-    if Value16 <> 0 then
-      raise EPascalTypeError.CreateFmt(RCStrCharMapErrorReserved, [Value16]);
+  // confirm reserved value is valid
+  if Value16 <> 0 then
+    raise EPascalTypeError.CreateFmt(RCStrCharMapErrorReserved, [Value16]);
 {$ELSE}
-    // skip reserved
-    Seek(2, soFromCurrent);
+  // skip reserved
+  Seek(2, soFromCurrent);
 {$ENDIF}
-    // read start count
-    for SegIndex := 0 to Length(FStartCount) - 1 do
-    begin
-      FStartCount[SegIndex] := ReadSwappedWord(Stream);
+  // read start count
+  for SegIndex := 0 to Length(FStartCount) - 1 do
+  begin
+    FStartCount[SegIndex] := ReadSwappedWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
-      // confirm start count is valid
-      if FStartCount[SegIndex] > FEndCount[SegIndex] then
-        raise EPascalTypeError.CreateFmt(RCStrCharMapErrorStartCount,
-          [FStartCount[SegIndex]]);
+    // confirm start count is valid
+    if FStartCount[SegIndex] > FEndCount[SegIndex] then
+      raise EPascalTypeError.CreateFmt(RCStrCharMapErrorStartCount, [FStartCount[SegIndex]]);
 {$ENDIF}
-    end;
-
-    // read ID delta
-    for SegIndex := 0 to Length(FIdDelta) - 1 do
-      FIdDelta[SegIndex] := ReadSwappedWord(Stream);
-
-{$IFDEF AmbigiousExceptions}
-    // confirm ID delta is valid
-    if FIdDelta[Length(FIdDelta) - 1] <> 1 then
-      raise EPascalTypeError.CreateFmt(RCStrCharMapErrorIdDelta,
-        [FIdDelta[Length(FIdDelta) - 1]]);
-{$ENDIF}
-    // read ID range offset
-    for SegIndex := 0 to Length(FIdRangeOffset) - 1 do
-      FIdRangeOffset[SegIndex] := ReadSwappedWord(Stream);
-
-    SetLength(FGlyphIdArray, (FLength - 2 - (Position - StartPos)) div 2);
-
-    // read glyph ID array
-    for SegIndex := 0 to Length(FGlyphIdArray) - 1 do
-      FGlyphIdArray[SegIndex] := ReadSwappedWord(Stream);
   end;
+
+  // read ID delta
+  for SegIndex := 0 to Length(FIdDelta) - 1 do
+    Word(FIdDelta[SegIndex]) := ReadSwappedWord(Stream);
+
+{$IFDEF AmbigiousExceptions}
+  // confirm ID delta is valid
+  if FIdDelta[Length(FIdDelta) - 1] <> 1 then
+    raise EPascalTypeError.CreateFmt(RCStrCharMapErrorIdDelta, [FIdDelta[Length(FIdDelta) - 1]]);
+{$ENDIF}
+  // read ID range offset
+  for SegIndex := 0 to Length(FIdRangeOffset) - 1 do
+    FIdRangeOffset[SegIndex] := ReadSwappedWord(Stream);
+
+  SetLength(FGlyphIdArray, (FLength - 2 - (Stream.Position - StartPos)) div 2);
+
+  // read glyph ID array
+  for SegIndex := 0 to Length(FGlyphIdArray) - 1 do
+    FGlyphIdArray[SegIndex] := ReadSwappedWord(Stream);
 end;
 
 procedure TPascalTypeFormat4CharacterMap.SaveToStream(Stream: TStream);

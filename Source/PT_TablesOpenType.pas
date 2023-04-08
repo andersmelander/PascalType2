@@ -2395,26 +2395,23 @@ var
 begin
   inherited;
 
-  with Stream do
+  // check (minimum) table size
+  if Stream.Position + 2 > Stream.Size then
+    raise Exception.Create(RCStrTableIncomplete);
+
+  // read glyph array count
+  SetLength(FRangeArray, ReadSwappedWord(Stream));
+
+  for GlyphIndex := 0 to High(FRangeArray) do
   begin
-    // check (minimum) table size
-    if Position + 2 > Size then
-      raise Exception.Create(RCStrTableIncomplete);
+    // read start glyph
+    FRangeArray[GlyphIndex].StartGlyph := ReadSwappedWord(Stream);
 
-    // read glyph array count
-    SetLength(FRangeArray, ReadSwappedWord(Stream));
+    // read end glyph
+    FRangeArray[GlyphIndex].EndGlyph := ReadSwappedWord(Stream);
 
-    for GlyphIndex := 0 to Length(FRangeArray) - 1 do
-    begin
-      // read start glyph
-      FRangeArray[GlyphIndex].StartGlyph := ReadSwappedWord(Stream);
-
-      // read end glyph
-      FRangeArray[GlyphIndex].EndGlyph := ReadSwappedWord(Stream);
-
-      // read start coverage
-      FRangeArray[GlyphIndex].StartCoverageIndex := ReadSwappedWord(Stream);
-    end;
+    // read start coverage
+    FRangeArray[GlyphIndex].StartCoverageIndex := ReadSwappedWord(Stream);
   end;
 end;
 
@@ -2501,58 +2498,55 @@ var
 begin
   inherited;
 
-  with Stream do
-  begin
-    StartPos := Position;
+  StartPos := Stream.Position;
 
-    // check (minimum) table size
-    if Position + 6 > Size then
-      raise Exception.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 6 > Stream.Size then
+    raise Exception.Create(RCStrTableIncomplete);
+
+  // read lookup type
+  FLookupType := ReadSwappedWord(Stream);
+
+  // read lookup flag
+  FLookupFlag := ReadSwappedWord(Stream);
+
+  // read subtable count
+  SetLength(SubTableOffsets, ReadSwappedWord(Stream));
+
+  // read lookup list index offsets
+  for LookupIndex := 0 to Length(SubTableOffsets) - 1 do
+    SubTableOffsets[LookupIndex] := ReadSwappedWord(Stream);
+
+  // eventually read mark filtering set
+  if (FLookupFlag and (1 shl 4)) <> 0 then
+    FMarkFilteringSet := ReadSwappedWord(Stream);
+
+  for LookupIndex := 0 to Length(SubTableOffsets) - 1 do
+  begin
+    // set position to actual script list entry
+    Stream.Position := StartPos + SubTableOffsets[LookupIndex];
 
     // read lookup type
-    FLookupType := ReadSwappedWord(Stream);
+    CoverageFormat := ReadSwappedWord(Stream);
 
-    // read lookup flag
-    FLookupFlag := ReadSwappedWord(Stream);
+    // create coverage sub table item
+    case CoverageFormat of
+      1:
+        SubTableItem := TOpenTypeCoverage1Table.Create;
+      2:
+        SubTableItem := TOpenTypeCoverage2Table.Create;
+    else
+      SubTableItem := nil;
+      // else raise EPascalTypeError.Create('Unknown coverage format');
+    end;
 
-    // read subtable count
-    SetLength(SubTableOffsets, ReadSwappedWord(Stream));
-
-    // read lookup list index offsets
-    for LookupIndex := 0 to Length(SubTableOffsets) - 1 do
-      SubTableOffsets[LookupIndex] := ReadSwappedWord(Stream);
-
-    // eventually read mark filtering set
-    if (FLookupFlag and (1 shl 4)) <> 0 then
-      FMarkFilteringSet := ReadSwappedWord(Stream);
-
-    for LookupIndex := 0 to Length(SubTableOffsets) - 1 do
+    if Assigned(SubTableItem) then
     begin
-      // set position to actual script list entry
-      Position := StartPos + SubTableOffsets[LookupIndex];
+      // load subtable
+      SubTableItem.LoadFromStream(Stream);
 
-      // read lookup type
-      CoverageFormat := ReadSwappedWord(Stream);
-
-      // create coverage sub table item
-      case CoverageFormat of
-        1:
-          SubTableItem := TOpenTypeCoverage1Table.Create;
-        2:
-          SubTableItem := TOpenTypeCoverage2Table.Create;
-      else
-        SubTableItem := nil;
-        // else raise EPascalTypeError.Create('Unknown coverage format');
-      end;
-
-      if Assigned(SubTableItem) then
-      begin
-        // load subtable
-        SubTableItem.LoadFromStream(Stream);
-
-        // add to subtable list
-        FSubtableList.Add(SubTableItem);
-      end;
+      // add to subtable list
+      FSubtableList.Add(SubTableItem);
     end;
   end;
 end;
@@ -2659,38 +2653,35 @@ var
 begin
   inherited;
 
-  with Stream do
+  StartPos := Stream.Position;
+
+  // check (minimum) table size
+  if Stream.Position + 2 > Stream.Size then
+    raise Exception.Create(RCStrTableIncomplete);
+
+  // read lookup list count
+  SetLength(LookupList, ReadSwappedWord(Stream));
+
+  // read offsets
+  for LookupIndex := 0 to Length(LookupList) - 1 do
+    LookupList[LookupIndex] := ReadSwappedWord(Stream);
+
+  // clear language system list
+  FLookupList.Clear;
+
+  for LookupIndex := 0 to Length(LookupList) - 1 do
   begin
-    StartPos := Position;
+    // create language system entry
+    LookupTable := TOpenTypeLookupTable.Create(FStorage);
 
-    // check (minimum) table size
-    if Position + 2 > Size then
-      raise Exception.Create(RCStrTableIncomplete);
+    // set position to actual script list entry
+    Stream.Position := StartPos + LookupList[LookupIndex];
 
-    // read lookup list count
-    SetLength(LookupList, ReadSwappedWord(Stream));
+    // load from stream
+    LookupTable.LoadFromStream(Stream);
 
-    // read offsets
-    for LookupIndex := 0 to Length(LookupList) - 1 do
-      LookupList[LookupIndex] := ReadSwappedWord(Stream);
-
-    // clear language system list
-    FLookupList.Clear;
-
-    for LookupIndex := 0 to Length(LookupList) - 1 do
-    begin
-      // create language system entry
-      LookupTable := TOpenTypeLookupTable.Create(FStorage);
-
-      // set position to actual script list entry
-      Position := StartPos + LookupList[LookupIndex];
-
-      // load from stream
-      LookupTable.LoadFromStream(Stream);
-
-      // add to language system list
-      FLookupList.Add(LookupTable);
-    end;
+    // add to language system list
+    FLookupList.Add(LookupTable);
   end;
 end;
 
@@ -2743,51 +2734,51 @@ end;
 
 procedure TCustomOpenTypeCommonTable.LoadFromStream(Stream: TStream);
 var
+  StartPosition : Int64;
   ScriptListPosition : Int64;
   FeatureListPosition: Int64;
   LookupListPosition : Int64;
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 10 > Size then
-      raise Exception.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 10 > Stream.Size then
+    raise Exception.Create(RCStrTableIncomplete);
 
-    // read version
-    FVersion.Fixed := ReadSwappedCardinal(Stream);
+  StartPosition := Stream.Position;
 
-    if Version.Value <> 1 then
-      raise Exception.Create(RCStrUnsupportedVersion);
+  // read version
+  FVersion.Fixed := ReadSwappedCardinal(Stream);
 
-    // read script list offset
-    ScriptListPosition := Position - 4 + ReadSwappedWord(Stream);
+  if Version.Value <> 1 then
+    raise Exception.Create(RCStrUnsupportedVersion);
 
-    // read feature list offset
-    FeatureListPosition := Position - 6 + ReadSwappedWord(Stream);
+  // read script list offset
+  ScriptListPosition := StartPosition + ReadSwappedWord(Stream);
 
-    // read lookup list offset
-    LookupListPosition := Position - 8 + ReadSwappedWord(Stream);
+  // read feature list offset
+  FeatureListPosition := StartPosition + ReadSwappedWord(Stream);
 
-    // locate script list position
-    Position := ScriptListPosition;
+  // read lookup list offset
+  LookupListPosition := StartPosition + ReadSwappedWord(Stream);
 
-    // load script table
-    FScriptListTable.LoadFromStream(Stream);
+  // locate script list position
+  Stream.Position := ScriptListPosition;
 
-    // locate feature list position
-    Position := FeatureListPosition;
+  // load script table
+  FScriptListTable.LoadFromStream(Stream);
 
-    // load script table
-    FFeatureListTable.LoadFromStream(Stream);
+  // locate feature list position
+  Stream.Position := FeatureListPosition;
 
-    // locate lookup list position
-    Position := LookupListPosition;
+  // load script table
+  FFeatureListTable.LoadFromStream(Stream);
 
-    // load lookup table
-    FLookupListTable.LoadFromStream(Stream);
-  end;
+  // locate lookup list position
+  Stream.Position := LookupListPosition;
+
+  // load lookup table
+  FLookupListTable.LoadFromStream(Stream);
 end;
 
 procedure TCustomOpenTypeCommonTable.SaveToStream(Stream: TStream);

@@ -68,7 +68,7 @@ procedure TCustomPascalTypeStorage.LoadFromFile(FileName: TFileName);
 var
   FileStream: TFileStream;
 begin
-  FileStream := TFileStream.Create(FileName, fmOpenRead);
+  FileStream := TFileStream.Create(FileName, fmOpenRead, fmShareDenyWrite);
   try
     LoadFromStream(FileStream);
   finally
