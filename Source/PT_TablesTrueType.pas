@@ -1528,65 +1528,64 @@ end;
 procedure TTrueTypeFontGlyphDataTable.LoadFromStream(Stream: TStream);
 var
   StartPos: Int64;
-  // GlyphData : TCustomTrueTypeFontGlyphData;
   Locations: TTrueTypeFontLocationTable;
   LocIndex : Integer;
   Value16  : SmallInt;
 begin
   // get location table
-  Locations := TTrueTypeFontLocationTable(FStorage.GetTableByTableName('loca'));
-  if not Assigned(Locations) then
+  Locations := TTrueTypeFontLocationTable(Storage.GetTableByTableName('loca'));
+  if (Locations = nil) then
     raise EPascalTypeError.Create(RCStrNoIndexToLocationTable);
 
-  with Stream do
+  // store initil position
+  StartPos := Stream.Position;
+
+  // check (minimum) table size
+  if Stream.Position + 10 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  // clear glyph data list length
+  for LocIndex := 0 to High(FGlyphDataList) do
+    FreeAndNil(FGlyphDataList[LocIndex]);
+  SetLength(FGlyphDataList, Locations.LocationCount - 1);
+
+  for LocIndex := 0 to Locations.LocationCount - 2 do
   begin
-    // store initil position
-    StartPos := Position;
-
-    // check (minimum) table size
-    if Position + 10 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-    // clear glyph data list length
-    for LocIndex := 0 to Length(FGlyphDataList) - 1 do
-      FreeAndNil(FGlyphDataList[LocIndex]);
-    SetLength(FGlyphDataList, Locations.LocationCount - 1);
-
-    for LocIndex := 0 to Locations.LocationCount - 2 do
+    if (Locations[LocIndex] = Locations[LocIndex+1]) then
     begin
-      Position := StartPos + Locations[LocIndex];
-
-      Value16 := ReadSwappedSmallInt(Stream);
-
-      if (Value16 < -1) then
-        raise EPascalTypeError.CreateFmt(RCStrUnknownGlyphDataType, [Value16]);
-
-      // set position before number of contours
-      Seek(-2, soFromCurrent);
-
-      // read number of contours and create glyph data object
-      if Value16 > 0 then
-        FGlyphDataList[LocIndex] :=
-          TTrueTypeFontSimpleGlyphData.Create(FStorage)
-      else
-        FGlyphDataList[LocIndex] := TTrueTypeFontCompositeGlyphData.Create
-          (FStorage);
-
-      try
-        FGlyphDataList[LocIndex].LoadFromStream(Stream);
-      except
-        on e: EPascalTypeError do
-          raise EPascalTypeError.CreateFmt('Error loading glyph #%d' + #10 +
-            e.Message, [LocIndex]);
-      end;
+      // Empty glyph
+      FGlyphDataList[LocIndex] := TTrueTypeFontSimpleGlyphData.Create(Storage);
+      continue;
     end;
 
-{$IFDEF AmbigiousExceptions}
-    with Locations do
-      if Locations[LocationCount - 1] > Size then
-        raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-{$ENDIF}
+    Stream.Position := StartPos + Locations[LocIndex];
+
+    Value16 := ReadSwappedSmallInt(Stream);
+
+    if (Value16 < -1) then
+      raise EPascalTypeError.CreateFmt(RCStrUnknownGlyphDataType, [Value16]);
+
+    // set position before number of contours
+    Stream.Seek(-2, soFromCurrent);
+
+    // read number of contours and create glyph data object
+    if Value16 > 0 then
+      FGlyphDataList[LocIndex] := TTrueTypeFontSimpleGlyphData.Create(Storage)
+    else
+      FGlyphDataList[LocIndex] := TTrueTypeFontCompositeGlyphData.Create(Storage);
+
+    try
+      FGlyphDataList[LocIndex].LoadFromStream(Stream);
+    except
+      on e: EPascalTypeError do
+        raise EPascalTypeError.CreateFmt('Error loading glyph #%d'#10 + e.Message, [LocIndex]);
+    end;
   end;
+
+{$IFDEF AmbigiousExceptions}
+  if Locations[Locations.LocationCount - 1] > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+{$ENDIF}
 end;
 
 procedure TTrueTypeFontGlyphDataTable.SaveToStream(Stream: TStream);
