@@ -11,7 +11,11 @@
 { Enable this option, if you want to check even reserved values and other
   not mandatory values.
   * Default: Enabled }
-{$DEFINE AmbigiousExceptions}
+{$DEFINE AmbigiousExceptions} // TODO : Rename this option; Ambigious is not the correct term
+
+{ Enable this option, if you want to raise an exception on non-severe font errors
+  * Default: Disabled }
+{-$DEFINE WarningExceptions}
 
 { If enabled every single read operation is validated to ensure all bytes
   queried could be readed entirely. While this guarantee to identify problems

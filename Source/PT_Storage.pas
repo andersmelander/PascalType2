@@ -72,7 +72,7 @@ begin
   try
     LoadFromStream(FileStream);
   finally
-    FreeAndNil(FileStream);
+    FileStream.Free;
   end;
 end;
 
@@ -87,7 +87,7 @@ begin
   try
     SaveToStream(FileStream);
   finally
-    FreeAndNil(FileStream);
+    FileStream.Free;
   end;
 end;
 

@@ -378,16 +378,16 @@ end;
 
 destructor TPascalTypeDirectoryTable.Destroy;
 begin
-  if Assigned(FHeaderTable) then FreeAndNil(FHeaderTable);
-  if Assigned(FMaxProfileDataEntry) then FreeAndNil(FMaxProfileDataEntry);
-  if Assigned(FHorHeaderDataEntry) then FreeAndNil(FHorHeaderDataEntry);
-  if Assigned(FHorMetricsDataEntry) then FreeAndNil(FHorMetricsDataEntry);
-  if Assigned(FCharMapDataEntry) then FreeAndNil(FCharMapDataEntry);
-  if Assigned(FNameDataEntry) then FreeAndNil(FNameDataEntry);
-  if Assigned(FPostscriptDataEntry) then FreeAndNil(FPostscriptDataEntry);
-  if Assigned(FLocationDataEntry) then FreeAndNil(FLocationDataEntry);
-  if Assigned(FGlyphDataEntry) then FreeAndNil(FGlyphDataEntry);
-  if Assigned(FOS2TableEntry) then FreeAndNil(FOS2TableEntry);
+  FreeAndNil(FHeaderTable);
+  FreeAndNil(FMaxProfileDataEntry);
+  FreeAndNil(FHorHeaderDataEntry);
+  FreeAndNil(FHorMetricsDataEntry);
+  FreeAndNil(FCharMapDataEntry);
+  FreeAndNil(FNameDataEntry);
+  FreeAndNil(FPostscriptDataEntry);
+  FreeAndNil(FLocationDataEntry);
+  FreeAndNil(FGlyphDataEntry);
+  FreeAndNil(FOS2TableEntry);
   FreeAndNil(FTableList);
 
   inherited;
@@ -419,35 +419,16 @@ begin
   FVersion := $10000;
 
   // clear fixed table entries
-  if Assigned(FHeaderTable) then
-    FreeAndNil(FHeaderTable);
-
-  if Assigned(FMaxProfileDataEntry) then
-    FreeAndNil(FMaxProfileDataEntry);
-
-  if Assigned(FHorHeaderDataEntry) then
-    FreeAndNil(FHorHeaderDataEntry );
-
-  if Assigned(FHorMetricsDataEntry) then
-    FreeAndNil(FHorMetricsDataEntry);
-
-  if Assigned(FCharMapDataEntry) then
-    FreeAndNil(FCharMapDataEntry);
-
-  if Assigned(FNameDataEntry) then
-    FreeAndNil(FNameDataEntry);
-
-  if Assigned(FPostscriptDataEntry) then
-    FreeAndNil(FPostscriptDataEntry);
-
-  if Assigned(FLocationDataEntry) then
-    FreeAndNil(FLocationDataEntry);
-
-  if Assigned(FGlyphDataEntry) then
-    FreeAndNil(FGlyphDataEntry);
-
-  if Assigned(FOS2TableEntry) then
-    FreeAndNil(FOS2TableEntry);
+  FreeAndNil(FHeaderTable);
+  FreeAndNil(FMaxProfileDataEntry);
+  FreeAndNil(FHorHeaderDataEntry );
+  FreeAndNil(FHorMetricsDataEntry);
+  FreeAndNil(FCharMapDataEntry);
+  FreeAndNil(FNameDataEntry);
+  FreeAndNil(FPostscriptDataEntry);
+  FreeAndNil(FLocationDataEntry);
+  FreeAndNil(FGlyphDataEntry);
+  FreeAndNil(FOS2TableEntry);
 
   // clear table list
   FTableList.Clear;
@@ -574,13 +555,13 @@ begin
   // check for required tables
   case Version of
     $00010000:
-      if not Assigned(OS2TableEntry) then
+      if (OS2TableEntry = nil) then
         raise EPascalTypeError.Create(RCStrNoOS2Table);
     $74727565:
       begin
-        if not Assigned(FLocationDataEntry) then
+        if (FLocationDataEntry = nil) then
           raise EPascalTypeError.Create(RCStrNoIndexToLocationTable);
-        if not Assigned(FGlyphDataEntry) then
+        if (FGlyphDataEntry = nil) then
           raise EPascalTypeError.Create(RCStrNoGlyphDataTable);
       end;
   end;

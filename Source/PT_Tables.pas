@@ -49,8 +49,7 @@ type
     function GetInternalTableType: TTableType; override;
     procedure ResetToDefaults; override;
   public
-    constructor Create(Storage: IPascalTypeStorageTable; TableTye: TTableType);
-      reintroduce; virtual;
+    constructor Create(const Storage: IPascalTypeStorageTable; TableType: TTableType); reintroduce; virtual;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -1225,7 +1224,7 @@ type
     procedure SuperscriptOffsetYChanged; virtual;
     procedure SuperscriptSizeYChanged; virtual;
   public
-    constructor Create(Storage: IPascalTypeStorageTable); override;
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -1420,10 +1419,9 @@ var
 
 { TPascalTypeUnknownTable }
 
-constructor TPascalTypeUnknownTable.Create(Storage: IPascalTypeStorageTable;
-  TableTye: TTableType);
+constructor TPascalTypeUnknownTable.Create(const Storage: IPascalTypeStorageTable; TableType: TTableType);
 begin
-  FTableType := TableTye;
+  FTableType := TableType;
   FStream := TMemoryStream.Create;
   inherited Create(Storage);
 end;
@@ -1529,89 +1527,86 @@ var
   Value32: Cardinal;
   Value16: Word;
 begin
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 54 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 54 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read version
-    Read(Value32, SizeOf(TFixedPoint));
-    FVersion.Fixed := Swap32(Value32);
+  // read version
+  Stream.Read(Value32, SizeOf(TFixedPoint));
+  FVersion.Fixed := Swap32(Value32);
 
-    // check version
-    if not(Version.Value = 1) then
-      raise EPascalTypeError.Create(RCStrUnsupportedVersion);
+  // check version
+  if not(Version.Value = 1) then
+    raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
-    // read font revision
-    Read(Value32, SizeOf(TFixedPoint));
-    FFontRevision.Fixed := Swap32(Value32);
+  // read font revision
+  Stream.Read(Value32, SizeOf(TFixedPoint));
+  FFontRevision.Fixed := Swap32(Value32);
 
-    // read check sum adjust
-    Read(Value32, SizeOf(Cardinal));
-    FCheckSumAdjustment := Swap32(Value32);
+  // read check sum adjust
+  Stream.Read(Value32, SizeOf(Cardinal));
+  FCheckSumAdjustment := Swap32(Value32);
 
-    // read magic number
-    Read(Value32, SizeOf(TFixedPoint));
-    FMagicNumber := Swap32(Value32);
+  // read magic number
+  Stream.Read(Value32, SizeOf(TFixedPoint));
+  FMagicNumber := Swap32(Value32);
 
-    // check for magic
-    if not(FMagicNumber = $5F0F3CF5) then
-      raise EPascalTypeError.Create(RCStrNoMagic);
+  // check for magic
+  if (FMagicNumber <> $5F0F3CF5) then
+    raise EPascalTypeError.Create(RCStrNoMagic);
 
-    // read flags
-    Value16 := ReadSwappedWord(Stream);
-    FFlags := WordToFontHeaderTableFlags(Value16);
+  // read flags
+  Value16 := ReadSwappedWord(Stream);
+  FFlags := WordToFontHeaderTableFlags(Value16);
 
 {$IFDEF AmbigiousExceptions}
-    if (Value16 shr 14) <> 0 then
-      raise EPascalTypeError.Create(RCStrHeaderFlagError);
+  if (Value16 shr 14) <> 0 then
+    raise EPascalTypeError.Create(RCStrHeaderFlagError);
 {$ENDIF}
-    // read UnitsPerEm
-    FUnitsPerEm := ReadSwappedWord(Stream);
+  // read UnitsPerEm
+  FUnitsPerEm := ReadSwappedWord(Stream);
 
-    // read CreatedDate
-    Read(Value64, SizeOf(Int64));
-    FCreatedDate := Swap64(Value64);
+  // read CreatedDate
+  Stream.Read(Value64, SizeOf(Int64));
+  FCreatedDate := Swap64(Value64);
 
-    // read ModifiedDate
-    FModifiedDate := ReadSwappedInt64(Stream);
+  // read ModifiedDate
+  FModifiedDate := ReadSwappedInt64(Stream);
 
-    // read xMin
-    FxMin := ReadSwappedSmallInt(Stream);
+  // read xMin
+  FxMin := ReadSwappedSmallInt(Stream);
 
-    // read yMin
-    FyMin := ReadSwappedSmallInt(Stream);
+  // read yMin
+  FyMin := ReadSwappedSmallInt(Stream);
 
-    // read xMax
-    FxMax := ReadSwappedSmallInt(Stream);
+  // read xMax
+  FxMax := ReadSwappedSmallInt(Stream);
 
-    // read xMax
-    FyMax := ReadSwappedSmallInt(Stream);
+  // read xMax
+  FyMax := ReadSwappedSmallInt(Stream);
 
-    // read MacStyle
-    FMacStyle := WordToMacStyles(ReadSwappedWord(Stream));
+  // read MacStyle
+  FMacStyle := WordToMacStyles(ReadSwappedWord(Stream));
 
-    // read LowestRecPPEM
-    FLowestRecPPEM := ReadSwappedWord(Stream);
+  // read LowestRecPPEM
+  FLowestRecPPEM := ReadSwappedWord(Stream);
 
-    // read FontDirectionHint
-    FFontDirectionHint := TFontDirectionHint(ReadSwappedSmallInt(Stream));
+  // read FontDirectionHint
+  FFontDirectionHint := TFontDirectionHint(ReadSwappedSmallInt(Stream));
 
-    // read IndexToLocFormat
-    Value16 := ReadSwappedSmallInt(Stream);
-    case Value16 of
-      0:
-        FIndexToLocFormat := ilShort;
-      1:
-        FIndexToLocFormat := ilLong;
-    else
-      raise EPascalTypeError.CreateFmt(RCStrWrongIndexToLocFormat, [Value16]);
-    end;
-
-    // read GlyphDataFormat
-    FGlyphDataFormat := ReadSwappedSmallInt(Stream);
+  // read IndexToLocFormat
+  Value16 := ReadSwappedSmallInt(Stream);
+  case Value16 of
+    0:
+      FIndexToLocFormat := ilShort;
+    1:
+      FIndexToLocFormat := ilLong;
+  else
+    raise EPascalTypeError.CreateFmt(RCStrWrongIndexToLocFormat, [Value16]);
   end;
+
+  // read GlyphDataFormat
+  FGlyphDataFormat := ReadSwappedSmallInt(Stream);
 end;
 
 procedure TPascalTypeHeaderTable.SaveToStream(Stream: TStream);
@@ -1914,8 +1909,7 @@ end;
 
 destructor TCustomPascalTypeCharacterMapDirectory.Destroy;
 begin
-  if Assigned(FCharacterMap) then
-    FreeAndNil(FCharacterMap);
+  FreeAndNil(FCharacterMap);
 
   inherited;
 end;
@@ -1930,8 +1924,7 @@ begin
       // match character map type
       if not(FCharacterMap is Self.FCharacterMap.ClassType) then
       begin
-        if Assigned(FCharacterMap) then
-          FreeAndNil(FCharacterMap);
+        FreeAndNil(FCharacterMap);
 
         // create new character map
         FCharacterMap := TCustomPascalTypeCharacterMapClass
@@ -1939,7 +1932,7 @@ begin
       end;
 
       // assign character map
-      if Assigned(FCharacterMap) then
+      if (FCharacterMap <> nil) then
         FCharacterMap.Assign(Self.FCharacterMap);
     end
   else
@@ -1948,9 +1941,7 @@ end;
 
 procedure TCustomPascalTypeCharacterMapDirectory.ResetToDefaults;
 begin
-  if Assigned(FCharacterMap) then
-    FreeAndNil(FCharacterMap);
-
+  FreeAndNil(FCharacterMap);
   FEncodingID := 0;
 end;
 
@@ -1964,50 +1955,41 @@ begin
   Result := FEncodingID;
 end;
 
-function TCustomPascalTypeCharacterMapDirectory.CharacterToGlyph
-  (CharacterIndex: Integer): Integer;
+function TCustomPascalTypeCharacterMapDirectory.CharacterToGlyph(CharacterIndex: Integer): Integer;
 begin
-  if Assigned(FCharacterMap) then
-    Result := FCharacterMap.CharacterToGlyph(CharacterIndex)
-  else
+  if (FCharacterMap = nil) then
     raise Exception.Create(RCStrCharacterMapNotSet);
+  Result := FCharacterMap.CharacterToGlyph(CharacterIndex);
 end;
 
-procedure TCustomPascalTypeCharacterMapDirectory.LoadFromStream
-  (Stream: TStream);
+procedure TCustomPascalTypeCharacterMapDirectory.LoadFromStream(Stream: TStream);
 var
   Value16 : Word;
   MapClass: TCustomPascalTypeCharacterMapClass;
   OldMap  : TCustomPascalTypeCharacterMap;
 begin
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 2 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 2 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read format
-    Value16 := ReadSwappedWord(Stream);
-    MapClass := FindPascalTypeCharacterMapByFormat(Value16);
+  // read format
+  Value16 := ReadSwappedWord(Stream);
+  MapClass := FindPascalTypeCharacterMapByFormat(Value16);
 
-    if Assigned(MapClass) then
-    begin
-      OldMap := FCharacterMap;
-      FCharacterMap := MapClass.Create;
-      if Assigned(OldMap) then
-        FreeAndNil(OldMap);
-    end
-    else
-      raise EPascalTypeError.CreateFmt(RCStrUnknownCharacterMap, [Value16]);
+  if (MapClass = nil) then
+    raise EPascalTypeError.CreateFmt(RCStrUnknownCharacterMap, [Value16]);
 
-    if Assigned(FCharacterMap) then
-      FCharacterMap.LoadFromStream(Stream);
-  end;
+  OldMap := FCharacterMap;
+  FCharacterMap := MapClass.Create;
+  OldMap.Free;
+
+  if (FCharacterMap <> nil) then
+    FCharacterMap.LoadFromStream(Stream);
 end;
 
 procedure TCustomPascalTypeCharacterMapDirectory.SaveToStream(Stream: TStream);
 begin
-  if Assigned(FCharacterMap) then
+  if (FCharacterMap <> nil) then
     FCharacterMap.SaveToStream(Stream);
 end;
 
@@ -2073,8 +2055,7 @@ end;
 
 { TPascalTypeCharacterMapMicrosoftDirectory }
 
-function TPascalTypeCharacterMapMicrosoftDirectory.GetEncodingID
-  : TMicrosoftEncodingID;
+function TPascalTypeCharacterMapMicrosoftDirectory.GetEncodingID: TMicrosoftEncodingID;
 begin
   Result := TMicrosoftEncodingID(FEncodingID);
 end;
@@ -2084,8 +2065,7 @@ begin
   Result := piMicrosoft;
 end;
 
-procedure TPascalTypeCharacterMapMicrosoftDirectory.SetEncodingID
-  (const Value: TMicrosoftEncodingID);
+procedure TPascalTypeCharacterMapMicrosoftDirectory.SetEncodingID(const Value: TMicrosoftEncodingID);
 begin
   SetEncodingIDAsWord(Word(Value));
 end;
@@ -2131,13 +2111,11 @@ begin
     inherited;
 end;
 
-function TPascalTypeCharacterMapTable.GetCharacterMapSubtable(Index: Integer)
-  : TCustomPascalTypeCharacterMapDirectory;
+function TPascalTypeCharacterMapTable.GetCharacterMapSubtable(Index: Integer): TCustomPascalTypeCharacterMapDirectory;
 begin
-  if (Index >= 0) and (Index < Length(FMaps)) then
-    Result := FMaps[Index]
-  else
+  if (Index < 0) or (Index > High(FMaps)) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FMaps[Index];
 end;
 
 function TPascalTypeCharacterMapTable.GetCharacterMapSubtableCount: Word;
@@ -2163,7 +2141,7 @@ procedure TPascalTypeCharacterMapTable.FreeMapItems;
 var
   MapIndex: Integer;
 begin
-  for MapIndex := 0 to Length(FMaps) - 1 do
+  for MapIndex := 0 to High(FMaps) do
     FreeAndNil(FMaps[MapIndex]);
 end;
 
@@ -2175,68 +2153,61 @@ var
   PlatformID: Word;
   EncodingID: Word;
 begin
-  with Stream do
+  // check (minimum) table size
+  if Stream.Position + 8 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  // store stream start position
+  StartPos := Stream.Position;
+  Assert(StartPos = 0); // assert this for the damn hack used in this table!!!
+
+  // read Version
+  FVersion := ReadSwappedWord(Stream);
+
+  // check version
+  if not(FVersion = 0) then
+    raise EPascalTypeError.Create(RCStrUnsupportedVersion);
+
+  // clear maps
+  FreeMapItems;
+
+  // read subtable count
+  SetLength(FMaps, ReadSwappedWord(Stream));
+
+  // check (minimum) table size
+  if Stream.Position + Length(FMaps) * 8 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  // read directory entry
+  for MapIndex := 0 to High(FMaps) do
   begin
-    // check (minimum) table size
-    if Position + 8 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+    Stream.Position := StartPos + 4 + MapIndex * 8;
 
-    // store stream start position
-    StartPos := Position;
-    Assert(StartPos = 0); // assert this for the damn hack used in this table!!!
+    // read Platform ID
+    PlatformID := ReadSwappedWord(Stream);
 
-    // read Version
-    FVersion := ReadSwappedWord(Stream);
+    // read encoding ID
+    EncodingID := ReadSwappedWord(Stream);
 
-    // check version
-    if not(FVersion = 0) then
-      raise EPascalTypeError.Create(RCStrUnsupportedVersion);
-
-    // clear maps
-    FreeMapItems;
-
-    // read subtable count
-    SetLength(FMaps, ReadSwappedWord(Stream));
-
-    // check (minimum) table size
-    if Position + Length(FMaps) * 8 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-    // read directory entry
-    for MapIndex := 0 to Length(FMaps) - 1 do
-    begin
-      Position := StartPos + 4 + MapIndex * 8;
-
-      // read Platform ID
-      PlatformID := ReadSwappedWord(Stream);
-
-      // read encoding ID
-      EncodingID := ReadSwappedWord(Stream);
-
-      // create character map based on encoding
-      case PlatformID of
-        0:
-          FMaps[MapIndex] := TPascalTypeCharacterMapUnicodeDirectory.Create
-            (EncodingID);
-        1:
-          FMaps[MapIndex] := TPascalTypeCharacterMapMacintoshDirectory.Create
-            (EncodingID);
-        3:
-          FMaps[MapIndex] := TPascalTypeCharacterMapMicrosoftDirectory.Create
-            (EncodingID);
-      else
-        FMaps[MapIndex] := TPascalTypeCharacterMapDirectoryGenericEntry.Create
-          (EncodingID);
-      end;
-
-      // read and apply offset
-      Read(Value32, SizeOf(Cardinal));
-      Position := StartPos + Swap32(Value32);
-
-      // load character map entry from stream
-      if Assigned(FMaps[MapIndex]) then
-        FMaps[MapIndex].LoadFromStream(Stream);
+    // create character map based on encoding
+    case PlatformID of
+      0:
+        FMaps[MapIndex] := TPascalTypeCharacterMapUnicodeDirectory.Create(EncodingID);
+      1:
+        FMaps[MapIndex] := TPascalTypeCharacterMapMacintoshDirectory.Create(EncodingID);
+      3:
+        FMaps[MapIndex] := TPascalTypeCharacterMapMicrosoftDirectory.Create(EncodingID);
+    else
+      FMaps[MapIndex] := TPascalTypeCharacterMapDirectoryGenericEntry.Create(EncodingID);
     end;
+
+    // read and apply offset
+    Stream.Read(Value32, SizeOf(Cardinal));
+    Stream.Position := StartPos + Swap32(Value32);
+
+    // load character map entry from stream
+    if (FMaps[MapIndex] <> nil) then
+      FMaps[MapIndex].LoadFromStream(Stream);
   end;
 end;
 
@@ -2247,46 +2218,41 @@ var
   Directory: array of Cardinal;
   Value32  : Cardinal;
 begin
-  with Stream do
+  // store stream start position
+  StartPos := Stream.Position;
+
+  // write format type
+  WriteSwappedWord(Stream, FVersion);
+
+  // write directory entry count
+  WriteSwappedWord(Stream, Length(FMaps));
+
+  // offset directory
+  Stream.Seek(soFromCurrent, 6 * Length(FMaps));
+
+  // build directory (to be written later) and write data
+  SetLength(Directory, Length(FMaps));
+
+  for DirIndex := 0 to High(FMaps) do
   begin
-    // store stream start position
-    StartPos := Position;
+    Directory[DirIndex] := Cardinal(Stream.Position - StartPos);
+    FMaps[DirIndex].SaveToStream(Stream);
+  end;
 
-    // write format type
-    WriteSwappedWord(Stream, FVersion);
+  // locate directory
+  Stream.Position := StartPos + 4;
 
-    // write directory entry count
-    WriteSwappedWord(Stream, Length(FMaps));
+  for DirIndex := 0 to High(FMaps) do
+  begin
+    // write format
+    WriteSwappedWord(Stream, Word(FMaps[DirIndex].PlatformID));
 
-    // offset directory
-    Seek(soFromCurrent, 6 * Length(FMaps));
+    // write encoding ID
+    WriteSwappedWord(Stream, FMaps[DirIndex].EncodingID);
 
-    // build directory (to be written later) and write data
-    SetLength(Directory, Length(FMaps));
-
-    for DirIndex := 0 to Length(FMaps) - 1 do
-      with FMaps[DirIndex] do
-      begin
-        Directory[DirIndex] := Cardinal(Position - StartPos);
-        SaveToStream(Stream);
-      end;
-
-    // locate directory
-    Position := StartPos + 4;
-
-    for DirIndex := 0 to Length(FMaps) - 1 do
-      with FMaps[DirIndex] do
-      begin
-        // write format
-        WriteSwappedWord(Stream, Word(PlatformID));
-
-        // write encoding ID
-        WriteSwappedWord(Stream, EncodingID);
-
-        // write offset
-        Value32 := Directory[DirIndex];
-        Write(Value32, SizeOf(Cardinal));
-      end;
+    // write offset
+    Value32 := Directory[DirIndex];
+    Stream.Write(Value32, SizeOf(Cardinal));
   end;
 end;
 
@@ -2357,68 +2323,65 @@ procedure TPascalTypeHorizontalHeaderTable.LoadFromStream(Stream: TStream);
 var
   Value32: Cardinal;
 begin
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 32 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 32 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read version
-    Read(Value32, SizeOf(TFixedPoint));
-    FVersion.Fixed := Swap32(Value32);
+  // read version
+  Stream.Read(Value32, SizeOf(TFixedPoint));
+  FVersion.Fixed := Swap32(Value32);
 
-    // check version
-    if not(Version.Value = 1) then
-      raise EPascalTypeError.Create(RCStrUnsupportedVersion);
+  // check version
+  if not(Version.Value = 1) then
+    raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
-    // read Ascent
-    FAscent := ReadSwappedSmallInt(Stream);
+  // read Ascent
+  FAscent := ReadSwappedSmallInt(Stream);
 
-    // read Descent
-    FDescent := ReadSwappedSmallInt(Stream);
+  // read Descent
+  FDescent := ReadSwappedSmallInt(Stream);
 
-    // read LineGap
-    FLineGap := ReadSwappedSmallInt(Stream);
+  // read LineGap
+  FLineGap := ReadSwappedSmallInt(Stream);
 
-    // read AdvanceWidthMax
-    FAdvanceWidthMax := ReadSwappedWord(Stream);
+  // read AdvanceWidthMax
+  FAdvanceWidthMax := ReadSwappedWord(Stream);
 
-    // read MinLeftSideBearing
-    FMinLeftSideBearing := ReadSwappedSmallInt(Stream);
+  // read MinLeftSideBearing
+  FMinLeftSideBearing := ReadSwappedSmallInt(Stream);
 
-    // read MinRightSideBearing
-    FMinRightSideBearing := ReadSwappedSmallInt(Stream);
+  // read MinRightSideBearing
+  FMinRightSideBearing := ReadSwappedSmallInt(Stream);
 
-    // read XMaxExtent
-    FXMaxExtent := ReadSwappedSmallInt(Stream);
+  // read XMaxExtent
+  FXMaxExtent := ReadSwappedSmallInt(Stream);
 
-    // read CaretSlopeRise
-    FCaretSlopeRise := ReadSwappedSmallInt(Stream);
+  // read CaretSlopeRise
+  FCaretSlopeRise := ReadSwappedSmallInt(Stream);
 
-    // read CaretSlopeRun
-    FCaretSlopeRun := ReadSwappedSmallInt(Stream);
+  // read CaretSlopeRun
+  FCaretSlopeRun := ReadSwappedSmallInt(Stream);
 
-    // read CaretOffset
-    FCaretOffset := ReadSwappedSmallInt(Stream);
+  // read CaretOffset
+  FCaretOffset := ReadSwappedSmallInt(Stream);
 
 {$IFDEF AmbigiousExceptions}
-    Read(Value32, SizeOf(Cardinal));
-    if Value32 <> 0 then
-      raise EPascalTypeError.Create(RCStrHorizontalHeaderReserved);
+  Stream.Read(Value32, SizeOf(Cardinal));
+  if Value32 <> 0 then
+    raise EPascalTypeError.Create(RCStrHorizontalHeaderReserved);
 
-    Read(Value32, SizeOf(Cardinal));
-    if Value32 <> 0 then
-      raise EPascalTypeError.Create(RCStrHorizontalHeaderReserved);
+  Stream.Read(Value32, SizeOf(Cardinal));
+  if Value32 <> 0 then
+    raise EPascalTypeError.Create(RCStrHorizontalHeaderReserved);
 {$ELSE}
-    // reserved (ignore!)
-    Position := Position + 8;
+  // reserved (ignore!)
+  Position := Position + 8;
 {$ENDIF}
-    // read MetricDataFormat
-    FMetricDataFormat := ReadSwappedSmallInt(Stream);
+  // read MetricDataFormat
+  FMetricDataFormat := ReadSwappedSmallInt(Stream);
 
-    // read NumOfLongHorMetrics
-    FNumOfLongHorMetrics := ReadSwappedWord(Stream);
-  end;
+  // read NumOfLongHorMetrics
+  FNumOfLongHorMetrics := ReadSwappedWord(Stream);
 end;
 
 procedure TPascalTypeHorizontalHeaderTable.SaveToStream(Stream: TStream);
@@ -2467,8 +2430,7 @@ begin
   WriteSwappedWord(Stream, FNumOfLongHorMetrics);
 end;
 
-procedure TPascalTypeHorizontalHeaderTable.SetAdvanceWidthMax
-  (const Value: Word);
+procedure TPascalTypeHorizontalHeaderTable.SetAdvanceWidthMax(const Value: Word);
 begin
   if FAdvanceWidthMax <> Value then
   begin
@@ -2486,8 +2448,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeHorizontalHeaderTable.SetCaretOffset
-  (const Value: SmallInt);
+procedure TPascalTypeHorizontalHeaderTable.SetCaretOffset(const Value: SmallInt);
 begin
   if FCaretOffset <> Value then
   begin
@@ -2506,8 +2467,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeHorizontalHeaderTable.SetCaretSlopeRun
-  (const Value: SmallInt);
+procedure TPascalTypeHorizontalHeaderTable.SetCaretSlopeRun(const Value: SmallInt);
 begin
   if FCaretSlopeRun <> Value then
   begin
@@ -2534,8 +2494,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeHorizontalHeaderTable.SetMetricDataFormat
-  (const Value: SmallInt);
+procedure TPascalTypeHorizontalHeaderTable.SetMetricDataFormat(const Value: SmallInt);
 begin
   if FMetricDataFormat <> Value then
   begin
@@ -2544,8 +2503,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeHorizontalHeaderTable.SetMinLeftSideBearing
-  (const Value: SmallInt);
+procedure TPascalTypeHorizontalHeaderTable.SetMinLeftSideBearing(const Value: SmallInt);
 begin
   if FMinLeftSideBearing <> Value then
   begin
@@ -2554,8 +2512,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeHorizontalHeaderTable.SetMinRightSideBearing
-  (const Value: SmallInt);
+procedure TPascalTypeHorizontalHeaderTable.SetMinRightSideBearing(const Value: SmallInt);
 begin
   if FMinRightSideBearing <> Value then
   begin
@@ -2564,8 +2521,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeHorizontalHeaderTable.SetNumOfLongHorMetrics
-  (const Value: Word);
+procedure TPascalTypeHorizontalHeaderTable.SetNumOfLongHorMetrics(const Value: Word);
 begin
   if FNumOfLongHorMetrics <> Value then
   begin
@@ -2692,12 +2648,10 @@ const
 begin
   inherited;
 
-  HorHead := TPascalTypeHorizontalHeaderTable
-    (FStorage.GetTableByTableName('hhea'));
-  Assert(Assigned(HorHead));
-  MaxProf := TPascalTypeMaximumProfileTable
-    (FStorage.GetTableByTableType(CMaxProfTableType));
-  Assert(Assigned(MaxProf));
+  HorHead := TPascalTypeHorizontalHeaderTable(Storage.GetTableByTableName('hhea'));
+  Assert(HorHead <> nil);
+  MaxProf := TPascalTypeMaximumProfileTable(Storage.GetTableByTableType(CMaxProfTableType));
+  Assert(MaxProf <> nil);
 
   // check if vertical metrics header is available
   if HorHead = nil then
@@ -2746,8 +2700,7 @@ begin
   inherited;
 
   // locate horizontal header
-  HorHead := TPascalTypeHorizontalHeaderTable
-    (FStorage.GetTableByTableName('hhea'));
+  HorHead := TPascalTypeHorizontalHeaderTable(Storage.GetTableByTableName('hhea'));
 
   // check if vertical metrics header is available
   if HorHead = nil then
@@ -3082,7 +3035,7 @@ procedure TPascalTypeNameTable.FreeNameSubTables;
 var
   NameIndex: Integer;
 begin
-  for NameIndex := 0 to Length(FNameSubTables) - 1 do
+  for NameIndex := 0 to High(FNameSubTables) do
     FreeAndNil(FNameSubTables[NameIndex]);
 end;
 
@@ -3130,7 +3083,7 @@ begin
     if Position + Length(FNameSubTables) * 12 > Size then
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    for NameIndex := 0 to Length(FNameSubTables) - 1 do
+    for NameIndex := 0 to High(FNameSubTables) do
     begin
       // read platform ID
       Value16 := ReadSwappedWord(Stream);
@@ -3247,87 +3200,84 @@ end;
 
 procedure TPascalTypeMaximumProfileTable.LoadFromStream(Stream: TStream);
 begin
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + $6 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + $6 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read version
-    FVersion.Fixed := ReadSwappedCardinal(Stream);
+  // read version
+  FVersion.Fixed := ReadSwappedCardinal(Stream);
 
 {$IFDEF AmbigiousExceptions}
-    if Version.Value > 1 then
-      raise EPascalTypeError.Create(RCStrUnsupportedVersion);
+//  if Version.Value > 1 then
+//    raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 {$ENDIF}
-    if (Version.Value = 0) and (Version.Fract < $5000) then
-      raise EPascalTypeError.Create(RCStrUnsupportedVersion);
+  if (Version.Fixed <> $00010000) and (Version.Fixed <> $00005000) then
+    raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
-    // read glyphs count
-    FNumGlyphs := ReadSwappedWord(Stream);
+  // read glyphs count
+  FNumGlyphs := ReadSwappedWord(Stream);
 
-    // set post script values to maximum
-    if (Version.Value = 0) and (Version.Fract >= 5) then
-    begin
-      FMaxPoints := High(Word);
-      FMaxContours := High(Word);
-      FMaxCompositePoints := High(Word);
-      FMaxCompositeContours := High(Word);
-      FMaxZones := High(Word);
-      FMaxTwilightPoints := High(Word);
-      FMaxStorage := High(Word);
-      FMaxFunctionDefs := High(Word);
-      FMaxInstructionDefs := High(Word);
-      FMaxStackElements := High(Word);
-      FMaxSizeOfInstructions := High(Word);
-      FMaxComponentElements := High(Word);
-      FMaxComponentDepth := High(Word);
-      Exit;
-    end;
-
-    // check (minimum) table size
-    if Position + $1A > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-    // read max points
-    FMaxPoints := ReadSwappedWord(Stream);
-
-    // read max contours
-    FMaxContours := ReadSwappedWord(Stream);
-
-    // read max composite points
-    FMaxCompositePoints := ReadSwappedWord(Stream);
-
-    // read max composite contours
-    FMaxCompositeContours := ReadSwappedWord(Stream);
-
-    // read max zones
-    FMaxZones := ReadSwappedWord(Stream);
-
-    // read max twilight points
-    FMaxTwilightPoints := ReadSwappedWord(Stream);
-
-    // read max storage
-    FMaxStorage := ReadSwappedWord(Stream);
-
-    // read max function defs
-    FMaxFunctionDefs := ReadSwappedWord(Stream);
-
-    // read max instruction defs
-    FMaxInstructionDefs := ReadSwappedWord(Stream);
-
-    // read max stack elements
-    FMaxStackElements := ReadSwappedWord(Stream);
-
-    // read max size of instructions
-    FMaxSizeOfInstructions := ReadSwappedWord(Stream);
-
-    // read max component elements
-    FMaxComponentElements := ReadSwappedWord(Stream);
-
-    // read max component depth
-    FMaxComponentDepth := ReadSwappedWord(Stream);
+  // set postscript values to maximum
+  if (Version.Fixed = $00005000) then
+  begin
+    FMaxPoints := High(Word);
+    FMaxContours := High(Word);
+    FMaxCompositePoints := High(Word);
+    FMaxCompositeContours := High(Word);
+    FMaxZones := High(Word);
+    FMaxTwilightPoints := High(Word);
+    FMaxStorage := High(Word);
+    FMaxFunctionDefs := High(Word);
+    FMaxInstructionDefs := High(Word);
+    FMaxStackElements := High(Word);
+    FMaxSizeOfInstructions := High(Word);
+    FMaxComponentElements := High(Word);
+    FMaxComponentDepth := High(Word);
+    Exit;
   end;
+
+  // check (minimum) table size
+  if Stream.Position + $1A > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  // read max points
+  FMaxPoints := ReadSwappedWord(Stream);
+
+  // read max contours
+  FMaxContours := ReadSwappedWord(Stream);
+
+  // read max composite points
+  FMaxCompositePoints := ReadSwappedWord(Stream);
+
+  // read max composite contours
+  FMaxCompositeContours := ReadSwappedWord(Stream);
+
+  // read max zones
+  FMaxZones := ReadSwappedWord(Stream);
+
+  // read max twilight points
+  FMaxTwilightPoints := ReadSwappedWord(Stream);
+
+  // read max storage
+  FMaxStorage := ReadSwappedWord(Stream);
+
+  // read max function defs
+  FMaxFunctionDefs := ReadSwappedWord(Stream);
+
+  // read max instruction defs
+  FMaxInstructionDefs := ReadSwappedWord(Stream);
+
+  // read max stack elements
+  FMaxStackElements := ReadSwappedWord(Stream);
+
+  // read max size of instructions
+  FMaxSizeOfInstructions := ReadSwappedWord(Stream);
+
+  // read max component elements
+  FMaxComponentElements := ReadSwappedWord(Stream);
+
+  // read max component depth
+  FMaxComponentDepth := ReadSwappedWord(Stream);
 end;
 
 procedure TPascalTypeMaximumProfileTable.SaveToStream(Stream: TStream);
@@ -3388,8 +3338,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeMaximumProfileTable.SetMaxComponentElements
-  (const Value: Word);
+procedure TPascalTypeMaximumProfileTable.SetMaxComponentElements(const Value: Word);
 begin
   if FMaxComponentElements <> Value then
   begin
@@ -3398,8 +3347,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeMaximumProfileTable.SetMaxCompositeContours
-  (const Value: Word);
+procedure TPascalTypeMaximumProfileTable.SetMaxCompositeContours(const Value: Word);
 begin
   if FMaxCompositeContours <> Value then
   begin
@@ -3408,8 +3356,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeMaximumProfileTable.SetMaxCompositePoints
-  (const Value: Word);
+procedure TPascalTypeMaximumProfileTable.SetMaxCompositePoints(const Value: Word);
 begin
   if FMaxCompositePoints <> Value then
   begin
@@ -3436,8 +3383,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeMaximumProfileTable.SetMaxInstructionDefs
-  (const Value: Word);
+procedure TPascalTypeMaximumProfileTable.SetMaxInstructionDefs(const Value: Word);
 begin
   if FMaxInstructionDefs <> Value then
   begin
@@ -3455,8 +3401,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeMaximumProfileTable.SetMaxSizeOfInstructions
-  (const Value: Word);
+procedure TPascalTypeMaximumProfileTable.SetMaxSizeOfInstructions(const Value: Word);
 begin
   if FMaxSizeOfInstructions <> Value then
   begin
@@ -3483,8 +3428,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeMaximumProfileTable.SetMaxTwilightPoints
-  (const Value: Word);
+procedure TPascalTypeMaximumProfileTable.SetMaxTwilightPoints(const Value: Word);
 begin
   if FMaxTwilightPoints <> Value then
   begin
@@ -5005,7 +4949,7 @@ end;
 
 { TPascalTypeOS2Table }
 
-constructor TPascalTypeOS2Table.Create(Storage: IPascalTypeStorageTable);
+constructor TPascalTypeOS2Table.Create(const AStorage: IPascalTypeStorageTable);
 begin
   FPanose := TPascalTypeDefaultPanoseTable.Create;
   FUnicodeRangeTable := TPascalTypeUnicodeRangeTable.Create;
@@ -5016,10 +4960,8 @@ destructor TPascalTypeOS2Table.Destroy;
 begin
   FreeAndNil(FPanose);
   FreeAndNil(FUnicodeRangeTable);
-  if Assigned(FCodePageRange) then
-    FreeAndNil(FCodePageRange);
-  if Assigned(FAddendumTable) then
-    FreeAndNil(FAddendumTable);
+  FreeAndNil(FCodePageRange);
+  FreeAndNil(FAddendumTable);
   inherited;
 end;
 
@@ -5204,7 +5146,7 @@ begin
   // find panose family class by type
   PanoseFamilyClass := FindPascalTypePanoseByType(PanoseFamilyKind);
 
-  if not Assigned(PanoseFamilyClass) then
+  if (PanoseFamilyClass = nil) then
   begin
     if not(FPanose is TPascalTypeDefaultPanoseTable) then
     begin
@@ -5217,8 +5159,8 @@ begin
 
     // rewind current position to read the family type as well
     Stream.Seek(-1, soFromCurrent);
-  end
-  else if not(FPanose is PanoseFamilyClass) then
+  end else
+  if not(FPanose is PanoseFamilyClass) then
   begin
     // free other panose object
     FreeAndNil(FPanose);
@@ -5268,8 +5210,8 @@ begin
   FWindowsDescent := ReadSwappedWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
-  HorizontalHeader := TPascalTypeHorizontalHeaderTable(FStorage.GetTableByTableName('hhea'));
-  Assert(Assigned(HorizontalHeader));
+  HorizontalHeader := TPascalTypeHorizontalHeaderTable(Storage.GetTableByTableName('hhea'));
+  Assert(HorizontalHeader <> nil);
 
   if fsfUseTypoMetrics in FontSelectionFlags then
   begin
@@ -5297,7 +5239,7 @@ begin
   if Version > 0 then
   begin
     // check if codepage range exists
-    if not Assigned(FCodePageRange) then
+    if (FCodePageRange = nil) then
       FCodePageRange := TPascalTypeOS2CodePageRangeTable.Create;
 
     // load codepage range from stream
@@ -5307,7 +5249,7 @@ begin
     if Version >= 2 then
     begin
       // check if addendum table exists
-      if not Assigned(FAddendumTable) then
+      if (FAddendumTable = nil) then
         FAddendumTable := TPascalTypeOS2AddendumTable.Create;
 
       // load addendum table from stream
@@ -5407,17 +5349,17 @@ begin
   if (FVersion > 0) then
   begin
     // check if code page range has been set and eventually save to stream
-    if Assigned(FCodePageRange) then
-      FCodePageRange.SaveToStream(Stream)
-    else
+    if (FCodePageRange = nil) then
       raise EPascalTypeError.Create(RCStrCodePageRangeTableUndefined);
+    FCodePageRange.SaveToStream(Stream);
 
     // check if addendum table has been set and eventually save to stream
     if Version >= 2 then
-      if Assigned(FAddendumTable) then
-        FAddendumTable.SaveToStream(Stream)
-      else
+    begin
+      if (FAddendumTable = nil) then
         raise EPascalTypeError.Create(RCStrAddendumTableUndefined);
+      FAddendumTable.SaveToStream(Stream);
+    end;
   end;
 end;
 
@@ -5507,30 +5449,32 @@ begin
   FPanose.Assign(Value);
 end;
 
-procedure TPascalTypeOS2Table.SetAddendumTable(const Value
-  : TPascalTypeOS2AddendumTable);
+procedure TPascalTypeOS2Table.SetAddendumTable(const Value: TPascalTypeOS2AddendumTable);
 begin
-  if Assigned(FAddendumTable) then
-    if Assigned(Value) then
+  if (FAddendumTable <> nil) then
+  begin
+    if (Value <> nil) then
       FAddendumTable.Assign(Value)
     else
       FreeAndNil(FAddendumTable)
-  else if Assigned(Value) then
+  end else
+  if (Value <> nil) then
   begin
     FAddendumTable := TPascalTypeOS2AddendumTable.Create;
     FAddendumTable.Assign(Value);
   end;
 end;
 
-procedure TPascalTypeOS2Table.SetCodePageRange(const Value
-  : TPascalTypeOS2CodePageRangeTable);
+procedure TPascalTypeOS2Table.SetCodePageRange(const Value: TPascalTypeOS2CodePageRangeTable);
 begin
-  if Assigned(FCodePageRange) then
-    if Assigned(Value) then
+  if (FCodePageRange <> nil) then
+  begin
+    if (Value <> nil) then
       FCodePageRange.Assign(Value)
     else
       FreeAndNil(FCodePageRange)
-  else if Assigned(Value) then
+  end else
+  if (Value <> nil) then
   begin
     FCodePageRange := TPascalTypeOS2CodePageRangeTable.Create;
     FCodePageRange.Assign(Value);
@@ -5867,27 +5811,23 @@ begin
   if FVersion > 0 then
   begin
     // create code page range table if it doesn't exists
-    if not Assigned(FCodePageRange) then
+    if (FCodePageRange = nil) then
       FCodePageRange := TPascalTypeOS2CodePageRangeTable.Create;
 
     if FVersion >= 2 then
     begin
       // create addendum table if it doesn't exists
-      if not Assigned(FAddendumTable) then
+      if (FAddendumTable = nil) then
         FAddendumTable := TPascalTypeOS2AddendumTable.Create;
-    end
-    else if Assigned(FAddendumTable) then
+    end else
       FreeAndNil(FAddendumTable);
-  end
-  else
+  end else
   begin
     // free code page range if not needed
-    if Assigned(FCodePageRange) then
-      FreeAndNil(FCodePageRange);
+    FreeAndNil(FCodePageRange);
 
     // free addendum table if not needed
-    if Assigned(FAddendumTable) then
-      FreeAndNil(FAddendumTable);
+    FreeAndNil(FAddendumTable);
   end;
 
   Changed;
@@ -5953,9 +5893,7 @@ end;
 
 destructor TPascalTypePostscriptTable.Destroy;
 begin
-  if Assigned(FPostscriptV2Table) then
-    FreeAndNil(FPostscriptV2Table);
-
+  FreeAndNil(FPostscriptV2Table);
   inherited;
 end;
 
@@ -5978,9 +5916,9 @@ begin
       FMaxMemType42 := Self.FMaxMemType42;
       FMinMemType1 := Self.FMinMemType1;
       FMaxMemType1 := Self.FMaxMemType1;
-      if Assigned(Self.FPostscriptV2Table) then
+      if (Self.FPostscriptV2Table <> nil) then
       begin
-        if not Assigned(FPostscriptV2Table) then
+        if (FPostscriptV2Table = nil) then
           FPostscriptV2Table := TPascalTypePostscriptVersion2Table.Create;
         FPostscriptV2Table.Assign(Self.FPostscriptV2Table);
       end;
@@ -6054,7 +5992,7 @@ begin
 
     if FVersion.Value = 2 then
     begin
-      if not Assigned(FPostscriptV2Table) then
+      if (FPostscriptV2Table = nil) then
         FPostscriptV2Table := TPascalTypePostscriptVersion2Table.Create;
       FPostscriptV2Table.LoadFromStream(Stream);
     end;
@@ -6291,15 +6229,15 @@ begin
       Position := Position + 2 * Length(FGlyphNameIndex);
     end
     else
-      for GlyphIndex := 0 to Length(FGlyphNameIndex) - 1 do
+      for GlyphIndex := 0 to High(FGlyphNameIndex) do
         FGlyphNameIndex[GlyphIndex] := ReadSwappedWord(Stream);
 
     while Position < Size do
     begin
       Read(Value8, SizeOf(Byte));
       SetLength(FNames, Length(FNames) + 1);
-      SetLength(FNames[Length(FNames) - 1], Value8);
-      Read(FNames[Length(FNames) - 1][1], Value8);
+      SetLength(FNames[High(FNames)], Value8);
+      Read(FNames[High(FNames)][1], Value8);
     end;
   end;
 end;
@@ -6317,7 +6255,7 @@ var
   CharacterMapClassIndex: Integer;
 begin
   Result := False;
-  for CharacterMapClassIndex := 0 to Length(GCharacterMapClasses) - 1 do
+  for CharacterMapClassIndex := 0 to High(GCharacterMapClasses) do
     if GCharacterMapClasses[CharacterMapClassIndex] = CharacterMapClass then
     begin
       Result := True;
@@ -6331,9 +6269,9 @@ var
   CharacterMapClassIndex    : Integer;
 begin
   Result := True;
-  for CharacterMapClassBaseIndex := 0 to Length(GCharacterMapClasses) - 1 do
+  for CharacterMapClassBaseIndex := 0 to High(GCharacterMapClasses) do
     for CharacterMapClassIndex := CharacterMapClassBaseIndex +
-      1 to Length(GCharacterMapClasses) - 1 do
+      1 to High(GCharacterMapClasses) do
       if GCharacterMapClasses[CharacterMapClassBaseIndex] = GCharacterMapClasses
         [CharacterMapClassIndex] then
       begin
@@ -6347,7 +6285,7 @@ procedure RegisterPascalTypeCharacterMap(CharacterMapClass
 begin
   Assert(IsPascalTypeCharacterMapRegistered(CharacterMapClass) = False);
   SetLength(GCharacterMapClasses, Length(GCharacterMapClasses) + 1);
-  GCharacterMapClasses[Length(GCharacterMapClasses) - 1] := CharacterMapClass;
+  GCharacterMapClasses[High(GCharacterMapClasses)] := CharacterMapClass;
 end;
 
 procedure RegisterPascalTypeCharacterMaps(CharacterMapClasses
@@ -6357,7 +6295,7 @@ var
 begin
   SetLength(GCharacterMapClasses, Length(GCharacterMapClasses) +
     Length(CharacterMapClasses));
-  for CharacterMapClassIndex := 0 to Length(CharacterMapClasses) - 1 do
+  for CharacterMapClassIndex := 0 to High(CharacterMapClasses) do
     GCharacterMapClasses[Length(GCharacterMapClasses) -
       Length(CharacterMapClasses) + CharacterMapClassIndex] :=
       CharacterMapClasses[CharacterMapClassIndex];
@@ -6370,7 +6308,7 @@ var
   CharacterMapClassIndex: Integer;
 begin
   Result := nil;
-  for CharacterMapClassIndex := 0 to Length(GCharacterMapClasses) - 1 do
+  for CharacterMapClassIndex := 0 to High(GCharacterMapClasses) do
     if GCharacterMapClasses[CharacterMapClassIndex].GetFormat = Format then
     begin
       Result := GCharacterMapClasses[CharacterMapClassIndex];
@@ -6387,7 +6325,7 @@ var
   PanoseClassIndex: Integer;
 begin
   Result := False;
-  for PanoseClassIndex := 0 to Length(GPanoseClasses) - 1 do
+  for PanoseClassIndex := 0 to High(GPanoseClasses) do
     if GPanoseClasses[PanoseClassIndex] = PanoseClass then
     begin
       Result := True;
@@ -6399,7 +6337,7 @@ procedure RegisterPascalTypePanose(PanoseClass: TCustomPascalTypePanoseClass);
 begin
   Assert(IsPascalTypePanoseRegistered(PanoseClass) = False);
   SetLength(GPanoseClasses, Length(GPanoseClasses) + 1);
-  GPanoseClasses[Length(GPanoseClasses) - 1] := PanoseClass;
+  GPanoseClasses[High(GPanoseClasses)] := PanoseClass;
 end;
 
 procedure RegisterPascalTypePanoses(PanoseClasses
@@ -6407,7 +6345,7 @@ procedure RegisterPascalTypePanoses(PanoseClasses
 var
   PanoseClassIndex: Integer;
 begin
-  for PanoseClassIndex := 0 to Length(PanoseClasses) - 1 do
+  for PanoseClassIndex := 0 to High(PanoseClasses) do
     RegisterPascalTypePanose(PanoseClasses[PanoseClassIndex]);
 end;
 
@@ -6417,7 +6355,7 @@ var
   PanoseClassIndex: Integer;
 begin
   Result := nil;
-  for PanoseClassIndex := 0 to Length(GPanoseClasses) - 1 do
+  for PanoseClassIndex := 0 to High(GPanoseClasses) do
     if GPanoseClasses[PanoseClassIndex].GetFamilyType = PanoseType then
     begin
       Result := GPanoseClasses[PanoseClassIndex];
@@ -6428,13 +6366,12 @@ end;
 
 /// /////////////////////////////////////////////////////////////////////////////
 
-function IsPascalTypeTableRegistered(TableClass
-  : TCustomPascalTypeNamedTableClass): Boolean;
+function IsPascalTypeTableRegistered(TableClass: TCustomPascalTypeNamedTableClass): Boolean;
 var
   TableClassIndex: Integer;
 begin
   Result := False;
-  for TableClassIndex := 0 to Length(GTableClasses) - 1 do
+  for TableClassIndex := 0 to High(GTableClasses) do
     if GTableClasses[TableClassIndex] = TableClass then
     begin
       Result := True;
@@ -6448,11 +6385,9 @@ var
   TableClassIndex    : Integer;
 begin
   Result := True;
-  for TableClassBaseIndex := 0 to Length(GTableClasses) - 1 do
-    for TableClassIndex := TableClassBaseIndex +
-      1 to Length(GTableClasses) - 1 do
-      if GTableClasses[TableClassBaseIndex] = GTableClasses[TableClassIndex]
-      then
+  for TableClassBaseIndex := 0 to High(GTableClasses) do
+    for TableClassIndex := TableClassBaseIndex + 1 to High(GTableClasses) do
+      if GTableClasses[TableClassBaseIndex] = GTableClasses[TableClassIndex] then
       begin
         Result := False;
         Exit;
@@ -6463,28 +6398,25 @@ procedure RegisterPascalTypeTable(TableClass: TCustomPascalTypeNamedTableClass);
 begin
   Assert(IsPascalTypeTableRegistered(TableClass) = False);
   SetLength(GTableClasses, Length(GTableClasses) + 1);
-  GTableClasses[Length(GTableClasses) - 1] := TableClass;
+  GTableClasses[High(GTableClasses)] := TableClass;
 end;
 
-procedure RegisterPascalTypeTables(TableClasses
-  : array of TCustomPascalTypeNamedTableClass);
+procedure RegisterPascalTypeTables(TableClasses: array of TCustomPascalTypeNamedTableClass);
 var
   TableClassIndex: Integer;
 begin
   SetLength(GTableClasses, Length(GTableClasses) + Length(TableClasses));
-  for TableClassIndex := 0 to Length(TableClasses) - 1 do
-    GTableClasses[Length(GTableClasses) - Length(TableClasses) +
-      TableClassIndex] := TableClasses[TableClassIndex];
+  for TableClassIndex := 0 to High(TableClasses) do
+    GTableClasses[Length(GTableClasses) - Length(TableClasses) + TableClassIndex] := TableClasses[TableClassIndex];
   Assert(CheckGlobalTableClassesValid);
 end;
 
-function FindPascalTypeTableByType(TableType: TTableType)
-  : TCustomPascalTypeNamedTableClass;
+function FindPascalTypeTableByType(TableType: TTableType): TCustomPascalTypeNamedTableClass;
 var
   TableClassIndex: Integer;
 begin
   Result := nil;
-  for TableClassIndex := 0 to Length(GTableClasses) - 1 do
+  for TableClassIndex := 0 to High(GTableClasses) do
     if GTableClasses[TableClassIndex].GetTableType.AsCardinal = TableType.AsCardinal then
     begin
       Result := GTableClasses[TableClassIndex];

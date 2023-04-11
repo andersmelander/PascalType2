@@ -108,7 +108,7 @@ type
     procedure PixelPerInchXChanged; virtual;
     procedure PixelPerInchYChanged; virtual;
 
-    procedure RenderText(Text: string);
+    procedure RenderText(const Text: string);
     procedure RenderCharacter(Character: AnsiChar);
     property Storage: TPascalTypeStorage read FStorage;
     property ScalerX: TScaleType read FScalerX;
@@ -119,8 +119,8 @@ type
 
     procedure LoadFromStream(Stream: TStream); virtual;
     procedure SaveToStream(Stream: TStream); virtual;
-    procedure LoadFromFile(FileName: TFileName);
-    procedure SaveToFile(FileName: TFileName);
+    procedure LoadFromFile(const FileName: TFileName);
+    procedure SaveToFile(const FileName: TFileName);
 
     property FontName: string read GetFontName;
     property FontHeight: Integer read FFontHeight write SetFontHeight
@@ -205,7 +205,7 @@ begin
   inherited;
 end;
 
-procedure TCustomPascalTypeFontEngine.LoadFromFile(FileName: TFileName);
+procedure TCustomPascalTypeFontEngine.LoadFromFile(const FileName: TFileName);
 begin
   FStorage.LoadFromFile(FileName);
 
@@ -223,7 +223,7 @@ begin
   // SetLength(FScaledGlyphs
 end;
 
-procedure TCustomPascalTypeFontEngine.SaveToFile(FileName: TFileName);
+procedure TCustomPascalTypeFontEngine.SaveToFile(const FileName: TFileName);
 begin
   FStorage.SaveToFile(FileName);
 end;
@@ -233,7 +233,7 @@ begin
   FStorage.SaveToStream(Stream);
 end;
 
-procedure TCustomPascalTypeFontEngine.RenderText(Text: string);
+procedure TCustomPascalTypeFontEngine.RenderText(const Text: string);
 var
   CharIndex: Integer;
 begin
@@ -261,7 +261,7 @@ procedure TCustomPascalTypeFontEngine.ClearScaledGlyphs;
 var
   GlyphIndex: Integer;
 begin
-  for GlyphIndex := 0 to Length(FScaledGlyphs) - 1 do
+  for GlyphIndex := 0 to High(FScaledGlyphs) do
     FreeAndNil(FScaledGlyphs[GlyphIndex]);
   SetLength(FScaledGlyphs, 0);
 end;
@@ -280,10 +280,8 @@ begin
       // get horizontal metrics
       with HorizontalMetrics, FScaledGlyphs[GlyphIndex] do
       begin
-        FAdvanceWidth := RoundedScaleX(HorizontalMetric[GlyphIndex]
-          .AdvanceWidth);
-        FLeftSideBearing :=
-          RoundedScaleY(HorizontalMetric[GlyphIndex].AdvanceWidth);
+        FAdvanceWidth := RoundedScaleX(HorizontalMetric[GlyphIndex].AdvanceWidth);
+        FLeftSideBearing := RoundedScaleY(HorizontalMetric[GlyphIndex].AdvanceWidth);
       end;
 
       if not(htfIntegerScaling in HeaderTable.Flags) then
@@ -354,42 +352,50 @@ begin
   Result := -Int64(FFontHeight * 72) div FPixelPerInchY;
 end;
 
-function TCustomPascalTypeFontEngine.GetGlyphByCharacter
-  (Character: Word): Integer;
+function TCustomPascalTypeFontEngine.GetGlyphByCharacter(Character: Word): Integer;
 var
   CharMapIndex: Integer;
+{$IFDEF MSWINDOWS}
+  CharacterMapDirectory: TPascalTypeCharacterMapMicrosoftDirectory;
+{$ENDIF}
+{$IFDEF OSX}
+  CharacterMapDirectory: TPascalTypeCharacterMapMacintoshDirectory;
+{$ENDIF}
 begin
   // direct translate character to glyph (will most probably fail!!!
   Result := Integer(Character);
 
-  with FStorage.CharacterMap do
-    for CharMapIndex := 0 to CharacterMapSubtableCount - 1 do
+  for CharMapIndex := 0 to FStorage.CharacterMap.CharacterMapSubtableCount - 1 do
 {$IFDEF MSWINDOWS}
-      if CharacterMapSubtable[CharMapIndex] is TPascalTypeCharacterMapMicrosoftDirectory
-      then
-        with TPascalTypeCharacterMapMicrosoftDirectory
-          (CharacterMapSubtable[CharMapIndex]) do
-          if PlatformSpecificID = meUnicodeBMP then
-            Result := CharacterToGlyph(Integer(Character));
+    if FStorage.CharacterMap.CharacterMapSubtable[CharMapIndex] is TPascalTypeCharacterMapMicrosoftDirectory then
+    begin
+      CharacterMapDirectory := TPascalTypeCharacterMapMicrosoftDirectory(FStorage.CharacterMap.CharacterMapSubtable[CharMapIndex]);
+      if CharacterMapDirectory.PlatformSpecificID = meUnicodeBMP then
+      begin
+        Result := CharacterMapDirectory.CharacterToGlyph(Integer(Character));
+        break;
+      end;
+    end;
 {$ENDIF}
 {$IFDEF OSX}
-  if CharacterMapSubtable[CharMapIndex] is TPascalTypeCharacterMapMacintoshDirectory
-  then
-    with TPascalTypeCharacterMapMacintoshDirectory
-      (CharacterMapSubtable[CharMapIndex]) do
-      if PlatformSpecificID = 1 then
-        Result := CharacterToGlyph(Integer(Character));
+  if FStorage.CharacterMap.CharacterMapSubtable[CharMapIndex] is TPascalTypeCharacterMapMacintoshDirectory then
+  begin
+    CharacterMapDirectory := TPascalTypeCharacterMapMacintoshDirectory(FStorage.CharacterMap.CharacterMapSubtable[CharMapIndex]);
+    if CharacterMapDirectory.PlatformSpecificID = 1 then
+    begin
+      Result := CharacterMapDirectory.CharacterToGlyph(Integer(Character));
+      break;
+    end;
+  end;
 {$ENDIF}
 end;
 
-function TCustomPascalTypeFontEngine.GetGlyphByCharacter
-  (Character: WideChar): Integer;
+function TCustomPascalTypeFontEngine.GetGlyphByCharacter(Character: WideChar): Integer;
 begin
   Result := GetGlyphByCharacter(Word(Character));
 end;
 
-function TCustomPascalTypeFontEngine.GetGlyphByCharacter
-  (Character: AnsiChar): Integer;
+function TCustomPascalTypeFontEngine.GetGlyphByCharacter(Character: AnsiChar): Integer;
 begin
   Result := GetGlyphByCharacter(Word(Character));
 end;

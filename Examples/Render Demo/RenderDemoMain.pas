@@ -153,7 +153,7 @@ var
   FontIndex : Integer;
 begin
  FBitmap.Canvas.Font.Name := FFontName;
- for FontIndex := 0 to Length(FFontArray) - 1 do
+ for FontIndex := 0 to High(FFontArray) do
   if FFontArray[FontIndex].FullFontName = FFontName then
    begin
     FFontEngine.LoadFromFile(FFontArray[FontIndex].FileName);
@@ -291,7 +291,7 @@ begin
  ComboBoxFont.Items.Add(CurrentFontName);
 
  SetLength(FFontArray, Length(FFontArray) + 1);
- with FFontArray[Length(FFontArray) - 1] do
+ with FFontArray[High(FFontArray)] do
   begin
    FullFontName := CurrentFontName;
    FileName := FontFileName;

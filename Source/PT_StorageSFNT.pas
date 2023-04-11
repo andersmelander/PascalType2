@@ -59,7 +59,7 @@ type
     function GetFontVersion: WideString;
     function GetUniqueIdentifier: WideString;
   protected
-    function GetTableByTableName(TableName: TTableName): TCustomPascalTypeNamedTable; virtual; abstract;
+    function GetTableByTableName(const TableName: TTableName): TCustomPascalTypeNamedTable; virtual; abstract;
     function GetTableByTableType(TableType: TTableType): TCustomPascalTypeNamedTable; virtual; abstract;
     function GetTableByTableClass(TableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable; virtual; abstract;
 
@@ -93,7 +93,7 @@ type
 
   TPascalTypeStorageScan = class(TCustomPascalTypeStorageSFNT)
   protected
-    function GetTableByTableName(TableName: TTableName): TCustomPascalTypeNamedTable; override;
+    function GetTableByTableName(const TableName: TTableName): TCustomPascalTypeNamedTable; override;
     function GetTableByTableType(TableType: TTableType): TCustomPascalTypeNamedTable; override;
     function GetTableByTableClass(TableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable; override;
 
@@ -125,7 +125,7 @@ type
     function GetBoundingBox: TRect;
     function GetGlyphCount: Word;
   protected
-    function GetTableByTableName(TableName: TTableName): TCustomPascalTypeNamedTable; override;
+    function GetTableByTableName(const TableName: TTableName): TCustomPascalTypeNamedTable; override;
     function GetTableByTableType(ATableType: TTableType): TCustomPascalTypeNamedTable; override;
     function GetTableByTableClass(TableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable; override;
 
@@ -303,8 +303,7 @@ begin
   inherited;
 end;
 
-procedure TCustomPascalTypeStorageSFNT.DirectoryTableReaded(DirectoryTable
-  : TPascalTypeDirectoryTable);
+procedure TCustomPascalTypeStorageSFNT.DirectoryTableReaded(DirectoryTable: TPascalTypeDirectoryTable);
 begin
   // optimize table read order
   DirectoryTable.TableList.SortByOffset;
@@ -451,56 +450,56 @@ begin
       DirectoryTableReaded(DirectoryTable);
 
       // read header table
-      if not Assigned(HeaderTable) then
+      if (HeaderTable = nil) then
         raise EPascalTypeError.Create(RCStrNoHeaderTable);
       LoadTableFromStream(Stream, HeaderTable);
 
       // read horizontal header table
-      if not Assigned(HorizontalHeaderDataEntry) then
+      if (HorizontalHeaderDataEntry = nil) then
         raise EPascalTypeError.Create(RCStrNoHorizontalHeaderTable);
       LoadTableFromStream(Stream, HorizontalHeaderDataEntry);
 
       // read maximum profile table
-      if not Assigned(MaximumProfileDataEntry) then
+      if (MaximumProfileDataEntry = nil) then
         raise EPascalTypeError.Create(RCStrNoMaximumProfileTable);
       LoadTableFromStream(Stream, MaximumProfileDataEntry);
 
       // eventually read OS/2 table or eventually raise an exception
-      if Assigned(OS2TableEntry) then
+      if (OS2TableEntry <> nil) then
         LoadTableFromStream(Stream, OS2TableEntry)
       else if (Version = $00010000) then
         raise EPascalTypeError.Create(RCStrNoOS2Table);
 
       // read horizontal metrics table
-      if not Assigned(HorizontalMetricsDataEntry) then
+      if (HorizontalMetricsDataEntry = nil) then
         raise EPascalTypeError.Create(RCStrNoHorizontalMetricsTable);
       LoadTableFromStream(Stream, HorizontalMetricsDataEntry);
 
       // read character map table
-      if not Assigned(CharacterMapDataEntry) then
+      if (CharacterMapDataEntry = nil) then
         raise EPascalTypeError.Create(RCStrNoCharacterMapTable);
       LoadTableFromStream(Stream, CharacterMapDataEntry);
 
       // TODO: check if these are required by tables already read!!!
       // read index to location table
-      if Assigned(LocationDataEntry) then
+      if (LocationDataEntry <> nil) then
         LoadTableFromStream(Stream, LocationDataEntry)
       else if (Version = $74727565) then
         raise EPascalTypeError.Create(RCStrNoIndexToLocationTable);
 
       // read glyph data table
-      if Assigned(GlyphDataEntry) then
+      if (GlyphDataEntry <> nil) then
         LoadTableFromStream(Stream, GlyphDataEntry)
       else if (Version = $74727565) then
         raise EPascalTypeError.Create(RCStrNoGlyphDataTable);
 
       // read name table
-      if not Assigned(NameDataEntry) then
+      if (NameDataEntry = nil) then
         raise EPascalTypeError.Create(RCStrNoNameTable);
       LoadTableFromStream(Stream, NameDataEntry);
 
       // read postscript table
-      if not Assigned(PostscriptDataEntry) then
+      if (PostscriptDataEntry = nil) then
         raise EPascalTypeError.Create(RCStrNoPostscriptTable);
       LoadTableFromStream(Stream, PostscriptDataEntry);
 
@@ -508,7 +507,7 @@ begin
       for TableIndex := 0 to TableList.Count - 1 do
         LoadTableFromStream(Stream, TableList[TableIndex]);
     finally
-      FreeAndNil(DirectoryTable);
+      DirectoryTable.Free;
     end;
 end;
 
@@ -566,25 +565,27 @@ begin
     Result := nil;
 end;
 
-function TPascalTypeStorageScan.GetTableByTableName(
-  TableName: TTableName): TCustomPascalTypeNamedTable;
+function TPascalTypeStorageScan.GetTableByTableName(const TableName: TTableName): TCustomPascalTypeNamedTable;
 begin
   if CompareTableType(FHeaderTable.TableType, TableName) then
     Result := FHeaderTable
-  else if CompareTableType(FHorizontalHeader.TableType, TableName) then
+  else
+  if CompareTableType(FHorizontalHeader.TableType, TableName) then
     Result := FHorizontalHeader
-  else if CompareTableType(FMaximumProfile.TableType, TableName) then
+  else
+  if CompareTableType(FMaximumProfile.TableType, TableName) then
     Result := FMaximumProfile
-  else if CompareTableType(FNameTable.TableType, TableName) then
+  else
+  if CompareTableType(FNameTable.TableType, TableName) then
     Result := FNameTable
-  else if CompareTableType(FPostScriptTable.TableType, TableName) then
+  else
+  if CompareTableType(FPostScriptTable.TableType, TableName) then
     Result := FPostScriptTable
   else
     Result := nil;
 end;
 
-function TPascalTypeStorageScan.GetTableByTableType(TableType: TTableType)
-  : TCustomPascalTypeNamedTable;
+function TPascalTypeStorageScan.GetTableByTableType(TableType: TTableType): TCustomPascalTypeNamedTable;
 begin
   if TableType.AsCardinal = FHeaderTable.TableType.AsCardinal then
     Result := FHeaderTable
@@ -641,7 +642,7 @@ begin
       end;
 
     finally
-      FreeAndNil(MemoryStream);
+      MemoryStream.Free;
     end;
 end;
 
@@ -674,8 +675,7 @@ begin
   inherited;
 end;
 
-procedure TPascalTypeStorage.DirectoryTableReaded(DirectoryTable
-  : TPascalTypeDirectoryTable);
+procedure TPascalTypeStorage.DirectoryTableReaded(DirectoryTable: TPascalTypeDirectoryTable);
 begin
   inherited;
 
@@ -683,19 +683,15 @@ begin
   FOptionalTables.Clear;
 
   // eventually free OS/2 table
-  if Assigned(FOS2Table) then
-    FreeAndNil(FOS2Table);
+  FreeAndNil(FOS2Table);
 end;
 
 function TPascalTypeStorage.GetAdvanceWidth(GlyphIndex: Integer): Word;
 begin
-  with FHorizontalMetrics do
-  begin
-    if (GlyphIndex >= 0) and (GlyphIndex < HorizontalMetricCount) then
-      Result := HorizontalMetric[GlyphIndex].AdvanceWidth
-    else
-      Result := HorizontalMetric[0].AdvanceWidth;
-  end;
+  if (GlyphIndex >= 0) and (GlyphIndex < FHorizontalMetrics.HorizontalMetricCount) then
+    Result := FHorizontalMetrics.HorizontalMetric[GlyphIndex].AdvanceWidth
+  else
+    Result := FHorizontalMetrics.HorizontalMetric[0].AdvanceWidth;
 end;
 
 function TPascalTypeStorage.GetBoundingBox: TRect;
@@ -719,7 +715,7 @@ begin
   Result := nil;
 
   GlyphDataTable := TTrueTypeFontGlyphDataTable(GetTableByTableName('glyf'));
-  if Assigned(GlyphDataTable) then
+  if (GlyphDataTable <> nil) then
     if (Index >= 0) and (Index < GlyphDataTable.GlyphDataCount) then
       Result := GlyphDataTable.GlyphData[Index];
 end;
@@ -732,13 +728,11 @@ begin
   // GetTableByTableType()
 end;
 
-function TPascalTypeStorage.GetOptionalTable(Index: Integer)
-  : TCustomPascalTypeNamedTable;
+function TPascalTypeStorage.GetOptionalTable(Index: Integer): TCustomPascalTypeNamedTable;
 begin
-  if (Index >= 0) and (Index < FOptionalTables.Count) then
-    Result := TCustomPascalTypeNamedTable(FOptionalTables[Index])
-  else
+  if (Index < 0) or (Index >= FOptionalTables.Count) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := TCustomPascalTypeNamedTable(FOptionalTables[Index]);
 end;
 
 function TPascalTypeStorage.GetOptionalTableCount: Integer;
@@ -751,13 +745,11 @@ begin
   // default result
   Result := nil;
 
-  if Assigned(FOS2Table) then
-    if Assigned(FOS2Table.Panose) then
-      Result := FOS2Table.Panose
+  if (FOS2Table <> nil) then
+    Result := FOS2Table.Panose
 end;
 
-function TPascalTypeStorage.GetTableByTableType(ATableType: TTableType)
-  : TCustomPascalTypeNamedTable;
+function TPascalTypeStorage.GetTableByTableType(ATableType: TTableType): TCustomPascalTypeNamedTable;
 var
   TableIndex: Integer;
 begin
@@ -766,23 +758,28 @@ begin
 
   if ATableType.AsCardinal = FHeaderTable.TableType.AsCardinal then
     Result := FHeaderTable
-  else if ATableType.AsCardinal = FHorizontalHeader.TableType.AsCardinal then
+  else
+  if ATableType.AsCardinal = FHorizontalHeader.TableType.AsCardinal then
     Result := FHorizontalHeader
-  else if ATableType.AsCardinal = FHorizontalMetrics.TableType.AsCardinal then
+  else
+  if ATableType.AsCardinal = FHorizontalMetrics.TableType.AsCardinal then
     Result := FHorizontalMetrics
-  else if ATableType.AsCardinal = FCharacterMap.TableType.AsCardinal then
+  else
+  if ATableType.AsCardinal = FCharacterMap.TableType.AsCardinal then
     Result := FCharacterMap
-  else if ATableType.AsCardinal = FMaximumProfile.TableType.AsCardinal then
+  else
+  if ATableType.AsCardinal = FMaximumProfile.TableType.AsCardinal then
     Result := FMaximumProfile
-  else if ATableType.AsCardinal = FNameTable.TableType.AsCardinal then
+  else
+  if ATableType.AsCardinal = FNameTable.TableType.AsCardinal then
     Result := FNameTable
-  else if ATableType.AsCardinal = FPostScriptTable.TableType.AsCardinal then
+  else
+  if ATableType.AsCardinal = FPostScriptTable.TableType.AsCardinal then
     Result := FPostScriptTable
   else
     for TableIndex := 0 to FOptionalTables.Count - 1 do
-      with TCustomPascalTypeNamedTable(FOptionalTables[TableIndex]) do
-        if ATableType.AsCardinal = TableType.AsCardinal then
-          Result := TCustomPascalTypeNamedTable(FOptionalTables[TableIndex]);
+      if ATableType.AsCardinal = TCustomPascalTypeNamedTable(FOptionalTables[TableIndex]).TableType.AsCardinal then
+        Exit(TCustomPascalTypeNamedTable(FOptionalTables[TableIndex]));
 end;
 
 function TPascalTypeStorage.ContainsTable(TableType: TTableType): Boolean;
@@ -790,8 +787,7 @@ begin
   Result := GetTableByTableType(TableType) <> nil;
 end;
 
-function TPascalTypeStorage.GetTableByTableClass
-  (TableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable;
+function TPascalTypeStorage.GetTableByTableClass(TableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable;
 var
   TableIndex: Integer;
 begin
@@ -800,28 +796,31 @@ begin
 
   if TableClass = FHeaderTable.ClassType then
     Result := FHeaderTable
-  else if TableClass = FHorizontalHeader.ClassType then
+  else
+  if TableClass = FHorizontalHeader.ClassType then
     Result := FHorizontalHeader
-  else if TableClass = FHorizontalMetrics.ClassType then
+  else
+  if TableClass = FHorizontalMetrics.ClassType then
     Result := FHorizontalMetrics
-  else if TableClass = FCharacterMap.ClassType then
+  else
+  if TableClass = FCharacterMap.ClassType then
     Result := FCharacterMap
-  else if TableClass = FMaximumProfile.ClassType then
+  else
+  if TableClass = FMaximumProfile.ClassType then
     Result := FMaximumProfile
-  else if TableClass = FNameTable.ClassType then
+  else
+  if TableClass = FNameTable.ClassType then
     Result := FNameTable
-  else if TableClass = FPostScriptTable.ClassType then
+  else
+  if TableClass = FPostScriptTable.ClassType then
     Result := FPostScriptTable
   else
-
     for TableIndex := 0 to FOptionalTables.Count - 1 do
-      with TCustomPascalTypeNamedTable(FOptionalTables[TableIndex]) do
-        if ClassType = TableClass then
-          Result := TCustomPascalTypeNamedTable(FOptionalTables[TableIndex]);
+      if TCustomPascalTypeNamedTable(FOptionalTables[TableIndex]).ClassType = TableClass then
+        Exit(TCustomPascalTypeNamedTable(FOptionalTables[TableIndex]));
 end;
 
-function TPascalTypeStorage.GetTableByTableName(
-  TableName: TTableName): TCustomPascalTypeNamedTable;
+function TPascalTypeStorage.GetTableByTableName(const TableName: TTableName): TCustomPascalTypeNamedTable;
 var
   TableIndex: Integer;
 begin
@@ -830,23 +829,28 @@ begin
 
   if CompareTableType(FHeaderTable.TableType, TableName) then
     Result := FHeaderTable
-  else if CompareTableType(FHorizontalHeader.TableType, TableName) then
+  else
+  if CompareTableType(FHorizontalHeader.TableType, TableName) then
     Result := FHorizontalHeader
-  else if CompareTableType(FHorizontalMetrics.TableType, TableName) then
+  else
+  if CompareTableType(FHorizontalMetrics.TableType, TableName) then
     Result := FHorizontalMetrics
-  else if CompareTableType(FCharacterMap.TableType, TableName) then
+  else
+  if CompareTableType(FCharacterMap.TableType, TableName) then
     Result := FCharacterMap
-  else if CompareTableType(FMaximumProfile.TableType, TableName) then
+  else
+  if CompareTableType(FMaximumProfile.TableType, TableName) then
     Result := FMaximumProfile
-  else if CompareTableType(FNameTable.TableType, TableName) then
+  else
+  if CompareTableType(FNameTable.TableType, TableName) then
     Result := FNameTable
-  else if CompareTableType(FPostScriptTable.TableType, TableName) then
+  else
+  if CompareTableType(FPostScriptTable.TableType, TableName) then
     Result := FPostScriptTable
   else
     for TableIndex := 0 to FOptionalTables.Count - 1 do
-      with TCustomPascalTypeNamedTable(FOptionalTables[TableIndex]) do
-        if CompareTableType(TableType, TableName) then
-          Result := TCustomPascalTypeNamedTable(FOptionalTables[TableIndex]);
+      if CompareTableType(TCustomPascalTypeNamedTable(FOptionalTables[TableIndex]).TableType, TableName) then
+        Exit(TCustomPascalTypeNamedTable(FOptionalTables[TableIndex]));
 end;
 
 function TPascalTypeStorage.GetTableCount: Integer;
@@ -854,106 +858,102 @@ begin
   Result := 7 + FOptionalTables.Count;
 end;
 
-procedure TPascalTypeStorage.LoadTableFromStream(Stream: TStream;
-  TableEntry: TPascalTypeDirectoryTableEntry);
+procedure TPascalTypeStorage.LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry);
 var
   MemoryStream: TMemoryStream;
   TableClass  : TCustomPascalTypeNamedTableClass;
   CurrentTable: TCustomPascalTypeNamedTable;
 begin
   MemoryStream := TMemoryStream.Create;
-  with Stream do
-    try
-      // set stream position
-      Position := TableEntry.Offset;
+  try
+    // set stream position
+    Stream.Position := TableEntry.Offset;
 
-      // copy from stream
-      MemoryStream.CopyFrom(Stream, 4 * ((TableEntry.Length + 3) div 4));
+    // copy from stream
+    MemoryStream.CopyFrom(Stream, 4 * ((TableEntry.Length + 3) div 4));
 
 {$IFDEF ChecksumTest}
-      ValidateChecksum(MemoryStream, TableEntry);
+    ValidateChecksum(MemoryStream, TableEntry);
 {$ENDIF}
-      // reset memory stream position
-      MemoryStream.Seek(soFromBeginning, 0);
+    // reset memory stream position
+    MemoryStream.Seek(soFromBeginning, 0);
 
-      // restore original table length
-      MemoryStream.Size := TableEntry.Length;
+    // restore original table length
+    MemoryStream.Size := TableEntry.Length;
 
-      TableClass := FindPascalTypeTableByType(TableEntry.TableType);
-      if TableClass <> nil then
-      begin
-        CurrentTable := TableClass.Create(Self);
+    TableClass := FindPascalTypeTableByType(TableEntry.TableType);
+    if TableClass <> nil then
+    begin
+      CurrentTable := TableClass.Create(Self);
+      try
+        // load table from stream
         try
-          // load table from stream
-          try
-            CurrentTable.LoadFromStream(MemoryStream);
+          CurrentTable.LoadFromStream(MemoryStream);
 
-            // assign tables
-            if TableClass = TPascalTypeHeaderTable then
-              FHeaderTable.Assign(CurrentTable)
-            else
-            if TableClass = TPascalTypeHorizontalHeaderTable then
-              FHorizontalHeader.Assign(CurrentTable)
-            else
-            if TableClass = TPascalTypeHorizontalMetricsTable then
-              FHorizontalMetrics.Assign(CurrentTable)
-            else
-            if TableClass = TPascalTypePostscriptTable then
-              FPostScriptTable.Assign(CurrentTable)
-            else
-            if TableClass = TPascalTypeMaximumProfileTable then
-              FMaximumProfile.Assign(CurrentTable)
-            else
-            if TableClass = TPascalTypeNameTable then
-              FNameTable.Assign(CurrentTable)
-            else
-            if TableClass = TPascalTypeCharacterMapTable then
-              FCharacterMap.Assign(CurrentTable)
-            else
-            if TableClass = TPascalTypeOS2Table then
-            begin
-              FOS2Table := TPascalTypeOS2Table(CurrentTable);
-              CurrentTable := nil;
-            end else
-            begin
-              FOptionalTables.ADD(CurrentTable);
-              CurrentTable := nil;
-            end;
-
-          except
-{$IFDEF IgnoreIncompleteOptionalTables}
-            on E: EPascalTypeTableIncomplete do
-            begin
-              if (TableClass = TPascalTypeHeaderTable) or
-                (TableClass = TPascalTypeHorizontalHeaderTable) or
-                (TableClass = TPascalTypeHorizontalMetricsTable) or
-                (TableClass = TPascalTypePostscriptTable) or
-                (TableClass = TPascalTypeMaximumProfileTable) or
-                (TableClass = TPascalTypeNameTable) then
-                raise;
-            end;
-{$ELSE}
-            raise
-{$ENDIF}
+          // assign tables
+          if TableClass = TPascalTypeHeaderTable then
+            FHeaderTable.Assign(CurrentTable)
+          else
+          if TableClass = TPascalTypeHorizontalHeaderTable then
+            FHorizontalHeader.Assign(CurrentTable)
+          else
+          if TableClass = TPascalTypeHorizontalMetricsTable then
+            FHorizontalMetrics.Assign(CurrentTable)
+          else
+          if TableClass = TPascalTypePostscriptTable then
+            FPostScriptTable.Assign(CurrentTable)
+          else
+          if TableClass = TPascalTypeMaximumProfileTable then
+            FMaximumProfile.Assign(CurrentTable)
+          else
+          if TableClass = TPascalTypeNameTable then
+            FNameTable.Assign(CurrentTable)
+          else
+          if TableClass = TPascalTypeCharacterMapTable then
+            FCharacterMap.Assign(CurrentTable)
+          else
+          if TableClass = TPascalTypeOS2Table then
+          begin
+            Assert(FOS2Table = nil);
+            FOS2Table := TPascalTypeOS2Table(CurrentTable);
+            CurrentTable := nil;
+          end else
+          begin
+            FOptionalTables.Add(CurrentTable);
+            CurrentTable := nil;
           end;
 
-        finally
-          // dispose temporary table
-          if Assigned(CurrentTable) then
-            FreeAndNil(CurrentTable);
+        except
+{$IFDEF IgnoreIncompleteOptionalTables}
+          on E: EPascalTypeTableIncomplete do
+          begin
+            if (TableClass = TPascalTypeHeaderTable) or
+              (TableClass = TPascalTypeHorizontalHeaderTable) or
+              (TableClass = TPascalTypeHorizontalMetricsTable) or
+              (TableClass = TPascalTypePostscriptTable) or
+              (TableClass = TPascalTypeMaximumProfileTable) or
+              (TableClass = TPascalTypeNameTable) then
+              raise;
+          end;
+{$ELSE}
+          raise
+{$ENDIF}
         end;
-      end
-      else
-      begin
-        CurrentTable := TPascalTypeUnknownTable.Create(Self,
-          TableEntry.TableType);
-        CurrentTable.LoadFromStream(Stream);
-        FOptionalTables.ADD(CurrentTable);
-      end;
 
-    finally
-      FreeAndNil(MemoryStream);
+      finally
+        // dispose temporary table
+        CurrentTable.Free;
+      end;
+    end else
+    begin
+      CurrentTable := TPascalTypeUnknownTable.Create(Self, TableEntry.TableType);
+      CurrentTable.LoadFromStream(Stream);
+      FOptionalTables.Add(CurrentTable);
     end;
+
+  finally
+    MemoryStream.Free;
+  end;
 end;
 
 procedure TPascalTypeStorage.SaveToStream(Stream: TStream);
@@ -983,7 +983,7 @@ begin
         with TableList[TableIndex] do
         begin
           NamedTable := GetTableByTableType(TableType);
-          Assert(Assigned(NamedTable));
+          Assert(NamedTable <> nil);
 
           Offset := Stream.Position;
           MemoryStream := TMemoryStream.Create;
@@ -1005,7 +1005,7 @@ begin
             // copy streams
             CopyFrom(MemoryStream, Length);
           finally
-            FreeAndNil(MemoryStream);
+            MemoryStream.Free;
           end;
         end;
 
@@ -1015,7 +1015,7 @@ begin
       // write final directory
       SaveToStream(Stream);
     finally
-      FreeAndNil(DirectoryTable);
+      DirectoryTable.Free;
     end;
 end;
 

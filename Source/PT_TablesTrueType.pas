@@ -50,7 +50,7 @@ type
 
     procedure ResetToDefaults; override;
   public
-    constructor Create(Storage: IPascalTypeStorageTable); override;
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -75,7 +75,7 @@ type
 
     procedure ResetToDefaults; override;
   public
-    constructor Create(Storage: IPascalTypeStorageTable); override;
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
     procedure LoadFromStream(Stream: TStream); override;
@@ -144,7 +144,7 @@ type
     procedure YMaxChanged; virtual;
     procedure YMinChanged; virtual;
   public
-    constructor Create(Storage: IPascalTypeStorageTable); reintroduce; virtual;
+    constructor Create(const Storage: IPascalTypeStorageTable); reintroduce; virtual;
     destructor Destroy; override;
 
     procedure LoadFromStream(Stream: TStream); override;
@@ -173,8 +173,10 @@ type
   end;
 
   TPascalTypeTrueTypeContour = class(TPersistent)
+  private type
+    TContourPointRecordArray = array of TContourPointRecord;
   private
-    FPoints: array of TContourPointRecord;
+    FPoints: TContourPointRecordArray;
     function GetPoint(Index: Integer): TContourPointRecord;
     function GetPointCount: Integer;
     procedure SetPoint(Index: Integer; const Value: TContourPointRecord);
@@ -184,6 +186,7 @@ type
   protected
     procedure AssignTo(Dest: TPersistent); override;
     procedure PointCountChanged; virtual;
+    property Points: TContourPointRecordArray read FPoints;
   public
     property Area                 : Integer read GetArea;
     property IsClockwise          : Boolean read GetIsClockwise;
@@ -192,6 +195,19 @@ type
   end;
 
   TTrueTypeFontSimpleGlyphData = class(TCustomTrueTypeFontGlyphData)
+  public
+    const
+      // Simple glyf flags
+      // https://learn.microsoft.com/en-us/typography/opentype/spec/glyf
+      GLYF_ON_CURVE             = $01; // Data point is on curve (i.e. not a control point)
+      GLYF_X_SHORT_VECTOR       = $02;
+      GLYF_Y_SHORT_VECTOR       = $04;
+      GLYF_REPEAT_FLAG          = $08;
+      GLYF_X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR = $10;
+      GLYF_Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR = $20;
+      GLYF_OVERLAP_SIMPLE       = $40;
+      GLYF_RESERVED8            = $80;
+      GLYF_RESERVED             = GLYF_RESERVED8;
   private
     FContours: array of TPascalTypeTrueTypeContour;
     function GetContour(Index: Integer): TPascalTypeTrueTypeContour;
@@ -207,11 +223,29 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    property Contour[Index: Integer]: TPascalTypeTrueTypeContour
-      read GetContour;
+    property Contour[Index: Integer]: TPascalTypeTrueTypeContour read GetContour;
   end;
 
   TPascalTypeCompositeGlyph = class(TCustomPascalTypeTable)
+  private
+    const
+      ARG_1_AND_2_ARE_WORDS     = $0001;
+      ARGS_ARE_XY_VALUES        = $0002;
+      ROUND_XY_TO_GRID          = $0004;
+      WE_HAVE_A_SCALE           = $0008;
+      RESERVED5                 = $0010;
+      MORE_COMPONENTS           = $0020;
+      WE_HAVE_AN_X_AND_Y_SCALE  = $0040;
+      WE_HAVE_A_TWO_BY_TWO      = $0080;
+      WE_HAVE_INSTRUCTIONS      = $0100;
+      USE_MY_METRICS            = $0200;
+      OVERLAP_COMPOUND          = $0400;
+      SCALED_COMPONENT_OFFSET   = $0800;
+      UNSCALED_COMPONENT_OFFSET = $1000;
+      RESERVED13                = $2000;
+      RESERVED14                = $4000;
+      RESERVED15                = $8000;
+      RESERVED                  = RESERVED5 or RESERVED13 or RESERVED14 or RESERVED15;
   private
     FFlags     : Word; // Component flag
     FGlyphIndex: Word; // Glyph index of component
@@ -225,6 +259,9 @@ type
 
     procedure FlagsChanged; virtual;
     procedure GlyphIndexChanged; virtual;
+
+    function FlagMoreComponents: boolean;
+    function FlagHasInstructions: boolean;
   public
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -253,8 +290,7 @@ type
     procedure SaveToStream(Stream: TStream); override;
 
     property GlyphCount: Integer read GetGlyphCount;
-    property Glyph[Index: Integer]: TPascalTypeCompositeGlyph
-      read GetCompositeGlyph;
+    property Glyph[Index: Integer]: TPascalTypeCompositeGlyph read GetCompositeGlyph;
   end;
 
   TTrueTypeFontGlyphDataTable = class(TCustomPascalTypeNamedTable)
@@ -318,7 +354,7 @@ uses
 
 { TTrueTypeFontControlValueTable }
 
-constructor TTrueTypeFontControlValueTable.Create;
+constructor TTrueTypeFontControlValueTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
   // nothing in here yet
   inherited;
@@ -389,7 +425,7 @@ end;
 
 { TCustomTrueTypeFontInstructionTable }
 
-constructor TCustomTrueTypeFontInstructionTable.Create;
+constructor TCustomTrueTypeFontInstructionTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
   // nothing in here yet
   inherited;
@@ -498,7 +534,7 @@ var
   Value16   : Word;
   MaxProfile: TPascalTypeMaximumProfileTable;
 begin
-  MaxProfile := TPascalTypeMaximumProfileTable(FStorage.GetTableByTableName('maxp'));
+  MaxProfile := TPascalTypeMaximumProfileTable(Storage.GetTableByTableName('maxp'));
   Assert(MaxProfile <> nil);
 
   // read instruction size
@@ -508,11 +544,12 @@ begin
   if Value16 = $FFFF then
     Exit;
 
+{$IFDEF WarningExceptions}
   // check if too many instuctions are present -> possible stream error
   if Value16 > MaxProfile.MaxSizeOfInstruction then
-    // Probably just an error in the font - ignore for now
-    // TODO : Handle too many instructions
-    ; //raise EPascalTypeError.CreateFmt(RCStrTooManyInstructions, [Value16]);
+    // ... but probably just an error in the font
+    raise EPascalTypeError.CreateFmt(RCStrTooManyInstructions, [Value16]);
+{$ENDIF}
 
   // set instruction length
   SetLength(FInstructions, Value16);
@@ -534,8 +571,7 @@ end;
 
 { TCustomTrueTypeFontGlyphData }
 
-constructor TCustomTrueTypeFontGlyphData.Create
-  (Storage: IPascalTypeStorageTable);
+constructor TCustomTrueTypeFontGlyphData.Create(const Storage: IPascalTypeStorageTable);
 begin
   FInstructions := TTrueTypeFontGlyphInstructionTable.Create(Storage);
   inherited Create(Storage);
@@ -552,10 +588,9 @@ var
   GlyphDataTable: TTrueTypeFontGlyphDataTable;
   GlyphIndex    : Integer;
 begin
-  GlyphDataTable := TTrueTypeFontGlyphDataTable
-    (FStorage.GetTableByTableName('glyf'));
+  GlyphDataTable := TTrueTypeFontGlyphDataTable(Storage.GetTableByTableName('glyf'));
   Result := -1;
-  if Assigned(GlyphDataTable) then
+  if (GlyphDataTable <> nil) then
     for GlyphIndex := 0 to GlyphDataTable.GlyphDataCount - 1 do
       if GlyphDataTable.GlyphData[GlyphIndex] = Self then
       begin
@@ -598,45 +633,39 @@ var
   MaxProfile: TPascalTypeMaximumProfileTable;
 begin
   // get maximum profile
-  MaxProfile := TPascalTypeMaximumProfileTable
-    (FStorage.GetTableByTableClass(TPascalTypeMaximumProfileTable));
+  MaxProfile := TPascalTypeMaximumProfileTable(Storage.GetTableByTableClass(TPascalTypeMaximumProfileTable));
 
-  with Stream do
-  begin
-    if Position + 2 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  if Stream.Position + 2 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read number of contours
-    FNumberOfContours := ReadSwappedSmallInt(Stream);
+  // read number of contours
+  FNumberOfContours := ReadSwappedSmallInt(Stream);
 
-    // check if maximum number of contours are exceeded
-    if (FNumberOfContours > 0) and
-      (Word(FNumberOfContours) > MaxProfile.MaxContours) then
-      raise EPascalTypeError.CreateFmt(RCStrTooManyContours,
-        [FNumberOfContours, MaxProfile.MaxContours]);
+  // check if maximum number of contours are exceeded
+  if (FNumberOfContours > 0) and (Word(FNumberOfContours) > MaxProfile.MaxContours) then
+    raise EPascalTypeError.CreateFmt(RCStrTooManyContours, [FNumberOfContours, MaxProfile.MaxContours]);
 
-    // check if glyph contains any information at all
-    if FNumberOfContours = 0 then
-      Exit;
+  // check if glyph contains any information at all
+  if FNumberOfContours = 0 then
+    Exit;
 
-    if Position + 8 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  if Stream.Position + 8 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read XMin
-    FXMin := ReadSwappedSmallInt(Stream);
+  // read XMin
+  FXMin := ReadSwappedSmallInt(Stream);
 
-    // read YMin
-    FYMin := ReadSwappedSmallInt(Stream);
+  // read YMin
+  FYMin := ReadSwappedSmallInt(Stream);
 
-    // read XMax
-    FXMax := ReadSwappedSmallInt(Stream);
+  // read XMax
+  FXMax := ReadSwappedSmallInt(Stream);
 
-    // read YMax
-    FYMax := ReadSwappedSmallInt(Stream);
+  // read YMax
+  FYMax := ReadSwappedSmallInt(Stream);
 
-    // Assert(FXMin <= FXMax);
-    // Assert(FYMin <= FYMax);
-  end;
+  // Assert(FXMin <= FXMax);
+  // Assert(FYMin <= FYMax);
 end;
 
 procedure TCustomTrueTypeFontGlyphData.SaveToStream(Stream: TStream);
@@ -657,8 +686,7 @@ begin
   WriteSwappedWord(Stream, FYMax);
 end;
 
-procedure TCustomTrueTypeFontGlyphData.SetNumberOfContours
-  (const Value: SmallInt);
+procedure TCustomTrueTypeFontGlyphData.SetNumberOfContours(const Value: SmallInt);
 begin
   if FNumberOfContours <> Value then
   begin
@@ -731,12 +759,9 @@ end;
 
 { TContourPointRecord }
 
-const
-  GLYF_ON_CURVE         = $01;  // Data point is on curve (i.e. not a control point)
-
 function TContourPointRecord.FlagIsOnCurve: boolean;
 begin
-  Result := (Flags and GLYF_ON_CURVE <> 0);
+  Result := (Flags and TTrueTypeFontSimpleGlyphData.GLYF_ON_CURVE <> 0);
 end;
 
 { TPascalTypeTrueTypeContour }
@@ -763,36 +788,32 @@ begin
     Exit;
   end;
 
-  Result := (FPoints[0].XPos * FPoints[1].YPos - FPoints[1].XPos * FPoints[0]
-    .YPos) div 2;
-  for PointIndex := 1 to Length(FPoints) - 2 do
-    Result := Result * (FPoints[0].XPos * FPoints[1].YPos - FPoints[1].XPos *
-      FPoints[0].YPos);
+  Result := (FPoints[0].XPos * FPoints[1].YPos - FPoints[1].XPos * FPoints[0].YPos) div 2;
+  for PointIndex := 1 to High(FPoints) - 1 do
+    Result := Result * (FPoints[0].XPos * FPoints[1].YPos - FPoints[1].XPos * FPoints[0].YPos);
 end;
 
 function TPascalTypeTrueTypeContour.GetIsClockwise: Boolean;
 begin
-  Result := Area >= 0;
+  Result := (Area >= 0);
 end;
 
 function TPascalTypeTrueTypeContour.GetPoint(Index: Integer): TContourPointRecord;
 begin
-  if (Index = Length(FPoints)) then
-    Result := FPoints[0]
-  else
-  if (Index >= 0) and (Index < Length(FPoints)) then
+  if (Index >= 0) and (Index <= High(FPoints)) then
     Result := FPoints[Index]
+  else
+  if (Index = Length(FPoints)) then
+    Result := FPoints[0] // Wrap around to first
   else
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
 end;
 
-procedure TPascalTypeTrueTypeContour.SetPoint(Index: Integer;
-  const Value: TContourPointRecord);
+procedure TPascalTypeTrueTypeContour.SetPoint(Index: Integer; const Value: TContourPointRecord);
 begin
-  if (Index >= 0) and (Index < Length(FPoints)) then
-    FPoints[Index] := Value
-  else
+  if (Index < 0) or (Index > High(FPoints)) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  FPoints[Index] := Value;
 end;
 
 function TPascalTypeTrueTypeContour.GetPointCount: Integer;
@@ -831,17 +852,17 @@ begin
     with TTrueTypeFontSimpleGlyphData(Dest) do
     begin
       // eventually clear not used contours
-      for ContourIndex := Length(Self.FContours) to Length(FContours) - 1 do
+      for ContourIndex := Length(Self.FContours) to High(FContours) do
         FreeAndNil(FContours[ContourIndex]);
 
       // set length of countour array
       SetLength(FContours, Length(Self.FContours));
 
       // assign contours
-      for ContourIndex := 0 to Length(Self.FContours) - 1 do
+      for ContourIndex := 0 to High(Self.FContours) do
       begin
         // eventually create the contour
-        if not Assigned(FContours[ContourIndex]) then
+        if (FContours[ContourIndex] = nil) then
           FContours[ContourIndex] := TPascalTypeTrueTypeContour.Create;
 
         // assign contour
@@ -856,7 +877,7 @@ procedure TTrueTypeFontSimpleGlyphData.FreeContourArrayItems;
 var
   ContourIndex: Integer;
 begin
-  for ContourIndex := 0 to Length(FContours) - 1 do
+  for ContourIndex := 0 to High(FContours) do
     FreeAndNil(FContours[ContourIndex]);
 end;
 
@@ -869,13 +890,11 @@ begin
   SetLength(FContours, 0);
 end;
 
-function TTrueTypeFontSimpleGlyphData.GetContour(Index: Integer)
-  : TPascalTypeTrueTypeContour;
+function TTrueTypeFontSimpleGlyphData.GetContour(Index: Integer): TPascalTypeTrueTypeContour;
 begin
-  if (Index >= 0) and (Index < Length(FContours)) then
-    Result := FContours[Index]
-  else
+  if (Index < 0) or (Index > High(FContours)) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FContours[Index];
 end;
 
 function TTrueTypeFontSimpleGlyphData.GetContourCount: Integer;
@@ -900,230 +919,220 @@ begin
   inherited;
 
   // get maximum profile
-  MaxProfile := TPascalTypeMaximumProfileTable
-    (FStorage.GetTableByTableClass(TPascalTypeMaximumProfileTable));
+  MaxProfile := TPascalTypeMaximumProfileTable(Storage.GetTableByTableClass(TPascalTypeMaximumProfileTable));
 
   // check if glyph contains any information at all
   if FNumberOfContours = 0 then
     Exit;
 
-  with Stream do
+  // set end points of contours array size
+  SetLength(EndPtsOfCont, FNumberOfContours);
+
+  // reset point count
+  PointCount := -1;
+
+  // read end points
+  for ContourIndex := 0 to FNumberOfContours - 1 do
   begin
-    // set end points of contours array size
-    SetLength(EndPtsOfCont, FNumberOfContours);
+    // read number of contours
+    PointCount := ReadSwappedWord(Stream);
+    EndPtsOfCont[ContourIndex] := PointCount;
+  end;
 
-    // reset point count
-    PointCount := -1;
+  // increase last end point to get the true point count
+  Inc(PointCount);
 
-    // read end points
-    for ContourIndex := 0 to FNumberOfContours - 1 do
+  // check if maximum points are exceeded
+  if PointCount > MaxProfile.MaxPoints then
+    raise EPascalTypeError.CreateFmt(RCStrTooManyPoints, [PointCount]);
+
+  // read instructions
+  FInstructions.LoadFromStream(Stream);
+
+  // clear eventuall existing contours
+  for ContourIndex := FNumberOfContours to High(FContours) do
+    FreeAndNil(FContours[ContourIndex]);
+  SetLength(FContours, FNumberOfContours);
+
+  for ContourIndex := 0 to FNumberOfContours - 1 do
+  begin
+    // eventually create new contour
+    Contour := FContours[ContourIndex];
+    if (Contour = nil) then
     begin
-      // read number of contours
-      PointCount := ReadSwappedWord(Stream);
-      EndPtsOfCont[ContourIndex] := PointCount;
+      Contour := TPascalTypeTrueTypeContour.Create;
+      FContours[ContourIndex] := Contour;
     end;
 
-    // increase last end point to get the true point count
-    Inc(PointCount);
+    // set contour point count
+    if ContourIndex = 0 then
+      Contour.PointCount := EndPtsOfCont[ContourIndex] + 1
+    else
+      Contour.PointCount := (EndPtsOfCont[ContourIndex] - EndPtsOfCont[ContourIndex - 1]);
+  end;
 
-    // check if maximum points are exceeded
-    if PointCount > MaxProfile.MaxPoints then
-      raise EPascalTypeError.CreateFmt(RCStrTooManyPoints, [PointCount]);
+  // reset point and contour index
+  PointIndex := 0;
+  ContourIndex := 0;
+  CntrPntIndex := 0;
 
-    // read instructions
-    FInstructions.LoadFromStream(Stream);
+  // set first contour
+  Contour := TPascalTypeTrueTypeContour(FContours[ContourIndex]);
 
-    // clear eventuall existing contours
-    for ContourIndex := FNumberOfContours to Length(FContours) - 1 do
-      FreeAndNil(FContours[ContourIndex]);
-    SetLength(FContours, FNumberOfContours);
-
-    for ContourIndex := 0 to FNumberOfContours - 1 do
+  while PointIndex < PointCount do
+  begin
+    // eventually increase contour index
+    if PointIndex > EndPtsOfCont[ContourIndex] then
     begin
-      // eventually create new contour
-      if not Assigned(FContours[ContourIndex]) then
-        FContours[ContourIndex] := TPascalTypeTrueTypeContour.Create;
+      Inc(ContourIndex);
+      CntrPntIndex := 0;
 
-      // set contour point count
-      with FContours[ContourIndex] do
-        if ContourIndex = 0 then
-          PointCount := EndPtsOfCont[ContourIndex] + 1
-        else
-          PointCount := (EndPtsOfCont[ContourIndex] - EndPtsOfCont
-            [ContourIndex - 1]);
+      // set next contour
+      Contour := TPascalTypeTrueTypeContour(FContours[ContourIndex]);
     end;
 
-    // reset point and contour index
-    PointIndex := 0;
-    ContourIndex := 0;
-    CntrPntIndex := 0;
-
-    // set first contour
-    Contour := TPascalTypeTrueTypeContour(FContours[ContourIndex]);
-
-    while PointIndex < PointCount do
-    begin
-      // eventually increase contour index
-      if PointIndex > EndPtsOfCont[ContourIndex] then
-      begin
-        Inc(ContourIndex);
-        CntrPntIndex := 0;
-
-        // set next contour
-        Contour := TPascalTypeTrueTypeContour(FContours[ContourIndex]);
-      end;
-
-      // read flag value
-      Read(Flag, 1);
+    // read flag value
+    Stream.Read(Flag, 1);
 
 {$IFDEF AmbigiousExceptions}
-      if (Flag and (1 shl 6)) <> 0 then
-        raise EPascalTypeError.CreateFmt(RCStrGlyphDataFlagReservedError,
-          [PointIndex, PointCount]);
-
-      if (Flag and (1 shl 7)) <> 0 then
-        raise EPascalTypeError.CreateFmt(RCStrGlyphDataFlagReservedError,
-          [PointIndex, PointCount]);
+    if (Flag and GLYF_RESERVED <> 0) then
+      raise EPascalTypeError.CreateFmt(RCStrGlyphDataFlagReservedError, [PointIndex, PointCount]);
 {$ENDIF}
-      // set flags
-      Contour.FPoints[CntrPntIndex].Flags := Flag;
+    // set flags
+    Contour.FPoints[CntrPntIndex].Flags := Flag;
 
-      // increase point index
-      Inc(PointIndex);
-      Inc(CntrPntIndex);
+    // increase point index
+    Inc(PointIndex);
+    Inc(CntrPntIndex);
 
-      // check for 'repeat' flag
-      if (Flag and (1 shl 3)) <> 0 then
+    // check for 'repeat' flag
+    if (Flag and GLYF_REPEAT_FLAG <> 0) then
+    begin
+      // read repeat count
+      Stream.Read(FlagCount, 1);
+
+      if (PointIndex + FlagCount > PointCount) then
+        raise EPascalTypeError.CreateFmt(RCStrGlyphDataFlagRepeatError, [PointIndex + FlagCount, PointCount]);
+
+      while FlagCount > 0 do
       begin
-        // read repeat count
-        Read(FlagCount, 1);
-
-        if (PointIndex + FlagCount > PointCount) then
-          raise EPascalTypeError.CreateFmt(RCStrGlyphDataFlagRepeatError,
-            [PointIndex + FlagCount, PointCount]);
-
-        while FlagCount > 0 do
+        // eventually increase contour index
+        if PointIndex > EndPtsOfCont[ContourIndex] then
         begin
-          // eventually increase contour index
-          if PointIndex > EndPtsOfCont[ContourIndex] then
-          begin
-            Inc(ContourIndex);
-            CntrPntIndex := 0;
+          Inc(ContourIndex);
+          CntrPntIndex := 0;
 
-            // set next contour
-            Contour := TPascalTypeTrueTypeContour(FContours[ContourIndex]);
-          end;
+          // set next contour
+          Contour := TPascalTypeTrueTypeContour(FContours[ContourIndex]);
+        end;
 
-          // set flags
-          Contour.FPoints[CntrPntIndex].Flags := Flag;
+        // set flags
+        Contour.FPoints[CntrPntIndex].Flags := Flag;
 
-          Inc(PointIndex);
-          Inc(CntrPntIndex);
-          Dec(FlagCount);
-        end
+        Inc(PointIndex);
+        Inc(CntrPntIndex);
+        Dec(FlagCount);
       end
-    end;
+    end
+  end;
 
-    // reset contour and point index
-    ContourIndex := 0;
-    CntrPntIndex := 0;
+  // reset contour and point index
+  ContourIndex := 0;
+  CntrPntIndex := 0;
 
-    // set first contour
-    Contour := TPascalTypeTrueTypeContour(FContours[ContourIndex]);
+  // set first contour
+  Contour := TPascalTypeTrueTypeContour(FContours[ContourIndex]);
 
-    // reset last point
-    LastPoint := 0;
+  // reset last point
+  LastPoint := 0;
 
-    // read x-coordinates
-    for PointIndex := 0 to PointCount - 1 do
+  // read x-coordinates
+  for PointIndex := 0 to PointCount - 1 do
+  begin
+    // eventually increase contour
+    if PointIndex > EndPtsOfCont[ContourIndex] then
     begin
-      // eventually increase contour
-      if PointIndex > EndPtsOfCont[ContourIndex] then
-      begin
-        Inc(ContourIndex);
-        CntrPntIndex := 0;
+      Inc(ContourIndex);
+      CntrPntIndex := 0;
 
-        // set next contour
-        Contour := TPascalTypeTrueTypeContour(FContours[ContourIndex])
-      end;
-
-      // check for short or long version
-      with Contour, FPoints[CntrPntIndex] do
-      begin
-        if (Flags and (1 shl 1)) > 0 then
-        begin
-          Read(Value8, 1);
-
-          // eventually change sign
-          if (Flags and (1 shl 4)) > 0 then
-            XPos := LastPoint + Value8
-          else
-            XPos := LastPoint - Value8;
-        end
-        else
-        begin
-          // eventually use last point
-          if (Flags and (1 shl 4)) > 0 then
-            XPos := LastPoint
-          else
-            XPos := LastPoint + ReadSwappedSmallInt(Stream);
-        end;
-        LastPoint := XPos;
-
-        Inc(CntrPntIndex);
-      end;
+      // set next contour
+      Contour := TPascalTypeTrueTypeContour(FContours[ContourIndex])
     end;
 
-    // reset contour and point index
-    ContourIndex := 0;
-    CntrPntIndex := 0;
-
-    // set first contour
-    Contour := TPascalTypeTrueTypeContour(FContours[ContourIndex]);
-
-    // reset last point
-    LastPoint := 0;
-
-    // read y-coordinates
-    for PointIndex := 0 to PointCount - 1 do
+    // check for short or long version
+    with Contour, FPoints[CntrPntIndex] do
     begin
-      // eventually increase contour
-      if PointIndex > EndPtsOfCont[ContourIndex] then
+      if (Flags and GLYF_X_SHORT_VECTOR <> 0) then
       begin
-        Inc(ContourIndex);
-        CntrPntIndex := 0;
+        Stream.Read(Value8, 1);
 
-        // set next contour
-        Contour := TPascalTypeTrueTypeContour(FContours[ContourIndex])
-      end;
-
-      // check for short or long version
-      with Contour, FPoints[CntrPntIndex] do
-      begin
-        if (Flags and (1 shl 2)) > 0 then
-        begin
-          Read(Value8, 1);
-
-          // eventually change sign
-          if (Flags and (1 shl 5)) > 0 then
-            YPos := LastPoint + Value8
-          else
-            YPos := LastPoint - Value8;
-        end
+        // eventually change sign
+        if (Flags and GLYF_X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR <> 0) then
+          XPos := LastPoint + Value8
         else
-        begin
-          // eventually use last point
-          if (Flags and (1 shl 5)) > 0 then
-            YPos := LastPoint
-          else
-            YPos := LastPoint + ReadSwappedSmallInt(Stream);
-        end;
-        LastPoint := YPos;
-
-        Inc(CntrPntIndex);
+          XPos := LastPoint - Value8;
+      end else
+      begin
+        // eventually use last point
+        if (Flags and GLYF_X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR <> 0) then
+          XPos := LastPoint
+        else
+          XPos := LastPoint + ReadSwappedSmallInt(Stream);
       end;
+      LastPoint := XPos;
 
+      Inc(CntrPntIndex);
     end;
+  end;
+
+  // reset contour and point index
+  ContourIndex := 0;
+  CntrPntIndex := 0;
+
+  // set first contour
+  Contour := TPascalTypeTrueTypeContour(FContours[ContourIndex]);
+
+  // reset last point
+  LastPoint := 0;
+
+  // read y-coordinates
+  for PointIndex := 0 to PointCount - 1 do
+  begin
+    // eventually increase contour
+    if PointIndex > EndPtsOfCont[ContourIndex] then
+    begin
+      Inc(ContourIndex);
+      CntrPntIndex := 0;
+
+      // set next contour
+      Contour := TPascalTypeTrueTypeContour(FContours[ContourIndex])
+    end;
+
+    // check for short or long version
+    with Contour, FPoints[CntrPntIndex] do
+    begin
+      if (Flags and GLYF_Y_SHORT_VECTOR <> 0) then
+      begin
+        Stream.Read(Value8, 1);
+
+        // eventually change sign
+        if (Flags and GLYF_Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR <> 0) then
+          YPos := LastPoint + Value8
+        else
+          YPos := LastPoint - Value8;
+      end else
+      begin
+        // eventually use last point
+        if (Flags and GLYF_Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR <> 0) then
+          YPos := LastPoint
+        else
+          YPos := LastPoint + ReadSwappedSmallInt(Stream);
+      end;
+      LastPoint := YPos;
+
+      Inc(CntrPntIndex);
+    end;
+
   end;
 end;
 
@@ -1159,6 +1168,7 @@ end;
 procedure TPascalTypeCompositeGlyph.LoadFromStream(Stream: TStream);
 var
   Argument: array [0..1] of SmallInt;
+  Bytes: array [0..1] of byte;
 {$IFDEF UseFloatingPoint}
 const
   CFixedPoint2Dot14Scale: Single = 1 / 16384;
@@ -1166,116 +1176,114 @@ const
 begin
   inherited;
 
-  with Stream do
+  // read flags
+  FFlags := ReadSwappedWord(Stream);
+
+{$IFDEF AmbigiousExceptions}
+  // make sure the reserved flag is set to 0
+  // if (FFlags and RESERVED <> 0) then
+  //   raise EPascalTypeError.Create(RCStrCompositeGlyphFlagError);
+{$ENDIF}
+  // read glyph index
+  FGlyphIndex := ReadSwappedWord(Stream);
+
+  // read argument 1
+  if (FFlags and ARG_1_AND_2_ARE_WORDS <> 0) then
   begin
-    // read flags
-    FFlags := ReadSwappedWord(Stream);
+    Argument[0] := ReadSwappedSmallInt(Stream);
+    Argument[1] := ReadSwappedSmallInt(Stream);
+  end else
+  begin
+    Stream.Read(Bytes[0], 1);
+    Stream.Read(Bytes[1], 1);
+    Argument[0] := Bytes[0];
+    Argument[1] := Bytes[1];
+  end;
+
+  if (FFlags and WE_HAVE_A_SCALE <> 0) then
+  begin
+    // read scale
+{$IFDEF UseFloatingPoint}
+    FScale[0, 0] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
+{$ELSE}
+    FScale[0, 0] := ReadSwappedSmallInt(Stream);
+{$ENDIF}
+    // set other values implicitly
+    FScale[0, 1] := 0;
+    FScale[1, 0] := 0;
+    FScale[1, 1] := FScale[0, 0];
 
 {$IFDEF AmbigiousExceptions}
     // make sure the reserved flag is set to 0
-    // if (FFlags and (1 shl 4)) <> 0
-    // then raise EPascalTypeError.Create(RCStrCompositeGlyphFlagError);
+    if (FFlags and WE_HAVE_AN_X_AND_Y_SCALE <> 0) then
+      raise EPascalTypeError.Create(RCStrCompositeGlyphFlagError);
+    if (FFlags and WE_HAVE_A_TWO_BY_TWO <> 0) then
+      raise EPascalTypeError.Create(RCStrCompositeGlyphFlagError);
 {$ENDIF}
-    // read glyph index
-    FGlyphIndex := ReadSwappedWord(Stream);
-
-    // read argument 1
-    if (FFlags and 1) > 0 then
-    begin
-      Argument[0] := ReadSwappedSmallInt(Stream);
-      Argument[1] := ReadSwappedSmallInt(Stream);
-    end
-    else
-    begin
-      Read(Argument[0], 1);
-      Read(Argument[1], 1);
-    end;
-
-    if (FFlags and 8) <> 0 then
-    begin
-      // read scale
+  end else
+  if (FFlags and WE_HAVE_AN_X_AND_Y_SCALE <> 0) then
+  begin
+    // read x-scale
 {$IFDEF UseFloatingPoint}
-      FScale[0, 0] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
+    FScale[0, 0] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
 {$ELSE}
-      FScale[0, 0] := ReadSwappedSmallInt(Stream);
+    FScale[0, 0] := ReadSwappedSmallInt(Stream);
 {$ENDIF}
-      // set other values implicitly
-      FScale[0, 1] := 0;
-      FScale[1, 0] := 0;
-      FScale[1, 1] := FScale[0, 0];
+
+    // read y-scale
+{$IFDEF UseFloatingPoint}
+    FScale[1, 1] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
+{$ELSE}
+    FScale[1, 1] := ReadSwappedSmallInt(Stream);
+{$ENDIF}
+    // set other values implicitly
+    FScale[0, 1] := 0;
+    FScale[1, 0] := 0;
 
 {$IFDEF AmbigiousExceptions}
-      // make sure the reserved flag is set to 0
-      if (FFlags and (1 shl 6)) <> 0 then
-        raise EPascalTypeError.Create(RCStrCompositeGlyphFlagError);
-      if (FFlags and (1 shl 7)) <> 0 then
-        raise EPascalTypeError.Create(RCStrCompositeGlyphFlagError);
+    // make sure the reserved flag is set to 0
+    if (FFlags and WE_HAVE_A_SCALE <> 0) then // Unnecessary: We have already tested for this above...
+      raise EPascalTypeError.Create(RCStrCompositeGlyphFlagError);
+    if (FFlags and WE_HAVE_A_TWO_BY_TWO <> 0) then
+      raise EPascalTypeError.Create(RCStrCompositeGlyphFlagError);
 {$ENDIF}
-    end
-    else if (FFlags and (1 shl 6)) <> 0 then
-    begin
-      // read x-scale
+  end else
+  if (FFlags and WE_HAVE_A_TWO_BY_TWO <> 0) then
+  begin
+    // read x-scale
 {$IFDEF UseFloatingPoint}
-      FScale[0, 0] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
+    FScale[0, 0] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
 {$ELSE}
-      FScale[0, 0] := ReadSwappedSmallInt(Stream);
+    FScale[0, 0] := ReadSwappedSmallInt(Stream);
 {$ENDIF}
 
-      // read y-scale
+    // read scale01
 {$IFDEF UseFloatingPoint}
-      FScale[1, 1] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
+    FScale[0, 1] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
 {$ELSE}
-      FScale[1, 1] := ReadSwappedSmallInt(Stream);
-{$ENDIF}
-      // set other values implicitly
-      FScale[0, 1] := 0;
-      FScale[1, 0] := 0;
-
-{$IFDEF AmbigiousExceptions}
-      // make sure the reserved flag is set to 0
-      if (FFlags and (1 shl 3)) <> 0 then
-        raise EPascalTypeError.Create(RCStrCompositeGlyphFlagError);
-      if (FFlags and (1 shl 7)) <> 0 then
-        raise EPascalTypeError.Create(RCStrCompositeGlyphFlagError);
-{$ENDIF}
-    end
-    else if (FFlags and (1 shl 7)) <> 0 then
-    begin
-      // read x-scale
-{$IFDEF UseFloatingPoint}
-      FScale[0, 0] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
-{$ELSE}
-      FScale[0, 0] := ReadSwappedSmallInt(Stream);
+    FScale[0, 1] := ReadSwappedSmallInt(Stream);
 {$ENDIF}
 
-      // read scale01
+    // read scale10
 {$IFDEF UseFloatingPoint}
-      FScale[0, 1] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
+    FScale[1, 0] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
 {$ELSE}
-      FScale[0, 1] := ReadSwappedSmallInt(Stream);
+    FScale[1, 0] := ReadSwappedSmallInt(Stream);
 {$ENDIF}
 
-      // read scale10
+    // read y-scale
 {$IFDEF UseFloatingPoint}
-      FScale[1, 0] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
+    FScale[1, 1] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
 {$ELSE}
-      FScale[1, 0] := ReadSwappedSmallInt(Stream);
-{$ENDIF}
-
-      // read y-scale
-{$IFDEF UseFloatingPoint}
-      FScale[1, 1] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
-{$ELSE}
-      FScale[1, 1] := ReadSwappedSmallInt(Stream);
+    FScale[1, 1] := ReadSwappedSmallInt(Stream);
 {$ENDIF}
 {$IFDEF AmbigiousExceptions}
-      // make sure the reserved flag is set to 0
-      if (FFlags and (1 shl 3)) <> 0 then
-        raise EPascalTypeError.Create(RCStrCompositeGlyphFlagError);
-      if (FFlags and (1 shl 6)) <> 0 then
-        raise EPascalTypeError.Create(RCStrCompositeGlyphFlagError);
+    // make sure the reserved flag is set to 0
+    if (FFlags and WE_HAVE_A_SCALE <> 0) then // Unnecessary: We have already tested for this above...
+      raise EPascalTypeError.Create(RCStrCompositeGlyphFlagError);
+    if (FFlags and WE_HAVE_AN_X_AND_Y_SCALE <> 0) then // Unnecessary: We have already tested for this above...
+      raise EPascalTypeError.Create(RCStrCompositeGlyphFlagError);
 {$ENDIF}
-    end;
   end;
 end;
 
@@ -1303,6 +1311,16 @@ begin
   end;
 end;
 
+function TPascalTypeCompositeGlyph.FlagHasInstructions: boolean;
+begin
+  Result := (FFlags and WE_HAVE_INSTRUCTIONS <> 0);
+end;
+
+function TPascalTypeCompositeGlyph.FlagMoreComponents: boolean;
+begin
+  Result := (FFlags and MORE_COMPONENTS <> 0);
+end;
+
 procedure TPascalTypeCompositeGlyph.FlagsChanged;
 begin
   Changed;
@@ -1320,7 +1338,7 @@ destructor TTrueTypeFontCompositeGlyphData.Destroy;
 var
   ContourIndex: Integer;
 begin
-  for ContourIndex := 0 to Length(FGlyphs) - 1 do
+  for ContourIndex := 0 to High(FGlyphs) do
     FreeAndNil(FGlyphs[ContourIndex]);
   inherited;
 end;
@@ -1333,17 +1351,17 @@ begin
     with TTrueTypeFontCompositeGlyphData(Dest) do
     begin
       // eventually clear not used contours
-      for GlyphsIndex := Length(Self.FGlyphs) to Length(FGlyphs) - 1 do
+      for GlyphsIndex := Length(Self.FGlyphs) to High(FGlyphs) do
         FreeAndNil(FGlyphs[GlyphsIndex]);
 
       // set length of countour array
       SetLength(FGlyphs, Length(Self.FGlyphs));
 
       // assign contours
-      for GlyphsIndex := 0 to Length(Self.FGlyphs) - 1 do
+      for GlyphsIndex := 0 to High(Self.FGlyphs) do
       begin
         // eventually create the contour
-        if not Assigned(FGlyphs[GlyphsIndex]) then
+        if (FGlyphs[GlyphsIndex] = nil) then
           FGlyphs[GlyphsIndex] := TPascalTypeCompositeGlyph.Create;
 
         // assign contour
@@ -1354,13 +1372,11 @@ begin
     inherited;
 end;
 
-function TTrueTypeFontCompositeGlyphData.GetCompositeGlyph(Index: Integer)
-  : TPascalTypeCompositeGlyph;
+function TTrueTypeFontCompositeGlyphData.GetCompositeGlyph(Index: Integer): TPascalTypeCompositeGlyph;
 begin
-  if (Index >= 0) and (Index < Length(FGlyphs)) then
-    Result := FGlyphs[Index]
-  else
+  if (Index < 0) or (Index > High(FGlyphs)) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FGlyphs[Index];
 end;
 
 function TTrueTypeFontCompositeGlyphData.GetContourCount: Integer;
@@ -1370,15 +1386,13 @@ var
   GlyphScanIndex: Integer;
 begin
   Result := 0;
-  GlyphDataTable := TTrueTypeFontGlyphDataTable
-    (FStorage.GetTableByTableName('glyf'));
-  if Assigned(GlyphDataTable) then
+  GlyphDataTable := TTrueTypeFontGlyphDataTable(Storage.GetTableByTableName('glyf'));
+  if (GlyphDataTable <> nil) then
     for SubGlyphIndex := 0 to GetGlyphCount - 1 do
       for GlyphScanIndex := 0 to GlyphDataTable.GetGlyphDataCount - 1 do
         if GlyphScanIndex = Glyph[SubGlyphIndex].FGlyphIndex then
         begin
-          Result := Result + GlyphDataTable.GlyphData[GlyphScanIndex]
-            .ContourCount;
+          Result := Result + GlyphDataTable.GlyphData[GlyphScanIndex].ContourCount;
           Break;
         end;
 end;
@@ -1395,7 +1409,7 @@ begin
   FInstructions.ResetToDefaults;
 
   // free Glyph list
-  for SubGlyphIndex := 0 to Length(FGlyphs) - 1 do
+  for SubGlyphIndex := 0 to High(FGlyphs) do
     FreeAndNil(FGlyphs[SubGlyphIndex]);
   SetLength(FGlyphs, 0);
 end;
@@ -1404,6 +1418,8 @@ procedure TTrueTypeFontCompositeGlyphData.LoadFromStream(Stream: TStream);
 var
   GlyphIndex     : Integer;
   HasInstructions: Boolean;
+  MoreComponents: boolean;
+  Glyph: TPascalTypeCompositeGlyph;
 begin
   inherited;
 
@@ -1411,25 +1427,26 @@ begin
   HasInstructions := False;
 
   // clear existing glyphs
-  for GlyphIndex := 0 to Length(FGlyphs) - 1 do
+  for GlyphIndex := 0 to High(FGlyphs) do
     FreeAndNil(FGlyphs[GlyphIndex]);
   SetLength(FGlyphs, 0);
 
-  with Stream do
-    repeat
-      // add new array element
-      SetLength(FGlyphs, Length(FGlyphs) + 1);
+  MoreComponents := True;
+  while (MoreComponents) do
+  begin
+    // add new array element
+    SetLength(FGlyphs, Length(FGlyphs) + 1);
 
-      // create composite glyph
-      FGlyphs[Length(FGlyphs) - 1] := TPascalTypeCompositeGlyph.Create;
+    // create composite glyph
+    Glyph := TPascalTypeCompositeGlyph.Create;
+    FGlyphs[High(FGlyphs)] := Glyph;
 
-      // load composite glyph from stream
-      FGlyphs[Length(FGlyphs) - 1].LoadFromStream(Stream);
+    // load composite glyph from stream
+    Glyph.LoadFromStream(Stream);
 
-      // check if glyph has instructions
-      if (FGlyphs[Length(FGlyphs) - 1].Flags and (1 shl 8)) <> 0 then
-        HasInstructions := True;
-    until (FGlyphs[Length(FGlyphs) - 1].Flags and (1 shl 5)) = 0;
+    HasInstructions := HasInstructions or Glyph.FlagHasInstructions;
+    MoreComponents := Glyph.FlagMoreComponents;
+  end;
 
   // eventually read instructions
   if HasInstructions then
@@ -1441,9 +1458,8 @@ var
   GlyphIndex: Integer;
 begin
   // save glyphs
-  for GlyphIndex := 0 to Length(FGlyphs) - 1 do
-    with FGlyphs[GlyphIndex] do
-      SaveToStream(Stream);
+  for GlyphIndex := 0 to High(FGlyphs) do
+    FGlyphs[GlyphIndex].SaveToStream(Stream);
 
   // save instructions to stream
   FInstructions.SaveToStream(Stream);
@@ -1475,11 +1491,10 @@ begin
       // assign contours
       for GlyphsIndex := 0 to Length(Self.FGlyphDataList) - 1 do
       begin
-        GlyphClass := TTrueTypeFontGlyphDataClass
-          (Self.FGlyphDataList[GlyphsIndex].ClassType);
+        GlyphClass := TTrueTypeFontGlyphDataClass(Self.FGlyphDataList[GlyphsIndex].ClassType);
 
         // eventually create the contour
-        FGlyphDataList[GlyphsIndex] := GlyphClass.Create(FStorage);
+        FGlyphDataList[GlyphsIndex] := GlyphClass.Create(Storage);
 
         // assign contour
         FGlyphDataList[GlyphsIndex].Assign(Self.FGlyphDataList[GlyphsIndex]);
@@ -1489,13 +1504,11 @@ begin
     inherited;
 end;
 
-function TTrueTypeFontGlyphDataTable.GetGlyphData(Index: Integer)
-  : TCustomTrueTypeFontGlyphData;
+function TTrueTypeFontGlyphDataTable.GetGlyphData(Index: Integer): TCustomTrueTypeFontGlyphData;
 begin
-  if (Index >= 0) and (Index < Length(FGlyphDataList)) then
-    Result := TCustomTrueTypeFontGlyphData(FGlyphDataList[Index])
-  else
+  if (Index < 0) or (Index > High(FGlyphDataList)) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := TCustomTrueTypeFontGlyphData(FGlyphDataList[Index]);
 end;
 
 function TTrueTypeFontGlyphDataTable.GetGlyphDataCount: Integer;
@@ -1521,7 +1534,7 @@ procedure TTrueTypeFontGlyphDataTable.FreeGlyphDataListItems;
 var
   GlyphIndex: Integer;
 begin
-  for GlyphIndex := 0 to Length(FGlyphDataList) - 1 do
+  for GlyphIndex := 0 to High(FGlyphDataList) do
     FreeAndNil(FGlyphDataList[GlyphIndex]);
 end;
 
@@ -1592,9 +1605,8 @@ procedure TTrueTypeFontGlyphDataTable.SaveToStream(Stream: TStream);
 var
   GlyphDataIndex: Integer;
 begin
-  for GlyphDataIndex := 0 to Length(FGlyphDataList) - 1 do
-    with FGlyphDataList[GlyphDataIndex] do
-      SaveToStream(Stream);
+  for GlyphDataIndex := 0 to High(FGlyphDataList) do
+    FGlyphDataList[GlyphDataIndex].SaveToStream(Stream);
 end;
 
 
@@ -1618,10 +1630,9 @@ end;
 
 function TTrueTypeFontLocationTable.GetLocation(Index: Integer): Cardinal;
 begin
-  if (Index >= 0) and (Index < Length(FLocations)) then
-    Result := FLocations[Index]
-  else
+  if (Index < 0) or (Index > High(FLocations)) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FLocations[Index];
 end;
 
 function TTrueTypeFontLocationTable.GetLocationCount: Cardinal;
@@ -1640,53 +1651,50 @@ var
   HeaderTable  : TPascalTypeHeaderTable;
   MaxProfTable : TPascalTypeMaximumProfileTable;
 begin
-  with Stream do
-  begin
-    // get header table
-    HeaderTable := TPascalTypeHeaderTable(FStorage.GetTableByTableName('head'));
-    Assert(Assigned(HeaderTable));
+  // get header table
+  HeaderTable := TPascalTypeHeaderTable(Storage.GetTableByTableName('head'));
+  Assert(HeaderTable <> nil);
 
-    // get maximum profile table
-    MaxProfTable := TPascalTypeMaximumProfileTable
-      (FStorage.GetTableByTableName('maxp'));
-    Assert(Assigned(MaxProfTable));
+  // get maximum profile table
+  MaxProfTable := TPascalTypeMaximumProfileTable(Storage.GetTableByTableName('maxp'));
+  Assert(MaxProfTable <> nil);
 
-    case HeaderTable.IndexToLocationFormat of
-      ilShort:
-        begin
-          // check (minimum) table size
-          if (MaxProfTable.NumGlyphs + 1) * SizeOf(Word) > Size then
-            raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  case HeaderTable.IndexToLocationFormat of
+    ilShort:
+      begin
+        // check (minimum) table size
+        if (MaxProfTable.NumGlyphs + 1) * SizeOf(Word) > Stream.Size then
+          raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-          // set location array length
-          SetLength(FLocations, MaxProfTable.NumGlyphs + 1);
+        // set location array length
+        SetLength(FLocations, MaxProfTable.NumGlyphs + 1);
 
-          // read location array data
-          for LocationIndex := 0 to Length(FLocations) - 1 do
-            FLocations[LocationIndex] := 2 * ReadSwappedWord(Stream);
-        end;
-      ilLong:
-        begin
-          // check (minimum) table size
-          if (MaxProfTable.NumGlyphs + 1) * SizeOf(Cardinal) > Size then
-            raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+        // read location array data
+        for LocationIndex := 0 to High(FLocations) do
+          FLocations[LocationIndex] := 2 * ReadSwappedWord(Stream);
+      end;
 
-          // set location array length
-          SetLength(FLocations, MaxProfTable.NumGlyphs + 1);
+    ilLong:
+      begin
+        // check (minimum) table size
+        if (MaxProfTable.NumGlyphs + 1) * SizeOf(Cardinal) > Stream.Size then
+          raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-          // read location array data
-          for LocationIndex := 0 to Length(FLocations) - 1 do
-            FLocations[LocationIndex] := ReadSwappedCardinal(Stream);
-        end;
-    end;
+        // set location array length
+        SetLength(FLocations, MaxProfTable.NumGlyphs + 1);
+
+        // read location array data
+        for LocationIndex := 0 to High(FLocations) do
+          FLocations[LocationIndex] := ReadSwappedCardinal(Stream);
+      end;
+  end;
 
 {$IFDEF AmbigiousExceptions}
-    // verify that the locations are stored in ascending order
-    for LocationIndex := 1 to Length(FLocations) - 1 do
-      if FLocations[LocationIndex - 1] > FLocations[LocationIndex] then
-        raise EPascalTypeError.Create(RCStrLocationOffsetError);
+  // verify that the locations are stored in ascending order
+  for LocationIndex := 1 to High(FLocations) do
+    if FLocations[LocationIndex - 1] > FLocations[LocationIndex] then
+      raise EPascalTypeError.Create(RCStrLocationOffsetError);
 {$ENDIF}
-  end;
 end;
 
 procedure TTrueTypeFontLocationTable.SaveToStream(Stream: TStream);
@@ -1695,36 +1703,32 @@ var
   HeaderTable  : TPascalTypeHeaderTable;
   MaxProfTable : TPascalTypeMaximumProfileTable;
 begin
-  with Stream do
-  begin
-    // get header table
-    HeaderTable := TPascalTypeHeaderTable(FStorage.GetTableByTableName('head'));
-    Assert(Assigned(HeaderTable));
+  // get header table
+  HeaderTable := TPascalTypeHeaderTable(Storage.GetTableByTableName('head'));
+  Assert(HeaderTable <> nil);
 
-    // get maximum profile table
-    MaxProfTable := TPascalTypeMaximumProfileTable
-      (FStorage.GetTableByTableName('maxp'));
-    Assert(Assigned(MaxProfTable));
+  // get maximum profile table
+  MaxProfTable := TPascalTypeMaximumProfileTable(Storage.GetTableByTableName('maxp'));
+  Assert(MaxProfTable <> nil);
 
-    // check whether the number of glyps matches the location array length
-    if (MaxProfTable.NumGlyphs + 1) <> Length(FLocations) then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check whether the number of glyps matches the location array length
+  if (MaxProfTable.NumGlyphs + 1) <> Length(FLocations) then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    case HeaderTable.IndexToLocationFormat of
-      ilShort:
-        begin
-          // write location array data
-          for LocationIndex := 0 to Length(FLocations) - 1 do
-            WriteSwappedWord(Stream, FLocations[LocationIndex] div 2);
-        end;
-      ilLong:
-        begin
-          // write location array data
-          for LocationIndex := 0 to Length(FLocations) - 1 do
-            WriteSwappedCardinal(Stream, FLocations[LocationIndex]);
-        end;
-    end;
+  case HeaderTable.IndexToLocationFormat of
+    ilShort:
+      begin
+        // write location array data
+        for LocationIndex := 0 to High(FLocations) do
+          WriteSwappedWord(Stream, FLocations[LocationIndex] div 2);
+      end;
 
+    ilLong:
+      begin
+        // write location array data
+        for LocationIndex := 0 to High(FLocations) do
+          WriteSwappedCardinal(Stream, FLocations[LocationIndex]);
+      end;
   end;
 end;
 
@@ -1738,8 +1742,8 @@ end;
 
 initialization
 
-RegisterPascalTypeTables([TTrueTypeFontControlValueTable,
-  TTrueTypeFontFontProgramTable, TTrueTypeFontGlyphDataTable,
-  TTrueTypeFontLocationTable, TTrueTypeFontControlValueProgramTable]);
+  RegisterPascalTypeTables([TTrueTypeFontControlValueTable,
+    TTrueTypeFontFontProgramTable, TTrueTypeFontGlyphDataTable,
+    TTrueTypeFontLocationTable, TTrueTypeFontControlValueProgramTable]);
 
 end.

@@ -88,7 +88,7 @@ type
     procedure FlagsChanged; virtual;
     procedure VersionChanged; virtual;
   public
-    constructor Create(Storage: IPascalTypeStorageTable); override;
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -143,8 +143,7 @@ type
 
   // table 'hdmx'
 
-  TPascalTypeHorizontalDeviceMetricsSubTable = class
-    (TCustomPascalTypeInterfaceTable)
+  TPascalTypeHorizontalDeviceMetricsSubTable = class(TCustomPascalTypeInterfaceTable)
   private
     Fppem    : Byte;
     FMaxWidth: Byte;
@@ -175,17 +174,15 @@ type
     FSubtables: TObjectList;
     procedure SetVersion(const Value: Word);
     function GetDeviceRecordCount: Word;
-    function GetDeviceRecord(Index: Word)
-      : TPascalTypeHorizontalDeviceMetricsSubTable;
-    procedure SetDeviceRecord(Index: Word;
-      const Value: TPascalTypeHorizontalDeviceMetricsSubTable);
+    function GetDeviceRecord(Index: Word): TPascalTypeHorizontalDeviceMetricsSubTable;
+    procedure SetDeviceRecord(Index: Word; const Value: TPascalTypeHorizontalDeviceMetricsSubTable);
   protected
     procedure AssignTo(Dest: TPersistent); override;
 
     procedure ResetToDefaults; override;
     procedure VersionChanged; virtual;
   public
-    constructor Create(Storage: IPascalTypeStorageTable); override;
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -195,8 +192,7 @@ type
 
     property Version: Word read FVersion write SetVersion;
     property DeviceRecordCount: Word read GetDeviceRecordCount;
-    property DeviceRecord[Index: Word]
-      : TPascalTypeHorizontalDeviceMetricsSubTable read GetDeviceRecord
+    property DeviceRecord[Index: Word]: TPascalTypeHorizontalDeviceMetricsSubTable read GetDeviceRecord
       write SetDeviceRecord;
   end;
 
@@ -309,7 +305,7 @@ type
 
     procedure VersionChanged; virtual;
   public
-    constructor Create(Storage: IPascalTypeStorageTable); override;
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -473,7 +469,7 @@ type
     procedure ResetToDefaults; override;
     procedure VersionChanged; virtual;
   public
-    constructor Create(Storage: IPascalTypeStorageTable); override;
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -707,7 +703,7 @@ end;
 
 { TPascalTypeDigitalSignatureTable }
 
-constructor TPascalTypeDigitalSignatureTable.Create;
+constructor TPascalTypeDigitalSignatureTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
   FSignatures := TObjectList.Create(True);
   inherited;
@@ -795,7 +791,7 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read directory entry
-    for DirIndex := 0 to Length(Directory) - 1 do
+    for DirIndex := 0 to High(Directory) do
       with Directory[DirIndex] do
       begin
         // read format
@@ -812,7 +808,7 @@ begin
     FSignatures.Clear;
 
     // read digital signatures
-    for DirIndex := 0 to Length(Directory) - 1 do
+    for DirIndex := 0 to High(Directory) do
       with Directory[DirIndex] do
       begin
         SigBlock := TPascalTypeDigitalSignatureBlock.Create;
@@ -872,7 +868,7 @@ begin
     Position := StartPos + 3 * SizeOf(Word);
 
     // write directory entries
-    for DirIndex := 0 to Length(Directory) - 1 do
+    for DirIndex := 0 to High(Directory) do
       with Directory[DirIndex], TPascalTypeDigitalSignatureBlock
         (FSignatures[DirIndex]) do
       begin
@@ -987,7 +983,7 @@ begin
     if Position + 4 * Length(FGaspRanges) > Size then
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    for RangeIndex := 0 to Length(FGaspRanges) - 1 do
+    for RangeIndex := 0 to High(FGaspRanges) do
     begin
       // read MaxPPEM
       FGaspRanges[RangeIndex].MaxPPEM := Byte(ReadSwappedWord(Stream));
@@ -1011,7 +1007,7 @@ begin
     // write numRanges
     WriteSwappedWord(Stream, Length(FGaspRanges));
 
-    for RangeIndex := 0 to Length(FGaspRanges) - 1 do
+    for RangeIndex := 0 to High(FGaspRanges) do
     begin
       // write MaxPPEM
       WriteSwappedWord(Stream, FGaspRanges[RangeIndex].MaxPPEM);
@@ -1083,8 +1079,7 @@ var
 begin
   inherited;
 
-  MaxProfile := TPascalTypeMaximumProfileTable
-    (FStorage.GetTableByTableName('maxp'));
+  MaxProfile := TPascalTypeMaximumProfileTable(Storage.GetTableByTableName('maxp'));
 
   with Stream do
   begin
@@ -1160,8 +1155,7 @@ end;
 
 { TPascalTypeHorizontalDeviceMetricsTable }
 
-constructor TPascalTypeHorizontalDeviceMetricsTable.Create
-  (Storage: IPascalTypeStorageTable);
+constructor TPascalTypeHorizontalDeviceMetricsTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
   FSubtables := TObjectList.Create;
   inherited;
@@ -1248,8 +1242,7 @@ begin
       Position := OffsetPosition + RecordIndex * SizeDeviceRecord;
 
       // create subtable entry
-      SubTableRecord := TPascalTypeHorizontalDeviceMetricsSubTable.Create
-        (FStorage);
+      SubTableRecord := TPascalTypeHorizontalDeviceMetricsSubTable.Create(Storage);
 
       // load subtable entry from stream
       SubTableRecord.LoadFromStream(Stream);
@@ -1315,7 +1308,7 @@ var
   PairIndex: Integer;
 begin
   Result := 0;
-  for PairIndex := 0 to Length(FPairs) - 1 do
+  for PairIndex := 0 to High(FPairs) do
     if FPairs[PairIndex].Left = LeftGlyphIndex then
       if FPairs[PairIndex].Right = RightGlyphIndex then
       begin
@@ -1381,7 +1374,7 @@ begin
       raise EPascalTypeError.Create(RCStrErrorInKerningSubTable + ': ' +
         RCStrWrongRangeShift);
 {$ENDIF}
-    for PairIndex := 0 to Length(FPairs) - 1 do
+    for PairIndex := 0 to High(FPairs) do
       with FPairs[PairIndex] do
       begin
         // read left
@@ -1422,7 +1415,7 @@ begin
     RangeShift := 6 * Length(FPairs) - SearchRange;
     WriteSwappedWord(Stream, RangeShift);
 
-    for PairIndex := 0 to Length(FPairs) - 1 do
+    for PairIndex := 0 to High(FPairs) do
       with FPairs[PairIndex] do
       begin
         // write left
@@ -1642,10 +1635,10 @@ begin
       begin
         OldFormatTable := FFormatTable;
         FFormatTable := CFormatClasses[Format shr 1].Create;
-        if Assigned(OldFormatTable) then
+        if (OldFormatTable <> nil) then
         begin
           FFormatTable.Assign(OldFormatTable);
-          FreeAndNil(OldFormatTable);
+          OldFormatTable.Free;
         end;
       end;
   else
@@ -1692,7 +1685,7 @@ end;
 
 { TPascalTypeKerningTable }
 
-constructor TPascalTypeKerningTable.Create;
+constructor TPascalTypeKerningTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
   FKerningSubtableList := TObjectList.Create;
   inherited;
@@ -1776,8 +1769,8 @@ begin
       SubTable := TPascalTypeKerningSubTable.Create;
       try
 
-      // load from stream
-      SubTable.LoadFromStream(Stream);
+        // load from stream
+        SubTable.LoadFromStream(Stream);
 
       except
         SubTable.Free;
@@ -2326,7 +2319,7 @@ begin
     // read ending yPelHeight
     Read(FEndsz, 1);
 
-    for EntryIndex := 0 to Length(FEntry) - 1 do
+    for EntryIndex := 0 to High(FEntry) do
       with FEntry[EntryIndex] do
       begin
         // read yPelHeight to which values apply.
@@ -2358,7 +2351,7 @@ begin
     // write ending yPelHeight
     Write(FEndsz, 1);
 
-    for EntryIndex := 0 to Length(FEntry) - 1 do
+    for EntryIndex := 0 to High(FEntry) do
       with FEntry[EntryIndex] do
       begin
         // write yPelHeight to which values apply.
@@ -2376,8 +2369,7 @@ end;
 
 { TPascalTypeVerticalDeviceMetricsTable }
 
-constructor TPascalTypeVerticalDeviceMetricsTable.Create
-  (Storage: IPascalTypeStorageTable);
+constructor TPascalTypeVerticalDeviceMetricsTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
   FGroups := TObjectList.Create;
   inherited;
@@ -2458,7 +2450,7 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read ratios
-    for RatioIndex := 0 to Length(FRatios) - 1 do
+    for RatioIndex := 0 to High(FRatios) do
       with FRatios[RatioIndex] do
       begin
         Read(bCharSet, 1);
@@ -2468,7 +2460,7 @@ begin
       end;
 
     // read offsets
-    for RatioIndex := 0 to Length(FRatios) - 1 do
+    for RatioIndex := 0 to High(FRatios) do
       Offsets[RatioIndex] := ReadSwappedWord(Stream);
 
     // read groups
@@ -2914,11 +2906,9 @@ begin
   inherited;
 
   // locate vertical metrics header
-  VerticalHeader := TPascalTypeVerticalHeaderTable
-    (FStorage.GetTableByTableClass(TPascalTypeVerticalHeaderTable));
-  MaximumProfile := TPascalTypeMaximumProfileTable
-    (FStorage.GetTableByTableName('maxp'));
-  Assert(Assigned(MaximumProfile));
+  VerticalHeader := TPascalTypeVerticalHeaderTable(Storage.GetTableByTableClass(TPascalTypeVerticalHeaderTable));
+  MaximumProfile := TPascalTypeMaximumProfileTable(Storage.GetTableByTableName('maxp'));
+  Assert(MaximumProfile <> nil);
 
   // check if vertical metrics header is available
   if VerticalHeader = nil then
@@ -2958,8 +2948,7 @@ begin
   inherited;
 
   // locate vertical metrics header
-  VerticalHeader := TPascalTypeVerticalHeaderTable
-    (FStorage.GetTableByTableClass(TPascalTypeVerticalHeaderTable));
+  VerticalHeader := TPascalTypeVerticalHeaderTable(Storage.GetTableByTableClass(TPascalTypeVerticalHeaderTable));
 
   // check if vertical metrics header is available
   if VerticalHeader = nil then

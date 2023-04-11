@@ -176,7 +176,7 @@ type
 
     procedure ResetToDefaults; override;
   public
-    constructor Create(Storage: IPascalTypeStorageTable); override;
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -281,7 +281,7 @@ type
 
     procedure ResetToDefaults; override;
   public
-    constructor Create(Storage: IPascalTypeStorageTable); override;
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -369,7 +369,7 @@ type
   public
     class function GetTableType: TTableType; override;
 
-    constructor Create(Storage: IPascalTypeStorageTable); override;
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
     procedure LoadFromStream(Stream: TStream); override;
@@ -405,7 +405,7 @@ type
 
     procedure ResetToDefaults; override;
   public
-    constructor Create(Storage: IPascalTypeStorageTable); override;
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -515,7 +515,7 @@ type
 
     procedure ResetToDefaults; override;
   public
-    constructor Create(Storage: IPascalTypeStorageTable); override;
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
     property ChainCount: Cardinal read GetChainCount;
@@ -673,7 +673,7 @@ type
     procedure HorizontalChanged; virtual;
     procedure VerticalChanged; virtual;
   public
-    constructor Create(Storage: IPascalTypeStorageTable); override;
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -1228,7 +1228,7 @@ begin
     SetLength(FCorrespondenceArray,
       Swap16(Value16));
 
-    for PairIndex := 0 to Length(FCorrespondenceArray) - 1 do
+    for PairIndex := 0 to High(FCorrespondenceArray) do
       with FCorrespondenceArray[PairIndex] do
       begin
         // read 'from' coordinate
@@ -1251,7 +1251,7 @@ begin
   // write pair count
   WriteSwappedWord(Stream, Length(FCorrespondenceArray));
 
-  for PairIndex := 0 to Length(FCorrespondenceArray) - 1 do
+  for PairIndex := 0 to High(FCorrespondenceArray) do
     with FCorrespondenceArray[PairIndex] do
     begin
       // write 'from' coordinate
@@ -1265,10 +1265,9 @@ end;
 
 { TPascalTypeAxisVariationTable }
 
-constructor TPascalTypeAxisVariationTable.Create(Storage:
-  IPascalTypeStorageTable);
+constructor TPascalTypeAxisVariationTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
-  inherited Create(Storage);
+  inherited Create(AStorage);
   FSegments := TObjectList.Create;
 end;
 
@@ -1379,7 +1378,7 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read 32 delta values (a value of 0 means no delta ;-)
-    for DeltaIndex := 0 to Length(FDeltas) - 1 do
+    for DeltaIndex := 0 to High(FDeltas) do
       FDeltas[DeltaIndex] :=
         ReadSwappedWord(Stream);
   end;
@@ -1500,7 +1499,7 @@ begin
   WriteSwappedWord(Stream, FDefaultBaseline);
 
   // write baseline part to stream
-  if Assigned(FBaselinePart) then
+  if (FBaselinePart <> nil) then
     FBaselinePart.SaveToStream(Stream);
 end;
 
@@ -1515,8 +1514,7 @@ end;
 
 { TPascalTypeBitmapLocationTable }
 
-constructor TPascalTypeBitmapLocationTable.Create(Storage:
-  IPascalTypeStorageTable);
+constructor TPascalTypeBitmapLocationTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
   FBitmapSizeList := TObjectList.Create;
   inherited;
@@ -1794,8 +1792,7 @@ end;
 
 { TPascalTypeFontDescriptionTable }
 
-constructor TPascalTypeFontDescriptionTable.Create(Storage:
-  IPascalTypeStorageTable);
+constructor TPascalTypeFontDescriptionTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
   FDescritors := TObjectList.Create;
   inherited;
@@ -1858,7 +1855,7 @@ begin
       TagClass := FindDescriptionTagByType(TTableType(Value32));
 
       // read tag
-      if Assigned(TagClass) then
+      if (TagClass <> nil) then
       begin
         // create descriptor
         Descritor := TagClass.Create;
@@ -1963,10 +1960,10 @@ end;
 
 { TPascalTypeFeatureTable }
 
-constructor TPascalTypeFeatureTable.Create(Storage: IPascalTypeStorageTable);
+constructor TPascalTypeFeatureTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
   FFeatures := TObjectList.Create;
-  inherited Create(Storage);
+  inherited Create(AStorage);
 end;
 
 destructor TPascalTypeFeatureTable.Destroy;
@@ -2151,7 +2148,7 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read data
-    for AxisIndex := 0 to Length(FVariationAxes) - 1 do
+    for AxisIndex := 0 to High(FVariationAxes) do
       with FVariationAxes[AxisIndex] do
       begin
         // read axis tag
@@ -2177,7 +2174,7 @@ begin
         NameID := ReadSwappedWord(Stream);
       end;
 
-    for InstIndex := 0 to Length(FInstances) - 1 do
+    for InstIndex := 0 to High(FInstances) do
       with FInstances[InstIndex] do
       begin
         // read name ID
@@ -2190,7 +2187,7 @@ begin
         SetLength(Coordinates, Length(FVariationAxes));
 
         // read coordinates
-        for AxisIndex := 0 to Length(FVariationAxes) - 1 do
+        for AxisIndex := 0 to High(FVariationAxes) do
           Coordinates[AxisIndex]
             .Fixed := ReadSwappedCardinal(Stream);
       end;
@@ -2495,8 +2492,7 @@ end;
 
 { TCustomPascalTypeGlyphMetamorphosisTable }
 
-constructor TCustomPascalTypeGlyphMetamorphosisTable.Create(
-  Storage: IPascalTypeStorageTable);
+constructor TCustomPascalTypeGlyphMetamorphosisTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
   FChains := TObjectList.Create;
   inherited;
@@ -2605,7 +2601,7 @@ begin
     // read subtable count
     SubtableCount := ReadSwappedWord(Stream);
 
-    for FeatureIndex := 0 to Length(FFeatureArray) - 1 do
+    for FeatureIndex := 0 to High(FFeatureArray) do
       with FFeatureArray[FeatureIndex] do
       begin
         // read feature type
@@ -2799,7 +2795,7 @@ begin
     // read subtable count
     SubtableCount := ReadSwappedCardinal(Stream);
 
-    for FeatureIndex := 0 to Length(FFeatureArray) - 1 do
+    for FeatureIndex := 0 to High(FFeatureArray) do
       with FFeatureArray[FeatureIndex] do
       begin
         // read feature type
@@ -3008,7 +3004,7 @@ begin
     if Position + 8 * Length(FTrackTable) + 4 * Length(FSizeTable) > Size then
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    for RecordIndex := 0 to Length(FTrackTable) - 1 do
+    for RecordIndex := 0 to High(FTrackTable) do
       with FTrackTable[RecordIndex] do
       begin
         // read track
@@ -3028,7 +3024,7 @@ begin
     // locate size table position
     Position := StartPos + SizeTableOffset;
 
-    for RecordIndex := 0 to Length(FSizeTable) - 1 do
+    for RecordIndex := 0 to High(FSizeTable) do
     begin
       // read value
       FSizeTable[RecordIndex].Fixed := ReadSwappedCardinal(Stream);
@@ -3057,7 +3053,7 @@ begin
     end;
 end;
 
-constructor TPascalTypeTrackingTable.Create(Storage: IPascalTypeStorageTable);
+constructor TPascalTypeTrackingTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
   FHorizontal := TPascalTypeTrackingDataTable.Create;
   FVertical := TPascalTypeTrackingDataTable.Create;
@@ -3240,7 +3236,7 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read unicode code points
-    for UnicodeIndex := 0 to Length(FUnicodeCodePoints) - 1 do
+    for UnicodeIndex := 0 to High(FUnicodeCodePoints) do
       FUnicodeCodePoints[UnicodeIndex] := ReadSwappedWord(Stream);
 
     // read kind name count
@@ -3381,8 +3377,7 @@ end;
 
 procedure TPascalTypeZapfKindName.ResetToDefaults;
 begin
-  if Assigned(FKindName) then
-    FreeAndNil(FKindName);
+  FreeAndNil(FKindName);
 
   inherited;
 end;
@@ -3393,8 +3388,7 @@ begin
     (not (FKindName is TPascalTypeZapfKindNameString)) then
   begin
     // eventually free current kind name object
-    if Assigned(FKindName) then
-      FreeAndNil(FKindName);
+    FreeAndNil(FKindName);
 
     // create new kind name object
     FKindName := TPascalTypeZapfKindNameString.Create;
@@ -3403,8 +3397,7 @@ begin
     (not (FKindName is TPascalTypeZapfKindNameString)) then
   begin
     // eventually free current kind name object
-    if Assigned(FKindName) then
-      FreeAndNil(FKindName);
+    FreeAndNil(FKindName);
 
     // create new kind name object
     FKindName := TPascalTypeZapfKindNameBinary.Create;
@@ -3425,8 +3418,7 @@ begin
     Read(FKindType, 1);
 
     // eventually free current kind name object
-    if Assigned(FKindName) then
-      FreeAndNil(FKindName);
+    FreeAndNil(FKindName);
 
     // eventually create kind name object
     if FKindType in [zknUniversal..zknUniversal] then
@@ -3437,7 +3429,7 @@ begin
         TPascalTypeZapfKindNameBinary.Create;
 
     // eventually load kind name from stream
-    if Assigned(FKindName) then
+    if (FKindName <> nil) then
       FKindName.LoadFromStream(Stream);
   end;
 end;
@@ -3478,7 +3470,7 @@ begin
     with TPascalTypeZapfTable(Dest) do
     begin
       SetLength(FGlyphInfos, Length(Self.FGlyphInfos));
-      for GlyphIndex := 0 to Length(FGlyphInfos) - 1 do
+      for GlyphIndex := 0 to High(FGlyphInfos) do
         FGlyphInfos[GlyphIndex]
           .Assign(Self.FGlyphInfos[GlyphIndex]);
     end;
@@ -3499,7 +3491,7 @@ procedure TPascalTypeZapfTable.ClearGlyphInfos;
 var
   GlyphIndex: Integer;
 begin
-  for GlyphIndex := 0 to Length(FGlyphInfos) - 1 do
+  for GlyphIndex := 0 to High(FGlyphInfos) do
     FreeAndNil(FGlyphInfos[GlyphIndex]);
 end;
 
@@ -3525,14 +3517,14 @@ begin
     ExtraInfo := ReadSwappedCardinal(Stream);
 
     // get maximum profile table
-    MaxProfile := TPascalTypeMaximumProfileTable(FStorage.GetTableByTableType('maxp'));
-    Assert(Assigned(MaxProfile));
+    MaxProfile := TPascalTypeMaximumProfileTable(Storage.GetTableByTableType('maxp'));
+    Assert(MaxProfile <> nil);
 
     // set length of offset array
     SetLength(Offsets, MaxProfile.NumGlyphs);
 
     // read glyph info offsets
-    for GlyphIndex := 0 to Length(Offsets) - 1 do
+    for GlyphIndex := 0 to High(Offsets) do
       Offsets[GlyphIndex] :=
         ReadSwappedCardinal(Stream);
 
@@ -3540,7 +3532,7 @@ begin
     SetLength(FGlyphInfos, Length(Offsets));
 
     // load glyph info
-    for GlyphIndex := 0 to Length(Offsets) - 1 do
+    for GlyphIndex := 0 to High(Offsets) do
     begin
       // locate glyph info
       Position := StartPos + Offsets[GlyphIndex];
@@ -3570,7 +3562,7 @@ var
   TableClassIndex: Integer;
 begin
   Result := False;
-  for TableClassIndex := 0 to Length(GDescriptionTagClasses) - 1 do
+  for TableClassIndex := 0 to High(GDescriptionTagClasses) do
     if GDescriptionTagClasses[TableClassIndex] = TableClass then
     begin
       Result := True;
@@ -3584,8 +3576,8 @@ var
   TableClassIndex: Integer;
 begin
   Result := True;
-  for TableClassBaseIndex := 0 to Length(GDescriptionTagClasses) - 1 do
-    for TableClassIndex := TableClassBaseIndex + 1 to Length(GDescriptionTagClasses) - 1 do
+  for TableClassBaseIndex := 0 to High(GDescriptionTagClasses) do
+    for TableClassIndex := TableClassBaseIndex + 1 to High(GDescriptionTagClasses) do
       if GDescriptionTagClasses[TableClassBaseIndex] = GDescriptionTagClasses[TableClassIndex] then
       begin
         Result := False;
@@ -3597,7 +3589,7 @@ procedure RegisterDescriptionTag(TableClass: TPascalTypeTaggedValueTableClass);
 begin
   Assert(IsTagRegistered(TableClass) = False);
   SetLength(GDescriptionTagClasses, Length(GDescriptionTagClasses) + 1);
-  GDescriptionTagClasses[Length(GDescriptionTagClasses) - 1] := TableClass;
+  GDescriptionTagClasses[High(GDescriptionTagClasses)] := TableClass;
 end;
 
 procedure RegisterDescriptionTags(TableClasses:
@@ -3607,7 +3599,7 @@ var
 begin
   SetLength(GDescriptionTagClasses, Length(GDescriptionTagClasses) +
     Length(TableClasses));
-  for TableClassIndex := 0 to Length(TableClasses) - 1 do
+  for TableClassIndex := 0 to High(TableClasses) do
     GDescriptionTagClasses[Length(GDescriptionTagClasses) -
       Length(TableClasses) + TableClassIndex] := TableClasses[TableClassIndex];
   Assert(CheckDescriptionTagsValid);
@@ -3619,7 +3611,7 @@ var
   TableClassIndex: Integer;
 begin
   Result := nil;
-  for TableClassIndex := 0 to Length(GDescriptionTagClasses) - 1 do
+  for TableClassIndex := 0 to High(GDescriptionTagClasses) do
     if GDescriptionTagClasses[TableClassIndex].GetTableType = TableType then
     begin
       Result := GDescriptionTagClasses[TableClassIndex];

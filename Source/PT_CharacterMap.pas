@@ -309,7 +309,7 @@ begin
     else
       Inc(SegmentIndex);
 
-  if not(CharacterIndex >= FStartCount[SegmentIndex]) then
+  if (CharacterIndex < FStartCount[SegmentIndex]) then
   begin
     // missing glyph
     Result := 0;
@@ -384,18 +384,19 @@ begin
   if FRangeShift <> FSegCountX2 - FSearchRange then
     raise EPascalTypeError.Create(RCStrCharMapError + ': ' + 'wrong range shift!');
 {$ENDIF}
+
   SetLength(FEndCount, FSegCountX2 div 2);
   SetLength(FStartCount, FSegCountX2 div 2);
   SetLength(FIdDelta, FSegCountX2 div 2);
   SetLength(FIdRangeOffset, FSegCountX2 div 2);
 
   // read end count
-  for SegIndex := 0 to Length(FEndCount) - 1 do
+  for SegIndex := 0 to High(FEndCount) do
     FEndCount[SegIndex] := ReadSwappedWord(Stream);
 
   // confirm end count is valid
-  if FEndCount[Length(FEndCount) - 1] <> $FFFF then
-    raise EPascalTypeError.CreateFmt(RCStrCharMapErrorEndCount, [FEndCount[Length(FEndCount) - 1]]);
+  if FEndCount[High(FEndCount)] <> $FFFF then
+    raise EPascalTypeError.CreateFmt(RCStrCharMapErrorEndCount, [FEndCount[High(FEndCount)]]);
 
 {$IFDEF AmbigiousExceptions}
   // read reserved
@@ -406,10 +407,11 @@ begin
     raise EPascalTypeError.CreateFmt(RCStrCharMapErrorReserved, [Value16]);
 {$ELSE}
   // skip reserved
-  Seek(2, soFromCurrent);
+  Stream.Seek(2, soFromCurrent);
 {$ENDIF}
+
   // read start count
-  for SegIndex := 0 to Length(FStartCount) - 1 do
+  for SegIndex := 0 to High(FStartCount) do
   begin
     FStartCount[SegIndex] := ReadSwappedWord(Stream);
 
@@ -421,22 +423,23 @@ begin
   end;
 
   // read ID delta
-  for SegIndex := 0 to Length(FIdDelta) - 1 do
+  for SegIndex := 0 to High(FIdDelta) do
     Word(FIdDelta[SegIndex]) := ReadSwappedWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
   // confirm ID delta is valid
-  if FIdDelta[Length(FIdDelta) - 1] <> 1 then
-    raise EPascalTypeError.CreateFmt(RCStrCharMapErrorIdDelta, [FIdDelta[Length(FIdDelta) - 1]]);
+  if FIdDelta[High(FIdDelta)] <> 1 then
+    raise EPascalTypeError.CreateFmt(RCStrCharMapErrorIdDelta, [FIdDelta[High(FIdDelta)]]);
 {$ENDIF}
+
   // read ID range offset
-  for SegIndex := 0 to Length(FIdRangeOffset) - 1 do
+  for SegIndex := 0 to High(FIdRangeOffset) do
     FIdRangeOffset[SegIndex] := ReadSwappedWord(Stream);
 
   SetLength(FGlyphIdArray, (FLength - 2 - (Stream.Position - StartPos)) div 2);
 
   // read glyph ID array
-  for SegIndex := 0 to Length(FGlyphIdArray) - 1 do
+  for SegIndex := 0 to High(FGlyphIdArray) do
     FGlyphIdArray[SegIndex] := ReadSwappedWord(Stream);
 end;
 
@@ -515,7 +518,7 @@ begin
     // read number of character codes in subrange
     SetLength(FGlyphIdArray, ReadSwappedWord(Stream));
 
-    for EntryIndex := 0 to Length(FGlyphIdArray) - 1 do
+    for EntryIndex := 0 to High(FGlyphIdArray) do
       FGlyphIdArray[EntryIndex] := ReadSwappedWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
@@ -549,7 +552,7 @@ begin
     WriteSwappedWord(Stream, Length(FGlyphIdArray));
 
     // write glyph indices
-    for EntryIndex := 0 to Length(FGlyphIdArray) - 1 do
+    for EntryIndex := 0 to High(FGlyphIdArray) do
       WriteSwappedWord(Stream, FGlyphIdArray[EntryIndex]);
   end;
 end;
@@ -627,7 +630,7 @@ begin
     // read group count
     SetLength(FCoverageArray, ReadSwappedCardinal(Stream));
 
-    for GroupIndex := 0 to Length(FCoverageArray) - 1 do
+    for GroupIndex := 0 to High(FCoverageArray) do
       with FCoverageArray[GroupIndex] do
       begin
         // read start character code

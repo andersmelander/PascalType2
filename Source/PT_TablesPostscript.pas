@@ -193,7 +193,7 @@ type
     procedure AssignTo(Dest: TPersistent); override;
     procedure VersionChanged; virtual;
   public
-    constructor Create(Storage: IPascalTypeStorageTable); override;
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -1044,7 +1044,7 @@ begin
 
   SetLength(FOperands, Length(FOperands) + 1);
 
-  FOperands[Length(FOperands) - 1] := Operand;
+  FOperands[High(FOperands)] := Operand;
 end;
 
 procedure TPascalTypePostscriptDictPair.AssignTo(Dest: TPersistent);
@@ -1055,7 +1055,7 @@ begin
     with TPascalTypePostscriptDictPair(Dest) do
     begin
       SetLength(FOperands, Length(Self.FOperands));
-      for OpIndex := 0 to Length(FOperands) - 1 do
+      for OpIndex := 0 to High(FOperands) do
       begin
         FOperands[OpIndex] := TCustomPascalTypePostscriptDictOperand
           (Self.FOperands[OpIndex].ClassType.Create);
@@ -1074,8 +1074,7 @@ procedure TPascalTypePostscriptDictPair.Clear;
 begin
   inherited;
 
-  if Assigned(FDictOperator) then
-    FreeAndNil(FDictOperator);
+  FreeAndNil(FDictOperator);
 
   ClearOperands;
   SetLength(FOperands, 0);
@@ -1085,7 +1084,7 @@ procedure TPascalTypePostscriptDictPair.ClearOperands;
 var
   OperandIndex: Integer;
 begin
-  for OperandIndex := 0 to Length(FOperands) - 1 do
+  for OperandIndex := 0 to High(FOperands) do
     FreeAndNil(FOperands[OperandIndex]);
 end;
 
@@ -1134,9 +1133,9 @@ function TPascalTypePostscriptDictDataTable.GetStringIndex
 var
   DictIndex: Integer;
 begin
-  for DictIndex := 0 to Length(FData) - 1 do
+  for DictIndex := 0 to High(FData) do
     with FData[DictIndex] do
-      if Assigned(DictOperator) then
+      if (DictOperator <> nil) then
         if DictOperator.GetOperator = Index then
           if OperandCount > 0 then
           begin
@@ -1173,8 +1172,7 @@ begin
         SetLength(Operands, Length(Operands) + 1);
 
       // eventually free operator
-      if Assigned(DictOp) then
-        FreeAndNil(DictOp);
+      FreeAndNil(DictOp);
 
       // read element data
       case Token of
@@ -1295,9 +1293,9 @@ begin
             Read(Data[0], 2);
             Value := (Data[0] shl 8) or Data[1];
 
-            Operands[Length(Operands) - 1] :=
+            Operands[High(Operands)] :=
               TPascalTypePostscriptOperandSmallInt.Create;
-            TPascalTypePostscriptOperandSmallInt(Operands[Length(Operands) - 1])
+            TPascalTypePostscriptOperandSmallInt(Operands[High(Operands)])
               .Value := Value;
           end;
         29:
@@ -1306,9 +1304,9 @@ begin
             Value := (Data[0] shl 24) or (Data[1] shl 16) or (Data[2] shl 8)
               or Data[3];
 
-            Operands[Length(Operands) - 1] :=
+            Operands[High(Operands)] :=
               TPascalTypePostscriptOperandInteger.Create;
-            TPascalTypePostscriptOperandInteger(Operands[Length(Operands) - 1])
+            TPascalTypePostscriptOperandInteger(Operands[High(Operands)])
               .Value := Value;
           end;
         30:
@@ -1364,18 +1362,18 @@ begin
 
             until (Nibble = $F);
 
-            Operands[Length(Operands) - 1] :=
+            Operands[High(Operands)] :=
               TPascalTypePostscriptOperandBCD.Create;
-            TPascalTypePostscriptOperandBCD(Operands[Length(Operands) - 1])
+            TPascalTypePostscriptOperandBCD(Operands[High(Operands)])
               .Value := str;
           end;
         32..246:
           begin
             Value := Token - 139;
 
-            Operands[Length(Operands) - 1] :=
+            Operands[High(Operands)] :=
               TPascalTypePostscriptOperandShortInt.Create;
-            TPascalTypePostscriptOperandShortInt(Operands[Length(Operands) - 1])
+            TPascalTypePostscriptOperandShortInt(Operands[High(Operands)])
               .Value := Value;
           end;
         247..250:
@@ -1383,9 +1381,9 @@ begin
             Read(Data[0], 1);
             Value := (Token - 247) shl 8 + Data[0] + 108;
 
-            Operands[Length(Operands) - 1] :=
+            Operands[High(Operands)] :=
               TPascalTypePostscriptOperandComposite.Create;
-            TPascalTypePostscriptOperandComposite(Operands[Length(Operands) - 1]
+            TPascalTypePostscriptOperandComposite(Operands[High(Operands)]
               ).Value := Value;
           end;
         251..254:
@@ -1393,9 +1391,9 @@ begin
             Read(Data[0], 1);
             Value := -(Token - 251) shl 8 - Data[0] - 108;
 
-            Operands[Length(Operands) - 1] :=
+            Operands[High(Operands)] :=
               TPascalTypePostscriptOperandComposite.Create;
-            TPascalTypePostscriptOperandComposite(Operands[Length(Operands) - 1]
+            TPascalTypePostscriptOperandComposite(Operands[High(Operands)]
               ).Value := Value;
           end;
       else
@@ -1408,31 +1406,27 @@ begin
         SetLength(FData, Length(FData) + 1);
 
         // assign value
-        FData[Length(FData) - 1] := TPascalTypePostscriptDictPair.Create;
+        FData[High(FData)] := TPascalTypePostscriptDictPair.Create;
 
         // assign dict operator
-        FData[Length(FData) - 1].DictOperator := DictOp;
+        FData[High(FData)].DictOperator := DictOp;
+        DictOp := nil; // Ownership has been transferred
 
         // assign operands
-        for OpIndex := 0 to Length(Operands) - 1 do
-          FData[Length(FData) - 1].AddOperand(Operands[OpIndex]);
+        for OpIndex := 0 to High(Operands) do
+          FData[High(FData)].AddOperand(Operands[OpIndex]);
 
         // reset operand list length to zero
         SetLength(Operands, 0);
-
-        // clear operator pointer
-        DictOp := nil;
       end;
     end;
 
   // eventually free operand items
-  for OpIndex := 0 to Length(Operands) - 1 do
-    if Assigned(Operands[OpIndex]) then
-      Operands[OpIndex].Free;
+  for OpIndex := 0 to High(Operands) do
+    Operands[OpIndex].Free;
 
   // free dictionary operator
-  if Assigned(DictOp) then
-    DictOp := nil;
+  DictOp.Free;
 end;
 
 procedure TPascalTypePostscriptDictDataTable.SaveToStream(Stream: TStream);
@@ -1479,7 +1473,7 @@ begin
   // read offset size
   Stream.Read(OffSize, 1);
 
-  for OffIndex := 0 to Length(Offsets) - 1 do
+  for OffIndex := 0 to High(Offsets) do
     case OffSize of
       1:
         Stream.Read(Offsets[OffIndex], 1);
@@ -1508,7 +1502,7 @@ begin
     raise Exception.CreateFmt(RCStrCFFIndexFirstOffsetError, [Offsets[0]]);
 
   // check (minimum) table size
-  if Stream.Position + Offsets[Length(Offsets) - 1] > Stream.Size then
+  if Stream.Position + Offsets[High(Offsets)] > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   MS := TMemoryStream.Create;
@@ -1531,7 +1525,7 @@ begin
       ReadData(OffIndex, MS);
     end;
   finally
-    FreeAndNil(MS);
+    MS.Free;
   end;
 end;
 
@@ -1696,7 +1690,7 @@ begin
       SetLength(FDict, Length(Self.FDict));
 
       // create and assign dictionary entries
-      for DictIndex := 0 to Length(FDict) - 1 do
+      for DictIndex := 0 to High(FDict) do
       begin
         FDict[DictIndex] := TPascalTypePostscriptDictDataTable.Create;
         FDict[DictIndex].Assign(Self.FDict[DictIndex]);
@@ -1717,7 +1711,7 @@ procedure TPascalTypePostscriptTopDictIndexTable.ClearDict;
 var
   DictIndex: Integer;
 begin
-  for DictIndex := 0 to Length(FDict) - 1 do
+  for DictIndex := 0 to High(FDict) do
     FreeAndNil(FDict[DictIndex]);
 end;
 
@@ -1728,13 +1722,13 @@ begin
   if Index >= Length(FDict) then
   begin
     SetLength(FDict, Index + 1);
-    FDict[Length(FDict) - 1] := TPascalTypePostscriptDictDataTable.Create;
+    FDict[High(FDict)] := TPascalTypePostscriptDictDataTable.Create;
   end
   else
-    FDict[Length(FDict) - 1].ResetToDefaults;
+    FDict[High(FDict)].ResetToDefaults;
 
   // load dict from stream
-  FDict[Length(FDict) - 1].LoadFromStream(Stream);
+  FDict[High(FDict)].LoadFromStream(Stream);
 end;
 
 procedure TPascalTypePostscriptTopDictIndexTable.WriteData(Index: Integer;
@@ -1746,8 +1740,7 @@ end;
 
 { TPascalTypeCompactFontFormatTable }
 
-constructor TPascalTypeCompactFontFormatTable.Create
-  (Storage: IPascalTypeStorageTable);
+constructor TPascalTypeCompactFontFormatTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
   FNameTable := TPascalTypePostscriptNameIndexTable.Create;
   FTopDictTable := TPascalTypePostscriptTopDictIndexTable.Create;
@@ -2021,7 +2014,7 @@ begin
     // read vertical origin y-metrics
     SetLength(FVertOriginYMetrics, ReadSwappedWord(Stream));
 
-    for Index := 0 to Length(FVertOriginYMetrics) - 1 do
+    for Index := 0 to High(FVertOriginYMetrics) do
       with FVertOriginYMetrics[Index] do
       begin
         // read glyph index
@@ -2053,7 +2046,7 @@ begin
     // write vertical origin y-metrics
     WriteSwappedWord(Stream, Length(FVertOriginYMetrics));
 
-    for Index := 0 to Length(FVertOriginYMetrics) - 1 do
+    for Index := 0 to High(FVertOriginYMetrics) do
       with FVertOriginYMetrics[Index] do
       begin
         // write glyph index
@@ -2073,7 +2066,7 @@ var
   OperatorClassIndex: Integer;
 begin
   Result := False;
-  for OperatorClassIndex := 0 to Length(GOperatorClasses) - 1 do
+  for OperatorClassIndex := 0 to High(GOperatorClasses) do
     if GOperatorClasses[OperatorClassIndex] = OperatorClass then
     begin
       Result := True;
@@ -2087,9 +2080,9 @@ var
   TableClassIndex    : Integer;
 begin
   Result := True;
-  for TableClassBaseIndex := 0 to Length(GOperatorClasses) - 1 do
+  for TableClassBaseIndex := 0 to High(GOperatorClasses) do
     for TableClassIndex := TableClassBaseIndex +
-      1 to Length(GOperatorClasses) - 1 do
+      1 to High(GOperatorClasses) do
       if GOperatorClasses[TableClassBaseIndex] = GOperatorClasses
         [TableClassIndex] then
       begin
@@ -2103,7 +2096,7 @@ procedure RegisterOperator(OperatorClass
 begin
   Assert(IsOperatorClassRegistered(OperatorClass) = False);
   SetLength(GOperatorClasses, Length(GOperatorClasses) + 1);
-  GOperatorClasses[Length(GOperatorClasses) - 1] := OperatorClass;
+  GOperatorClasses[High(GOperatorClasses)] := OperatorClass;
 end;
 
 procedure RegisterOperators(OperatorClasses
@@ -2113,7 +2106,7 @@ var
 begin
   SetLength(GOperatorClasses, Length(GOperatorClasses) +
     Length(OperatorClasses));
-  for OperatorClassIndex := 0 to Length(OperatorClasses) - 1 do
+  for OperatorClassIndex := 0 to High(OperatorClasses) do
     GOperatorClasses[Length(GOperatorClasses) - Length(OperatorClasses) +
       OperatorClassIndex] := OperatorClasses[OperatorClassIndex];
   Assert(CheckOperatorClassesValid);
@@ -2125,7 +2118,7 @@ var
   OperatorClassIndex: Integer;
 begin
   Result := nil;
-  for OperatorClassIndex := 0 to Length(GOperatorClasses) - 1 do
+  for OperatorClassIndex := 0 to High(GOperatorClasses) do
     if GOperatorClasses[OperatorClassIndex].GetOperator = Encoding then
     begin
       Result := GOperatorClasses[OperatorClassIndex];

@@ -45,8 +45,8 @@ type
     procedure RasterizeGlyph(GlyphIndex: Integer; Canvas: TCanvas; X, Y: Integer);
     procedure RasterizeSimpleGlyph(Glyph: TTrueTypeFontSimpleGlyphData; Canvas: TCanvas; X, Y: Integer);
   public
-    procedure RenderText(Text: string; Canvas: TCanvas); overload; virtual;
-    procedure RenderText(Text: string; Canvas: TCanvas; X, Y: Integer); overload; virtual;
+    procedure RenderText(const Text: string; Canvas: TCanvas); overload; virtual;
+    procedure RenderText(const Text: string; Canvas: TCanvas; X, Y: Integer); overload; virtual;
 
     // GDI like functions
     function GetGlyphOutlineA(Character: Cardinal; Format: TGetGlyphOutlineUnion;
@@ -60,8 +60,8 @@ type
     function GetTextMetricsW(var TextMetric: TTextMetricW): Boolean;
     function GetOutlineTextMetricsA(Buffersize: Cardinal; OutlineTextMetric: Pointer): Cardinal;
     function GetOutlineTextMetricsW(Buffersize: Cardinal; OutlineTextMetric: Pointer): Cardinal;
-    function GetTextExtentPoint32A(Text: string; var Size: TSize): Boolean;
-    function GetTextExtentPoint32W(Text: WideString; var Size: TSize): Boolean;
+    function GetTextExtentPoint32A(const Text: string; var Size: TSize): Boolean;
+    function GetTextExtentPoint32W(const Text: WideString; var Size: TSize): Boolean;
   end;
 
 function ConvertLocalPointerToGlobalPointer(Local, Base: Pointer): Pointer;
@@ -321,7 +321,7 @@ begin
     Exit;
   end;
 
-  if not Assigned(Storage.OS2Table) or (Buffersize < SizeOf(TOutlineTextmetricA)) then
+  if (Storage.OS2Table = nil) or (Buffersize < SizeOf(TOutlineTextmetricA)) then
   begin
     Result := 0;
     if Buffersize < SizeOf(TOutlineTextmetricA) then
@@ -428,7 +428,7 @@ var
   FullNameStr: WideString;
 begin
   // check if OS/2 table exists (as it is not necessary in the true type spec
-  if not Assigned(Storage.OS2Table) then
+  if (Storage.OS2Table = nil) then
   begin
     Result := 0;
     FillChar(OutlineTextMetric^, Buffersize, 0);
@@ -561,7 +561,7 @@ end;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-function TPascalTypeFontEngineGDI.GetTextExtentPoint32A(Text: string;
+function TPascalTypeFontEngineGDI.GetTextExtentPoint32A(const Text: string;
   var Size: TSize): Boolean;
 var
   GlyphIndex: Integer;
@@ -570,7 +570,7 @@ begin
   Result := False;
 end;
 
-function TPascalTypeFontEngineGDI.GetTextExtentPoint32W(Text: WideString;
+function TPascalTypeFontEngineGDI.GetTextExtentPoint32W(const Text: WideString;
   var Size: TSize): Boolean;
 var
   CharIndex: Integer;
@@ -760,12 +760,12 @@ end;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-procedure TPascalTypeFontEngineGDI.RenderText(Text: string; Canvas: TCanvas);
+procedure TPascalTypeFontEngineGDI.RenderText(const Text: string; Canvas: TCanvas);
 begin
   RenderText(Text, Canvas, 0, 0);
 end;
 
-procedure TPascalTypeFontEngineGDI.RenderText(Text: string; Canvas: TCanvas; X,
+procedure TPascalTypeFontEngineGDI.RenderText(const Text: string; Canvas: TCanvas; X,
   Y: Integer);
 var
   CharIndex: Integer;

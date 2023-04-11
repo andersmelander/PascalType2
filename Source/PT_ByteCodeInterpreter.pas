@@ -191,11 +191,11 @@ begin
       ByteCodeToStrings(MS, SL);
       Result := SL.Text;
     finally
-      FreeAndNil(SL);
+      SL.Free;
     end;
 
   finally
-    FreeAndNil(MS);
+    MS.Free;
   end;
 end;
 
