@@ -671,11 +671,24 @@ end;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-procedure TPascalTypeFontEngineGR32.RasterizeGlyph(GlyphIndex: Integer;
-  Canvas: TCustomPath; X, Y: Integer);
+procedure TPascalTypeFontEngineGR32.RasterizeGlyph(GlyphIndex: Integer; Canvas: TCustomPath; X, Y: Integer);
+var
+  CompositeGlyphData: TTrueTypeFontCompositeGlyphData;
+  CompositeGlyph: TPascalTypeCompositeGlyph;
+  i: integer;
 begin
   if Storage.GlyphData[GlyphIndex] is TTrueTypeFontSimpleGlyphData then
-    RasterizeSimpleGlyph(TTrueTypeFontSimpleGlyphData(Storage.GlyphData[GlyphIndex]), Canvas, X, Y);
+    RasterizeSimpleGlyph(TTrueTypeFontSimpleGlyphData(Storage.GlyphData[GlyphIndex]), Canvas, X, Y)
+  else
+  if Storage.GlyphData[GlyphIndex] is TTrueTypeFontCompositeGlyphData then
+  begin
+    CompositeGlyphData := TTrueTypeFontCompositeGlyphData(Storage.GlyphData[GlyphIndex]);
+    for i := 0 to CompositeGlyphData.GlyphCount-1 do
+    begin
+      CompositeGlyph := CompositeGlyphData.Glyph[i];
+      RasterizeGlyph(CompositeGlyph.GlyphIndex, Canvas, X+CompositeGlyph.ArgumentX, Y+CompositeGlyph.ArgumentY)
+    end;
+  end;
 end;
 
 type
@@ -703,7 +716,7 @@ const
   StateMachine: array[boolean, TPathState] of TStateTransition = (
     // False: Current point is a control-point
     ((NextState: psControl;     Emit: emitNone),        // psCurve -> psControl
-     (NextState: psControl;     Emit: emitHalfway)),    // psControl -> psControl
+     (NextState: psControl;     Emit: emitHalfway)),    // psControl -> psControl: synthesize point, emitQuadratic
     // True: Current point is a curve-point
     ((NextState: psCurve;       Emit: emitLine),        // psCurve -> psCurve: emitLine
      (NextState: psCurve;       Emit: emitQuadratic))   // psControl -> psCurve: emitQuadratic
