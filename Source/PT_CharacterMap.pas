@@ -317,22 +317,32 @@ begin
   end;
 
   if FIdRangeOffset[SegmentIndex] = 0 then
-    Result := (FIdDelta[SegmentIndex] + CharacterIndex) mod (1 shl 16)
-  else
   begin
-    Result := FIdRangeOffset[SegmentIndex] +
-      (CharacterIndex - FStartCount[SegmentIndex]);
+    Result := (FIdDelta[SegmentIndex] + CharacterIndex) and $0000FFFF;
+  end else
+  begin
+    (*
+    ** Issue #5: The following maps to the wrong GlypgID
 
-    // modulo operation
-    Result := Result mod (1 shl 16);
+    Result := (FIdRangeOffset[SegmentIndex] + (CharacterIndex - FStartCount[SegmentIndex])) and $0000FFFF;
+
+    ** but this works:
+
+    Result := FGlyphIdArray[(CharacterIndex - FStartCount[SegmentIndex]) and $0000FFFF];
+
+    *)
+    Result := FGlyphIdArray[(CharacterIndex - FStartCount[SegmentIndex]) and $0000FFFF];
 
     // check for missing character and add offset eventually
+    (*
+    ** The following has been disabled as I cannot find rationale for it in the
+    ** documentation:
+
     if Result = 0 then
-      Result := FIdDelta[SegmentIndex] mod (1 shl 16)
+      Result := FIdDelta[SegmentIndex] and $0000FFFF;
+
+    *)
   end;
-
-  Result := Result mod (1 shl 16);
-
 end;
 
 procedure TPascalTypeFormat4CharacterMap.LoadFromStream(Stream: TStream);
