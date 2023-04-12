@@ -35,6 +35,7 @@ interface
 {$I PT_Compiler.inc}
 
 uses
+  Generics.Collections,
   Classes, Contnrs, SysUtils, PT_Types;
 
 type
@@ -53,17 +54,20 @@ type
     procedure Changed;
   end;
 
+
   TCustomPascalTypeTable = class(TInterfacedPersistent, IStreamPersist)
   protected
     procedure Changed; virtual;
-
-    procedure ResetToDefaults; virtual; abstract;
   public
     constructor Create; virtual;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); virtual; abstract;
     procedure SaveToStream(Stream: TStream); virtual; abstract;
   end;
+  TCustomPascalTypeTableClass = class of TCustomPascalTypeTable;
+
 
   TCustomPascalTypeInterfaceTable = class(TCustomPascalTypeTable)
   private
@@ -72,8 +76,10 @@ type
     procedure Changed; override;
     property Storage: IPascalTypeStorageTable read FStorage;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); reintroduce; virtual;
+    constructor Create(const AStorage: IPascalTypeStorageTable); reintroduce; overload; virtual;
   end;
+  TCustomPascalTypeInterfaceTableClass = class of TCustomPascalTypeInterfaceTable;
+
 
   TCustomPascalTypeNamedTable = class(TCustomPascalTypeInterfaceTable)
   protected
@@ -85,7 +91,26 @@ type
     property TableType: TTableType read GetInternalTableType;
   end;
 
-  // big-endian stream I/O
+
+  TPascalTypeTableList<T: TCustomPascalTypeTable> = class(TObjectList<T>)
+  public
+    function Add: T; overload; virtual;
+    procedure Assign(Source: TPascalTypeTableList<T>);
+  end;
+
+  TPascalTypeTableInterfaceList<T: TCustomPascalTypeTable> = class(TPascalTypeTableList<T>)
+  private
+    FStorage: IPascalTypeStorageTable;
+  protected
+    property Storage: IPascalTypeStorageTable read FStorage;
+  public
+    constructor Create(const AStorage: IPascalTypeStorageTable);
+    function Add: T; overload; override;
+    function Add(ATableClass: TCustomPascalTypeInterfaceTableClass): T; overload;
+    procedure Assign(Source: TPascalTypeTableList<T>);
+  end;
+
+// big-endian stream I/O
 function ReadSwappedWord(Stream: TStream): Word; {$IFDEF UseInline} inline;
 {$ENDIF}
 function ReadSwappedSmallInt(Stream: TStream): SmallInt;
@@ -191,12 +216,75 @@ begin
 end;
 
 
+{ TPascalTypeTableList<T> }
+
+function TPascalTypeTableList<T>.Add: T;
+begin
+  Result := T.Create;
+  Add(Result);
+end;
+
+procedure TPascalTypeTableList<T>.Assign(Source: TPascalTypeTableList<T>);
+var
+  SourceItem: T;
+  DestItem: T;
+begin
+  Clear;
+  for SourceItem in Source do
+  begin
+    DestItem := T(TCustomPascalTypeTableClass(SourceItem.ClassType).Create);
+    Add(DestItem);
+    DestItem.Assign(SourceItem);
+  end;
+end;
+
+{ TPascalTypeTableInterfaceList<T> }
+
+function TPascalTypeTableInterfaceList<T>.Add: T;
+begin
+  Result := T(TCustomPascalTypeInterfaceTableClass(T).Create(FStorage));
+  Add(Result);
+end;
+
+function TPascalTypeTableInterfaceList<T>.Add(ATableClass: TCustomPascalTypeInterfaceTableClass): T;
+begin
+  Result := T(ATableClass.Create(FStorage));
+  Add(Result);
+end;
+
+procedure TPascalTypeTableInterfaceList<T>.Assign(Source: TPascalTypeTableList<T>);
+var
+  SourceItem: T;
+  DestItem: T;
+begin
+  Clear;
+  for SourceItem in Source do
+  begin
+    DestItem := Add(TCustomPascalTypeInterfaceTableClass(SourceItem.ClassType));
+    DestItem.Assign(SourceItem);
+  end;
+end;
+
+constructor TPascalTypeTableInterfaceList<T>.Create(const AStorage: IPascalTypeStorageTable);
+begin
+  inherited Create;
+  FStorage := AStorage;
+end;
+
 { TCustomPascalTypeTable }
 
 constructor TCustomPascalTypeTable.Create;
 begin
   inherited Create;
-  ResetToDefaults;
+end;
+
+procedure TCustomPascalTypeTable.Assign(Source: TPersistent);
+begin
+  if (Source is TCustomPascalTypeTable) then
+  begin
+    // Backstop
+  end else
+    inherited;
 end;
 
 procedure TCustomPascalTypeTable.Changed;
@@ -216,11 +304,9 @@ end;
 
 constructor TCustomPascalTypeInterfaceTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
-  FStorage := AStorage;
-
   inherited Create;
+  FStorage := AStorage;
 end;
-
 
 { TCustomPascalTypeNamedTable }
 

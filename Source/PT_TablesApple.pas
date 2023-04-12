@@ -43,11 +43,12 @@ type
     FVersion: TFixedPoint;
     procedure SetVersion(const Value: TFixedPoint);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
     procedure VersionChanged; virtual;
   public
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -61,11 +62,9 @@ type
     FSearchRange: Word; // The value of unitSize times the largest power of 2 that is less than or equal to the value of nUnits.
     FEntrySelector: Word; // The log base 2 of the largest power of 2 less than or equal to the value of nUnits.
     FRangeShift: Word; // The value of unitSize times the difference of the value of nUnits minus the largest power of 2 less than or equal to the value of nUnits.
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
@@ -73,45 +72,42 @@ type
 
   // table 'acnt'
 
-  TCustomPascalTypeAccentAttachmentDescriptionTable = class
-    (TCustomPascalTypeTable)
+  TCustomPascalTypeAccentAttachmentDescriptionTable = class(TCustomPascalTypeTable)
   private
     FPrimaryGlyphIndex: Word; // Primary glyph index number.
   protected
     class function GetIsFormat1: Boolean; virtual; abstract;
-    procedure ResetToDefaults; override;
-    procedure AssignTo(Dest: TPersistent); override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property IsFormat1: Boolean read GetIsFormat1;
   end;
 
-  TPascalTypeAccentAttachmentDescriptionFormat0Table = class
-    (TCustomPascalTypeAccentAttachmentDescriptionTable)
+  TPascalTypeAccentAttachmentDescriptionFormat0Table = class(TCustomPascalTypeAccentAttachmentDescriptionTable)
   private
     FPrimaryAttachmentPoint: Byte; // Primary attachment control point number.
     FSecondaryInfoIndex: Byte; // Secondary attachment control point number.
   protected
     class function GetIsFormat1: Boolean; override;
-    procedure ResetToDefaults; override;
-    procedure AssignTo(Dest: TPersistent); override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
-  TPascalTypeAccentAttachmentDescriptionFormat1Table = class
-    (TCustomPascalTypeAccentAttachmentDescriptionTable)
+  TPascalTypeAccentAttachmentDescriptionFormat1Table = class(TCustomPascalTypeAccentAttachmentDescriptionTable)
   private
     FExtensionOffset: Word;
     // Byte offset to the beginning of the extensions subtable.
   protected
     class function GetIsFormat1: Boolean; override;
-    procedure ResetToDefaults; override;
-    procedure AssignTo(Dest: TPersistent); override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
@@ -135,12 +131,10 @@ type
   private
     FFirstAccentGlyphIndex: Word; // The first accented glyph index.
     FLastAccentGlyphIndex : Word; // The last accented glyph index.
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -157,11 +151,9 @@ type
   TPascalTypeAxisVariationSegmentTable = class(TCustomPascalTypeTable)
   private
     FCorrespondenceArray: array of TAxisVariationCorrespondence;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
@@ -171,15 +163,13 @@ type
   TPascalTypeAxisVariationTable = class(TCustomPascalTypeNamedVersionTable)
   private
     FSegments: TObjectList;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -194,28 +184,22 @@ type
   TCustomPascalTypeBaselinePartTable = class(TCustomPascalTypeTable)
   end;
 
-  TPascalTypeBaselinePartFormat0Table = class
-    (TCustomPascalTypeBaselinePartTable)
+  TPascalTypeBaselinePartFormat0Table = class(TCustomPascalTypeBaselinePartTable)
   private
     FDeltas: array [0..31] of Word;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
-  TPascalTypeBaselinePartFormat1Table = class
-    (TPascalTypeBaselinePartFormat0Table)
+  TPascalTypeBaselinePartFormat1Table = class(TPascalTypeBaselinePartFormat0Table)
   private
     // FLookupTable : TLookupTable;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
@@ -225,14 +209,12 @@ type
     FFormat: Word; // Format of the baseline table. Only one baseline format may be selected for the font.
     FDefaultBaseline: Word; // Default baseline value for all glyphs. This value can be from 0 through 31.
     FBaselinePart: TCustomPascalTypeBaselinePartTable;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -244,13 +226,10 @@ type
   // not entirely implemented, for more details see
   // http://developer.apple.com/fonts/TTRefMan/RM06/Chap6bdat.html
   TPascalTypeBitmapDataTable = class(TCustomPascalTypeNamedVersionTable)
-  private
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -276,15 +255,13 @@ type
     FBitmapSizeList: TObjectList;
     function GetBitmapSizeTable(Index: Integer): TPascalTypeBitmapSizeTable;
     function GetBitmapSizeTableCount: Integer;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -300,13 +277,12 @@ type
   TCustomPascalTypeTaggedValueTable = class(TCustomPascalTypeTable)
   protected
     FValue: TFixedPoint;
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
     procedure ValueChanged; virtual;
 
     class function GetTableType: TTableType; virtual; abstract;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
@@ -362,15 +338,13 @@ type
   TPascalTypeFontDescriptionTable = class(TCustomPascalTypeNamedVersionTable)
   private
     FDescritors: TObjectList;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
-    class function GetTableType: TTableType; override;
-
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
+
+    class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -388,11 +362,9 @@ type
     FSettingTable : Cardinal; // Offset in bytes from the beginning of this table to this feature's setting name array. The actual type of record this offset refers to will depend on the exclusivity value, as described below.
     FFeatureFlags : Word;     // Single-bit flags associated with the feature type.
     FNameIndex    : SmallInt; // The name table index for the feature's name. This index has values greater than 255 and less than 32768.
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
@@ -400,15 +372,13 @@ type
   TPascalTypeFeatureTable = class(TCustomPascalTypeNamedVersionTable)
   private
     FFeatures: TObjectList;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -436,12 +406,10 @@ type
   private
     FVariationAxes: array of TVariationAxisRecord;
     FInstances    : array of TVariationInstancesRecord;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -471,8 +439,6 @@ type
     procedure SetExtraShadow(const Value: SmallInt);
     procedure SetExtraUnderline(const Value: SmallInt);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
     procedure ExtraBoldChanged; virtual;
     procedure ExtraCondensedChanged; virtual;
     procedure ExtraExtendedChanged; virtual;
@@ -481,10 +447,10 @@ type
     procedure ExtraPlainChanged; virtual;
     procedure ExtraShadowChanged; virtual;
     procedure ExtraUnderlineChanged; virtual;
-
-    procedure ResetToDefaults; override;
   public
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -504,19 +470,16 @@ type
 
   // table 'mort'
 
-  TCustomPascalTypeGlyphMetamorphosisTable = class
-    (TCustomPascalTypeNamedVersionTable)
+  TCustomPascalTypeGlyphMetamorphosisTable = class(TCustomPascalTypeNamedVersionTable)
   private
     function GetChainCount: Cardinal;
   protected
     FChains: TObjectList;
-
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     property ChainCount: Cardinal read GetChainCount;
   end;
@@ -536,11 +499,10 @@ type
     function GetFeatureCount: Cardinal;
     function GetFeature(Index: Cardinal): TFeatureSubtableRecord;
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
     procedure DefaultFlagsChanged; virtual;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -551,8 +513,7 @@ type
 
   // not entirely implemented, for more details see
   // http://developer.apple.com/fonts/TTRefMan/RM06/Chap6mort.html
-  TPascalTypeGlyphMetamorphosisTable = class
-    (TCustomPascalTypeGlyphMetamorphosisTable)
+  TPascalTypeGlyphMetamorphosisTable = class(TCustomPascalTypeGlyphMetamorphosisTable)
   public
     class function GetTableType: TTableType; override;
 
@@ -563,8 +524,7 @@ type
 
   // table 'morx'
 
-  TPascalTypeExtendedGlyphMetamorphosisChainTable = class
-    (TCustomPascalTypeTable)
+  TPascalTypeExtendedGlyphMetamorphosisChainTable = class(TCustomPascalTypeTable)
   private
     FDefaultFlags: Cardinal; // The default sub-feature flags for this chain.
     FFeatureArray: array of TFeatureSubtableRecord;
@@ -572,11 +532,10 @@ type
     function GetFeatureCount: Cardinal;
     function GetFeature(Index: Cardinal): TFeatureSubtableRecord;
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
     procedure DefaultFlagsChanged; virtual;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -587,8 +546,7 @@ type
 
   // not entirely implemented, for more details see
   // http://developer.apple.com/fonts/TTRefMan/RM06/Chap6morx.html
-  TPascalTypeExtendedGlyphMetamorphosisTable = class
-    (TCustomPascalTypeGlyphMetamorphosisTable)
+  TPascalTypeExtendedGlyphMetamorphosisTable = class(TCustomPascalTypeGlyphMetamorphosisTable)
   public
     class function GetTableType: TTableType; override;
 
@@ -604,12 +562,10 @@ type
   TPascalTypeOpticalBoundsTable = class(TCustomPascalTypeNamedVersionTable)
   private
     FFormat: Word;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -624,12 +580,10 @@ type
   private
     FFormat : Word; // Format of the tracking table (set to 0).
     FDefault: Word; // Default properties applied to a glyph if that glyph is not present in the lookup table.
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -646,11 +600,9 @@ type
   private
     FTrackTable: array of TTrackTableEntryRecord; // Array[nTracks] of TrackTableEntry records.
     FSizeTable: array of TFixedPoint; // Array[nSizes] of size values.
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
@@ -666,9 +618,6 @@ type
     procedure SetVertical(const Value: TPascalTypeTrackingDataTable);
     procedure SetFormat(const Value: Word);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
     procedure FormatChanged; virtual;
     procedure HorizontalChanged; virtual;
     procedure VerticalChanged; virtual;
@@ -677,6 +626,8 @@ type
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -694,10 +645,9 @@ type
   TPascalTypeZapfKindNameString = class(TCustomPascalTypeZapfKindName)
   private
     FName: AnsiString;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-    procedure ResetToDefaults; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -707,10 +657,9 @@ type
   TPascalTypeZapfKindNameBinary = class(TCustomPascalTypeZapfKindName)
   private
     FValue: Word;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-    procedure ResetToDefaults; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -729,11 +678,10 @@ type
     FKindName: TCustomPascalTypeZapfKindName;
     procedure SetKindName(const Value: TCustomPascalTypeZapfKindName);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
     procedure KindNameChanged; virtual;
-    procedure ResetToDefaults; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -745,11 +693,9 @@ type
   private
     FUnicodeCodePoints: array of Word; // Unicode code points for this glyph
     FKindNames        : array of TPascalTypeZapfKindName;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
@@ -760,23 +706,20 @@ type
   private
     FGlyphInfos: array of TPascalTypeZapfGlyphInfoTable;
     procedure ClearGlyphInfos;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
     destructor Destroy; override;
+
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
 procedure RegisterDescriptionTag(TableClass: TPascalTypeTaggedValueTableClass);
-procedure RegisterDescriptionTags(TableClasses
-  : array of TPascalTypeTaggedValueTableClass);
-function FindDescriptionTagByType(TableType: TTableType)
-  : TPascalTypeTaggedValueTableClass;
+procedure RegisterDescriptionTags(TableClasses: array of TPascalTypeTaggedValueTableClass);
+function FindDescriptionTagByType(TableType: TTableType): TPascalTypeTaggedValueTableClass;
 
 implementation
 
@@ -797,22 +740,17 @@ var
 
 { TCustomPascalTypeNamedVersionTable }
 
-procedure TCustomPascalTypeNamedVersionTable.AssignTo(Dest: TPersistent);
-begin
-  if Dest is Self.ClassType then
-    with TCustomPascalTypeNamedVersionTable(Dest) do
-    begin
-      FVersion := Self.FVersion;
-    end
-  else
-    inherited;
-end;
-
-procedure TCustomPascalTypeNamedVersionTable.ResetToDefaults;
+constructor TCustomPascalTypeNamedVersionTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
   inherited;
   FVersion.Value := 1;
-  FVersion.Fract := 0;
+end;
+
+procedure TCustomPascalTypeNamedVersionTable.Assign(Source: TPersistent);
+begin
+  inherited;
+  if Source is TCustomPascalTypeNamedVersionTable then
+    FVersion := TCustomPascalTypeNamedVersionTable(Source).FVersion;
 end;
 
 procedure TCustomPascalTypeNamedVersionTable.LoadFromStream(Stream: TStream);
@@ -861,29 +799,17 @@ end;
 
 { TCustomPascalTypeBinarySearchingTable }
 
-procedure TCustomPascalTypeBinarySearchingTable.AssignTo(Dest: TPersistent);
-begin
-  if Dest is Self.ClassType then
-    with TCustomPascalTypeBinarySearchingTable(Dest) do
-    begin
-      FUnitSize := Self.FUnitSize;
-      FnUnits := Self.FnUnits;
-      FSearchRange := Self.FSearchRange;
-      FEntrySelector := Self.FEntrySelector;
-      FRangeShift := Self.FRangeShift;
-    end
-  else
-    inherited;
-end;
-
-procedure TCustomPascalTypeBinarySearchingTable.ResetToDefaults;
+procedure TCustomPascalTypeBinarySearchingTable.Assign(Source: TPersistent);
 begin
   inherited;
-  FUnitSize := 0;
-  FnUnits := 0;
-  FSearchRange := 0;
-  FEntrySelector := 0;
-  FRangeShift := 0;
+  if Source is TCustomPascalTypeBinarySearchingTable then
+  begin
+    FUnitSize := TCustomPascalTypeBinarySearchingTable(Source).FUnitSize;
+    FnUnits := TCustomPascalTypeBinarySearchingTable(Source).FnUnits;
+    FSearchRange := TCustomPascalTypeBinarySearchingTable(Source).FSearchRange;
+    FEntrySelector := TCustomPascalTypeBinarySearchingTable(Source).FEntrySelector;
+    FRangeShift := TCustomPascalTypeBinarySearchingTable(Source).FRangeShift;
+  end;
 end;
 
 procedure TCustomPascalTypeBinarySearchingTable.LoadFromStream(Stream: TStream);
@@ -921,26 +847,14 @@ end;
 
 { TCustomPascalTypeAccentAttachmentDescriptionTable }
 
-procedure TCustomPascalTypeAccentAttachmentDescriptionTable.AssignTo
-  (Dest: TPersistent);
-begin
-  if Dest is Self.ClassType then
-    with TCustomPascalTypeAccentAttachmentDescriptionTable(Dest) do
-    begin
-      FPrimaryGlyphIndex := Self.FPrimaryGlyphIndex;
-    end
-  else
-    inherited;
-end;
-
-procedure TCustomPascalTypeAccentAttachmentDescriptionTable.ResetToDefaults;
+procedure TCustomPascalTypeAccentAttachmentDescriptionTable.Assign(Source: TPersistent);
 begin
   inherited;
-  FPrimaryGlyphIndex := 0;
+  if Source is TCustomPascalTypeAccentAttachmentDescriptionTable then
+    FPrimaryGlyphIndex := TCustomPascalTypeAccentAttachmentDescriptionTable(Source).FPrimaryGlyphIndex;
 end;
 
-procedure TCustomPascalTypeAccentAttachmentDescriptionTable.LoadFromStream
-  (Stream: TStream);
+procedure TCustomPascalTypeAccentAttachmentDescriptionTable.LoadFromStream(Stream: TStream);
 var
   Value16: Word;
 begin
@@ -977,33 +891,22 @@ end;
 
 { TPascalTypeAccentAttachmentDescriptionFormat0Table }
 
-procedure TPascalTypeAccentAttachmentDescriptionFormat0Table.AssignTo(
-  Dest: TPersistent);
+procedure TPascalTypeAccentAttachmentDescriptionFormat0Table.Assign(Source: TPersistent);
 begin
   inherited;
-  if Dest is Self.ClassType then
-    with TPascalTypeAccentAttachmentDescriptionFormat0Table(Dest) do
-    begin
-      FPrimaryAttachmentPoint := Self.FPrimaryAttachmentPoint;
-      FSecondaryInfoIndex := Self.FSecondaryInfoIndex;
-    end;
+  if Source is TPascalTypeAccentAttachmentDescriptionFormat0Table then
+  begin
+    FPrimaryAttachmentPoint := TPascalTypeAccentAttachmentDescriptionFormat0Table(Source).FPrimaryAttachmentPoint;
+    FSecondaryInfoIndex := TPascalTypeAccentAttachmentDescriptionFormat0Table(Source).FSecondaryInfoIndex;
+  end;
 end;
 
-class function TPascalTypeAccentAttachmentDescriptionFormat0Table.GetIsFormat1
-: Boolean;
+class function TPascalTypeAccentAttachmentDescriptionFormat0Table.GetIsFormat1: Boolean;
 begin
   Result := False;
 end;
 
-procedure TPascalTypeAccentAttachmentDescriptionFormat0Table.ResetToDefaults;
-begin
-  inherited;
-  FPrimaryAttachmentPoint := 0;
-  FSecondaryInfoIndex := 0;
-end;
-
-procedure TPascalTypeAccentAttachmentDescriptionFormat0Table.
-LoadFromStream(Stream: TStream);
+procedure TPascalTypeAccentAttachmentDescriptionFormat0Table.LoadFromStream(Stream: TStream);
 begin
   inherited;
 
@@ -1039,30 +942,20 @@ end;
 
 { TPascalTypeAccentAttachmentDescriptionFormat1Table }
 
-procedure TPascalTypeAccentAttachmentDescriptionFormat1Table.AssignTo(
-  Dest: TPersistent);
+procedure TPascalTypeAccentAttachmentDescriptionFormat1Table.Assign(Source: TPersistent);
 begin
   inherited;
 
-  if Dest is Self.ClassType then
-    with TPascalTypeAccentAttachmentDescriptionFormat1Table(Dest) do
-      FExtensionOffset := Self.FExtensionOffset;
+  if Source is TPascalTypeAccentAttachmentDescriptionFormat1Table then
+    FExtensionOffset := TPascalTypeAccentAttachmentDescriptionFormat1Table(Source).FExtensionOffset;
 end;
 
-class function TPascalTypeAccentAttachmentDescriptionFormat1Table.GetIsFormat1
-: Boolean;
+class function TPascalTypeAccentAttachmentDescriptionFormat1Table.GetIsFormat1: Boolean;
 begin
   Result := True;
 end;
 
-procedure TPascalTypeAccentAttachmentDescriptionFormat1Table.ResetToDefaults;
-begin
-  inherited;
-  FExtensionOffset := 0;
-end;
-
-procedure TPascalTypeAccentAttachmentDescriptionFormat1Table.LoadFromStream(
-  Stream: TStream);
+procedure TPascalTypeAccentAttachmentDescriptionFormat1Table.LoadFromStream(Stream: TStream);
 begin
   inherited;
 
@@ -1077,8 +970,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeAccentAttachmentDescriptionFormat1Table.SaveToStream
-  (Stream: TStream);
+procedure TPascalTypeAccentAttachmentDescriptionFormat1Table.SaveToStream(Stream: TStream);
 begin
   inherited;
 
@@ -1089,29 +981,20 @@ end;
 
 { TPascalTypeAccentAttachmentTable }
 
-procedure TPascalTypeAccentAttachmentTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeAccentAttachmentTable.Assign(Source: TPersistent);
 begin
   inherited;
 
-  if Dest is Self.ClassType then
-    with TPascalTypeAccentAttachmentTable(Dest) do
-    begin
-      FFirstAccentGlyphIndex := Self.FFirstAccentGlyphIndex;
-      FLastAccentGlyphIndex  := Self.FLastAccentGlyphIndex;
-    end;
+  if Source is TPascalTypeAccentAttachmentTable then
+  begin
+    FFirstAccentGlyphIndex := TPascalTypeAccentAttachmentTable(Source).FFirstAccentGlyphIndex;
+    FLastAccentGlyphIndex  := TPascalTypeAccentAttachmentTable(Source).FLastAccentGlyphIndex;
+  end;
 end;
 
 class function TPascalTypeAccentAttachmentTable.GetTableType: TTableType;
 begin
   Result := 'acnt';
-end;
-
-procedure TPascalTypeAccentAttachmentTable.ResetToDefaults;
-begin
-  inherited;
-
-  FFirstAccentGlyphIndex := 0;
-  FLastAccentGlyphIndex  := 0;
 end;
 
 procedure TPascalTypeAccentAttachmentTable.LoadFromStream(Stream: TStream);
@@ -1196,25 +1079,15 @@ end;
 
 { TPascalTypeAxisVariationSegmentTable }
 
-procedure TPascalTypeAxisVariationSegmentTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeAxisVariationSegmentTable.Assign(Source: TPersistent);
 begin
   inherited;
 
-  if Dest is Self.ClassType then
-    with TPascalTypeAxisVariationSegmentTable(Dest) do
-    begin
-      FCorrespondenceArray := Self.FCorrespondenceArray;
-    end;
+  if Source is TPascalTypeAxisVariationSegmentTable then
+    FCorrespondenceArray := TPascalTypeAxisVariationSegmentTable(Source).FCorrespondenceArray;
 end;
 
-procedure TPascalTypeAxisVariationSegmentTable.ResetToDefaults;
-begin
-  inherited;
-  SetLength(FCorrespondenceArray, 0);
-end;
-
-procedure TPascalTypeAxisVariationSegmentTable.LoadFromStream(
-  Stream: TStream);
+procedure TPascalTypeAxisVariationSegmentTable.LoadFromStream(Stream: TStream);
 var
   PairIndex: Integer;
   Value16: Word;
@@ -1277,26 +1150,30 @@ begin
   inherited;
 end;
 
-procedure TPascalTypeAxisVariationTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeAxisVariationTable.Assign(Source: TPersistent);
+var
+  i: integer;
+  Segment: TPascalTypeAxisVariationSegmentTable;
 begin
   inherited;
 
-  if Dest is Self.ClassType then
-    with TPascalTypeAxisVariationTable(Dest) do
+  if Source is TPascalTypeAxisVariationTable then
+  begin
+    FSegments.Clear;
+
+    for i := 0 to TPascalTypeAxisVariationTable(Source).FSegments.Count-1 do
     begin
-      FSegments.Assign(Self.FSegments);
+      Segment := TPascalTypeAxisVariationSegmentTable.Create;
+      FSegments.Add(Segment);
+
+      Segment.Assign(TPascalTypeAxisVariationSegmentTable(TPascalTypeAxisVariationTable(Source).FSegments[i]));
     end;
+  end;
 end;
 
 class function TPascalTypeAxisVariationTable.GetTableType: TTableType;
 begin
   Result := 'avar';
-end;
-
-procedure TPascalTypeAxisVariationTable.ResetToDefaults;
-begin
-  inherited;
-  FSegments.Clear;
 end;
 
 procedure TPascalTypeAxisVariationTable.LoadFromStream(Stream: TStream);
@@ -1348,24 +1225,14 @@ end;
 
 { TPascalTypeBaselinePartFormat0Table }
 
-procedure TPascalTypeBaselinePartFormat0Table.AssignTo(Dest: TPersistent);
-begin
-  if Dest is Self.ClassType then
-    with TPascalTypeBaselinePartFormat0Table(Dest) do
-    begin
-      FDeltas :=
-        Self.FDeltas;
-    end else
-    inherited;
-end;
-
-procedure TPascalTypeBaselinePartFormat0Table.ResetToDefaults;
+procedure TPascalTypeBaselinePartFormat0Table.Assign(Source: TPersistent);
 begin
   inherited;
+  if Source is TPascalTypeBaselinePartFormat0Table then
+    FDeltas := TPascalTypeBaselinePartFormat0Table(Source).FDeltas;
 end;
 
-procedure TPascalTypeBaselinePartFormat0Table.LoadFromStream(
-  Stream: TStream);
+procedure TPascalTypeBaselinePartFormat0Table.LoadFromStream(Stream: TStream);
 var
   DeltaIndex: Word;
 begin
@@ -1393,25 +1260,16 @@ end;
 
 { TPascalTypeBaselinePartFormat1Table }
 
-procedure TPascalTypeBaselinePartFormat1Table.AssignTo(Dest: TPersistent);
+procedure TPascalTypeBaselinePartFormat1Table.Assign(Source: TPersistent);
 begin
   inherited;
 
-  if Dest is Self.ClassType then
-    with TPascalTypeBaselinePartFormat1Table(Dest) do
-    begin
-
-    end;
+  if Source is TPascalTypeBaselinePartFormat1Table then
+    // TPascalTypeBaselinePartFormat1Table(Source)
+    ;
 end;
 
-procedure TPascalTypeBaselinePartFormat1Table.ResetToDefaults;
-begin
-  inherited;
-
-end;
-
-procedure TPascalTypeBaselinePartFormat1Table.LoadFromStream(
-  Stream: TStream);
+procedure TPascalTypeBaselinePartFormat1Table.LoadFromStream(Stream: TStream);
 begin
   inherited;
 
@@ -1426,16 +1284,22 @@ end;
 
 { TPascalTypeBaselineTable }
 
-procedure TPascalTypeBaselineTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeBaselineTable.Assign(Source: TPersistent);
 begin
   inherited;
 
-  if Dest is Self.ClassType then
-    with TPascalTypeBaselineTable(Dest) do
-    begin
-      FFormat := Self.FFormat;
-      FDefaultBaseline := Self.FDefaultBaseline;
+  if Source is TPascalTypeBaselineTable then
+  begin
+    FFormat := TPascalTypeBaselineTable(Source).FFormat;
+    FDefaultBaseline := TPascalTypeBaselineTable(Source).FDefaultBaseline;
+    FreeAndNil(FBaselinePart);
+    case FFormat of
+      0: FBaselinePart := TPascalTypeBaselinePartFormat0Table.Create;
+      1: FBaselinePart := TPascalTypeBaselinePartFormat1Table.Create;
     end;
+    if (FBaselinePart <> nil) then
+      FBaselinePart.Assign(TPascalTypeBaselineTable(Source).FBaselinePart);
+  end;
 end;
 
 destructor TPascalTypeBaselineTable.Destroy;
@@ -1447,13 +1311,6 @@ end;
 class function TPascalTypeBaselineTable.GetTableType: TTableType;
 begin
   Result := 'bsln';
-end;
-
-procedure TPascalTypeBaselineTable.ResetToDefaults;
-begin
-  inherited;
-  FFormat := 0;
-  FDefaultBaseline := 0;
 end;
 
 procedure TPascalTypeBaselineTable.LoadFromStream(Stream: TStream);
@@ -1477,8 +1334,7 @@ begin
     FDefaultBaseline := Swap16(Value16);
 
     case FFormat of
-      0: FBaselinePart :=
-          TPascalTypeBaselinePartFormat0Table.Create;
+      0: FBaselinePart := TPascalTypeBaselinePartFormat0Table.Create;
       1: FBaselinePart := TPascalTypeBaselinePartFormat1Table.Create;
       2: raise EPascalTypeNotImplemented.Create(RCStrNotImplemented);
       3: raise EPascalTypeNotImplemented.Create(RCStrNotImplemented);
@@ -1526,15 +1382,14 @@ begin
   inherited;
 end;
 
-procedure TPascalTypeBitmapLocationTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeBitmapLocationTable.Assign(Source: TPersistent);
 begin
   inherited;
 
-  if Dest is Self.ClassType then
-    with TPascalTypeBitmapLocationTable(Dest) do
-    begin
-
-    end;
+  // TODO
+  if Source is TPascalTypeBitmapLocationTable then
+    // TPascalTypeBitmapLocationTable(Source)
+    ;
 end;
 
 function TPascalTypeBitmapLocationTable.GetBitmapSizeTable(Index: Integer)
@@ -1544,7 +1399,7 @@ begin
     Result :=
       TPascalTypeBitmapSizeTable(FBitmapSizeList[Index])
   else
-    raise Exception.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
 end;
 
 function TPascalTypeBitmapLocationTable.GetBitmapSizeTableCount: Integer;
@@ -1555,12 +1410,6 @@ end;
 class function TPascalTypeBitmapLocationTable.GetTableType: TTableType;
 begin
   Result := 'bloc';
-end;
-
-procedure TPascalTypeBitmapLocationTable.ResetToDefaults;
-begin
-  inherited;
-  FBitmapSizeList.Clear;
 end;
 
 procedure TPascalTypeBitmapLocationTable.LoadFromStream(Stream: TStream);
@@ -1613,25 +1462,18 @@ end;
 
 { TPascalTypeBitmapDataTable }
 
-procedure TPascalTypeBitmapDataTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeBitmapDataTable.Assign(Source: TPersistent);
 begin
   inherited;
 
-  if Dest is Self.ClassType then
-    with TPascalTypeBitmapDataTable(Dest) do
-    begin
-
-    end;
+  if Source is Self.ClassType then
+    // TPascalTypeBitmapDataTable(Source)
+    ;
 end;
 
 class function TPascalTypeBitmapDataTable.GetTableType: TTableType;
 begin
   Result := 'bdat';
-end;
-
-procedure TPascalTypeBitmapDataTable.ResetToDefaults;
-begin
-  inherited;
 end;
 
 procedure TPascalTypeBitmapDataTable.LoadFromStream(Stream: TStream);
@@ -1648,22 +1490,12 @@ end;
 
 { TCustomPascalTypeTaggedValueTable }
 
-procedure TCustomPascalTypeTaggedValueTable.AssignTo(Dest: TPersistent);
+procedure TCustomPascalTypeTaggedValueTable.Assign(Source: TPersistent);
 begin
   inherited;
 
-  if Dest is Self.ClassType then
-    with TCustomPascalTypeTaggedValueTable(Dest) do
-    begin
-      FValue := Self.FValue;
-    end;
-end;
-
-procedure TCustomPascalTypeTaggedValueTable.ResetToDefaults;
-begin
-  inherited;
-  FValue.Value := 0;
-  FValue.Fract := 0;
+  if Source is TCustomPascalTypeTaggedValueTable then
+    FValue := TCustomPascalTypeTaggedValueTable(Source).FValue;
 end;
 
 procedure TCustomPascalTypeTaggedValueTable.LoadFromStream(Stream: TStream);
@@ -1804,26 +1636,33 @@ begin
   inherited;
 end;
 
-procedure TPascalTypeFontDescriptionTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeFontDescriptionTable.Assign(Source: TPersistent);
+var
+  i: integer;
+  TagClass: TPascalTypeTaggedValueTableClass;
+  Descritor: TCustomPascalTypeTaggedValueTable;
 begin
   inherited;
 
-  if Dest is Self.ClassType then
-    with TPascalTypeFontDescriptionTable(Dest) do
+  if Source is TPascalTypeFontDescriptionTable then
+  begin
+    FDescritors.Clear;
+
+    for i := 0 to TPascalTypeFontDescriptionTable(Source).FDescritors.Count-1 do
     begin
-      FDescritors.Assign(Self.FDescritors);
+      TagClass := TPascalTypeTaggedValueTableClass(TCustomPascalTypeTaggedValueTable(TPascalTypeFontDescriptionTable(Source).FDescritors[i]).ClassType);
+      Descritor := TagClass.Create;
+
+      Descritor.Assign(TCustomPascalTypeTaggedValueTable(TPascalTypeFontDescriptionTable(Source).FDescritors[i]));
+
+      FDescritors.Add(Descritor);
     end;
+  end;
 end;
 
 class function TPascalTypeFontDescriptionTable.GetTableType: TTableType;
 begin
   Result := 'fdsc';
-end;
-
-procedure TPascalTypeFontDescriptionTable.ResetToDefaults;
-begin
-  inherited;
-  FDescritors.Clear;
 end;
 
 procedure TPascalTypeFontDescriptionTable.LoadFromStream(Stream: TStream);
@@ -1888,7 +1727,7 @@ begin
       begin
         // write tag
         Value32 := Cardinal(TableType);
-        Read(Value32, SizeOf(Cardinal));
+        Write(Value32, SizeOf(Cardinal));
 
         // write descriptor to stream
         SaveToStream(Stream);
@@ -1899,29 +1738,17 @@ end;
 
 { TPascalTypeAppleFeatureTable }
 
-procedure TPascalTypeAppleFeatureTable.AssignTo(Dest: TPersistent);
-begin
-  if Dest is Self.ClassType then
-    with TPascalTypeFeatureTable(Dest) do
-    begin
-      FFeature := Self.FFeature;
-      FNumSettings := Self.FNumSettings;
-      FSettingTable := Self.FSettingTable;
-      FFeatureFlags := Self.FFeatureFlags;
-      FNameIndex := Self.FNameIndex;
-    end else
-    inherited;
-end;
-
-procedure TPascalTypeAppleFeatureTable.ResetToDefaults;
+procedure TPascalTypeAppleFeatureTable.Assign(Source: TPersistent);
 begin
   inherited;
-
-  FFeature := 0;
-  FNumSettings := 0;
-  FSettingTable := 0;
-  FFeatureFlags := 0;
-  FNameIndex := 0;
+  if Source is TPascalTypeAppleFeatureTable then
+  begin
+    FFeature := TPascalTypeAppleFeatureTable(Source).FFeature;
+    FNumSettings := TPascalTypeAppleFeatureTable(Source).FNumSettings;
+    FSettingTable := TPascalTypeAppleFeatureTable(Source).FSettingTable;
+    FFeatureFlags := TPascalTypeAppleFeatureTable(Source).FFeatureFlags;
+    FNameIndex := TPascalTypeAppleFeatureTable(Source).FNameIndex;
+  end;
 end;
 
 procedure TPascalTypeAppleFeatureTable.LoadFromStream(Stream: TStream);
@@ -1972,26 +1799,30 @@ begin
   inherited;
 end;
 
-procedure TPascalTypeFeatureTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeFeatureTable.Assign(Source: TPersistent);
+var
+  i: integer;
+  AppleFeature: TPascalTypeAppleFeatureTable;
 begin
   inherited;
 
-  if Dest is Self.ClassType then
-    with TPascalTypeFeatureTable(Dest) do
+  if Source is TPascalTypeFeatureTable then
+  begin
+    FFeatures.Clear;
+
+    for i := 0 to TPascalTypeFeatureTable(Source).FFeatures.Count-1 do
     begin
-      FFeatures.Assign(Self.FFeatures);
+      AppleFeature := TPascalTypeAppleFeatureTable.Create;
+      FFeatures.Add(AppleFeature);
+      AppleFeature.Assign(TPascalTypeAppleFeatureTable(TPascalTypeFeatureTable(Source).FFeatures[i]));
     end;
+
+  end;
 end;
 
 class function TPascalTypeFeatureTable.GetTableType: TTableType;
 begin
   Result := 'feat';
-end;
-
-procedure TPascalTypeFeatureTable.ResetToDefaults;
-begin
-  FFeatures.Clear;
-  inherited;
 end;
 
 procedure TPascalTypeFeatureTable.LoadFromStream(Stream: TStream);
@@ -2016,12 +1847,10 @@ begin
 
 {$IFDEF AmbigiousExceptions}
     Read(Value16, SizeOf(Word));
-    if Value16 <> 0 then raise EPascalTypeError.CreateFmt
-      (RCStrReservedValueError, [Swap16(Value16)]);
+    if Value16 <> 0 then raise EPascalTypeError.CreateFmt(RCStrReservedValueError, [Swap16(Value16)]);
 
     Read(Value32, SizeOf(Cardinal));
-    if Value32 <> 0 then raise EPascalTypeError.CreateFmt
-      (RCStrReservedValueError, [Swap32(Value32)]);
+    if Value32 <> 0 then raise EPascalTypeError.CreateFmt(RCStrReservedValueError, [Swap32(Value32)]);
 {$ELSE}
     Seek(6, soFromCurrent);
 {$ENDIF}
@@ -2049,26 +1878,20 @@ end;
 
 { TPascalTypeFontVariationTable }
 
-procedure TPascalTypeFontVariationTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeFontVariationTable.Assign(Source: TPersistent);
 begin
   inherited;
 
-  if Dest is Self.ClassType then
-    with TPascalTypeFontVariationTable(Dest) do
-    begin
-      FVariationAxes := Self.FVariationAxes;
-    end;
+  if Source is TPascalTypeFontVariationTable then
+  begin
+    FVariationAxes := TPascalTypeFontVariationTable(Source).FVariationAxes;
+    FInstances := TPascalTypeFontVariationTable(Source).FInstances;
+  end;
 end;
 
 class function TPascalTypeFontVariationTable.GetTableType: TTableType;
 begin
   Result := 'fvar';
-end;
-
-procedure TPascalTypeFontVariationTable.ResetToDefaults;
-begin
-  inherited;
-
 end;
 
 procedure TPascalTypeFontVariationTable.LoadFromStream(Stream: TStream);
@@ -2136,8 +1959,8 @@ begin
 
 {$IFDEF AmbigiousExceptions}
     // ambigious instance size check
-    if InstSize > (4 + Length(FVariationAxes) * 4)
-    then raise EPascalTypeError.Create(RCStrInstanceSizeTooSmall);
+    if InstSize > (4 + Length(FVariationAxes) * 4) then
+      raise EPascalTypeError.Create(RCStrInstanceSizeTooSmall);
 {$ENDIF}
     // locate data
     Position := StartPos + OffsetToData;
@@ -2203,28 +2026,20 @@ end;
 
 { TPascalTypeGlyphPropertiesTable }
 
-procedure TPascalTypeGlyphPropertiesTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeGlyphPropertiesTable.Assign(Source: TPersistent);
 begin
   inherited;
 
-  if Dest is Self.ClassType then
-    with TPascalTypeGlyphPropertiesTable(Dest) do
-    begin
-      FFormat  := Self.FFormat;
-      FDefault := Self.FDefault;
-    end;
+  if Source is TPascalTypeGlyphPropertiesTable then
+  begin
+    FFormat  := TPascalTypeGlyphPropertiesTable(Source).FFormat;
+    FDefault := TPascalTypeGlyphPropertiesTable(Source).FDefault;
+  end;
 end;
 
 class function TPascalTypeGlyphPropertiesTable.GetTableType: TTableType;
 begin
   Result := 'prop';
-end;
-
-procedure TPascalTypeGlyphPropertiesTable.ResetToDefaults;
-begin
-  inherited;
-  FFormat  := 0;
-  FDefault := 0;
 end;
 
 procedure TPascalTypeGlyphPropertiesTable.LoadFromStream(Stream: TStream);
@@ -2263,40 +2078,26 @@ end;
 
 { TPascalTypeHorizontalStyleTable }
 
-procedure TPascalTypeHorizontalStyleTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeHorizontalStyleTable.Assign(Source: TPersistent);
 begin
   inherited;
 
-  if Dest is Self.ClassType then
-    with TPascalTypeHorizontalStyleTable(Dest) do
-    begin
-      FExtraPlain := Self.FExtraPlain;
-      FExtraBold  := Self.FExtraBold;
-      FExtraItalic := Self.FExtraItalic;
-      FExtraUnderline := Self.FExtraUnderline;
-      FExtraOutline := Self.FExtraOutline;
-      FExtraShadow := Self.FExtraShadow;
-      FExtraCondensed := Self.FExtraCondensed;
-      FExtraExtended := Self.FExtraExtended;
-    end;
+  if Source is TPascalTypeHorizontalStyleTable then
+  begin
+    FExtraPlain := TPascalTypeHorizontalStyleTable(Source).FExtraPlain;
+    FExtraBold  := TPascalTypeHorizontalStyleTable(Source).FExtraBold;
+    FExtraItalic := TPascalTypeHorizontalStyleTable(Source).FExtraItalic;
+    FExtraUnderline := TPascalTypeHorizontalStyleTable(Source).FExtraUnderline;
+    FExtraOutline := TPascalTypeHorizontalStyleTable(Source).FExtraOutline;
+    FExtraShadow := TPascalTypeHorizontalStyleTable(Source).FExtraShadow;
+    FExtraCondensed := TPascalTypeHorizontalStyleTable(Source).FExtraCondensed;
+    FExtraExtended := TPascalTypeHorizontalStyleTable(Source).FExtraExtended;
+  end;
 end;
 
 class function TPascalTypeHorizontalStyleTable.GetTableType: TTableType;
 begin
   Result := 'hsty';
-end;
-
-procedure TPascalTypeHorizontalStyleTable.ResetToDefaults;
-begin
-  inherited;
-  FExtraPlain := 0;
-  FExtraBold  := 0;
-  FExtraItalic := 0;
-  FExtraUnderline := 0;
-  FExtraOutline := 0;
-  FExtraShadow := 0;
-  FExtraCondensed := 0;
-  FExtraExtended := 0;
 end;
 
 procedure TPascalTypeHorizontalStyleTable.LoadFromStream(Stream: TStream);
@@ -2509,53 +2310,36 @@ begin
   Result := FChains.Count;
 end;
 
-procedure TCustomPascalTypeGlyphMetamorphosisTable.AssignTo(
-  Dest: TPersistent);
+procedure TCustomPascalTypeGlyphMetamorphosisTable.Assign(Source: TPersistent);
 begin
   inherited;
 
-  if Dest is Self.ClassType then
-    with TCustomPascalTypeGlyphMetamorphosisTable(Dest) do
-      FChains.Assign(FChains);
+  if Source is TCustomPascalTypeGlyphMetamorphosisTable then
+    // TCustomPascalTypeGlyphMetamorphosisTable(Source)
+    // TODO : FChains.Assign(FChains);
+    ;
 end;
-
-procedure TCustomPascalTypeGlyphMetamorphosisTable.ResetToDefaults;
-begin
-  inherited;
-  FChains.Clear;
-end;
-
 
 { TPascalTypeGlyphMetamorphosisChainTable }
 
-procedure TPascalTypeGlyphMetamorphosisChainTable.AssignTo(
-  Dest: TPersistent);
+procedure TPascalTypeGlyphMetamorphosisChainTable.Assign(Source: TPersistent);
 begin
   inherited;
 
-  if Dest is Self.ClassType then
-    with TPascalTypeGlyphMetamorphosisChainTable(Dest) do
-    begin
-      FDefaultFlags := Self.FDefaultFlags;
-      FFeatureArray := Self.FFeatureArray;
-    end;
+  if Source is TPascalTypeGlyphMetamorphosisChainTable then
+  begin
+    FDefaultFlags := TPascalTypeGlyphMetamorphosisChainTable(Source).FDefaultFlags;
+    FFeatureArray := TPascalTypeGlyphMetamorphosisChainTable(Source).FFeatureArray;
+  end;
 end;
 
-procedure TPascalTypeGlyphMetamorphosisChainTable.ResetToDefaults;
-begin
-  inherited;
-  FDefaultFlags := 0;
-  SetLength(FFeatureArray, 0);
-end;
-
-function TPascalTypeGlyphMetamorphosisChainTable.GetFeature(
-  Index: Cardinal): TFeatureSubtableRecord;
+function TPascalTypeGlyphMetamorphosisChainTable.GetFeature(Index: Cardinal): TFeatureSubtableRecord;
 begin
   if (Index < Cardinal(Length(FFeatureArray))) then
     Result :=
       FFeatureArray[Index]
   else
-    raise Exception.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
 end;
 
 function TPascalTypeGlyphMetamorphosisChainTable.GetFeatureCount: Cardinal;
@@ -2721,34 +2505,24 @@ end;
 
 { TPascalTypeExtendedGlyphMetamorphosisChainTable }
 
-procedure TPascalTypeExtendedGlyphMetamorphosisChainTable.AssignTo(
-  Dest: TPersistent);
+procedure TPascalTypeExtendedGlyphMetamorphosisChainTable.Assign(Source: TPersistent);
 begin
   inherited;
 
-  if Dest is Self.ClassType then
-    with TPascalTypeExtendedGlyphMetamorphosisChainTable(Dest) do
-    begin
-      FDefaultFlags := Self.FDefaultFlags;
-      FFeatureArray := Self.FFeatureArray;
-    end;
+  if Source is TPascalTypeExtendedGlyphMetamorphosisChainTable then
+  begin
+    FDefaultFlags := TPascalTypeExtendedGlyphMetamorphosisChainTable(Source).FDefaultFlags;
+    FFeatureArray := TPascalTypeExtendedGlyphMetamorphosisChainTable(Source).FFeatureArray;
+  end;
 end;
 
-procedure TPascalTypeExtendedGlyphMetamorphosisChainTable.ResetToDefaults;
-begin
-  inherited;
-  FDefaultFlags := 0;
-  SetLength(FFeatureArray, 0);
-end;
-
-function TPascalTypeExtendedGlyphMetamorphosisChainTable.GetFeature(
-  Index: Cardinal): TFeatureSubtableRecord;
+function TPascalTypeExtendedGlyphMetamorphosisChainTable.GetFeature(Index: Cardinal): TFeatureSubtableRecord;
 begin
   if (Index < Cardinal(Length(FFeatureArray))) then
     Result :=
       FFeatureArray[Index]
   else
-    raise Exception.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
 end;
 
 function TPascalTypeExtendedGlyphMetamorphosisChainTable.GetFeatureCount
@@ -2905,26 +2679,17 @@ end;
 
 { TPascalTypeOpticalBoundsTable }
 
-procedure TPascalTypeOpticalBoundsTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeOpticalBoundsTable.Assign(Source: TPersistent);
 begin
   inherited;
 
-  if Dest is Self.ClassType then
-    with TPascalTypeOpticalBoundsTable(Dest) do
-    begin
-      FFormat := Self.FFormat;
-    end;
+  if Source is TPascalTypeOpticalBoundsTable then
+    FFormat := TPascalTypeOpticalBoundsTable(Source).FFormat;
 end;
 
 class function TPascalTypeOpticalBoundsTable.GetTableType: TTableType;
 begin
   Result := 'opbd';
-end;
-
-procedure TPascalTypeOpticalBoundsTable.ResetToDefaults;
-begin
-  inherited;
-  FFormat := 0;
 end;
 
 procedure TPascalTypeOpticalBoundsTable.LoadFromStream(Stream: TStream);
@@ -2956,22 +2721,14 @@ end;
 
 { TPascalTypeTrackingDataTable }
 
-procedure TPascalTypeTrackingDataTable.AssignTo(Dest: TPersistent);
-begin
-  if Dest is Self.ClassType then
-    with TPascalTypeTrackingDataTable(Dest) do
-    begin
-      FTrackTable := Self.FTrackTable;
-      FSizeTable  := Self.FSizeTable;
-    end else
-    inherited;
-end;
-
-procedure TPascalTypeTrackingDataTable.ResetToDefaults;
+procedure TPascalTypeTrackingDataTable.Assign(Source: TPersistent);
 begin
   inherited;
-  SetLength(FTrackTable, 0);
-  SetLength(FSizeTable, 0);
+  if Source is TPascalTypeTrackingDataTable then
+  begin
+    FTrackTable := TPascalTypeTrackingDataTable(Source).FTrackTable;
+    FSizeTable  := TPascalTypeTrackingDataTable(Source).FSizeTable;
+  end;
 end;
 
 procedure TPascalTypeTrackingDataTable.LoadFromStream(Stream: TStream);
@@ -3042,15 +2799,12 @@ end;
 
 { TPascalTypeTrackingTable }
 
-procedure TPascalTypeTrackingTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeTrackingTable.Assign(Source: TPersistent);
 begin
   inherited;
 
-  if Dest is Self.ClassType then
-    with TPascalTypeTrackingTable(Dest) do
-    begin
-      FFormat := Self.FFormat;
-    end;
+  if Source is TPascalTypeTrackingTable then
+    FFormat := TPascalTypeTrackingTable(Source).FFormat;
 end;
 
 constructor TPascalTypeTrackingTable.Create(const AStorage: IPascalTypeStorageTable);
@@ -3070,14 +2824,6 @@ end;
 class function TPascalTypeTrackingTable.GetTableType: TTableType;
 begin
   Result := 'trak';
-end;
-
-procedure TPascalTypeTrackingTable.ResetToDefaults;
-begin
-  inherited;
-  FFormat := 0;
-  FHorizontal.ResetToDefaults;
-  FVertical.ResetToDefaults;
 end;
 
 procedure TPascalTypeTrackingTable.LoadFromStream(Stream: TStream);
@@ -3183,21 +2929,11 @@ end;
 
 { TPascalTypeZapfGlyphInfoTable }
 
-procedure TPascalTypeZapfGlyphInfoTable.AssignTo(Dest: TPersistent);
-begin
-  if Dest is Self.ClassType then
-    with TPascalTypeZapfGlyphInfoTable(Dest) do
-    begin
-      FUnicodeCodePoints := Self.FUnicodeCodePoints;
-    end
-  else
-    inherited;
-end;
-
-procedure TPascalTypeZapfGlyphInfoTable.ResetToDefaults;
+procedure TPascalTypeZapfGlyphInfoTable.Assign(Source: TPersistent);
 begin
   inherited;
-  SetLength(FUnicodeCodePoints, 0);
+  if Source is TPascalTypeZapfGlyphInfoTable then
+    FUnicodeCodePoints := TPascalTypeZapfGlyphInfoTable(Source).FUnicodeCodePoints;
 end;
 
 procedure TPascalTypeZapfGlyphInfoTable.LoadFromStream(Stream: TStream);
@@ -3268,21 +3004,11 @@ end;
 
 { TPascalTypeZapfKindNameString }
 
-procedure TPascalTypeZapfKindNameString.AssignTo(Dest: TPersistent);
+procedure TPascalTypeZapfKindNameString.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypeZapfKindNameString(Dest) do
-    begin
-      FName := Self.FName;
-    end else
-    inherited;
-end;
-
-procedure TPascalTypeZapfKindNameString.ResetToDefaults;
-begin
-  FName := '';
-
   inherited;
+  if Source is TPascalTypeZapfKindNameString then
+    FName := TPascalTypeZapfKindNameString(Source).FName;
 end;
 
 procedure TPascalTypeZapfKindNameString.LoadFromStream(Stream: TStream);
@@ -3319,23 +3045,12 @@ end;
 
 { TPascalTypeZapfKindNameBinary }
 
-procedure TPascalTypeZapfKindNameBinary.AssignTo(Dest: TPersistent);
+procedure TPascalTypeZapfKindNameBinary.Assign(Source: TPersistent);
 begin
   inherited;
 
-  if Dest is Self.ClassType then
-    with TPascalTypeZapfKindNameBinary(Dest) do
-    begin
-      FValue := Self.FValue;
-    end else
-    inherited;
-end;
-
-procedure TPascalTypeZapfKindNameBinary.ResetToDefaults;
-begin
-  FValue := 0;
-
-  inherited;
+  if Source is TPascalTypeZapfKindNameBinary then
+    FValue := TPascalTypeZapfKindNameBinary(Source).FValue;
 end;
 
 procedure TPascalTypeZapfKindNameBinary.LoadFromStream(Stream: TStream);
@@ -3362,24 +3077,15 @@ end;
 
 { TPascalTypeZapfKindName }
 
-procedure TPascalTypeZapfKindName.AssignTo(Dest: TPersistent);
+procedure TPascalTypeZapfKindName.Assign(Source: TPersistent);
 begin
   inherited;
 
-  if Dest is Self.ClassType then
-    with TPascalTypeZapfKindName(Dest) do
-    begin
-      FKindType := Self.FKindType;
-      FKindName := Self.FKindName;
-    end else
-    inherited;
-end;
-
-procedure TPascalTypeZapfKindName.ResetToDefaults;
-begin
-  FreeAndNil(FKindName);
-
-  inherited;
+  if Source is TPascalTypeZapfKindName then
+  begin
+    FKindType := TPascalTypeZapfKindName(Source).FKindType;
+    FKindName := TPascalTypeZapfKindName(Source).FKindName;
+  end;
 end;
 
 procedure TPascalTypeZapfKindName.KindNameChanged;
@@ -3460,31 +3166,23 @@ begin
   inherited;
 end;
 
-procedure TPascalTypeZapfTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeZapfTable.Assign(Source: TPersistent);
 var
   GlyphIndex: Integer;
 begin
   inherited;
 
-  if Dest is Self.ClassType then
-    with TPascalTypeZapfTable(Dest) do
-    begin
-      SetLength(FGlyphInfos, Length(Self.FGlyphInfos));
-      for GlyphIndex := 0 to High(FGlyphInfos) do
-        FGlyphInfos[GlyphIndex]
-          .Assign(Self.FGlyphInfos[GlyphIndex]);
-    end;
+  if Source is TPascalTypeZapfTable then
+  begin
+    SetLength(FGlyphInfos, Length(TPascalTypeZapfTable(Source).FGlyphInfos));
+    for GlyphIndex := 0 to High(FGlyphInfos) do
+      FGlyphInfos[GlyphIndex].Assign(TPascalTypeZapfTable(Source).FGlyphInfos[GlyphIndex]);
+  end;
 end;
 
 class function TPascalTypeZapfTable.GetTableType: TTableType;
 begin
   Result := 'Zapf';
-end;
-
-procedure TPascalTypeZapfTable.ResetToDefaults;
-begin
-  inherited;
-  ClearGlyphInfos;
 end;
 
 procedure TPascalTypeZapfTable.ClearGlyphInfos;

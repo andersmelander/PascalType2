@@ -39,73 +39,68 @@ uses
   PT_TablesPostscript;
 
 type
-  TPascalTypePostscriptOperandShortInt = class
-    (TCustomPascalTypePostscriptDictOperand)
+  TPascalTypePostscriptOperandShortInt = class(TCustomPascalTypePostscriptDictOperand)
   private
     FValue: ShortInt;
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
     function GetAsInteger: Integer; override;
     function GetAsString: string; override;
     function GetAsSingle: Single; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     property Value: ShortInt read FValue write FValue;
   end;
 
-  TPascalTypePostscriptOperandComposite = class
-    (TCustomPascalTypePostscriptDictOperand)
+  TPascalTypePostscriptOperandComposite = class(TCustomPascalTypePostscriptDictOperand)
   private
     FValue: SmallInt;
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
     function GetAsInteger: Integer; override;
     function GetAsString: string; override;
     function GetAsSingle: Single; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     property Value: SmallInt read FValue write FValue;
   end;
 
-  TPascalTypePostscriptOperandSmallInt = class
-    (TCustomPascalTypePostscriptDictOperand)
+  TPascalTypePostscriptOperandSmallInt = class(TCustomPascalTypePostscriptDictOperand)
   private
     FValue: SmallInt;
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
     function GetAsInteger: Integer; override;
     function GetAsString: string; override;
     function GetAsSingle: Single; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     property Value: SmallInt read FValue write FValue;
   end;
 
-  TPascalTypePostscriptOperandInteger = class
-    (TCustomPascalTypePostscriptDictOperand)
+  TPascalTypePostscriptOperandInteger = class(TCustomPascalTypePostscriptDictOperand)
   private
     FValue: Integer;
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
     function GetAsInteger: Integer; override;
     function GetAsString: string; override;
     function GetAsSingle: Single; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     property Value: Integer read FValue write FValue;
   end;
 
-  TPascalTypePostscriptOperandBCD = class
-    (TCustomPascalTypePostscriptDictOperand)
+  TPascalTypePostscriptOperandBCD = class(TCustomPascalTypePostscriptDictOperand)
   private
     FValue: string;
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
     function GetAsInteger: Integer; override;
     function GetAsString: string; override;
     function GetAsSingle: Single; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     property Value: string read FValue write FValue;
   end;
 
@@ -113,13 +108,10 @@ implementation
 
 { TPascalTypePostscriptOperandShortInt }
 
-procedure TPascalTypePostscriptOperandShortInt.AssignTo(Dest: TPersistent);
+procedure TPascalTypePostscriptOperandShortInt.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypePostscriptOperandShortInt(Dest) do
-    begin
-      FValue := Self.FValue;
-    end
+  if Source is TPascalTypePostscriptOperandShortInt then
+    FValue := TPascalTypePostscriptOperandShortInt(Source).FValue
   else
     inherited;
 end;
@@ -142,13 +134,10 @@ end;
 
 { TPascalTypePostscriptOperandComposite }
 
-procedure TPascalTypePostscriptOperandComposite.AssignTo(Dest: TPersistent);
+procedure TPascalTypePostscriptOperandComposite.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypePostscriptOperandComposite(Dest) do
-    begin
-      FValue := Self.FValue;
-    end
+  if Source is TPascalTypePostscriptOperandComposite then
+    FValue := TPascalTypePostscriptOperandComposite(Source).FValue
   else
     inherited;
 end;
@@ -171,13 +160,10 @@ end;
 
 { TPascalTypePostscriptOperandSmallInt }
 
-procedure TPascalTypePostscriptOperandSmallInt.AssignTo(Dest: TPersistent);
+procedure TPascalTypePostscriptOperandSmallInt.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypePostscriptOperandSmallInt(Dest) do
-    begin
-      FValue := Self.FValue;
-    end
+  if Source is TPascalTypePostscriptOperandSmallInt then
+    FValue := TPascalTypePostscriptOperandSmallInt(Source).FValue
   else
     inherited;
 end;
@@ -200,13 +186,10 @@ end;
 
 { TPascalTypePostscriptOperandInteger }
 
-procedure TPascalTypePostscriptOperandInteger.AssignTo(Dest: TPersistent);
+procedure TPascalTypePostscriptOperandInteger.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypePostscriptOperandInteger(Dest) do
-    begin
-      FValue := Self.FValue;
-    end
+  if Source is TPascalTypePostscriptOperandInteger then
+    FValue := TPascalTypePostscriptOperandInteger(Source).FValue
   else
     inherited;
 end;
@@ -229,13 +212,10 @@ end;
 
 { TPascalTypePostscriptOperandBCD }
 
-procedure TPascalTypePostscriptOperandBCD.AssignTo(Dest: TPersistent);
+procedure TPascalTypePostscriptOperandBCD.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypePostscriptOperandBCD(Dest) do
-    begin
-      FValue := Self.FValue;
-    end
+  if Source is TPascalTypePostscriptOperandBCD then
+    FValue := TPascalTypePostscriptOperandBCD(Source).FValue
   else
     inherited;
 end;

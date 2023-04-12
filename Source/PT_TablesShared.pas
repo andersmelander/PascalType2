@@ -61,8 +61,6 @@ type
     procedure SetMinOriginSB(const Value: Shortint);
     procedure SetWidthMax(const Value: Byte);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
     procedure AscenderChanged; virtual;
     procedure CaretOffsetChanged; virtual;
     procedure CaretSlopeDenominatorChanged; virtual;
@@ -74,7 +72,7 @@ type
     procedure MinOriginSBChanged; virtual;
     procedure WidthMaxChanged; virtual;
   public
-    procedure ResetToDefaults; override;
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -123,10 +121,6 @@ type
     procedure SetPpemY(const Value: Byte);
     procedure SetStartGlyphIndex(const Value: Word);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
-
     procedure BitDepthChanged; virtual;
     procedure ColorRefChanged; virtual;
     procedure EndGlyphIndexChanged; virtual;
@@ -140,6 +134,8 @@ type
   public
     constructor Create; override;
     destructor Destroy; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -172,38 +168,22 @@ uses
 
 { TPascalTypeBitmapLineMetrics }
 
-procedure TPascalTypeBitmapLineMetrics.AssignTo(Dest: TPersistent);
+procedure TPascalTypeBitmapLineMetrics.Assign(Source: TPersistent);
 begin
   inherited;
-  if Dest is Self.ClassType then
-    with TPascalTypeBitmapLineMetrics(Dest) do
-    begin
-      FAscender := Self.FAscender;
-      FDescender := Self.FDescender;
-      FWidthMax := Self.FWidthMax;
-      FCaretSlopeNumerator := Self.FCaretSlopeNumerator;
-      FCaretSlopeDenominator := Self.FCaretSlopeDenominator;
-      FCaretOffset := Self.FCaretOffset;
-      FMinOriginSB := Self.FMinOriginSB;
-      FMinAdvanceSB := Self.FMinAdvanceSB;
-      FMaxBeforeBL := Self.FMaxBeforeBL;
-      FMinAfterBL := Self.FMinAfterBL;
-    end;
-end;
-
-procedure TPascalTypeBitmapLineMetrics.ResetToDefaults;
-begin
-  inherited;
-  FAscender := 0;
-  FDescender := 0;
-  FWidthMax := 0;
-  FCaretSlopeNumerator := 0;
-  FCaretSlopeDenominator := 0;
-  FCaretOffset := 0;
-  FMinOriginSB := 0;
-  FMinAdvanceSB := 0;
-  FMaxBeforeBL := 0;
-  FMinAfterBL := 0;
+  if Source is TPascalTypeBitmapLineMetrics then
+  begin
+    FAscender := TPascalTypeBitmapLineMetrics(Source).FAscender;
+    FDescender := TPascalTypeBitmapLineMetrics(Source).FDescender;
+    FWidthMax := TPascalTypeBitmapLineMetrics(Source).FWidthMax;
+    FCaretSlopeNumerator := TPascalTypeBitmapLineMetrics(Source).FCaretSlopeNumerator;
+    FCaretSlopeDenominator := TPascalTypeBitmapLineMetrics(Source).FCaretSlopeDenominator;
+    FCaretOffset := TPascalTypeBitmapLineMetrics(Source).FCaretOffset;
+    FMinOriginSB := TPascalTypeBitmapLineMetrics(Source).FMinOriginSB;
+    FMinAdvanceSB := TPascalTypeBitmapLineMetrics(Source).FMinAdvanceSB;
+    FMaxBeforeBL := TPascalTypeBitmapLineMetrics(Source).FMaxBeforeBL;
+    FMinAfterBL := TPascalTypeBitmapLineMetrics(Source).FMinAfterBL;
+  end;
 end;
 
 procedure TPascalTypeBitmapLineMetrics.LoadFromStream(Stream: TStream);
@@ -449,9 +429,9 @@ end;
 
 constructor TPascalTypeBitmapSizeTable.Create;
 begin
+  inherited;
   FHorizontalMetrics := TPascalTypeBitmapLineMetrics.Create;
   FVerticalMetrics := TPascalTypeBitmapLineMetrics.Create;
-  inherited;
 end;
 
 destructor TPascalTypeBitmapSizeTable.Destroy;
@@ -461,45 +441,25 @@ begin
   inherited;
 end;
 
-procedure TPascalTypeBitmapSizeTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeBitmapSizeTable.Assign(Source: TPersistent);
 begin
   inherited;
-  if Dest is Self.ClassType then
-    with TPascalTypeBitmapSizeTable(Dest) do
-    begin
-      FIndexSubTableArrayOffset := Self.FIndexSubTableArrayOffset;
-      FIndexTablesSize := Self.FIndexTablesSize;
-      FNumberOfIndexSubTables := Self.FNumberOfIndexSubTables;
-      FColorRef := Self.FColorRef;
-      FStartGlyphIndex := Self.FStartGlyphIndex;
-      FEndGlyphIndex := Self.FEndGlyphIndex;
-      FPpemX := Self.FPpemX;
-      FPpemY := Self.FPpemY;
-      FBitDepth := Self.FBitDepth;
-      FFlags := Self.FFlags;
+  if Source is TPascalTypeBitmapSizeTable then
+  begin
+    FIndexSubTableArrayOffset := TPascalTypeBitmapSizeTable(Source).FIndexSubTableArrayOffset;
+    FIndexTablesSize := TPascalTypeBitmapSizeTable(Source).FIndexTablesSize;
+    FNumberOfIndexSubTables := TPascalTypeBitmapSizeTable(Source).FNumberOfIndexSubTables;
+    FColorRef := TPascalTypeBitmapSizeTable(Source).FColorRef;
+    FStartGlyphIndex := TPascalTypeBitmapSizeTable(Source).FStartGlyphIndex;
+    FEndGlyphIndex := TPascalTypeBitmapSizeTable(Source).FEndGlyphIndex;
+    FPpemX := TPascalTypeBitmapSizeTable(Source).FPpemX;
+    FPpemY := TPascalTypeBitmapSizeTable(Source).FPpemY;
+    FBitDepth := TPascalTypeBitmapSizeTable(Source).FBitDepth;
+    FFlags := TPascalTypeBitmapSizeTable(Source).FFlags;
 
-      FHorizontalMetrics.Assign(Self.FHorizontalMetrics);
-      FVerticalMetrics.Assign(Self.FVerticalMetrics);
-    end;
-end;
-
-procedure TPascalTypeBitmapSizeTable.ResetToDefaults;
-begin
-  inherited;
-
-  FIndexSubTableArrayOffset := 0;
-  FIndexTablesSize := 0;
-  FNumberOfIndexSubTables := 0;
-  FColorRef := 0;
-  FStartGlyphIndex := 0;
-  FEndGlyphIndex := 0;
-  FPpemX := 0;
-  FPpemY := 0;
-  FBitDepth := 0;
-  FFlags := 0;
-
-  FHorizontalMetrics.ResetToDefaults;
-  FVerticalMetrics.ResetToDefaults;
+    FHorizontalMetrics.Assign(TPascalTypeBitmapSizeTable(Source).FHorizontalMetrics);
+    FVerticalMetrics.Assign(TPascalTypeBitmapSizeTable(Source).FVerticalMetrics);
+  end;
 end;
 
 procedure TPascalTypeBitmapSizeTable.LoadFromStream(Stream: TStream);

@@ -34,24 +34,29 @@ begin
   try
     repeat
       FStorageScan := TPascalTypeStorageScan.Create;
-      with FStorageScan do
-        try
-          // store current file
-          FCurrentFile := SR.Name;
+      try
+        with FStorageScan do
+          try
+            // store current file
+            FCurrentFile := SR.Name;
 
-          if FCurrentFile = 'tahoma.ttf' then
-            Continue;
+            if FCurrentFile = 'tahoma.ttf' then
+              Continue;
 
-          // load font from file
-          LoadFromFile(FCurrentFile);
+            // load font from file
+            LoadFromFile(FCurrentFile);
 
-          Synchronize(FontScanned);
-        except
-          on
-            E: EPascalTypeError do Continue;
-          else
-            Continue;
-        end;
+            Synchronize(FontScanned);
+          except
+            on
+              E: EPascalTypeError do Continue;
+            else
+              Continue;
+          end;
+
+      finally
+        FreeAndNil(FStorageScan);
+      end;
     until (FindNext(SR) <> 0) or Terminated;
   finally
     FindClose(SR);

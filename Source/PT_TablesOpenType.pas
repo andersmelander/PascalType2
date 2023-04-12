@@ -50,11 +50,12 @@ type
     FVersion: TFixedPoint; // Version of the GDEF table-initially = 0x00010002
     procedure SetVersion(const Value: TFixedPoint);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
     procedure VersionChanged; virtual;
   public
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -68,11 +69,9 @@ type
     property ClassFormat: Word read GetClassFormat;
   end;
 
-  TOpenTypeClassDefinitionTableClass = class of
-    TCustomOpenTypeClassDefinitionTable;
+  TOpenTypeClassDefinitionTableClass = class of TCustomOpenTypeClassDefinitionTable;
 
-  TOpenTypeClassDefinitionFormat1Table = class
-    (TCustomOpenTypeClassDefinitionTable)
+  TOpenTypeClassDefinitionFormat1Table = class(TCustomOpenTypeClassDefinitionTable)
   private
     FStartGlyph      : Word;          // First GlyphID of the ClassValueArray
     FClassValueArray : array of Word; // Array of Class Values-one per GlyphID
@@ -82,11 +81,10 @@ type
   protected
     class function GetClassFormat: Word; override;
 
-    procedure AssignTo(Dest: TPersistent); override;
-    procedure ResetToDefaults; override;
-
     procedure StartGlyphChanged; virtual;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -101,8 +99,7 @@ type
     GlyphClass : Word; // Applied to all glyphs in the range
   end;
 
-  TOpenTypeClassDefinitionFormat2Table = class
-    (TCustomOpenTypeClassDefinitionTable)
+  TOpenTypeClassDefinitionFormat2Table = class(TCustomOpenTypeClassDefinitionTable)
   private
     FClassRangeRecords: array of TClassRangeRecord; // Array of ClassRangeRecords-ordered by Start GlyphID
     function GetClassRangeRecord(Index: Integer): TClassRangeRecord;
@@ -110,10 +107,9 @@ type
 
   protected
     class function GetClassFormat: Word; override;
-
-    procedure AssignTo(Dest: TPersistent); override;
-    procedure ResetToDefaults; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -130,11 +126,12 @@ type
     function GetCoverageCount: Integer;
     procedure SetTableFormat(const Value: Word);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-    procedure ResetToDefaults; override;
-
     procedure TableFormatChanged; virtual;
   public
+    constructor Create; override;
+
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -149,11 +146,9 @@ type
   TOpenTypeBaselineTagListTable = class(TCustomPascalTypeTable)
   private
     FBaseLineTags: array of TTableType;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
@@ -167,11 +162,9 @@ type
   TOpenTypeBaselineScriptListTable = class(TCustomPascalTypeTable)
   private
     FBaseLineScript: array of TBaseLineScriptRecord;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
@@ -179,29 +172,25 @@ type
   TOpenTypeAxisTable = class(TCustomPascalTypeTable)
   private
     FBaseLineTagList: TOpenTypeBaselineTagListTable;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
+    destructor Destroy; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
-    destructor Destroy; override;
   end;
 
   TOpenTypeBaselineTable = class(TCustomOpenTypeVersionedNamedTable)
   private
     FHorizontalAxis: TOpenTypeAxisTable;
     FVerticalAxis  : TOpenTypeAxisTable;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -217,22 +206,19 @@ type
     FLigCaretList       : Word;                                // Offset to list of positioning points for ligature carets-from beginning of GDEF header (may be NULL)
     FMarkAttachClassDef : TCustomOpenTypeClassDefinitionTable; // Class definition table for mark attachment type (may be nil)
     FMarkGlyphSetsDef   : TOpenTypeMarkGlyphSetTable;          // Table of mark set definitions (may be nil)
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
 
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    property GlyphClassDefinition: TCustomOpenTypeClassDefinitionTable
-      read FGlyphClassDef;
-    property MarkAttachmentClassDefinition: TCustomOpenTypeClassDefinitionTable
-      read FMarkAttachClassDef;
+    property GlyphClassDefinition: TCustomOpenTypeClassDefinitionTable read FGlyphClassDef;
+    property MarkAttachmentClassDefinition: TCustomOpenTypeClassDefinitionTable read FMarkAttachClassDef;
     property MarkGlyphSet: TOpenTypeMarkGlyphSetTable read FMarkGlyphSetsDef;
   end;
 
@@ -251,31 +237,23 @@ type
     procedure SetLookupOrder(const Value: Word);
     procedure SetReqFeatureIndex(const Value: Word);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
-
     procedure LookupOrderChanged; virtual;
     procedure ReqFeatureIndexChanged; virtual;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
-    destructor Destroy; override;
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property LookupOrder: Word read FLookupOrder write SetLookupOrder;
-    property RequiredFeatureIndex: Word read FReqFeatureIndex
-      write SetReqFeatureIndex;
+    property RequiredFeatureIndex: Word read FReqFeatureIndex write SetReqFeatureIndex;
     property FeatureIndexCount: Integer read GetFeatureIndexCount;
     property FeatureIndex[Index: Integer]: Word read GetFeatureIndex;
   end;
 
-  TOpenTypeLanguageSystemTableClass = class of
-    TCustomOpenTypeLanguageSystemTable;
+  TOpenTypeLanguageSystemTableClass = class of TCustomOpenTypeLanguageSystemTable;
 
-  TOpenTypeDefaultLanguageSystemTable = class
-    (TCustomOpenTypeLanguageSystemTable)
+  TOpenTypeDefaultLanguageSystemTable = class(TCustomOpenTypeLanguageSystemTable)
   protected
     class function GetDisplayName: string; override;
   public
@@ -285,28 +263,22 @@ type
   TCustomOpenTypeScriptTable = class(TCustomOpenTypeNamedTable)
   private
     FDefaultLangSys      : TCustomOpenTypeLanguageSystemTable;
-    FLanguageSystemTables: TObjectList;
-    function GetLanguageSystemTable(Index: Integer)
-      : TCustomOpenTypeLanguageSystemTable;
+    FLanguageSystemTables: TPascalTypeTableInterfaceList<TCustomOpenTypeNamedTable>;
+    function GetLanguageSystemTable(Index: Integer): TCustomOpenTypeNamedTable;
     function GetLanguageSystemTableCount: Integer;
-    procedure SetDefaultLangSys(const Value
-      : TCustomOpenTypeLanguageSystemTable);
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
+    procedure SetDefaultLangSys(const Value: TCustomOpenTypeLanguageSystemTable);
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    property DefaultLangSys: TCustomOpenTypeLanguageSystemTable
-      read FDefaultLangSys write SetDefaultLangSys;
+    property DefaultLangSys: TCustomOpenTypeLanguageSystemTable read FDefaultLangSys write SetDefaultLangSys;
     property LanguageSystemTableCount: Integer read GetLanguageSystemTableCount;
-    property LanguageSystemTable[Index: Integer]
-      : TCustomOpenTypeLanguageSystemTable read GetLanguageSystemTable;
+    property LanguageSystemTable[Index: Integer]: TCustomOpenTypeNamedTable read GetLanguageSystemTable;
   end;
 
   TOpenTypeScriptTableClass = class of TCustomOpenTypeScriptTable;
@@ -322,16 +294,14 @@ type
 
   TOpenTypeScriptListTable = class(TCustomPascalTypeInterfaceTable)
   private
-    FLangSysList: TObjectList;
+    FLangSysList: TPascalTypeTableInterfaceList<TCustomOpenTypeScriptTable>;
     function GetLanguageSystemCount: Integer;
     function GetLanguageSystem(Index: Integer): TCustomOpenTypeScriptTable;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -349,13 +319,12 @@ type
     function GetLookupListCount: Integer;
     procedure SetFeatureParams(const Value: Word);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
     procedure FeatureParamsChanged; virtual;
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -370,16 +339,14 @@ type
 
   TOpenTypeFeatureListTable = class(TCustomPascalTypeInterfaceTable)
   private
-    FFeatureList: TObjectList;
+    FFeatureList: TPascalTypeTableInterfaceList<TCustomOpenTypeFeatureTable>;
     function GetFeature(Index: Integer): TCustomOpenTypeFeatureTable;
     function GetFeatureCount: Integer;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -402,11 +369,10 @@ type
     function GetGlyph(Index: Integer): Word;
     function GetGlyphCount: Integer;
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
     class function GetCoverageFormat: TCoverageFormat; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -426,11 +392,10 @@ type
     function GetRange(Index: Integer): TRangeRecord;
     function GetRangeCount: Integer;
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
     class function GetCoverageFormat: TCoverageFormat; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -443,16 +408,13 @@ type
     FLookupType       : Word; // Different enumerations for GSUB and GPOS
     FLookupFlag       : Word; // Lookup qualifiers
     FMarkFilteringSet : Word; // Index (base 0) into GDEF mark glyph sets structure. This field is only present if bit UseMarkFilteringSet of lookup flags is set.
-    FSubtableList     : TObjectList;
+    FSubtableList     : TPascalTypeTableList<TCustomOpenTypeCoverageTable>;
     procedure SetLookupFlag(const Value: Word);
     procedure SetLookupType(const Value: Word);
     procedure SetMarkFilteringSet(const Value: Word);
     function GetSubtable(Index: Integer): TCustomOpenTypeCoverageTable;
     function GetSubtableCount: Integer;
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
     procedure LookupFlagChanged; virtual;
     procedure LookupTypeChanged; virtual;
     procedure MarkFilteringSetChanged; virtual;
@@ -460,31 +422,29 @@ type
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property LookupType: Word read FLookupType write SetLookupType;
     property LookupFlag: Word read FLookupFlag write SetLookupFlag;
-    property MarkFilteringSet: Word read FMarkFilteringSet
-      write SetMarkFilteringSet;
+    property MarkFilteringSet: Word read FMarkFilteringSet write SetMarkFilteringSet;
 
     property SubtableCount: Integer read GetSubtableCount;
-    property Subtable[Index: Integer]: TCustomOpenTypeCoverageTable
-      read GetSubtable;
+    property Subtable[Index: Integer]: TCustomOpenTypeCoverageTable read GetSubtable;
   end;
 
   TOpenTypeLookupListTable = class(TCustomPascalTypeInterfaceTable)
   private
-    FLookupList : TObjectList;
+    FLookupList : TPascalTypeTableInterfaceList<TOpenTypeLookupTable>;
     function GetLookupTableCount: Integer;
     function GetLookupTable(Index: Integer): TOpenTypeLookupTable;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -502,13 +462,12 @@ type
     FLookupListTable  : TOpenTypeLookupListTable;
     procedure SetVersion(const Value: TFixedPoint);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
     procedure VersionChanged; virtual;
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -541,13 +500,9 @@ type
   // not entirely implemented, for more information see
   // http://www.microsoft.com/typography/otspec/jstf.htm
 
-  TCustomOpenTypeJustificationLanguageSystemTable = class
-    (TCustomOpenTypeNamedTable)
+  TCustomOpenTypeJustificationLanguageSystemTable = class(TCustomOpenTypeNamedTable)
   private
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
@@ -556,11 +511,9 @@ type
     procedure SaveToStream(Stream: TStream); override;
   end;
 
-  TOpenTypeJustificationLanguageSystemTableClass = class of
-    TCustomOpenTypeJustificationLanguageSystemTable;
+  TOpenTypeJustificationLanguageSystemTableClass = class of TCustomOpenTypeJustificationLanguageSystemTable;
 
-  TOpenTypeJustificationLanguageSystemTable = class
-    (TCustomOpenTypeJustificationLanguageSystemTable)
+  TOpenTypeJustificationLanguageSystemTable = class(TCustomOpenTypeJustificationLanguageSystemTable)
   protected
     class function GetDisplayName: string; override;
   public
@@ -571,10 +524,9 @@ type
   private
     FGlyphID: array of Word; // GlyphIDs-in increasing numerical order
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
@@ -583,33 +535,26 @@ type
   private
     FExtenderGlyphTable  : TOpenTypeExtenderGlyphTable;
     FDefaultLangSys      : TCustomOpenTypeJustificationLanguageSystemTable;
-    FLanguageSystemTables: TObjectList;
-    function GetLanguageSystemTable(Index: Integer)
-      : TCustomOpenTypeJustificationLanguageSystemTable;
+    FLanguageSystemTables: TPascalTypeTableInterfaceList<TCustomOpenTypeJustificationLanguageSystemTable>;
+    function GetLanguageSystemTable(Index: Integer): TCustomOpenTypeJustificationLanguageSystemTable;
     function GetLanguageSystemTableCount: Integer;
-    procedure SetDefaultLangSys(const Value
-      : TCustomOpenTypeJustificationLanguageSystemTable);
+    procedure SetDefaultLangSys(const Value: TCustomOpenTypeJustificationLanguageSystemTable);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    property DefaultLangSys: TCustomOpenTypeJustificationLanguageSystemTable
-      read FDefaultLangSys write SetDefaultLangSys;
+    property DefaultLangSys: TCustomOpenTypeJustificationLanguageSystemTable read FDefaultLangSys write SetDefaultLangSys;
     property LanguageSystemTableCount: Integer read GetLanguageSystemTableCount;
-    property LanguageSystemTable[Index: Integer]
-      : TCustomOpenTypeJustificationLanguageSystemTable
-      read GetLanguageSystemTable;
+    property LanguageSystemTable[Index: Integer]: TCustomOpenTypeJustificationLanguageSystemTable read GetLanguageSystemTable;
   end;
 
-  TOpenTypeJustificationScriptTable = class
-    (TCustomOpenTypeJustificationScriptTable)
+  TOpenTypeJustificationScriptTable = class(TCustomOpenTypeJustificationScriptTable)
   protected
     class function GetDisplayName: string; override;
   public
@@ -624,19 +569,18 @@ type
   TOpenTypeJustificationTable = class(TCustomPascalTypeNamedTable)
   private
     FVersion : TFixedPoint; // Version of the JSTF table-initially set to 0x00010000
-    FScripts : TObjectList;
+    FScripts : TPascalTypeTableInterfaceList<TCustomOpenTypeJustificationScriptTable>;
     procedure SetVersion(const Value: TFixedPoint);
     function GetScriptCount: Cardinal;
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
     procedure VersionChanged; virtual;
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -646,12 +590,9 @@ type
   end;
 
   // language system
-procedure RegisterLanguageSystem(LanguageSystemClass
-  : TOpenTypeLanguageSystemTableClass);
-procedure RegisterLanguageSystems(LanguageSystemClasses
-  : array of TOpenTypeLanguageSystemTableClass);
-function FindLanguageSystemByType(TableType: TTableType)
-  : TOpenTypeLanguageSystemTableClass;
+procedure RegisterLanguageSystem(LanguageSystemClass: TOpenTypeLanguageSystemTableClass);
+procedure RegisterLanguageSystems(LanguageSystemClasses: array of TOpenTypeLanguageSystemTableClass);
+function FindLanguageSystemByType(TableType: TTableType): TOpenTypeLanguageSystemTableClass;
 
 // scripts
 procedure RegisterScript(ScriptClass: TOpenTypeScriptTableClass);
@@ -660,24 +601,19 @@ function FindScriptByType(TableType: TTableType): TOpenTypeScriptTableClass;
 
 // features
 procedure RegisterFeature(FeatureClass: TOpenTypeFeatureTableClass);
-procedure RegisterFeatures(FeaturesClasses
-  : array of TOpenTypeFeatureTableClass);
+procedure RegisterFeatures(FeaturesClasses: array of TOpenTypeFeatureTableClass);
 function FindFeatureByType(TableType: TTableType): TOpenTypeFeatureTableClass;
 
 // justification language system
-procedure RegisterJustificationLanguageSystem(LanguageSystemClass
-  : TOpenTypeJustificationLanguageSystemTableClass);
-procedure RegisterJustificationLanguageSystems(LanguageSystemClasses
-  : array of TOpenTypeJustificationLanguageSystemTableClass);
-function FindJustificationLanguageSystemByType(TableType: TTableType)
-  : TOpenTypeJustificationLanguageSystemTableClass;
+procedure RegisterJustificationLanguageSystem(LanguageSystemClass: TOpenTypeJustificationLanguageSystemTableClass);
+procedure RegisterJustificationLanguageSystems(LanguageSystemClasses: array of TOpenTypeJustificationLanguageSystemTableClass);
+function FindJustificationLanguageSystemByType(TableType: TTableType): TOpenTypeJustificationLanguageSystemTableClass;
 
 var
   GFeatureClasses        : array of TOpenTypeFeatureTableClass;
   GLanguageSystemClasses : array of TOpenTypeLanguageSystemTableClass;
   GScriptClasses         : array of TOpenTypeScriptTableClass;
-  GJustificationLanguageSystemClasses
-    : array of TOpenTypeJustificationLanguageSystemTableClass;
+  GJustificationLanguageSystemClasses: array of TOpenTypeJustificationLanguageSystemTableClass;
 
 implementation
 
@@ -687,21 +623,17 @@ uses
 
 { TCustomOpenTypeVersionedNamedTable }
 
-procedure TCustomOpenTypeVersionedNamedTable.AssignTo(Dest: TPersistent);
-begin
-  inherited;
-  if Dest is Self.ClassType then
-    with TOpenTypeBaselineTable(Dest) do
-    begin
-      FVersion := Self.FVersion;
-    end;
-end;
-
-procedure TCustomOpenTypeVersionedNamedTable.ResetToDefaults;
+constructor TCustomOpenTypeVersionedNamedTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
   inherited;
   FVersion.Fract := 0;
-  FVersion.Value := 1;
+end;
+
+procedure TCustomOpenTypeVersionedNamedTable.Assign(Source: TPersistent);
+begin
+  inherited;
+  if Source is TCustomOpenTypeVersionedNamedTable then
+    FVersion := TCustomOpenTypeVersionedNamedTable(Source).FVersion;
 end;
 
 procedure TCustomOpenTypeVersionedNamedTable.LoadFromStream(Stream: TStream);
@@ -712,7 +644,7 @@ begin
   begin
     // check (minimum) table size
     if Position + 4 > Size then
-      raise Exception.Create(RCStrTableIncomplete);
+      raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read version
     FVersion.Fixed := ReadSwappedCardinal(Stream);
@@ -748,16 +680,14 @@ end;
 
 { TOpenTypeClassDefinitionFormat1Table }
 
-procedure TOpenTypeClassDefinitionFormat1Table.AssignTo(Dest: TPersistent);
+procedure TOpenTypeClassDefinitionFormat1Table.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TOpenTypeClassDefinitionFormat1Table(Dest) do
-    begin
-      FStartGlyph := Self.FStartGlyph;
-      FClassValueArray := Self.FClassValueArray;
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TOpenTypeClassDefinitionFormat1Table then
+  begin
+    FStartGlyph := TOpenTypeClassDefinitionFormat1Table(Source).FStartGlyph;
+    FClassValueArray := TOpenTypeClassDefinitionFormat1Table(Source).FClassValueArray;
+  end;
 end;
 
 class function TOpenTypeClassDefinitionFormat1Table.GetClassFormat: Word;
@@ -765,25 +695,16 @@ begin
   Result := 1;
 end;
 
-function TOpenTypeClassDefinitionFormat1Table.GetClassValue
-  (Index: Integer): Word;
+function TOpenTypeClassDefinitionFormat1Table.GetClassValue(Index: Integer): Word;
 begin
-  if (Index >= 0) and (Index < Length(FClassValueArray)) then
-    Result := FClassValueArray[Index]
-  else
-    raise Exception.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  if (Index < 0) or (Index > High(FClassValueArray)) then
+    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FClassValueArray[Index];
 end;
 
 function TOpenTypeClassDefinitionFormat1Table.GetClassValueCount: Integer;
 begin
   Result := Length(FClassValueArray);
-end;
-
-procedure TOpenTypeClassDefinitionFormat1Table.ResetToDefaults;
-begin
-  inherited;
-  FStartGlyph := 0;
-  SetLength(FClassValueArray, 0);
 end;
 
 procedure TOpenTypeClassDefinitionFormat1Table.LoadFromStream(Stream: TStream);
@@ -844,15 +765,11 @@ end;
 
 { TOpenTypeClassDefinitionFormat2Table }
 
-procedure TOpenTypeClassDefinitionFormat2Table.AssignTo(Dest: TPersistent);
+procedure TOpenTypeClassDefinitionFormat2Table.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TOpenTypeClassDefinitionFormat1Table(Dest) do
-    begin
-      FClassRangeRecords := Self.FClassRangeRecords;
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TOpenTypeClassDefinitionFormat2Table then
+    FClassRangeRecords := TOpenTypeClassDefinitionFormat2Table(Source).FClassRangeRecords;
 end;
 
 class function TOpenTypeClassDefinitionFormat2Table.GetClassFormat: Word;
@@ -860,24 +777,16 @@ begin
   Result := 2;
 end;
 
-function TOpenTypeClassDefinitionFormat2Table.GetClassRangeRecord
-  (Index: Integer): TClassRangeRecord;
+function TOpenTypeClassDefinitionFormat2Table.GetClassRangeRecord(Index: Integer): TClassRangeRecord;
 begin
-  if (Index >= 0) and (Index < Length(FClassRangeRecords)) then
-    Result := FClassRangeRecords[Index]
-  else
-    raise Exception.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  if (Index < 0) or (Index > High(FClassRangeRecords)) then
+    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FClassRangeRecords[Index];
 end;
 
 function TOpenTypeClassDefinitionFormat2Table.GetClassRangeRecordCount: Integer;
 begin
   Result := Length(FClassRangeRecords);
-end;
-
-procedure TOpenTypeClassDefinitionFormat2Table.ResetToDefaults;
-begin
-  inherited;
-  SetLength(FClassRangeRecords, 0);
 end;
 
 procedure TOpenTypeClassDefinitionFormat2Table.LoadFromStream(Stream: TStream);
@@ -922,36 +831,32 @@ end;
 
 { TOpenTypeMarkGlyphSetTable }
 
-procedure TOpenTypeMarkGlyphSetTable.AssignTo(Dest: TPersistent);
+constructor TOpenTypeMarkGlyphSetTable.Create;
 begin
-  if Dest is Self.ClassType then
-    with TOpenTypeMarkGlyphSetTable(Dest) do
-    begin
-      FTableFormat := Self.FTableFormat;
-      FCoverage := Self.FCoverage;
-    end
-  else
-    inherited;
+  inherited;
+  FTableFormat := 1;
+end;
+
+procedure TOpenTypeMarkGlyphSetTable.Assign(Source: TPersistent);
+begin
+  inherited;
+  if Source is TOpenTypeMarkGlyphSetTable then
+  begin
+    FTableFormat := TOpenTypeMarkGlyphSetTable(Source).FTableFormat;
+    FCoverage := TOpenTypeMarkGlyphSetTable(Source).FCoverage;
+  end;
 end;
 
 function TOpenTypeMarkGlyphSetTable.GetCoverage(Index: Integer): Cardinal;
 begin
-  if (Index >= 0) and (Index < Length(FCoverage)) then
-    Result := FCoverage[Index]
-  else
-    raise Exception.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  if (Index < 0) or (Index > High(FCoverage)) then
+    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FCoverage[Index];
 end;
 
 function TOpenTypeMarkGlyphSetTable.GetCoverageCount: Integer;
 begin
   Result := Length(FCoverage);
-end;
-
-procedure TOpenTypeMarkGlyphSetTable.ResetToDefaults;
-begin
-  inherited;
-  FTableFormat := 1;
-  SetLength(FCoverage, 0);
 end;
 
 procedure TOpenTypeMarkGlyphSetTable.LoadFromStream(Stream: TStream);
@@ -1019,20 +924,11 @@ end;
 
 { TOpenTypeBaselineTagListTable }
 
-procedure TOpenTypeBaselineTagListTable.AssignTo(Dest: TPersistent);
+procedure TOpenTypeBaselineTagListTable.Assign(Source: TPersistent);
 begin
   inherited;
-  if Dest is Self.ClassType then
-    with TOpenTypeBaselineTagListTable(Dest) do
-    begin
-      FBaseLineTags := Self.FBaseLineTags;
-    end;
-end;
-
-procedure TOpenTypeBaselineTagListTable.ResetToDefaults;
-begin
-  inherited;
-  SetLength(FBaseLineTags, 0);
+  if Source is TOpenTypeBaselineTagListTable then
+    FBaseLineTags := TOpenTypeBaselineTagListTable(Source).FBaseLineTags;
 end;
 
 procedure TOpenTypeBaselineTagListTable.LoadFromStream(Stream: TStream);
@@ -1045,14 +941,14 @@ begin
   begin
     // check (minimum) table size
     if Position + 2 > Size then
-      raise Exception.Create(RCStrTableIncomplete);
+      raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read baseline tag list array length
     SetLength(FBaseLineTags, ReadSwappedWord(Stream));
 
     // check if table is complete
     if Position + 4 * Length(FBaseLineTags) > Size then
-      raise Exception.Create(RCStrTableIncomplete);
+      raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read baseline array data
     for TagIndex := 0 to High(FBaseLineTags) do
@@ -1080,20 +976,11 @@ end;
 
 { TOpenTypeBaselineScriptListTable }
 
-procedure TOpenTypeBaselineScriptListTable.AssignTo(Dest: TPersistent);
+procedure TOpenTypeBaselineScriptListTable.Assign(Source: TPersistent);
 begin
   inherited;
-  if Dest is Self.ClassType then
-    with TOpenTypeBaselineScriptListTable(Dest) do
-    begin
-      FBaseLineScript := Self.FBaseLineScript;
-    end;
-end;
-
-procedure TOpenTypeBaselineScriptListTable.ResetToDefaults;
-begin
-  inherited;
-  SetLength(FBaseLineScript, 0);
+  if Source is TOpenTypeBaselineScriptListTable then
+    FBaseLineScript := TOpenTypeBaselineScriptListTable(Source).FBaseLineScript;
 end;
 
 procedure TOpenTypeBaselineScriptListTable.LoadFromStream(Stream: TStream);
@@ -1106,14 +993,14 @@ begin
   begin
     // check (minimum) table size
     if Position + 2 > Size then
-      raise Exception.Create(RCStrTableIncomplete);
+      raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read baseline stript list array length
     SetLength(FBaseLineScript, ReadSwappedWord(Stream));
 
     // check if table is complete
     if Position + 6 * Length(FBaseLineScript) > Size then
-      raise Exception.Create(RCStrTableIncomplete);
+      raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read baseline array data
     for ScriptIndex := 0 to High(FBaseLineScript) do
@@ -1142,31 +1029,23 @@ begin
   inherited;
 end;
 
-procedure TOpenTypeAxisTable.AssignTo(Dest: TPersistent);
+procedure TOpenTypeAxisTable.Assign(Source: TPersistent);
 begin
   inherited;
-  if Dest is Self.ClassType then
-    with TOpenTypeAxisTable(Dest) do
+  if Source is TOpenTypeAxisTable then
+  begin
+    // check if baseline tag list table needs to be assigned
+    if (TOpenTypeAxisTable(Source).FBaseLineTagList <> nil) then
     begin
-      // check if baseline tag list table needs to be assigned
-      if (Self.FBaseLineTagList <> nil) then
-      begin
-        // eventually create new destination baseline tag list table
-        if (FBaseLineTagList = nil) then
-          FBaseLineTagList := TOpenTypeBaselineTagListTable.Create;
+      // eventually create new destination baseline tag list table
+      if (FBaseLineTagList = nil) then
+        FBaseLineTagList := TOpenTypeBaselineTagListTable.Create;
 
-        // assign baseline tag list table
-        FBaseLineTagList.Assign(Self.FBaseLineTagList);
-      end else
-        FreeAndNil(FBaseLineTagList);
-
-    end;
-end;
-
-procedure TOpenTypeAxisTable.ResetToDefaults;
-begin
-  inherited;
-  FreeAndNil(FBaseLineTagList);
+      // assign baseline tag list table
+      FBaseLineTagList.Assign(TOpenTypeAxisTable(Source).FBaseLineTagList);
+    end else
+      FreeAndNil(FBaseLineTagList);
+  end;
 end;
 
 procedure TOpenTypeAxisTable.LoadFromStream(Stream: TStream);
@@ -1183,7 +1062,7 @@ begin
 
     // check (minimum) table size
     if Position + 4 > Size then
-      raise Exception.Create(RCStrTableIncomplete);
+      raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read baseline tag list table offset (maybe 0)
     Read(Value16, SizeOf(Word));
@@ -1218,49 +1097,40 @@ begin
   inherited;
 end;
 
-procedure TOpenTypeBaselineTable.AssignTo(Dest: TPersistent);
+procedure TOpenTypeBaselineTable.Assign(Source: TPersistent);
 begin
   inherited;
-  if Dest is Self.ClassType then
-    with TOpenTypeBaselineTable(Dest) do
+  if Source is TOpenTypeBaselineTable then
+  begin
+    // check if horizontal axis needs to be assigned
+    if (TOpenTypeBaselineTable(Source).FHorizontalAxis <> nil) then
     begin
-      // check if horizontal axis needs to be assigned
-      if (Self.FHorizontalAxis <> nil) then
-      begin
-        // eventually create new destination axis table
-        if (FHorizontalAxis = nil) then
-          FHorizontalAxis := TOpenTypeAxisTable.Create;
+      // eventually create new destination axis table
+      if (FHorizontalAxis = nil) then
+        FHorizontalAxis := TOpenTypeAxisTable.Create;
 
-        // assign horizontal axis table
-        FHorizontalAxis.Assign(Self.FHorizontalAxis);
-      end else
-        FreeAndNil(FHorizontalAxis);
+      // assign horizontal axis table
+      FHorizontalAxis.Assign(TOpenTypeBaselineTable(Source).FHorizontalAxis);
+    end else
+      FreeAndNil(FHorizontalAxis);
 
-      // check if vertical axis needs to be assigned
-      if (Self.FVerticalAxis <> nil) then
-      begin
-        // eventually create new destination axis table
-        if (FVerticalAxis = nil) then
-          FVerticalAxis := TOpenTypeAxisTable.Create;
+    // check if vertical axis needs to be assigned
+    if (TOpenTypeBaselineTable(Source).FVerticalAxis <> nil) then
+    begin
+      // eventually create new destination axis table
+      if (FVerticalAxis = nil) then
+        FVerticalAxis := TOpenTypeAxisTable.Create;
 
-        // assign horizontal axis table
-        FVerticalAxis.Assign(Self.FVerticalAxis);
-      end else
-        FreeAndNil(FVerticalAxis);
-
-    end;
+      // assign horizontal axis table
+      FVerticalAxis.Assign(TOpenTypeBaselineTable(Source).FVerticalAxis);
+    end else
+      FreeAndNil(FVerticalAxis);
+  end;
 end;
 
 class function TOpenTypeBaselineTable.GetTableType: TTableType;
 begin
   Result := 'BASE';
-end;
-
-procedure TOpenTypeBaselineTable.ResetToDefaults;
-begin
-  inherited;
-  FreeAndNil(FHorizontalAxis);
-  FreeAndNil(FVerticalAxis);
 end;
 
 procedure TOpenTypeBaselineTable.LoadFromStream(Stream: TStream);
@@ -1274,14 +1144,14 @@ begin
   begin
     // check version alread read
     if Version.Value <> 1 then
-      raise Exception.Create(RCStrUnsupportedVersion);
+      raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
     // remember start position as position minus the version already read
     StartPos := Position - 4;
 
     // check (minimum) table size
     if Position + 4 > Size then
-      raise Exception.Create(RCStrTableIncomplete);
+      raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read horizontal axis table offset (maybe 0)
     Read(Value16, SizeOf(Word));
@@ -1325,6 +1195,14 @@ end;
 
 { TOpenTypeGlyphDefinitionTable }
 
+constructor TOpenTypeGlyphDefinitionTable.Create(const AStorage: IPascalTypeStorageTable);
+const
+  CGlyphDefinitionDefaultVersion: Cardinal = $10002;
+begin
+  inherited;
+  FVersion.Fixed := CGlyphDefinitionDefaultVersion;
+end;
+
 destructor TOpenTypeGlyphDefinitionTable.Destroy;
 begin
   FreeAndNil(FGlyphClassDef);
@@ -1333,35 +1211,45 @@ begin
   inherited;
 end;
 
-procedure TOpenTypeGlyphDefinitionTable.AssignTo(Dest: TPersistent);
+procedure TOpenTypeGlyphDefinitionTable.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TOpenTypeGlyphDefinitionTable(Dest) do
-    begin
-      FAttachList := Self.FAttachList;
-      FLigCaretList := Self.FLigCaretList;
-      FMarkGlyphSetsDef := Self.FMarkGlyphSetsDef;
+  inherited;
+  if Source is TOpenTypeGlyphDefinitionTable then
+  begin
+    FAttachList := TOpenTypeGlyphDefinitionTable(Source).FAttachList;
+    FLigCaretList := TOpenTypeGlyphDefinitionTable(Source).FLigCaretList;
 
-      FGlyphClassDef.Assign(Self.FGlyphClassDef);
-      FMarkAttachClassDef.Assign(Self.FMarkAttachClassDef);
-      FMarkGlyphSetsDef.Assign(Self.FMarkGlyphSetsDef);
-    end
-  else
-    inherited;
+    if (TOpenTypeGlyphDefinitionTable(Source).FMarkGlyphSetsDef <> nil) then
+    begin
+      FMarkGlyphSetsDef := TOpenTypeMarkGlyphSetTable.Create;
+      FMarkGlyphSetsDef.Assign(TOpenTypeGlyphDefinitionTable(Source).FMarkGlyphSetsDef);
+    end else
+      FMarkGlyphSetsDef.Free;
+
+    if (TOpenTypeGlyphDefinitionTable(Source).FGlyphClassDef <> nil) then
+    begin
+      if (FGlyphClassDef <> nil) and (FGlyphClassDef.ClassType <>  TOpenTypeGlyphDefinitionTable(Source).FGlyphClassDef.ClassType) then
+        FreeAndNil(FGlyphClassDef);
+      FGlyphClassDef := TOpenTypeClassDefinitionTableClass(TOpenTypeGlyphDefinitionTable(Source).FGlyphClassDef.ClassType).Create;
+      FGlyphClassDef.Assign(TOpenTypeGlyphDefinitionTable(Source).FGlyphClassDef);
+    end else
+      FreeAndNil(FGlyphClassDef);
+
+    if (TOpenTypeGlyphDefinitionTable(Source).FMarkAttachClassDef <> nil) then
+    begin
+      if (FMarkAttachClassDef <> nil) and (FMarkAttachClassDef.ClassType <>  TOpenTypeGlyphDefinitionTable(Source).FMarkAttachClassDef.ClassType) then
+        FreeAndNil(FMarkAttachClassDef);
+
+      FMarkAttachClassDef := TOpenTypeClassDefinitionTableClass(TOpenTypeGlyphDefinitionTable(Source).FMarkAttachClassDef.ClassType).Create;
+      FMarkAttachClassDef.Assign(TOpenTypeGlyphDefinitionTable(Source).FMarkAttachClassDef);
+    end else
+      FreeAndNil(FMarkAttachClassDef);
+  end;
 end;
 
 class function TOpenTypeGlyphDefinitionTable.GetTableType: TTableType;
 begin
   Result := 'GDEF';
-end;
-
-procedure TOpenTypeGlyphDefinitionTable.ResetToDefaults;
-const
-  CGlyphDefinitionDefaultVersion: Cardinal = $10002;
-begin
-  FVersion.Fixed := CGlyphDefinitionDefaultVersion;
-  FAttachList := 0;
-  FLigCaretList := 0;
 end;
 
 procedure TOpenTypeGlyphDefinitionTable.LoadFromStream(Stream: TStream);
@@ -1378,14 +1266,14 @@ begin
   begin
     // check version alread read
     if Version.Value <> 1 then
-      raise Exception.Create(RCStrUnsupportedVersion);
+      raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
     // remember start position as position minus the version already read
     StartPos := Position - 4;
 
     // check if table is complete
     if Position + 10 > Size then
-      raise Exception.Create(RCStrTableIncomplete);
+      raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read glyph class definition offset
     GlyphClassDefOffset := ReadSwappedWord(Stream);
@@ -1418,7 +1306,7 @@ begin
         2:
           FGlyphClassDef := TOpenTypeClassDefinitionFormat2Table.Create;
       else
-        raise Exception.Create(RCStrUnknownClassDefinition);
+        raise EPascalTypeError.Create(RCStrUnknownClassDefinition);
       end;
 
       if (FGlyphClassDef <> nil) then
@@ -1441,7 +1329,7 @@ begin
         2:
           FMarkAttachClassDef := TOpenTypeClassDefinitionFormat2Table.Create;
       else
-        raise Exception.Create(RCStrUnknownClassDefinition);
+        raise EPascalTypeError.Create(RCStrUnknownClassDefinition);
       end;
 
       if (FMarkAttachClassDef <> nil) then
@@ -1544,23 +1432,11 @@ end;
 
 { TCustomOpenTypeLanguageSystemTable }
 
-constructor TCustomOpenTypeLanguageSystemTable.Create(const AStorage: IPascalTypeStorageTable);
+function TCustomOpenTypeLanguageSystemTable.GetFeatureIndex(Index: Integer): Word;
 begin
-  inherited Create(Storage);
-end;
-
-destructor TCustomOpenTypeLanguageSystemTable.Destroy;
-begin
-  inherited;
-end;
-
-function TCustomOpenTypeLanguageSystemTable.GetFeatureIndex
-  (Index: Integer): Word;
-begin
-  if (Index >= 0) and (Index < Length(FFeatureIndices)) then
-    Result := FFeatureIndices[Index]
-  else
-    raise Exception.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  if (Index < 0) or (Index > High(FFeatureIndices)) then
+    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FFeatureIndices[Index];
 end;
 
 function TCustomOpenTypeLanguageSystemTable.GetFeatureIndexCount: Integer;
@@ -1568,24 +1444,15 @@ begin
   Result := Length(FFeatureIndices);
 end;
 
-procedure TCustomOpenTypeLanguageSystemTable.AssignTo(Dest: TPersistent);
+procedure TCustomOpenTypeLanguageSystemTable.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TCustomOpenTypeLanguageSystemTable(Dest) do
-    begin
-      FLookupOrder := Self.FLookupOrder;
-      FReqFeatureIndex := Self.FReqFeatureIndex;
-      FFeatureIndices := Self.FFeatureIndices;
-    end
-  else
-    inherited;
-end;
-
-procedure TCustomOpenTypeLanguageSystemTable.ResetToDefaults;
-begin
-  FLookupOrder := 0;
-  FReqFeatureIndex := 0;
-  SetLength(FFeatureIndices, 0);
+  inherited;
+  if Source is TCustomOpenTypeLanguageSystemTable then
+  begin
+    FLookupOrder := TCustomOpenTypeLanguageSystemTable(Source).FLookupOrder;
+    FReqFeatureIndex := TCustomOpenTypeLanguageSystemTable(Source).FReqFeatureIndex;
+    FFeatureIndices := TCustomOpenTypeLanguageSystemTable(Source).FFeatureIndices;
+  end;
 end;
 
 procedure TCustomOpenTypeLanguageSystemTable.LoadFromStream(Stream: TStream);
@@ -1598,7 +1465,7 @@ begin
   begin
     // check (minimum) table size
     if Position + 6 > Size then
-      raise Exception.Create(RCStrTableIncomplete);
+      raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read default language system
     FLookupOrder := ReadSwappedWord(Stream);
@@ -1703,8 +1570,8 @@ end;
 
 constructor TCustomOpenTypeScriptTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
-  FLanguageSystemTables := TObjectList.Create;
   inherited Create(AStorage);
+  FLanguageSystemTables := TPascalTypeTableInterfaceList<TCustomOpenTypeNamedTable>.Create(AStorage);
 end;
 
 destructor TCustomOpenTypeScriptTable.Destroy;
@@ -1715,13 +1582,11 @@ begin
   inherited;
 end;
 
-function TCustomOpenTypeScriptTable.GetLanguageSystemTable(Index: Integer)
-  : TCustomOpenTypeLanguageSystemTable;
+function TCustomOpenTypeScriptTable.GetLanguageSystemTable(Index: Integer): TCustomOpenTypeNamedTable;
 begin
-  if (Index >= 0) and (Index < FLanguageSystemTables.Count) then
-    Result := TCustomOpenTypeLanguageSystemTable(FLanguageSystemTables[Index])
-  else
-    raise Exception.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  if (Index < 0) or (Index >= FLanguageSystemTables.Count) then
+    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FLanguageSystemTables[Index];
 end;
 
 function TCustomOpenTypeScriptTable.GetLanguageSystemTableCount: Integer;
@@ -1729,29 +1594,30 @@ begin
   Result := FLanguageSystemTables.Count;
 end;
 
-procedure TCustomOpenTypeScriptTable.AssignTo(Dest: TPersistent);
+procedure TCustomOpenTypeScriptTable.Assign(Source: TPersistent);
+var
+  SourceLangTable: TCustomOpenTypeNamedTable;
+  DestLangTable: TCustomOpenTypeNamedTable;
 begin
-  if Dest is Self.ClassType then
-    with TCustomOpenTypeScriptTable(Dest) do
+  inherited;
+  if Source is TCustomOpenTypeScriptTable then
+  begin
+    FLanguageSystemTables.Clear;
+    for SourceLangTable in TCustomOpenTypeScriptTable(Source).FLanguageSystemTables do
     begin
-      FLanguageSystemTables.Assign(Self.FLanguageSystemTables);
+      DestLangTable := FLanguageSystemTables.Add;
+      DestLangTable.Assign(SourceLangTable);
+    end;
 
-      if (Self.FDefaultLangSys <> nil) then
-      begin
-        if (FDefaultLangSys = nil) then
-          FDefaultLangSys := TOpenTypeDefaultLanguageSystemTable.Create(Storage);
+    if (TCustomOpenTypeScriptTable(Source).FDefaultLangSys <> nil) then
+    begin
+      if (FDefaultLangSys = nil) then
+        FDefaultLangSys := TOpenTypeDefaultLanguageSystemTable.Create(Storage);
 
-        FDefaultLangSys.Assign(Self.FDefaultLangSys);
-      end else
-        FreeAndNil(FDefaultLangSys);
-    end
-  else
-    inherited;
-end;
-
-procedure TCustomOpenTypeScriptTable.ResetToDefaults;
-begin
-  FLanguageSystemTables.Clear;
+      FDefaultLangSys.Assign(TCustomOpenTypeScriptTable(Source).FDefaultLangSys);
+    end else
+      FreeAndNil(FDefaultLangSys);
+  end;
 end;
 
 procedure TCustomOpenTypeScriptTable.LoadFromStream(Stream: TStream);
@@ -1759,7 +1625,7 @@ var
   StartPos      : Int64;
   LangSysIndex  : Integer;
   LangSysRecords: array of TTagOffsetRecord;
-  LangTable     : TCustomOpenTypeJustificationLanguageSystemTable;
+  LangTable     : TCustomOpenTypeNamedTable;//TCustomOpenTypeJustificationLanguageSystemTable;
   LangTableClass: TOpenTypeJustificationLanguageSystemTableClass;
   DefaultLangSys: Word;
 begin
@@ -1771,7 +1637,7 @@ begin
 
     // check (minimum) table size
     if Position + 4 > Size then
-      raise Exception.Create(RCStrTableIncomplete);
+      raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read default language system offset
     DefaultLangSys := ReadSwappedWord(Stream);
@@ -1805,13 +1671,16 @@ begin
 
     for LangSysIndex := 0 to High(LangSysRecords) do
     begin
-      LangTableClass := FindJustificationLanguageSystemByType
-        (LangSysRecords[LangSysIndex].Tag);
+      LangTableClass := FindJustificationLanguageSystemByType(LangSysRecords[LangSysIndex].Tag);
 
       if (LangTableClass <> nil) then
       begin
         // create language table entry
-        LangTable := LangTableClass.Create(Storage);
+        // add to language system tables
+        // TODO : Something was wrong here. We are adding TCustomOpenTypeJustificationLanguageSystemTable but the list contains
+        // TCustomOpenTypeLanguageSystemTable (per the list getter).
+        // I have changed the list and getter to use their common base class: TCustomOpenTypeJustificationLanguageSystemTable
+        LangTable := FLanguageSystemTables.Add(LangTableClass);
 
         // set position
         Position := StartPos + LangSysRecords[LangSysIndex].Offset;
@@ -1819,8 +1688,6 @@ begin
         // read language system table entry from stream
         LangTable.LoadFromStream(Stream);
 
-        // add to language system tables
-        FLanguageSystemTables.Add(LangTable);
       end;
     end;
   end;
@@ -1898,8 +1765,8 @@ end;
 
 constructor TOpenTypeScriptListTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
-  FLangSysList := TObjectList.Create;
   inherited Create(AStorage);
+  FLangSysList := TPascalTypeTableInterfaceList<TCustomOpenTypeScriptTable>.Create(AStorage);
 end;
 
 destructor TOpenTypeScriptListTable.Destroy;
@@ -1908,13 +1775,11 @@ begin
   inherited;
 end;
 
-function TOpenTypeScriptListTable.GetLanguageSystem(Index: Integer)
-  : TCustomOpenTypeScriptTable;
+function TOpenTypeScriptListTable.GetLanguageSystem(Index: Integer): TCustomOpenTypeScriptTable;
 begin
-  if (Index >= 0) and (Index < FLangSysList.Count) then
-    Result := TCustomOpenTypeScriptTable(FLangSysList[Index])
-  else
-    raise Exception.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  if (Index < 0) or (Index >= FLangSysList.Count) then
+    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FLangSysList[Index];
 end;
 
 function TOpenTypeScriptListTable.GetLanguageSystemCount: Integer;
@@ -1922,20 +1787,11 @@ begin
   Result := FLangSysList.Count;
 end;
 
-procedure TOpenTypeScriptListTable.AssignTo(Dest: TPersistent);
+procedure TOpenTypeScriptListTable.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TOpenTypeScriptListTable(Dest) do
-    begin
-      FLangSysList.Assign(Self.FLangSysList);
-    end
-  else
-    inherited;
-end;
-
-procedure TOpenTypeScriptListTable.ResetToDefaults;
-begin
-  FLangSysList.Clear;
+  inherited;
+  if Source is TOpenTypeScriptListTable then
+    FLangSysList.Assign(TOpenTypeScriptListTable(Source).FLangSysList);
 end;
 
 procedure TOpenTypeScriptListTable.LoadFromStream(Stream: TStream);
@@ -1954,7 +1810,7 @@ begin
 
     // check (minimum) table size
     if Position + 2 > Size then
-      raise Exception.Create(RCStrTableIncomplete);
+      raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read script list count
     SetLength(ScriptList, ReadSwappedWord(Stream));
@@ -1979,16 +1835,14 @@ begin
       if (ScriptTableClass <> nil) then
       begin
         // create language system entry
-        ScriptTable := ScriptTableClass.Create(Storage);
+        // add to language system list
+        ScriptTable := FLangSysList.Add(ScriptTableClass);
 
         // set position to actual script list entry
         Position := StartPos + ScriptList[ScriptIndex].Offset;
 
         // load from stream
         ScriptTable.LoadFromStream(Stream);
-
-        // add to language system list
-        FLangSysList.Add(ScriptTable)
       end;
     end;
   end;
@@ -2013,22 +1867,14 @@ begin
   inherited;
 end;
 
-procedure TCustomOpenTypeFeatureTable.AssignTo(Dest: TPersistent);
+procedure TCustomOpenTypeFeatureTable.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TCustomOpenTypeFeatureTable(Dest) do
-    begin
-      FFeatureParams := Self.FFeatureParams;
-      FLookupListIndex := Self.FLookupListIndex;
-    end
-  else
-    inherited;
-end;
-
-procedure TCustomOpenTypeFeatureTable.ResetToDefaults;
-begin
-  FFeatureParams := 0;
-  SetLength(FLookupListIndex, 0);
+  inherited;
+  if Source is TCustomOpenTypeFeatureTable then
+  begin
+    FFeatureParams := TCustomOpenTypeFeatureTable(Source).FFeatureParams;
+    FLookupListIndex := TCustomOpenTypeFeatureTable(Source).FLookupListIndex;
+  end;
 end;
 
 function TCustomOpenTypeFeatureTable.GetLookupList(Index: Integer): Word;
@@ -2036,7 +1882,7 @@ begin
   if (Index >= 0) and (Index < Length(FLookupListIndex)) then
     Result := FLookupListIndex[Index]
   else
-    raise Exception.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
 end;
 
 function TCustomOpenTypeFeatureTable.GetLookupListCount: Integer;
@@ -2054,7 +1900,7 @@ begin
   begin
     // check (minimum) table size
     if Position + 4 > Size then
-      raise Exception.Create(RCStrTableIncomplete);
+      raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read feature parameter offset
     FFeatureParams := ReadSwappedWord(Stream);
@@ -2107,8 +1953,8 @@ end;
 
 constructor TOpenTypeFeatureListTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
-  FFeatureList := TObjectList.Create;
   inherited;
+  FFeatureList := TPascalTypeTableInterfaceList<TCustomOpenTypeFeatureTable>.Create(AStorage);
 end;
 
 destructor TOpenTypeFeatureListTable.Destroy;
@@ -2117,29 +1963,18 @@ begin
   inherited;
 end;
 
-procedure TOpenTypeFeatureListTable.AssignTo(Dest: TPersistent);
+procedure TOpenTypeFeatureListTable.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TOpenTypeFeatureListTable(Dest) do
-    begin
-      FFeatureList.Assign(Self.FFeatureList);
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TOpenTypeFeatureListTable then
+    FFeatureList.Assign(TOpenTypeFeatureListTable(Source).FFeatureList);
 end;
 
-procedure TOpenTypeFeatureListTable.ResetToDefaults;
+function TOpenTypeFeatureListTable.GetFeature(Index: Integer): TCustomOpenTypeFeatureTable;
 begin
-  FFeatureList.Clear;
-end;
-
-function TOpenTypeFeatureListTable.GetFeature(Index: Integer)
-  : TCustomOpenTypeFeatureTable;
-begin
-  if (Index >= 0) and (Index < FFeatureList.Count) then
-    Result := TCustomOpenTypeFeatureTable(FFeatureList[Index])
-  else
-    raise Exception.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  if (Index < 0) or (Index >= FFeatureList.Count) then
+    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FFeatureList[Index];
 end;
 
 function TOpenTypeFeatureListTable.GetFeatureCount: Integer;
@@ -2163,7 +1998,7 @@ begin
 
     // check (minimum) table size
     if Position + 2 > Size then
-      raise Exception.Create(RCStrTableIncomplete);
+      raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read feature list count
     SetLength(FeatureList, ReadSwappedWord(Stream));
@@ -2188,16 +2023,14 @@ begin
       if (FeatureClass <> nil) then
       begin
         // create language system entry
-        FeatureTable := FeatureClass.Create(Storage);
+        // add to language system list
+        FeatureTable := FFeatureList.Add(FeatureClass);
 
         // set position to actual script list entry
         Position := StartPos + FeatureList[FeatureIndex].Offset;
 
         // load from stream
         FeatureTable.LoadFromStream(Stream);
-
-        // add to language system list
-        FFeatureList.Add(FeatureTable);
       end
       else; // raise EPascalTypeError.Create('Unknown Feature: ' + FeatureList[FeatureIndex].Tag);
     end;
@@ -2225,7 +2058,7 @@ begin
     // build directory (to be written later) and write data
     SetLength(FeatureList, FFeatureList.Count);
     for FeatureIndex := 0 to FFeatureList.Count - 1 do
-      with TCustomOpenTypeFeatureTable(FFeatureList[FeatureIndex]) do
+      with FFeatureList[FeatureIndex] do
       begin
         // get table type
         FeatureList[FeatureIndex].Tag := TableType;
@@ -2253,15 +2086,11 @@ end;
 
 { TOpenTypeCoverage1Table }
 
-procedure TOpenTypeCoverage1Table.AssignTo(Dest: TPersistent);
+procedure TOpenTypeCoverage1Table.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TOpenTypeCoverage1Table(Dest) do
-    begin
-      FGlyphArray := Self.FGlyphArray;
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TOpenTypeCoverage1Table then
+    FGlyphArray := TOpenTypeCoverage1Table(Source).FGlyphArray;
 end;
 
 class function TOpenTypeCoverage1Table.GetCoverageFormat: TCoverageFormat;
@@ -2271,10 +2100,9 @@ end;
 
 function TOpenTypeCoverage1Table.GetGlyph(Index: Integer): Word;
 begin
-  if (Index >= 0) and (Index < Length(FGlyphArray)) then
-    Result := FGlyphArray[Index]
-  else
-    raise Exception.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  if (Index < 0) or (Index > High(FGlyphArray)) then
+    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FGlyphArray[Index];
 end;
 
 function TOpenTypeCoverage1Table.GetGlyphCount: Integer;
@@ -2282,14 +2110,9 @@ begin
   Result := Length(FGlyphArray);
 end;
 
-procedure TOpenTypeCoverage1Table.ResetToDefaults;
-begin
-  SetLength(FGlyphArray, 0);
-end;
-
 procedure TOpenTypeCoverage1Table.LoadFromStream(Stream: TStream);
-var
-  GlyphIndex: Integer;
+//var
+//  GlyphIndex: Integer;
 begin
   inherited;
 
@@ -2297,7 +2120,7 @@ begin
   begin
     // check (minimum) table size
     if Position + 2 > Size then
-      raise Exception.Create(RCStrTableIncomplete);
+      raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read glyph array count
     SetLength(FGlyphArray, ReadSwappedWord(Stream));
@@ -2338,14 +2161,11 @@ end;
 
 { TOpenTypeCoverage2Table }
 
-procedure TOpenTypeCoverage2Table.AssignTo(Dest: TPersistent);
+procedure TOpenTypeCoverage2Table.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TOpenTypeCoverage2Table(Dest) do
-    begin
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TOpenTypeCoverage2Table then
+    FRangeArray := TOpenTypeCoverage2Table(Source).FRangeArray;
 end;
 
 class function TOpenTypeCoverage2Table.GetCoverageFormat: TCoverageFormat;
@@ -2355,20 +2175,14 @@ end;
 
 function TOpenTypeCoverage2Table.GetRange(Index: Integer): TRangeRecord;
 begin
-  if (Index >= 0) and (Index < Length(FRangeArray)) then
-    Result := FRangeArray[Index]
-  else
-    raise Exception.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  if (Index < 0) or (Index > High(FRangeArray)) then
+    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FRangeArray[Index];
 end;
 
 function TOpenTypeCoverage2Table.GetRangeCount: Integer;
 begin
   Result := Length(FRangeArray);
-end;
-
-procedure TOpenTypeCoverage2Table.ResetToDefaults;
-begin
-  SetLength(FRangeArray, 0);
 end;
 
 procedure TOpenTypeCoverage2Table.LoadFromStream(Stream: TStream);
@@ -2379,7 +2193,7 @@ begin
 
   // check (minimum) table size
   if Stream.Position + 2 > Stream.Size then
-    raise Exception.Create(RCStrTableIncomplete);
+    raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // read glyph array count
   SetLength(FRangeArray, ReadSwappedWord(Stream));
@@ -2424,8 +2238,8 @@ end;
 
 constructor TOpenTypeLookupTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
-  FSubtableList := TObjectList.Create;
   inherited;
+  FSubtableList := TPascalTypeTableList<TCustomOpenTypeCoverageTable>.Create;
 end;
 
 destructor TOpenTypeLookupTable.Destroy;
@@ -2434,13 +2248,11 @@ begin
   inherited;
 end;
 
-function TOpenTypeLookupTable.GetSubtable(Index: Integer)
-  : TCustomOpenTypeCoverageTable;
+function TOpenTypeLookupTable.GetSubtable(Index: Integer): TCustomOpenTypeCoverageTable;
 begin
-  if (Index >= 0) and (Index < FSubtableList.Count) then
-    Result := TCustomOpenTypeCoverageTable(FSubtableList[Index])
-  else
-    raise Exception.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  if (Index < 0) or (Index >= FSubtableList.Count) then
+    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := TCustomOpenTypeCoverageTable(FSubtableList[Index]);
 end;
 
 function TOpenTypeLookupTable.GetSubtableCount: Integer;
@@ -2448,26 +2260,16 @@ begin
   Result := FSubtableList.Count;
 end;
 
-procedure TOpenTypeLookupTable.AssignTo(Dest: TPersistent);
+procedure TOpenTypeLookupTable.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TOpenTypeLookupTable(Dest) do
-    begin
-      FLookupType := Self.FLookupType;
-      FLookupFlag := Self.FLookupFlag;
-      FMarkFilteringSet := Self.FMarkFilteringSet;
-      FSubtableList.Assign(FSubtableList);
-    end
-  else
-    inherited;
-end;
-
-procedure TOpenTypeLookupTable.ResetToDefaults;
-begin
-  FLookupType := 0;
-  FLookupFlag := 0;
-  FMarkFilteringSet := 0;
-  FSubtableList.Clear;
+  inherited;
+  if Source is TOpenTypeLookupTable then
+  begin
+    FLookupType := TOpenTypeLookupTable(Source).FLookupType;
+    FLookupFlag := TOpenTypeLookupTable(Source).FLookupFlag;
+    FMarkFilteringSet := TOpenTypeLookupTable(Source).FMarkFilteringSet;
+    FSubtableList.Assign(TOpenTypeLookupTable(Source).FSubtableList);
+  end;
 end;
 
 procedure TOpenTypeLookupTable.LoadFromStream(Stream: TStream);
@@ -2484,7 +2286,7 @@ begin
 
   // check (minimum) table size
   if Stream.Position + 6 > Stream.Size then
-    raise Exception.Create(RCStrTableIncomplete);
+    raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // read lookup type
   FLookupType := ReadSwappedWord(Stream);
@@ -2524,11 +2326,11 @@ begin
 
     if (SubTableItem <> nil) then
     begin
-      // load subtable
-      SubTableItem.LoadFromStream(Stream);
-
       // add to subtable list
       FSubtableList.Add(SubTableItem);
+
+      // load subtable
+      SubTableItem.LoadFromStream(Stream);
     end;
   end;
 end;
@@ -2586,8 +2388,8 @@ end;
 
 constructor TOpenTypeLookupListTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
-  FLookupList := TObjectList.Create;
   inherited;
+  FLookupList := TPascalTypeTableInterfaceList<TOpenTypeLookupTable>.Create(AStorage);
 end;
 
 destructor TOpenTypeLookupListTable.Destroy;
@@ -2596,29 +2398,18 @@ begin
   inherited;
 end;
 
-procedure TOpenTypeLookupListTable.AssignTo(Dest: TPersistent);
+procedure TOpenTypeLookupListTable.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TOpenTypeLookupListTable(Dest) do
-    begin
-      FLookupList.Assign(Self.FLookupList);
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TOpenTypeLookupListTable then
+    FLookupList.Assign(TOpenTypeLookupListTable(Source).FLookupList);
 end;
 
-procedure TOpenTypeLookupListTable.ResetToDefaults;
+function TOpenTypeLookupListTable.GetLookupTable(Index: Integer): TOpenTypeLookupTable;
 begin
-  FLookupList.Clear;
-end;
-
-function TOpenTypeLookupListTable.GetLookupTable(Index: Integer)
-  : TOpenTypeLookupTable;
-begin
-  if (Index >= 0) and (Index < FLookupList.Count) then
-    Result := TOpenTypeLookupTable(FLookupList[Index])
-  else
-    raise Exception.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  if (Index < 0) or (Index >= FLookupList.Count) then
+    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := TOpenTypeLookupTable(FLookupList[Index]);
 end;
 
 function TOpenTypeLookupListTable.GetLookupTableCount: Integer;
@@ -2639,7 +2430,7 @@ begin
 
   // check (minimum) table size
   if Stream.Position + 2 > Stream.Size then
-    raise Exception.Create(RCStrTableIncomplete);
+    raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // read lookup list count
   SetLength(LookupList, ReadSwappedWord(Stream));
@@ -2654,16 +2445,14 @@ begin
   for LookupIndex := 0 to High(LookupList) do
   begin
     // create language system entry
-    LookupTable := TOpenTypeLookupTable.Create(Storage);
+    // add to language system list
+    LookupTable := FLookupList.Add;
 
     // set position to actual script list entry
     Stream.Position := StartPos + LookupList[LookupIndex];
 
     // load from stream
     LookupTable.LoadFromStream(Stream);
-
-    // add to language system list
-    FLookupList.Add(LookupTable);
   end;
 end;
 
@@ -2677,11 +2466,16 @@ end;
 { TCustomOpenTypeCommonTable }
 
 constructor TCustomOpenTypeCommonTable.Create(const AStorage: IPascalTypeStorageTable);
+const
+  CGlyphPositionDefaultVersion: Cardinal = $10000;
 begin
+  inherited;
+
+  FVersion.Fixed := CGlyphPositionDefaultVersion;
+
   FScriptListTable := TOpenTypeScriptListTable.Create(Storage);
   FFeatureListTable := TOpenTypeFeatureListTable.Create(Storage);
   FLookupListTable := TOpenTypeLookupListTable.Create(Storage);
-  inherited;
 end;
 
 destructor TCustomOpenTypeCommonTable.Destroy;
@@ -2692,26 +2486,16 @@ begin
   inherited;
 end;
 
-procedure TCustomOpenTypeCommonTable.AssignTo(Dest: TPersistent);
+procedure TCustomOpenTypeCommonTable.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TOpenTypeGlyphPositionTable(Dest) do
-    begin
-      FVersion := Self.FVersion;
-    end
-  else
-    inherited;
-end;
-
-procedure TCustomOpenTypeCommonTable.ResetToDefaults;
-const
-  CGlyphPositionDefaultVersion: Cardinal = $10000;
-begin
-  FVersion.Fixed := CGlyphPositionDefaultVersion;
-
-  FScriptListTable.ResetToDefaults;
-  FFeatureListTable.ResetToDefaults;
-  FLookupListTable.ResetToDefaults;
+  inherited;
+  if Source is TCustomOpenTypeCommonTable then
+  begin
+    FVersion := TCustomOpenTypeCommonTable(Source).FVersion;
+    FScriptListTable.Assign(TCustomOpenTypeCommonTable(Source).FScriptListTable);
+    FFeatureListTable.Assign(TCustomOpenTypeCommonTable(Source).FFeatureListTable);
+    FLookupListTable.Assign(TCustomOpenTypeCommonTable(Source).FLookupListTable);
+  end;
 end;
 
 procedure TCustomOpenTypeCommonTable.LoadFromStream(Stream: TStream);
@@ -2725,7 +2509,7 @@ begin
 
   // check (minimum) table size
   if Stream.Position + 10 > Stream.Size then
-    raise Exception.Create(RCStrTableIncomplete);
+    raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   StartPosition := Stream.Position;
 
@@ -2733,7 +2517,7 @@ begin
   FVersion.Fixed := ReadSwappedCardinal(Stream);
 
   if Version.Value <> 1 then
-    raise Exception.Create(RCStrUnsupportedVersion);
+    raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
   // read script list offset
   ScriptListPosition := StartPosition + ReadSwappedWord(Stream);
@@ -2828,21 +2612,11 @@ end;
 
 { TOpenTypeExtenderGlyphTable }
 
-procedure TOpenTypeExtenderGlyphTable.AssignTo(Dest: TPersistent);
+procedure TOpenTypeExtenderGlyphTable.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TCustomOpenTypeLanguageSystemTable(Dest) do
-    begin
-      FGlyphID := Self.FGlyphID;
-    end
-  else
-    inherited;
-end;
-
-procedure TOpenTypeExtenderGlyphTable.ResetToDefaults;
-begin
-  SetLength(FGlyphID, 0);
   inherited;
+  if Source is TOpenTypeExtenderGlyphTable then
+    FGlyphID := TOpenTypeExtenderGlyphTable(Source).FGlyphID;
 end;
 
 procedure TOpenTypeExtenderGlyphTable.LoadFromStream(Stream: TStream);
@@ -2855,7 +2629,7 @@ begin
   begin
     // check (minimum) table size
     if Position + 2 > Size then
-      raise Exception.Create(RCStrTableIncomplete);
+      raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // set length of glyphID array
     SetLength(FGlyphID, ReadSwappedWord(Stream));
@@ -2896,25 +2670,7 @@ begin
   inherited;
 end;
 
-procedure TCustomOpenTypeJustificationLanguageSystemTable.AssignTo
-  (Dest: TPersistent);
-begin
-  if Dest is Self.ClassType then
-    with TCustomOpenTypeLanguageSystemTable(Dest) do
-    begin
-    end
-  else
-    inherited;
-end;
-
-procedure TCustomOpenTypeJustificationLanguageSystemTable.ResetToDefaults;
-begin
-  inherited;
-
-end;
-
-procedure TCustomOpenTypeJustificationLanguageSystemTable.LoadFromStream
-  (Stream: TStream);
+procedure TCustomOpenTypeJustificationLanguageSystemTable.LoadFromStream(Stream: TStream);
 begin
   inherited;
 
@@ -2922,7 +2678,7 @@ begin
   begin
     // check (minimum) table size
     if Position + 2 > Size then
-      raise Exception.Create(RCStrTableIncomplete);
+      raise EPascalTypeError.Create(RCStrTableIncomplete);
   end;
 end;
 
@@ -2941,8 +2697,7 @@ begin
   Result := 'Default';
 end;
 
-class function TOpenTypeJustificationLanguageSystemTable.GetTableType
-  : TTableType;
+class function TOpenTypeJustificationLanguageSystemTable.GetTableType: TTableType;
 begin
   Result := 'DFLT';
 end;
@@ -2952,8 +2707,8 @@ end;
 
 constructor TCustomOpenTypeJustificationScriptTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
-  FLanguageSystemTables := TObjectList.Create;
   inherited Create(Storage);
+  FLanguageSystemTables := TPascalTypeTableInterfaceList<TCustomOpenTypeJustificationLanguageSystemTable>.Create(AStorage);
 end;
 
 destructor TCustomOpenTypeJustificationScriptTable.Destroy;
@@ -2965,46 +2720,58 @@ begin
   inherited;
 end;
 
-procedure TCustomOpenTypeJustificationScriptTable.AssignTo(Dest: TPersistent);
-begin
-  if Dest is Self.ClassType then
-    with TCustomOpenTypeJustificationScriptTable(Dest) do
-    begin
-    end
-  else
-    inherited;
-end;
-
-procedure TCustomOpenTypeJustificationScriptTable.ResetToDefaults;
+procedure TCustomOpenTypeJustificationScriptTable.Assign(Source: TPersistent);
 begin
   inherited;
+  if Source is TCustomOpenTypeJustificationScriptTable then
+  begin
+    if (TCustomOpenTypeJustificationScriptTable(Source).FExtenderGlyphTable <> nil) then
+    begin
+      if (FExtenderGlyphTable = nil) then
+        FExtenderGlyphTable := TOpenTypeExtenderGlyphTable.Create;
+
+      FExtenderGlyphTable.Assign(TCustomOpenTypeJustificationScriptTable(Source).FExtenderGlyphTable);
+    end else
+      FreeAndNil(FExtenderGlyphTable);
+
+    if (TCustomOpenTypeJustificationScriptTable(Source).FDefaultLangSys <> nil) then
+    begin
+      if (FDefaultLangSys = nil) then
+        FDefaultLangSys := TOpenTypeJustificationLanguageSystemTable.Create(Storage);
+
+      FDefaultLangSys.Assign(TCustomOpenTypeJustificationScriptTable(Source).FDefaultLangSys);
+    end else
+      FreeAndNil(FDefaultLangSys);
+
+    FLanguageSystemTables.Assign(TCustomOpenTypeJustificationScriptTable(Source).FLanguageSystemTables);
+  end;
 end;
 
-function TCustomOpenTypeJustificationScriptTable.GetLanguageSystemTable
-  (Index: Integer): TCustomOpenTypeJustificationLanguageSystemTable;
+function TCustomOpenTypeJustificationScriptTable.GetLanguageSystemTable(Index: Integer): TCustomOpenTypeJustificationLanguageSystemTable;
 begin
-  if (Index >= 0) and (Index < FLanguageSystemTables.Count) then
-    Result := TCustomOpenTypeJustificationLanguageSystemTable
-      (FLanguageSystemTables[Index])
-  else
-    raise Exception.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  if (Index < 0) or (Index >= FLanguageSystemTables.Count) then
+    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FLanguageSystemTables[Index];
 end;
 
-procedure TCustomOpenTypeJustificationScriptTable.SetDefaultLangSys
-  (const Value: TCustomOpenTypeJustificationLanguageSystemTable);
+procedure TCustomOpenTypeJustificationScriptTable.SetDefaultLangSys(const Value: TCustomOpenTypeJustificationLanguageSystemTable);
 begin
-  FDefaultLangSys.Assign(Value);
+  if (Value <> nil) then
+  begin
+    if (FDefaultLangSys = nil) then
+      FDefaultLangSys := TOpenTypeJustificationLanguageSystemTable.Create(Storage);
+    FDefaultLangSys.Assign(Value);
+  end else
+    FreeAndNil(FDefaultLangSys);
   Changed;
 end;
 
-function TCustomOpenTypeJustificationScriptTable.
-  GetLanguageSystemTableCount: Integer;
+function TCustomOpenTypeJustificationScriptTable.GetLanguageSystemTableCount: Integer;
 begin
   Result := FLanguageSystemTables.Count;
 end;
 
-procedure TCustomOpenTypeJustificationScriptTable.LoadFromStream
-  (Stream: TStream);
+procedure TCustomOpenTypeJustificationScriptTable.LoadFromStream(Stream: TStream);
 var
   StartPos      : Int64;
   LangSysIndex  : Integer;
@@ -3022,7 +2789,7 @@ begin
 
     // check (minimum) table size
     if Position + 6 > Size then
-      raise Exception.Create(RCStrTableIncomplete);
+      raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read extender glyph offset
     ExtenderGlyph := ReadSwappedWord(Stream);
@@ -3071,22 +2838,19 @@ begin
 
     for LangSysIndex := 0 to High(LangSysRecords) do
     begin
-      LangTableClass := FindJustificationLanguageSystemByType
-        (LangSysRecords[LangSysIndex].Tag);
+      LangTableClass := FindJustificationLanguageSystemByType(LangSysRecords[LangSysIndex].Tag);
 
       if (LangTableClass <> nil) then
       begin
         // create language table entry
-        LangTable := LangTableClass.Create(Storage);
+        // add to language system tables
+        LangTable := FLanguageSystemTables.Add(LangTableClass);
 
         // set position
         Position := StartPos + LangSysRecords[LangSysIndex].Offset;
 
         // read language system table entry from stream
         LangTable.LoadFromStream(Stream);
-
-        // add to language system tables
-        FLanguageSystemTables.Add(LangTable);
       end;
     end;
   end;
@@ -3123,8 +2887,7 @@ begin
     begin
       ExtGlyphOff := Word(Position - StartPos);
       FExtenderGlyphTable.SaveToStream(Stream);
-    end
-    else
+    end else
       ExtGlyphOff := 0;
 
     // write default language system table
@@ -3132,15 +2895,13 @@ begin
     begin
       DefLangSysOff := Word(Position - StartPos);
       FDefaultLangSys.SaveToStream(Stream);
-    end
-    else
+    end else
       DefLangSysOff := 0;
 
     // build directory (to be written later) and write data
     SetLength(LangSysRecords, FLanguageSystemTables.Count);
     for LangSysIndex := 0 to High(LangSysRecords) do
-      with TCustomOpenTypeJustificationLanguageSystemTable
-        (FLanguageSystemTables[LangSysIndex]) do
+      with FLanguageSystemTables[LangSysIndex] do
       begin
         // get table type
         LangSysRecords[LangSysIndex].Tag := TableType;
@@ -3189,8 +2950,9 @@ end;
 
 constructor TOpenTypeJustificationTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
-  FScripts := TObjectList.Create(True);
   inherited;
+  FVersion.Value := 1;
+  FScripts := TPascalTypeTableInterfaceList<TCustomOpenTypeJustificationScriptTable>.Create(AStorage);
 end;
 
 destructor TOpenTypeJustificationTable.Destroy;
@@ -3204,27 +2966,19 @@ begin
   Result := 'JSTF';
 end;
 
-procedure TOpenTypeJustificationTable.AssignTo(Dest: TPersistent);
+procedure TOpenTypeJustificationTable.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TOpenTypeJustificationTable(Dest) do
-    begin
-      FVersion := Self.FVersion;
-      FScripts.Assign(Self.FScripts);
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TOpenTypeJustificationTable then
+  begin
+    FVersion := TOpenTypeJustificationTable(Source).FVersion;
+    FScripts.Assign(TOpenTypeJustificationTable(Source).FScripts);
+  end;
 end;
 
 function TOpenTypeJustificationTable.GetScriptCount: Cardinal;
 begin
   Result := FScripts.Count;
-end;
-
-procedure TOpenTypeJustificationTable.ResetToDefaults;
-begin
-  FVersion.Value := 1;
-  FScripts.Clear;
 end;
 
 procedure TOpenTypeJustificationTable.LoadFromStream(Stream: TStream);
@@ -3253,8 +3007,7 @@ begin
     SetLength(Directory, ReadSwappedWord(Stream));
 
     // check if table is complete
-    if Position + Length(Directory) * SizeOf(TJustificationScriptDirectoryEntry)
-      > Size then
+    if Position + Length(Directory) * SizeOf(TJustificationScriptDirectoryEntry) > Size then
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read directory entry
@@ -3276,15 +3029,13 @@ begin
       with Directory[DirIndex] do
       begin
         // TODO: Find matching justification script by tag!!!
-        Script := TOpenTypeJustificationScriptTable.Create(Storage);
+        Script := FScripts.Add;
 
         // jump to the right position
         Position := StartPos + Offset;
 
         // load digital signature from stream
         Script.LoadFromStream(Stream);
-
-        FScripts.Add(Script);
       end;
   end;
 end;
@@ -3316,26 +3067,23 @@ begin
 
     // build directory and store signature
     for DirIndex := 0 to FScripts.Count - 1 do
-      with TOpenTypeJustificationTable(FScripts[DirIndex]) do
-      begin
-        Directory[DirIndex].Offset := Position - StartPos;
-        Directory[DirIndex].Tag := GetTableType;
-        SaveToStream(Stream);
-      end;
+    begin
+      Directory[DirIndex].Offset := Position - StartPos;
+      Directory[DirIndex].Tag := FScripts[DirIndex].GetTableType;
+      SaveToStream(Stream);
+    end;
 
     // locate directory
     Position := StartPos + 3 * SizeOf(Word);
 
     // write directory entries
     for DirIndex := 0 to High(Directory) do
-      with Directory[DirIndex], TCustomOpenTypeJustificationScriptTable
-        (FScripts[DirIndex]) do
       begin
         // write tag
-        Write(Tag, SizeOf(Cardinal));
+        Write(Directory[DirIndex].Tag, SizeOf(Cardinal));
 
         // write offset
-        WriteSwappedWord(Stream, Offset);
+        WriteSwappedWord(Stream, Directory[DirIndex].Offset);
       end;
   end;
 end;
@@ -3511,13 +3259,12 @@ begin
       Result := GFeatureClasses[FeaturesIndex];
       Exit;
     end;
-  // raise Exception.Create('Unknown Table Class: ' + TableType);
+  // raise EPascalTypeError.Create('Unknown Table Class: ' + TableType);
 end;
 
 /// /////////////////////////////////////////////////////////////////////////////
 
-function IsJustificationLanguageSystemClassRegistered(LanguageSystemClass
-  : TOpenTypeJustificationLanguageSystemTableClass): Boolean;
+function IsJustificationLanguageSystemClassRegistered(LanguageSystemClass: TOpenTypeJustificationLanguageSystemTableClass): Boolean;
 var
   TableClassIndex: Integer;
 begin
@@ -3531,8 +3278,7 @@ begin
     end;
 end;
 
-procedure RegisterJustificationLanguageSystem(LanguageSystemClass
-  : TOpenTypeJustificationLanguageSystemTableClass);
+procedure RegisterJustificationLanguageSystem(LanguageSystemClass: TOpenTypeJustificationLanguageSystemTableClass);
 begin
   Assert(IsJustificationLanguageSystemClassRegistered
     (LanguageSystemClass) = False);
@@ -3542,8 +3288,7 @@ begin
     [High(GJustificationLanguageSystemClasses)] := LanguageSystemClass;
 end;
 
-procedure RegisterJustificationLanguageSystems(LanguageSystemClasses
-  : array of TOpenTypeJustificationLanguageSystemTableClass);
+procedure RegisterJustificationLanguageSystems(LanguageSystemClasses: array of TOpenTypeJustificationLanguageSystemTableClass);
 var
   LangSysIndex: Integer;
 begin
@@ -3551,15 +3296,13 @@ begin
     RegisterJustificationLanguageSystem(LanguageSystemClasses[LangSysIndex]);
 end;
 
-function FindJustificationLanguageSystemByType(TableType: TTableType)
-  : TOpenTypeJustificationLanguageSystemTableClass;
+function FindJustificationLanguageSystemByType(TableType: TTableType): TOpenTypeJustificationLanguageSystemTableClass;
 var
   LangSysIndex: Integer;
 begin
   Result := nil;
   for LangSysIndex := 0 to High(GJustificationLanguageSystemClasses) do
-    if GJustificationLanguageSystemClasses[LangSysIndex].GetTableType = TableType
-    then
+    if GJustificationLanguageSystemClasses[LangSysIndex].GetTableType = TableType then
     begin
       Result := GJustificationLanguageSystemClasses[LangSysIndex];
       Exit;

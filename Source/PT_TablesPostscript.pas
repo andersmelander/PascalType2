@@ -47,35 +47,33 @@ type
     procedure SaveToStream(Stream: TStream); override;
   end;
 
-  TPascalTypePostscriptNameIndexTable = class
-    (TCustomPascalTypePostscriptIndexTable)
+  TPascalTypePostscriptNameIndexTable = class(TCustomPascalTypePostscriptIndexTable)
   private
     FFontNames: array of string;
     function GetFontName(Index: Integer): string;
     function GetFontNameCount: Integer;
   protected
-    procedure ResetToDefaults; override;
-    procedure AssignTo(Dest: TPersistent); override;
-
     procedure ReadData(Index: Integer; Stream: TStream); override;
     procedure WriteData(Index: Integer; Stream: TStream); override;
+
+  public
+    procedure Assign(Source: TPersistent); override;
 
     property FontName[Index: Integer]: string read GetFontName;
     property FontNameCount: Integer read GetFontNameCount;
   end;
 
-  TPascalTypePostscriptStringIndexTable = class
-    (TCustomPascalTypePostscriptIndexTable)
+  TPascalTypePostscriptStringIndexTable = class(TCustomPascalTypePostscriptIndexTable)
   private
     FStrings: array of string;
     function GetString(Index: Integer): string;
     function GetStringCount: Integer;
   protected
-    procedure ResetToDefaults; override;
-    procedure AssignTo(Dest: TPersistent); override;
-
     procedure ReadData(Index: Integer; Stream: TStream); override;
     procedure WriteData(Index: Integer; Stream: TStream); override;
+
+  public
+    procedure Assign(Source: TPersistent); override;
 
     property StringItem[Index: Integer]: string read GetString;
     property StringCount: Integer read GetStringCount;
@@ -84,13 +82,13 @@ type
   TCustomPascalTypePostscriptDictOperator = class(TPersistent)
   protected
     class function GetOperator: Byte; virtual; abstract;
-    procedure AssignTo(Dest: TPersistent); override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     property DictOperator: Byte read GetOperator;
   end;
 
-  TPascalTypePostscriptDictOperatorClass = class of
-    TCustomPascalTypePostscriptDictOperator;
+  TPascalTypePostscriptDictOperatorClass = class of TCustomPascalTypePostscriptDictOperator;
 
   TCustomPascalTypePostscriptDictOperand = class(TPersistent)
   protected
@@ -111,29 +109,31 @@ type
     function GetOperandCount: Integer;
     procedure ClearOperands;
   protected
-    procedure AssignTo(Dest: TPersistent); override;
     procedure Clear; virtual;
   public
     destructor Destroy; override;
+
+    procedure Assign(Source: TPersistent); override;
+
     procedure AddOperand(Operand: TCustomPascalTypePostscriptDictOperand);
 
-    property DictOperator: TCustomPascalTypePostscriptDictOperator
-      read FDictOperator write FDictOperator;
+    property DictOperator: TCustomPascalTypePostscriptDictOperator read FDictOperator write FDictOperator;
     property OperandCount: Integer read GetOperandCount;
-    property Operand[Index: Integer]: TCustomPascalTypePostscriptDictOperand
-      read GetOperand;
+    property Operand[Index: Integer]: TCustomPascalTypePostscriptDictOperand read GetOperand;
   end;
 
   TPascalTypePostscriptDictDataTable = class(TCustomPascalTypeTable)
   private
     FData: array of TPascalTypePostscriptDictPair;
   protected
-    procedure ResetToDefaults; override;
-    procedure AssignTo(Dest: TPersistent); override;
     function GetStringIndex(const Index: Integer): Integer;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
+
+    procedure Clear; deprecated;
 
     property VersionStringIndex: Integer index 0 read GetStringIndex;
     property NoticeStringIndex: Integer index 1 read GetStringIndex;
@@ -144,31 +144,24 @@ type
     // property CopyrightStringIndex: Integer read GetStringIndex;
   end;
 
-  TPascalTypePostscriptTopDictIndexTable = class
-    (TCustomPascalTypePostscriptIndexTable)
+  TPascalTypePostscriptTopDictIndexTable = class(TCustomPascalTypePostscriptIndexTable)
   private
     FDict: array of TPascalTypePostscriptDictDataTable;
     procedure ClearDict;
     function GetStringIndex(Index: Integer; DictIndex: Integer): Integer;
   protected
-    procedure ResetToDefaults; override;
-    procedure AssignTo(Dest: TPersistent); override;
-
     procedure ReadData(Index: Integer; Stream: TStream); override;
     procedure WriteData(Index: Integer; Stream: TStream); override;
   public
     destructor Destroy; override;
 
-    property VersionStringIndex[DictIndex: Integer]: Integer index 0
-      read GetStringIndex;
-    property NoticeStringIndex[DictIndex: Integer]: Integer index 1
-      read GetStringIndex;
-    property FullNameStringIndex[DictIndex: Integer]: Integer index 2
-      read GetStringIndex;
-    property FamilyNameStringIndex[DictIndex: Integer]: Integer index 3
-      read GetStringIndex;
-    property WeightStringIndex[DictIndex: Integer]: Integer index 4
-      read GetStringIndex;
+    procedure Assign(Source: TPersistent); override;
+
+    property VersionStringIndex[DictIndex: Integer]: Integer index 0 read GetStringIndex;
+    property NoticeStringIndex[DictIndex: Integer]: Integer index 1 read GetStringIndex;
+    property FullNameStringIndex[DictIndex: Integer]: Integer index 2 read GetStringIndex;
+    property FamilyNameStringIndex[DictIndex: Integer]: Integer index 3 read GetStringIndex;
+    property WeightStringIndex[DictIndex: Integer]: Integer index 4 read GetStringIndex;
   end;
 
   TPascalTypeCompactFontFormatTable = class(TCustomPascalTypeNamedTable)
@@ -189,14 +182,15 @@ type
     function GetVersionString: string;
     function GetWeightStringIndex: string;
   protected
-    procedure ResetToDefaults; override;
-    procedure AssignTo(Dest: TPersistent); override;
     procedure VersionChanged; virtual;
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -223,10 +217,12 @@ type
     FDefaultVertOriginY: SmallInt; // The y coordinate of a glyph's vertical origin, in the font's design coordinate system, to be used if no entry is present for the glyph in the vertOriginYMetrics array.
     FVertOriginYMetrics: array of TVertOriginYMetrics;
   protected
-    procedure ResetToDefaults; override;
-    procedure AssignTo(Dest: TPersistent); override;
   public
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -1036,8 +1032,7 @@ end;
 
 { TPascalTypePostscriptDictPair }
 
-procedure TPascalTypePostscriptDictPair.AddOperand
-  (Operand: TCustomPascalTypePostscriptDictOperand);
+procedure TPascalTypePostscriptDictPair.AddOperand(Operand: TCustomPascalTypePostscriptDictOperand);
 begin
   if Operand = nil then
     raise EPascalTypeError.Create(RCStrNoOperandSpecified);
@@ -1047,26 +1042,23 @@ begin
   FOperands[High(FOperands)] := Operand;
 end;
 
-procedure TPascalTypePostscriptDictPair.AssignTo(Dest: TPersistent);
+procedure TPascalTypePostscriptDictPair.Assign(Source: TPersistent);
 var
   OpIndex: Integer;
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypePostscriptDictPair(Dest) do
+  if Source is Self.ClassType then
+  begin
+    SetLength(FOperands, Length(TPascalTypePostscriptDictPair(Source).FOperands));
+    for OpIndex := 0 to High(FOperands) do
     begin
-      SetLength(FOperands, Length(Self.FOperands));
-      for OpIndex := 0 to High(FOperands) do
-      begin
-        FOperands[OpIndex] := TCustomPascalTypePostscriptDictOperand
-          (Self.FOperands[OpIndex].ClassType.Create);
-        FOperands[OpIndex].Assign(Self.FOperands[OpIndex]);
-      end;
+      // TODO : Do we need a virtual constructor here?
+      FOperands[OpIndex] := TCustomPascalTypePostscriptDictOperand(TPascalTypePostscriptDictPair(Source).FOperands[OpIndex].ClassType.Create);
+      FOperands[OpIndex].Assign(TPascalTypePostscriptDictPair(Source).FOperands[OpIndex]);
+    end;
 
-      FDictOperator := TCustomPascalTypePostscriptDictOperator
-        (Self.FDictOperator.ClassType.Create);
-      FDictOperator.Assign(Self.FDictOperator);
-    end
-  else
+    FDictOperator := TCustomPascalTypePostscriptDictOperator(TPascalTypePostscriptDictPair(Source).FDictOperator.ClassType.Create);
+    FDictOperator.Assign(TPascalTypePostscriptDictPair(Source).FDictOperator);
+  end else
     inherited;
 end;
 
@@ -1111,25 +1103,19 @@ end;
 
 { TPascalTypePostscriptDictDataTable }
 
-procedure TPascalTypePostscriptDictDataTable.AssignTo(Dest: TPersistent);
-begin
-  if Dest is Self.ClassType then
-    with TPascalTypePostscriptDictDataTable(Dest) do
-    begin
-      FData := Self.FData;
-    end
-  else
-    inherited;
-end;
-
-procedure TPascalTypePostscriptDictDataTable.ResetToDefaults;
+procedure TPascalTypePostscriptDictDataTable.Assign(Source: TPersistent);
 begin
   inherited;
+  if Source is TPascalTypePostscriptDictDataTable then
+    FData := TPascalTypePostscriptDictDataTable(Source).FData;
+end;
+
+procedure TPascalTypePostscriptDictDataTable.Clear;
+begin
   SetLength(FData, 0);
 end;
 
-function TPascalTypePostscriptDictDataTable.GetStringIndex
-  (const Index: Integer): Integer;
+function TPascalTypePostscriptDictDataTable.GetStringIndex(const Index: Integer): Integer;
 var
   DictIndex: Integer;
 begin
@@ -1293,10 +1279,8 @@ begin
             Read(Data[0], 2);
             Value := (Data[0] shl 8) or Data[1];
 
-            Operands[High(Operands)] :=
-              TPascalTypePostscriptOperandSmallInt.Create;
-            TPascalTypePostscriptOperandSmallInt(Operands[High(Operands)])
-              .Value := Value;
+            Operands[High(Operands)] := TPascalTypePostscriptOperandSmallInt.Create;
+            TPascalTypePostscriptOperandSmallInt(Operands[High(Operands)]).Value := Value;
           end;
         29:
           begin
@@ -1304,10 +1288,8 @@ begin
             Value := (Data[0] shl 24) or (Data[1] shl 16) or (Data[2] shl 8)
               or Data[3];
 
-            Operands[High(Operands)] :=
-              TPascalTypePostscriptOperandInteger.Create;
-            TPascalTypePostscriptOperandInteger(Operands[High(Operands)])
-              .Value := Value;
+            Operands[High(Operands)] := TPascalTypePostscriptOperandInteger.Create;
+            TPascalTypePostscriptOperandInteger(Operands[High(Operands)]).Value := Value;
           end;
         30:
           begin
@@ -1362,39 +1344,31 @@ begin
 
             until (Nibble = $F);
 
-            Operands[High(Operands)] :=
-              TPascalTypePostscriptOperandBCD.Create;
-            TPascalTypePostscriptOperandBCD(Operands[High(Operands)])
-              .Value := str;
+            Operands[High(Operands)] := TPascalTypePostscriptOperandBCD.Create;
+            TPascalTypePostscriptOperandBCD(Operands[High(Operands)]).Value := str;
           end;
         32..246:
           begin
             Value := Token - 139;
 
-            Operands[High(Operands)] :=
-              TPascalTypePostscriptOperandShortInt.Create;
-            TPascalTypePostscriptOperandShortInt(Operands[High(Operands)])
-              .Value := Value;
+            Operands[High(Operands)] := TPascalTypePostscriptOperandShortInt.Create;
+            TPascalTypePostscriptOperandShortInt(Operands[High(Operands)]).Value := Value;
           end;
         247..250:
           begin
             Read(Data[0], 1);
             Value := (Token - 247) shl 8 + Data[0] + 108;
 
-            Operands[High(Operands)] :=
-              TPascalTypePostscriptOperandComposite.Create;
-            TPascalTypePostscriptOperandComposite(Operands[High(Operands)]
-              ).Value := Value;
+            Operands[High(Operands)] := TPascalTypePostscriptOperandComposite.Create;
+            TPascalTypePostscriptOperandComposite(Operands[High(Operands)]).Value := Value;
           end;
         251..254:
           begin
             Read(Data[0], 1);
             Value := -(Token - 251) shl 8 - Data[0] - 108;
 
-            Operands[High(Operands)] :=
-              TPascalTypePostscriptOperandComposite.Create;
-            TPascalTypePostscriptOperandComposite(Operands[High(Operands)]
-              ).Value := Value;
+            Operands[High(Operands)] := TPascalTypePostscriptOperandComposite.Create;
+            TPascalTypePostscriptOperandComposite(Operands[High(Operands)]).Value := Value;
           end;
       else
         raise EPascalTypeError.Create(RCStrCFFErrorWrongToken);
@@ -1499,7 +1473,7 @@ begin
   OffStart := Stream.Position - 1;
 
   if Offsets[0] <> 1 then
-    raise Exception.CreateFmt(RCStrCFFIndexFirstOffsetError, [Offsets[0]]);
+    raise EPascalTypeError.CreateFmt(RCStrCFFIndexFirstOffsetError, [Offsets[0]]);
 
   // check (minimum) table size
   if Stream.Position + Offsets[High(Offsets)] > Stream.Size then
@@ -1538,30 +1512,18 @@ end;
 
 { TPascalTypePostscriptNameIndexTable }
 
-procedure TPascalTypePostscriptNameIndexTable.AssignTo(Dest: TPersistent);
-begin
-  if Dest is Self.ClassType then
-    with TPascalTypePostscriptNameIndexTable(Dest) do
-    begin
-      FFontNames := Self.FFontNames;
-    end
-  else
-    inherited;
-end;
-
-procedure TPascalTypePostscriptNameIndexTable.ResetToDefaults;
+procedure TPascalTypePostscriptNameIndexTable.Assign(Source: TPersistent);
 begin
   inherited;
-  SetLength(FFontNames, 0);
+  if Source is TPascalTypePostscriptNameIndexTable then
+    FFontNames := TPascalTypePostscriptNameIndexTable(Source).FFontNames;
 end;
 
-function TPascalTypePostscriptNameIndexTable.GetFontName
-  (Index: Integer): string;
+function TPascalTypePostscriptNameIndexTable.GetFontName(Index: Integer): string;
 begin
-  if (Index >= 0) and (Index < Length(FFontNames)) then
-    Result := FFontNames[Index]
-  else
+  if (Index < 0) or (Index > High(FFontNames)) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FFontNames[Index];
 end;
 
 function TPascalTypePostscriptNameIndexTable.GetFontNameCount: Integer;
@@ -1597,33 +1559,23 @@ end;
 
 { TPascalTypePostscriptStringIndexTable }
 
-procedure TPascalTypePostscriptStringIndexTable.AssignTo(Dest: TPersistent);
-begin
-  if Dest is Self.ClassType then
-    with TPascalTypePostscriptStringIndexTable(Dest) do
-    begin
-      FStrings := Self.FStrings;
-    end
-  else
-    inherited;
-end;
-
-procedure TPascalTypePostscriptStringIndexTable.ResetToDefaults;
+procedure TPascalTypePostscriptStringIndexTable.Assign(Source: TPersistent);
 begin
   inherited;
-  SetLength(FStrings, 0);
+  if Source is TPascalTypePostscriptStringIndexTable then
+    FStrings := TPascalTypePostscriptStringIndexTable(Source).FStrings;
 end;
 
-function TPascalTypePostscriptStringIndexTable.GetString
-  (Index: Integer): string;
+function TPascalTypePostscriptStringIndexTable.GetString(Index: Integer): string;
 begin
-  if (Index >= 0) then
-    if Index <= 391 then
-      Result := GetStandardString(Index)
-    else if Index - 391 < Length(FStrings) then
-      Result := FStrings[Index - 391]
-    else
-      raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index])
+  if (Index < 0) then
+    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+
+  if Index <= 391 then
+    Result := GetStandardString(Index)
+  else
+  if Index - 391 < Length(FStrings) then
+    Result := FStrings[Index - 391]
   else
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
 end;
@@ -1633,8 +1585,7 @@ begin
   Result := Length(FStrings);
 end;
 
-procedure TPascalTypePostscriptStringIndexTable.ReadData(Index: Integer;
-  Stream: TStream);
+procedure TPascalTypePostscriptStringIndexTable.ReadData(Index: Integer; Stream: TStream);
 begin
   // eventually extend font String array
   if Index >= Length(FStrings) then
@@ -1647,8 +1598,7 @@ begin
   Stream.Read(FStrings[Index][1], Stream.Size);
 end;
 
-procedure TPascalTypePostscriptStringIndexTable.WriteData(Index: Integer;
-  Stream: TStream);
+procedure TPascalTypePostscriptStringIndexTable.WriteData(Index: Integer; Stream: TStream);
 begin
   // check if index exceeds the list
   if (Index < 0) or (Index >= Length(FStrings)) then
@@ -1667,44 +1617,33 @@ begin
   inherited;
 end;
 
-function TPascalTypePostscriptTopDictIndexTable.GetStringIndex(Index: Integer;
-  DictIndex: Integer): Integer;
+function TPascalTypePostscriptTopDictIndexTable.GetStringIndex(Index: Integer; DictIndex: Integer): Integer;
 begin
-  if (DictIndex >= 0) and (DictIndex < Length(FDict)) then
-    Result := FDict[DictIndex].GetStringIndex(Index)
-  else
+  if (DictIndex < 0) or (DictIndex > High(FDict)) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [DictIndex]);
+  Result := FDict[DictIndex].GetStringIndex(Index);
 end;
 
-procedure TPascalTypePostscriptTopDictIndexTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypePostscriptTopDictIndexTable.Assign(Source: TPersistent);
 var
   DictIndex: Integer;
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypePostscriptTopDictIndexTable(Dest) do
-    begin
-      // clear existing dictionary entries
-      ClearDict;
-
-      // set length of new dictionary
-      SetLength(FDict, Length(Self.FDict));
-
-      // create and assign dictionary entries
-      for DictIndex := 0 to High(FDict) do
-      begin
-        FDict[DictIndex] := TPascalTypePostscriptDictDataTable.Create;
-        FDict[DictIndex].Assign(Self.FDict[DictIndex]);
-      end;
-    end
-  else
-    inherited;
-end;
-
-procedure TPascalTypePostscriptTopDictIndexTable.ResetToDefaults;
-begin
   inherited;
-  ClearDict;
-  SetLength(FDict, 0);
+  if Source is TPascalTypePostscriptTopDictIndexTable then
+  begin
+    // clear existing dictionary entries
+    ClearDict;
+
+    // set length of new dictionary
+    SetLength(FDict, Length(TPascalTypePostscriptTopDictIndexTable(Source).FDict));
+
+    // create and assign dictionary entries
+    for DictIndex := 0 to High(FDict) do
+    begin
+      FDict[DictIndex] := TPascalTypePostscriptDictDataTable.Create;
+      FDict[DictIndex].Assign(TPascalTypePostscriptTopDictIndexTable(Source).FDict[DictIndex]);
+    end;
+  end;
 end;
 
 procedure TPascalTypePostscriptTopDictIndexTable.ClearDict;
@@ -1715,24 +1654,21 @@ begin
     FreeAndNil(FDict[DictIndex]);
 end;
 
-procedure TPascalTypePostscriptTopDictIndexTable.ReadData(Index: Integer;
-  Stream: TStream);
+procedure TPascalTypePostscriptTopDictIndexTable.ReadData(Index: Integer; Stream: TStream);
 begin
   // eventually extend font name array or reset dict to default
   if Index >= Length(FDict) then
   begin
     SetLength(FDict, Index + 1);
     FDict[High(FDict)] := TPascalTypePostscriptDictDataTable.Create;
-  end
-  else
-    FDict[High(FDict)].ResetToDefaults;
+  end else
+    FDict[High(FDict)].Clear;
 
   // load dict from stream
   FDict[High(FDict)].LoadFromStream(Stream);
 end;
 
-procedure TPascalTypePostscriptTopDictIndexTable.WriteData(Index: Integer;
-  Stream: TStream);
+procedure TPascalTypePostscriptTopDictIndexTable.WriteData(Index: Integer; Stream: TStream);
 begin
 
 end;
@@ -1742,11 +1678,11 @@ end;
 
 constructor TPascalTypeCompactFontFormatTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
+  inherited;
   FNameTable := TPascalTypePostscriptNameIndexTable.Create;
   FTopDictTable := TPascalTypePostscriptTopDictIndexTable.Create;
   FStringTable := TPascalTypePostscriptStringIndexTable.Create;
   FGlobalTable := TPascalTypePostscriptStringIndexTable.Create;
-  inherited;
 end;
 
 destructor TPascalTypeCompactFontFormatTable.Destroy;
@@ -1758,21 +1694,19 @@ begin
   inherited;
 end;
 
-procedure TPascalTypeCompactFontFormatTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeCompactFontFormatTable.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypeCompactFontFormatTable(Dest) do
-    begin
-      FVersionMajor := Self.FVersionMajor;
-      FVersionMinor := Self.FVersionMinor;
-      FOffSize := Self.FOffSize;
-      FNameTable.Assign(Self.FNameTable);
-      FTopDictTable.AssignTo(Self.FTopDictTable);
-      FStringTable.AssignTo(Self.FStringTable);
-      FGlobalTable.AssignTo(Self.FGlobalTable);
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TPascalTypeCompactFontFormatTable then
+  begin
+    FVersionMajor := TPascalTypeCompactFontFormatTable(Source).FVersionMajor;
+    FVersionMinor := TPascalTypeCompactFontFormatTable(Source).FVersionMinor;
+    FOffSize := TPascalTypeCompactFontFormatTable(Source).FOffSize;
+    FNameTable.Assign(TPascalTypeCompactFontFormatTable(Source).FNameTable);
+    FTopDictTable.Assign(TPascalTypeCompactFontFormatTable(Source).FTopDictTable);
+    FStringTable.Assign(TPascalTypeCompactFontFormatTable(Source).FStringTable);
+    FGlobalTable.Assign(TPascalTypeCompactFontFormatTable(Source).FGlobalTable);
+  end;
 end;
 
 function TPascalTypeCompactFontFormatTable.GetFontName: string;
@@ -1858,18 +1792,6 @@ begin
   end;
 end;
 
-procedure TPascalTypeCompactFontFormatTable.ResetToDefaults;
-begin
-  inherited;
-  FVersionMajor := 0;
-  FVersionMinor := 0;
-  FOffSize := 0;
-  FNameTable.ResetToDefaults;
-  FTopDictTable.ResetToDefaults;
-  FStringTable.ResetToDefaults;
-  FGlobalTable.ResetToDefaults;
-end;
-
 procedure TPascalTypeCompactFontFormatTable.LoadFromStream(Stream: TStream);
 var
   StartPos  : Int64;
@@ -1936,7 +1858,7 @@ begin
     // read offset size
     Write(FOffSize, 1);
 
-    raise Exception.Create(RCStrNotImplemented);
+    raise EPascalTypeError.Create(RCStrNotImplemented);
   end;
 end;
 
@@ -1966,32 +1888,27 @@ end;
 
 { TPascalTypeVerticalOriginTable }
 
-procedure TPascalTypeVerticalOriginTable.AssignTo(Dest: TPersistent);
+constructor TPascalTypeVerticalOriginTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypeVerticalOriginTable(Dest) do
-    begin
-      FMajorVersion := Self.FMajorVersion;
-      FMinorVersion := Self.FMinorVersion;
-      FDefaultVertOriginY := Self.FDefaultVertOriginY;
-      FVertOriginYMetrics := Self.FVertOriginYMetrics;
-    end
-  else
-    inherited;
+  inherited;
+  FMajorVersion := 1;
+end;
+
+procedure TPascalTypeVerticalOriginTable.Assign(Source: TPersistent);
+begin
+  inherited;
+  if Source is TPascalTypeVerticalOriginTable then
+  begin
+    FMajorVersion := TPascalTypeVerticalOriginTable(Source).FMajorVersion;
+    FMinorVersion := TPascalTypeVerticalOriginTable(Source).FMinorVersion;
+    FDefaultVertOriginY := TPascalTypeVerticalOriginTable(Source).FDefaultVertOriginY;
+    FVertOriginYMetrics := TPascalTypeVerticalOriginTable(Source).FVertOriginYMetrics;
+  end;
 end;
 
 class function TPascalTypeVerticalOriginTable.GetTableType: TTableType;
 begin
   Result := 'VORG';
-end;
-
-procedure TPascalTypeVerticalOriginTable.ResetToDefaults;
-begin
-  inherited;
-  FMajorVersion := 1;
-  FMinorVersion := 0;
-  FDefaultVertOriginY := 0;
-  SetLength(FVertOriginYMetrics, 0);
 end;
 
 procedure TPascalTypeVerticalOriginTable.LoadFromStream(Stream: TStream);
@@ -2112,8 +2029,7 @@ begin
   Assert(CheckOperatorClassesValid);
 end;
 
-function FindOperatorByEncoding(Encoding: Byte)
-  : TPascalTypePostscriptDictOperatorClass;
+function FindOperatorByEncoding(Encoding: Byte): TPascalTypePostscriptDictOperatorClass;
 var
   OperatorClassIndex: Integer;
 begin
@@ -2130,14 +2046,16 @@ end;
 
 { TCustomPascalTypePostscriptDictOperator }
 
-procedure TCustomPascalTypePostscriptDictOperator.AssignTo(Dest: TPersistent);
+procedure TCustomPascalTypePostscriptDictOperator.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TCustomPascalTypePostscriptDictOperator(Dest) do
-      if GetOperator = Self.GetOperator then
-      else
-        inherited
-  else
+  if Source is TCustomPascalTypePostscriptDictOperator then
+  begin
+    if GetOperator = TCustomPascalTypePostscriptDictOperator(Source).GetOperator then
+    begin
+
+    end else
+      inherited
+  end else
     inherited;
 end;
 

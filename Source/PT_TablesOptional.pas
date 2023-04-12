@@ -49,12 +49,11 @@ type
     procedure SetReserved(const Index: Integer; const Value: Word);
     procedure SetFormat(const Value: Cardinal);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
     procedure FormatChanged; virtual;
     procedure ReservedChanged; virtual;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -75,16 +74,12 @@ type
   private
     FVersion: Cardinal; // Version number of the DSIG table (0x00000001)
     FFlags  : TDigitalSignatureFlags; // Permission flags: Bit 0: cannot be resigned, Bits 1-7: Reserved (Set to 0)
-    FSignatures: TObjectList;
+    FSignatures: TPascalTypeTableList<TPascalTypeDigitalSignatureBlock>;
     procedure SetVersion(const Value: Cardinal);
     procedure SetFlags(const Value: TDigitalSignatureFlags);
     function GetSignatureCount: Integer;
-    function GetSignatureBlock(Index: Integer)
-      : TPascalTypeDigitalSignatureBlock;
+    function GetSignatureBlock(Index: Integer): TPascalTypeDigitalSignatureBlock;
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
     procedure FlagsChanged; virtual;
     procedure VersionChanged; virtual;
   public
@@ -93,14 +88,15 @@ type
 
     class function GetTableType: TTableType; override;
 
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: Cardinal read FVersion write SetVersion;
     property Flags: TDigitalSignatureFlags read FFlags write SetFlags;
     property SignatureCount: Integer read GetSignatureCount;
-    property SignatureBlock[Index: Integer]: TPascalTypeDigitalSignatureBlock
-      read GetSignatureBlock;
+    property SignatureBlock[Index: Integer]: TPascalTypeDigitalSignatureBlock read GetSignatureBlock;
   end;
 
 
@@ -116,8 +112,7 @@ type
     GaspFlag: Byte;
   end;
 
-  TPascalTypeGridFittingAndScanConversionProcedureTable = class
-    (TCustomPascalTypeNamedTable)
+  TPascalTypeGridFittingAndScanConversionProcedureTable = class(TCustomPascalTypeNamedTable)
   private
     FVersion   : Word;
     FGaspRanges: array of TGaspRange;
@@ -125,12 +120,11 @@ type
     function GetRangeCount: Integer;
     function GetRange(Index: Integer): TGaspRange;
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
     procedure VersionChanged; virtual;
-    procedure ResetToDefaults; override;
   public
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -153,12 +147,11 @@ type
     procedure SetMaxWidth(const Value: Byte);
     procedure Setppem(const Value: Byte);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
     procedure MaxWidthChanged; virtual;
     procedure ppemChanged; virtual;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -177,13 +170,12 @@ type
     function GetDeviceRecord(Index: Word): TPascalTypeHorizontalDeviceMetricsSubTable;
     procedure SetDeviceRecord(Index: Word; const Value: TPascalTypeHorizontalDeviceMetricsSubTable);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
     procedure VersionChanged; virtual;
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     class function GetTableType: TTableType; override;
 
@@ -192,8 +184,7 @@ type
 
     property Version: Word read FVersion write SetVersion;
     property DeviceRecordCount: Word read GetDeviceRecordCount;
-    property DeviceRecord[Index: Word]: TPascalTypeHorizontalDeviceMetricsSubTable read GetDeviceRecord
-      write SetDeviceRecord;
+    property DeviceRecord[Index: Word]: TPascalTypeHorizontalDeviceMetricsSubTable read GetDeviceRecord write SetDeviceRecord;
   end;
 
   // table 'kern'
@@ -212,29 +203,22 @@ type
     Value : SmallInt; // The kerning value for the above pair, in FUnits. If this value is greater than zero, the characters will be moved apart. If this value is less than zero, the character will be moved closer together.
   end;
 
-  TPascalTypeKerningFormat0SubTable = class
-    (TCustomPascalTypeKerningFormatSubTable)
+  TPascalTypeKerningFormat0SubTable = class(TCustomPascalTypeKerningFormatSubTable)
   private
     FPairs: array of TKerningFormat0SubTable;
     function GetPairCount: Integer;
     function GetPair(Index: Integer): TKerningFormat0SubTable;
-  protected
-    procedure ResetToDefaults; override;
   public
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function GetKerningValue(LeftGlyphIndex: Word; RightGlyphIndex: Word)
-      : Word; override;
+    function GetKerningValue(LeftGlyphIndex: Word; RightGlyphIndex: Word): Word; override;
 
     property PairCount: Integer read GetPairCount;
     property Pair[Index: Integer]: TKerningFormat0SubTable read GetPair;
   end;
 
-  TPascalTypeKerningFormat2SubTable = class
-    (TCustomPascalTypeKerningFormatSubTable)
-  protected
-    procedure ResetToDefaults; override;
+  TPascalTypeKerningFormat2SubTable = class(TCustomPascalTypeKerningFormatSubTable)
   public
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -258,9 +242,6 @@ type
     procedure SetIsReplace(const Value: Boolean);
     procedure SetVersion(const Value: Word);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
     procedure AssignFormat; virtual;
     procedure CoverageChanged; virtual;
     procedure FormatChanged; virtual;
@@ -273,6 +254,8 @@ type
     constructor Create; override;
     destructor Destroy; override;
 
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -282,13 +265,11 @@ type
 
     property IsHorizontal: Boolean read GetIsHorizontal write SetIsHorizontal;
     property IsMinimum: Boolean read GetIsMinimum write SetIsMinimum;
-    property IsCrossStream: Boolean read GetIsCrossStream
-      write SetIsCrossStream;
+    property IsCrossStream: Boolean read GetIsCrossStream write SetIsCrossStream;
     property IsReplace: Boolean read GetIsReplace write SetIsReplace;
     property Format: Byte read GetFormat write SetFormat;
 
-    property FormatTable: TCustomPascalTypeKerningFormatSubTable
-      read FFormatTable;
+    property FormatTable: TCustomPascalTypeKerningFormatSubTable read FFormatTable;
   end;
 
   TPascalTypeKerningTable = class(TCustomPascalTypeNamedTable)
@@ -299,10 +280,6 @@ type
     function GetKerningSubtableCount: Integer;
     function GetKerningSubtable(Index: Integer): TPascalTypeKerningSubTable;
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
-
     procedure VersionChanged; virtual;
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
@@ -310,13 +287,14 @@ type
 
     class function GetTableType: TTableType; override;
 
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: Word read FVersion write SetVersion;
 
-    property KerningSubtable[Index: Integer]: TPascalTypeKerningSubTable
-      read GetKerningSubtable;
+    property KerningSubtable[Index: Integer]: TPascalTypeKerningSubTable read GetKerningSubtable;
     property KerningSubtableCount: Integer read GetKerningSubtableCount;
   end;
 
@@ -331,12 +309,11 @@ type
     function GetVerticalPel(Index: Integer): Byte;
     procedure SetVersion(const Value: Word);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
     procedure VersionChanged; virtual;
   public
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -385,9 +362,6 @@ type
     procedure SetFileName(const Value: string);
     procedure SetTypeface(const Value: string);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
     procedure VersionChanged; virtual;
     procedure CapHeightChanged; virtual;
     procedure FontNumberChanged; virtual;
@@ -401,7 +375,11 @@ type
     procedure WidthTypeChanged; virtual;
     procedure XHeightChanged; virtual;
   public
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -440,10 +418,9 @@ type
     FEndsz  : Byte; // Ending yPelHeight
     FEntry  : array of TVDMXHeightRecord; // The VDMX records
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
@@ -464,15 +441,14 @@ type
     function GetRatioCount: Word;
     function GetGroupCount: Word;
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
     procedure VersionChanged; virtual;
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -483,6 +459,7 @@ type
   end;
 
   // table 'vhea'
+  // Apparently not fully implemented?
   TPascalTypeVerticalHeaderTable = class(TCustomPascalTypeNamedTable)
   private
     FVersion              : TFixedPoint;
@@ -496,7 +473,7 @@ type
     FCaretSlopeRise       : SmallInt; // The value of the caretSlopeRise field divided by the value of the caretSlopeRun Field determines the slope of the caret. A value of 0 for the rise and a value of 1 for the run specifies a horizontal caret. A value of 1 for the rise and a value of 0 for the run specifies a vertical caret. Intermediate values are desirable for fonts whose glyphs are oblique or italic. For a vertical font, a horizontal caret is best.
     FCaretSlopeRun        : SmallInt; // See the caretSlopeRise field. Value=1 for nonslanted vertical fonts.
     FCaretOffset          : SmallInt; // The amount by which the highlight on a slanted glyph needs to be shifted away from the glyph in order to produce the best appearance. Set value equal to 0 for nonslanted fonts.
-    FReserved             : array [0..3] of SmallInt; // Set to 0.
+//    FReserved             : array [0..3] of SmallInt; // Set to 0.
     FMetricDataFormat     : SmallInt; // Set to 0.
     FNumOfLongVerMetrics  : Word;     // Number of advance heights in the vertical metrics table.
 
@@ -514,10 +491,6 @@ type
     procedure SetNumOfLongVerMetrics(const Value: Word);
     procedure SetYMaxExtent(const Value: SmallInt);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
-
     procedure AdvanceHeightMaxChanged; virtual;
     procedure AscentChanged; virtual;
     procedure CaretOffsetChanged; virtual;
@@ -532,7 +505,11 @@ type
     procedure VersionChanged; virtual;
     procedure YMaxExtentChanged; virtual;
   public
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -572,17 +549,15 @@ type
     function GetVerticalMetric(Index: Integer): TVerticalMetric;
     function GetVerticalMetricCount: Integer;
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    property VerticalMetric[Index: Integer]: TVerticalMetric
-      read GetVerticalMetric;
+    property VerticalMetric[Index: Integer]: TVerticalMetric read GetVerticalMetric;
     property VerticalMetricCount: Integer read GetVerticalMetricCount;
   end;
 
@@ -594,33 +569,22 @@ uses
 
 { TPascalTypeDigitalSignatureBlock }
 
-procedure TPascalTypeDigitalSignatureBlock.AssignTo(Dest: TPersistent);
+procedure TPascalTypeDigitalSignatureBlock.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypeDigitalSignatureBlock(Dest) do
-    begin
-      FReserved[0] := Self.FReserved[0];
-      FReserved[1] := Self.FReserved[1];
-      FSignature := Self.FSignature;
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TPascalTypeDigitalSignatureBlock then
+  begin
+    FFormat := TPascalTypeDigitalSignatureBlock(Source).FFormat;
+    FReserved := TPascalTypeDigitalSignatureBlock(Source).FReserved;
+    FSignature := TPascalTypeDigitalSignatureBlock(Source).FSignature;
+  end;
 end;
 
-procedure TPascalTypeDigitalSignatureBlock.ResetToDefaults;
+function TPascalTypeDigitalSignatureBlock.GetSignatureByte(Index: Integer): Byte;
 begin
-  FReserved[0] := 0;
-  FReserved[1] := 0;
-  SetLength(FSignature, 0);
-end;
-
-function TPascalTypeDigitalSignatureBlock.GetSignatureByte
-  (Index: Integer): Byte;
-begin
-  if (Index >= 0) and (Index < Length(FSignature)) then
-    Result := FSignature[Index]
-  else
+  if (Index < 0) or (Index > High(FSignature)) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FSignature[Index];
 end;
 
 function TPascalTypeDigitalSignatureBlock.GetSignatureLength: Cardinal;
@@ -705,8 +669,9 @@ end;
 
 constructor TPascalTypeDigitalSignatureTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
-  FSignatures := TObjectList.Create(True);
   inherited;
+  FVersion := 1;
+  FSignatures := TPascalTypeTableList<TPascalTypeDigitalSignatureBlock>.Create;
 end;
 
 destructor TPascalTypeDigitalSignatureTable.Destroy;
@@ -715,17 +680,15 @@ begin
   inherited;
 end;
 
-procedure TPascalTypeDigitalSignatureTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeDigitalSignatureTable.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypeDigitalSignatureTable(Dest) do
-    begin
-      FVersion := Self.FVersion;
-      FFlags := Self.FFlags;
-      FSignatures.Assign(Self.FSignatures);
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TPascalTypeDigitalSignatureTable then
+  begin
+    FVersion := TPascalTypeDigitalSignatureTable(Source).FVersion;
+    FFlags := TPascalTypeDigitalSignatureTable(Source).FFlags;
+    FSignatures.Assign(TPascalTypeDigitalSignatureTable(Source).FSignatures);
+  end;
 end;
 
 class function TPascalTypeDigitalSignatureTable.GetTableType: TTableType;
@@ -733,22 +696,11 @@ begin
   Result.AsAnsiChar := 'DSIG';
 end;
 
-procedure TPascalTypeDigitalSignatureTable.ResetToDefaults;
+function TPascalTypeDigitalSignatureTable.GetSignatureBlock(Index: Integer): TPascalTypeDigitalSignatureBlock;
 begin
-  FVersion := 1;
-  FFlags := [];
-
-  // clear signatures
-  FSignatures.Clear;
-end;
-
-function TPascalTypeDigitalSignatureTable.GetSignatureBlock(Index: Integer)
-  : TPascalTypeDigitalSignatureBlock;
-begin
-  if (Index >= 0) and (Index < SignatureCount) then
-    Result := TPascalTypeDigitalSignatureBlock(FSignatures[Index])
-  else
+  if (Index < 0) or (Index >= FSignatures.Count) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FSignatures[Index];
 end;
 
 function TPascalTypeDigitalSignatureTable.GetSignatureCount: Integer;
@@ -786,8 +738,7 @@ begin
     // read flags
     FFlags := WordToDigitalSignatureFlags(ReadSwappedWord(Stream));
 
-    if Position + Length(Directory) * SizeOf(TDigitalSignatureDirectory) > Size
-    then
+    if Position + Length(Directory) * SizeOf(TDigitalSignatureDirectory) > Size then
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read directory entry
@@ -809,21 +760,18 @@ begin
 
     // read digital signatures
     for DirIndex := 0 to High(Directory) do
-      with Directory[DirIndex] do
-      begin
-        SigBlock := TPascalTypeDigitalSignatureBlock.Create;
+    begin
+      SigBlock := FSignatures.Add;
 
-        Position := StartPos + Offset;
+      Position := StartPos + Directory[DirIndex].Offset;
 
-        // check if table contains the entire signature
-        if Position + Length > Size then
-          raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+      // check if table contains the entire signature
+      if Position + Directory[DirIndex].Length > Size then
+        raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-        // load digital signature from stream
-        SigBlock.LoadFromStream(Stream);
-
-        FSignatures.Add(SigBlock);
-      end;
+      // load digital signature from stream
+      SigBlock.LoadFromStream(Stream);
+    end;
   end;
 end;
 
@@ -855,37 +803,32 @@ begin
 
     // build directory and store signature
     for DirIndex := 0 to FSignatures.Count - 1 do
-      with TPascalTypeDigitalSignatureBlock(FSignatures[DirIndex]) do
-      begin
-        Directory[DirIndex].Format := Format;
-        Directory[DirIndex].Offset := Position - StartPos;
-        SaveToStream(Stream);
-        Directory[DirIndex].Length := (Position - StartPos) -
-          Directory[DirIndex].Offset;
-      end;
+    begin
+      Directory[DirIndex].Format := FSignatures[DirIndex].Format;
+      Directory[DirIndex].Offset := Position - StartPos;
+      FSignatures[DirIndex].SaveToStream(Stream);
+      Directory[DirIndex].Length := (Position - StartPos) - Directory[DirIndex].Offset;
+    end;
 
     // locate directory
     Position := StartPos + 3 * SizeOf(Word);
 
     // write directory entries
     for DirIndex := 0 to High(Directory) do
-      with Directory[DirIndex], TPascalTypeDigitalSignatureBlock
-        (FSignatures[DirIndex]) do
-      begin
-        // write format
-        WriteSwappedCardinal(Stream, Format);
+    begin
+      // write format
+      WriteSwappedCardinal(Stream, Directory[DirIndex].Format);
 
-        // write length
-        WriteSwappedCardinal(Stream, Length);
+      // write length
+      WriteSwappedCardinal(Stream, Directory[DirIndex].Length);
 
-        // write offset
-        WriteSwappedCardinal(Stream, Offset);
-      end;
+      // write offset
+      WriteSwappedCardinal(Stream, Directory[DirIndex].Offset);
+    end;
   end;
 end;
 
-procedure TPascalTypeDigitalSignatureTable.SetFlags
-  (const Value: TDigitalSignatureFlags);
+procedure TPascalTypeDigitalSignatureTable.SetFlags(const Value: TDigitalSignatureFlags);
 begin
   if FFlags <> Value then
   begin
@@ -916,42 +859,29 @@ end;
 
 { TPascalTypeGridFittingAndScanConversionProcedureTable }
 
-procedure TPascalTypeGridFittingAndScanConversionProcedureTable.AssignTo
-  (Dest: TPersistent);
+procedure TPascalTypeGridFittingAndScanConversionProcedureTable.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypeGridFittingAndScanConversionProcedureTable(Dest) do
-    begin
-      FVersion := Self.FVersion;
-      FGaspRanges := Self.FGaspRanges;
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TPascalTypeGridFittingAndScanConversionProcedureTable then
+  begin
+    FVersion := TPascalTypeGridFittingAndScanConversionProcedureTable(Source).FVersion;
+    FGaspRanges := TPascalTypeGridFittingAndScanConversionProcedureTable(Source).FGaspRanges;
+  end;
 end;
 
-class function TPascalTypeGridFittingAndScanConversionProcedureTable.
-  GetTableType: TTableType;
+class function TPascalTypeGridFittingAndScanConversionProcedureTable.GetTableType: TTableType;
 begin
   Result.AsAnsiChar := 'gasp';
 end;
 
-procedure TPascalTypeGridFittingAndScanConversionProcedureTable.ResetToDefaults;
+function TPascalTypeGridFittingAndScanConversionProcedureTable.GetRange(Index: Integer): TGaspRange;
 begin
-  FVersion := 0;
-  SetLength(FGaspRanges, 0);
-end;
-
-function TPascalTypeGridFittingAndScanConversionProcedureTable.GetRange
-  (Index: Integer): TGaspRange;
-begin
-  if (Index >= 0) and (Index < Length(FGaspRanges)) then
-    Result := FGaspRanges[Index]
-  else
+  if (Index < 0) or (Index > High(FGaspRanges)) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FGaspRanges[Index];
 end;
 
-function TPascalTypeGridFittingAndScanConversionProcedureTable.
-  GetRangeCount: Integer;
+function TPascalTypeGridFittingAndScanConversionProcedureTable.GetRangeCount: Integer;
 begin
   Result := Length(FGaspRanges);
 end;
@@ -994,8 +924,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeGridFittingAndScanConversionProcedureTable.SaveToStream
-  (Stream: TStream);
+procedure TPascalTypeGridFittingAndScanConversionProcedureTable.SaveToStream(Stream: TStream);
 var
   RangeIndex: Integer;
 begin
@@ -1018,8 +947,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeGridFittingAndScanConversionProcedureTable.SetVersion
-  (const Value: Word);
+procedure TPascalTypeGridFittingAndScanConversionProcedureTable.SetVersion(const Value: Word);
 begin
   if FVersion <> Value then
   begin
@@ -1036,35 +964,22 @@ end;
 
 { TPascalTypeHorizontalDeviceMetricsSubTable }
 
-procedure TPascalTypeHorizontalDeviceMetricsSubTable.AssignTo
-  (Dest: TPersistent);
-begin
-  if Dest is Self.ClassType then
-    with TPascalTypeHorizontalDeviceMetricsSubTable(Dest) do
-    begin
-      Fppem := Self.Fppem;
-      FMaxWidth := Self.FMaxWidth;
-      FWidths := Self.FWidths;
-    end
-  else
-    inherited;
-end;
-
-procedure TPascalTypeHorizontalDeviceMetricsSubTable.ResetToDefaults;
+procedure TPascalTypeHorizontalDeviceMetricsSubTable.Assign(Source: TPersistent);
 begin
   inherited;
-  Fppem := 0;
-  FMaxWidth := 0;
-  SetLength(FWidths, 0);
+  if Source is TPascalTypeHorizontalDeviceMetricsSubTable then
+  begin
+    Fppem := TPascalTypeHorizontalDeviceMetricsSubTable(Source).Fppem;
+    FMaxWidth := TPascalTypeHorizontalDeviceMetricsSubTable(Source).FMaxWidth;
+    FWidths := TPascalTypeHorizontalDeviceMetricsSubTable(Source).FWidths;
+  end;
 end;
 
-function TPascalTypeHorizontalDeviceMetricsSubTable.GetWidth
-  (Index: Integer): Byte;
+function TPascalTypeHorizontalDeviceMetricsSubTable.GetWidth(Index: Integer): Byte;
 begin
-  if (Index >= 0) and (Index < Length(FWidths)) then
-    Result := FWidths[Index]
-  else
+  if (Index < 0) or (Index > High(FWidths)) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FWidths[Index];
 end;
 
 function TPascalTypeHorizontalDeviceMetricsSubTable.GetWidthCount: Integer;
@@ -1072,8 +987,7 @@ begin
   Result := Length(FWidths);
 end;
 
-procedure TPascalTypeHorizontalDeviceMetricsSubTable.LoadFromStream
-  (Stream: TStream);
+procedure TPascalTypeHorizontalDeviceMetricsSubTable.LoadFromStream(Stream: TStream);
 var
   MaxProfile: TPascalTypeMaximumProfileTable;
 begin
@@ -1167,25 +1081,21 @@ begin
   inherited;
 end;
 
-procedure TPascalTypeHorizontalDeviceMetricsTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeHorizontalDeviceMetricsTable.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypeHorizontalDeviceMetricsTable(Dest) do
-    begin
-      FVersion := Self.FVersion;
-      FSubtables.Assign(Self.FSubtables);
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TPascalTypeHorizontalDeviceMetricsTable then
+  begin
+    FVersion := TPascalTypeHorizontalDeviceMetricsTable(Source).FVersion;
+    FSubtables.Assign(TPascalTypeHorizontalDeviceMetricsTable(Source).FSubtables);
+  end;
 end;
 
-function TPascalTypeHorizontalDeviceMetricsTable.GetDeviceRecord(Index: Word)
-  : TPascalTypeHorizontalDeviceMetricsSubTable;
+function TPascalTypeHorizontalDeviceMetricsTable.GetDeviceRecord(Index: Word): TPascalTypeHorizontalDeviceMetricsSubTable;
 begin
-  if (Index < FSubtables.Count) then
-    Result := TPascalTypeHorizontalDeviceMetricsSubTable(FSubtables[Index])
-  else
+  if (Index > FSubtables.Count) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := TPascalTypeHorizontalDeviceMetricsSubTable(FSubtables[Index]);
 end;
 
 function TPascalTypeHorizontalDeviceMetricsTable.GetDeviceRecordCount: Word;
@@ -1198,14 +1108,7 @@ begin
   Result.AsAnsiChar := 'hdmx';
 end;
 
-procedure TPascalTypeHorizontalDeviceMetricsTable.ResetToDefaults;
-begin
-  FVersion := 0;
-  FSubtables.Clear;
-end;
-
-procedure TPascalTypeHorizontalDeviceMetricsTable.LoadFromStream
-  (Stream: TStream);
+procedure TPascalTypeHorizontalDeviceMetricsTable.LoadFromStream(Stream: TStream);
 var
   OffsetPosition  : Int64;
   SizeDeviceRecord: Cardinal;
@@ -1295,15 +1198,7 @@ end;
 
 { TPascalTypeKerningFormat0SubTable }
 
-procedure TPascalTypeKerningFormat0SubTable.ResetToDefaults;
-begin
-  inherited;
-
-  SetLength(FPairs, 0);
-end;
-
-function TPascalTypeKerningFormat0SubTable.GetKerningValue(LeftGlyphIndex,
-  RightGlyphIndex: Word): Word;
+function TPascalTypeKerningFormat0SubTable.GetKerningValue(LeftGlyphIndex, RightGlyphIndex: Word): Word;
 var
   PairIndex: Integer;
 begin
@@ -1317,13 +1212,11 @@ begin
       end;
 end;
 
-function TPascalTypeKerningFormat0SubTable.GetPair(Index: Integer)
-  : TKerningFormat0SubTable;
+function TPascalTypeKerningFormat0SubTable.GetPair(Index: Integer): TKerningFormat0SubTable;
 begin
-  if (Index >= 0) and (Index < Length(FPairs)) then
-    Result := FPairs[Index]
-  else
+  if (Index < 0) or (Index > High(FPairs)) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FPairs[Index];
 end;
 
 function TPascalTypeKerningFormat0SubTable.GetPairCount: Integer;
@@ -1433,11 +1326,6 @@ end;
 
 { TPascalTypeKerningFormat2SubTable }
 
-procedure TPascalTypeKerningFormat2SubTable.ResetToDefaults;
-begin
-  inherited;
-end;
-
 procedure TPascalTypeKerningFormat2SubTable.LoadFromStream(Stream: TStream);
 begin
   inherited;
@@ -1455,8 +1343,9 @@ end;
 
 constructor TPascalTypeKerningSubTable.Create;
 begin
-  FFormatTable := TPascalTypeKerningFormat0SubTable.Create;
   inherited;
+  FFormatTable := TPascalTypeKerningFormat0SubTable.Create;
+  AssignFormat;
 end;
 
 destructor TPascalTypeKerningSubTable.Destroy;
@@ -1465,26 +1354,17 @@ begin
   inherited;
 end;
 
-procedure TPascalTypeKerningSubTable.AssignTo(Dest: TPersistent);
-begin
-  if Dest is Self.ClassType then
-    with TPascalTypeKerningTable(Dest) do
-    begin
-      FVersion := Self.FVersion;
-      FLength := Self.FLength;
-      FCoverage := Self.FCoverage;
-    end
-  else
-    inherited;
-end;
-
-procedure TPascalTypeKerningSubTable.ResetToDefaults;
+procedure TPascalTypeKerningSubTable.Assign(Source: TPersistent);
 begin
   inherited;
-  FVersion := 0;
-  FLength := 0;
-  FCoverage := 0;
-  AssignFormat;
+  if Source is TPascalTypeKerningSubTable then
+  begin
+    FVersion := TPascalTypeKerningSubTable(Source).FVersion;
+    FLength := TPascalTypeKerningSubTable(Source).FLength;
+    FCoverage := TPascalTypeKerningSubTable(Source).FCoverage;
+
+    FFormatTable.Assign(TPascalTypeKerningSubTable(Source).FFormatTable);
+  end;
 end;
 
 procedure TPascalTypeKerningSubTable.LoadFromStream(Stream: TStream);
@@ -1577,8 +1457,7 @@ procedure TPascalTypeKerningSubTable.SetIsCrossStream(const Value: Boolean);
 begin
   if IsCrossStream <> Value then
   begin
-    FCoverage := (FCoverage and (not(1 shl 2))) or
-      (Integer(Value = True) shl 2);
+    FCoverage := (FCoverage and (not(1 shl 2))) or (Integer(Value = True) shl 2);
     IsCrossStreamChanged;
   end;
 end;
@@ -1596,8 +1475,7 @@ procedure TPascalTypeKerningSubTable.SetIsMinimum(const Value: Boolean);
 begin
   if IsMinimum <> Value then
   begin
-    FCoverage := (FCoverage and (not(1 shl 1))) or
-      (Integer(Value = True) shl 1);
+    FCoverage := (FCoverage and (not(1 shl 1))) or (Integer(Value = True) shl 1);
     IsMinimumChanged;
   end;
 end;
@@ -1606,8 +1484,7 @@ procedure TPascalTypeKerningSubTable.SetIsReplace(const Value: Boolean);
 begin
   if IsReplace <> Value then
   begin
-    FCoverage := (FCoverage and (not(1 shl 3))) or
-      (Integer(Value = True) shl 3);
+    FCoverage := (FCoverage and (not(1 shl 3))) or (Integer(Value = True) shl 3);
     IsReplaceChanged;
   end;
 end;
@@ -1625,8 +1502,7 @@ procedure TPascalTypeKerningSubTable.AssignFormat;
 var
   OldFormatTable: TCustomPascalTypeKerningFormatSubTable;
 const
-  CFormatClasses: array [0..1]
-    of TCustomPascalTypeKerningFormatSubTableClass =
+  CFormatClasses: array[0..1] of TCustomPascalTypeKerningFormatSubTableClass =
     (TPascalTypeKerningFormat0SubTable, TPascalTypeKerningFormat2SubTable);
 begin
   case Format of
@@ -1687,8 +1563,8 @@ end;
 
 constructor TPascalTypeKerningTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
-  FKerningSubtableList := TObjectList.Create;
   inherited;
+  FKerningSubtableList := TObjectList.Create;
 end;
 
 destructor TPascalTypeKerningTable.Destroy;
@@ -1697,19 +1573,17 @@ begin
   inherited;
 end;
 
-procedure TPascalTypeKerningTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeKerningTable.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypeKerningTable(Dest) do
-    begin
-      FVersion := Self.FVersion;
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TPascalTypeKerningTable then
+  begin
+    FVersion := TPascalTypeKerningTable(Source).FVersion;
+    FKerningSubtableList.Assign(TPascalTypeKerningTable(Source).FKerningSubtableList);
+  end;
 end;
 
-function TPascalTypeKerningTable.GetKerningSubtable(Index: Integer)
-  : TPascalTypeKerningSubTable;
+function TPascalTypeKerningTable.GetKerningSubtable(Index: Integer): TPascalTypeKerningSubTable;
 begin
   if (Index >= 0) and (Index < FKerningSubtableList.Count) then
     Result := TPascalTypeKerningSubTable(FKerningSubtableList[Index])
@@ -1725,12 +1599,6 @@ end;
 class function TPascalTypeKerningTable.GetTableType: TTableType;
 begin
   Result.AsAnsiChar := 'kern';
-end;
-
-procedure TPascalTypeKerningTable.ResetToDefaults;
-begin
-  inherited;
-  FKerningSubtableList.Clear;
 end;
 
 procedure TPascalTypeKerningTable.LoadFromStream(Stream: TStream);
@@ -1815,16 +1683,14 @@ end;
 
 { TPascalTypeLinearThresholdTable }
 
-procedure TPascalTypeLinearThresholdTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeLinearThresholdTable.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypeLinearThresholdTable(Dest) do
-    begin
-      FVersion := Self.FVersion;
-      FVerticalPels := Self.FVerticalPels;
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TPascalTypeLinearThresholdTable then
+  begin
+    FVersion := TPascalTypeLinearThresholdTable(Source).FVersion;
+    FVerticalPels := TPascalTypeLinearThresholdTable(Source).FVerticalPels;
+  end;
 end;
 
 class function TPascalTypeLinearThresholdTable.GetTableType: TTableType;
@@ -1843,12 +1709,6 @@ end;
 function TPascalTypeLinearThresholdTable.GetVerticalPelCount: Integer;
 begin
   Result := Length(FVerticalPels);
-end;
-
-procedure TPascalTypeLinearThresholdTable.ResetToDefaults;
-begin
-  FVersion := 0;
-  SetLength(FVerticalPels, 0);
 end;
 
 procedure TPascalTypeLinearThresholdTable.LoadFromStream(Stream: TStream);
@@ -1907,29 +1767,33 @@ end;
 
 { TPascalTypePCL5Table }
 
-procedure TPascalTypePCL5Table.AssignTo(Dest: TPersistent);
+constructor TPascalTypePCL5Table.Create(const AStorage: IPascalTypeStorageTable);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypePCL5Table(Dest) do
-    begin
-      FVersion.Value := Self.FVersion.Value;
-      FFontNumber := Self.FFontNumber;
-      FPitch := Self.FPitch;
-      FXHeight := Self.FXHeight;
-      FStyle := Self.FStyle;
-      FTypeFamily := Self.FTypeFamily;
-      FCapHeight := Self.FCapHeight;
-      FSymbolSet := Self.FSymbolSet;
-      Move(Self.FTypeface, FTypeface, 16);
-      Move(Self.FCharacterComplement, FCharacterComplement, 8);
-      Move(Self.FFileName, FFileName, 6);
-      FStrokeWeight := Self.FStrokeWeight;
-      FWidthType := Self.FWidthType;
-      FSerifStyle := Self.FSerifStyle;
-      FPadding := Self.FPadding;
-    end
-  else
-    inherited;
+  inherited;
+  FVersion.Value := 1;
+end;
+
+procedure TPascalTypePCL5Table.Assign(Source: TPersistent);
+begin
+  inherited;
+  if Source is TPascalTypePCL5Table then
+  begin
+    FVersion := TPascalTypePCL5Table(Source).FVersion;
+    FFontNumber := TPascalTypePCL5Table(Source).FFontNumber;
+    FPitch := TPascalTypePCL5Table(Source).FPitch;
+    FXHeight := TPascalTypePCL5Table(Source).FXHeight;
+    FStyle := TPascalTypePCL5Table(Source).FStyle;
+    FTypeFamily := TPascalTypePCL5Table(Source).FTypeFamily;
+    FCapHeight := TPascalTypePCL5Table(Source).FCapHeight;
+    FSymbolSet := TPascalTypePCL5Table(Source).FSymbolSet;
+    FTypeface := TPascalTypePCL5Table(Source).FTypeface;
+    FCharacterComplement := TPascalTypePCL5Table(Source).FCharacterComplement;
+    FFileName := TPascalTypePCL5Table(Source).FFileName;
+    FStrokeWeight := TPascalTypePCL5Table(Source).FStrokeWeight;
+    FWidthType := TPascalTypePCL5Table(Source).FWidthType;
+    FSerifStyle := TPascalTypePCL5Table(Source).FSerifStyle;
+    FPadding := TPascalTypePCL5Table(Source).FPadding;
+  end;
 end;
 
 class function TPascalTypePCL5Table.GetTableType: TTableType;
@@ -1950,28 +1814,6 @@ end;
 function TPascalTypePCL5Table.GetTypeface: string;
 begin
   Result := string(FTypeface);
-end;
-
-procedure TPascalTypePCL5Table.ResetToDefaults;
-begin
-  FVersion.Value := 1;
-  FFontNumber.Vendor := 0;
-  FFontNumber.Specific[0] := 0;
-  FFontNumber.Specific[1] := 0;
-  FFontNumber.Specific[2] := 0;
-  FPitch := 0;
-  FXHeight := 0;
-  FStyle := 0;
-  FTypeFamily := 0;
-  FCapHeight := 0;
-  FSymbolSet := 0;
-  FillChar(FTypeface[0], 16, 0);
-  FillChar(FCharacterComplement[0], 8, 0);
-  FillChar(FFileName[0], 6, 0);
-  FStrokeWeight := #0;
-  FWidthType := #0;
-  FSerifStyle := 0;
-  FPadding := 0;
 end;
 
 procedure TPascalTypePCL5Table.LoadFromStream(Stream: TStream);
@@ -2277,25 +2119,15 @@ end;
 
 { TPascalTypeVDMXGroupTable }
 
-procedure TPascalTypeVDMXGroupTable.AssignTo(Dest: TPersistent);
-begin
-  if Dest is Self.ClassType then
-    with TPascalTypeVDMXGroupTable(Dest) do
-    begin
-      FStartsz := Self.FStartsz;
-      FEndsz := Self.FEndsz;
-      FEntry := Self.FEntry;
-    end
-  else
-    inherited;
-end;
-
-procedure TPascalTypeVDMXGroupTable.ResetToDefaults;
+procedure TPascalTypeVDMXGroupTable.Assign(Source: TPersistent);
 begin
   inherited;
-  FStartsz := 0;
-  FEndsz := 0;
-  SetLength(FEntry, 0);
+  if Source is TPascalTypeVDMXGroupTable then
+  begin
+    FStartsz := TPascalTypeVDMXGroupTable(Source).FStartsz;
+    FEndsz := TPascalTypeVDMXGroupTable(Source).FEndsz;
+    FEntry := TPascalTypeVDMXGroupTable(Source).FEntry;
+  end;
 end;
 
 procedure TPascalTypeVDMXGroupTable.LoadFromStream(Stream: TStream);
@@ -2371,8 +2203,8 @@ end;
 
 constructor TPascalTypeVerticalDeviceMetricsTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
-  FGroups := TObjectList.Create;
   inherited;
+  FGroups := TObjectList.Create;
 end;
 
 destructor TPascalTypeVerticalDeviceMetricsTable.Destroy;
@@ -2381,17 +2213,15 @@ begin
   inherited;
 end;
 
-procedure TPascalTypeVerticalDeviceMetricsTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeVerticalDeviceMetricsTable.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypeVerticalDeviceMetricsTable(Dest) do
-    begin
-      FVersion := Self.FVersion;
-      FRatios := Self.FRatios;
-      FGroups.Assign(Self.FGroups);
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TPascalTypeVerticalDeviceMetricsTable then
+  begin
+    FVersion := TPascalTypeVerticalDeviceMetricsTable(Source).FVersion;
+    FRatios := TPascalTypeVerticalDeviceMetricsTable(Source).FRatios;
+    FGroups.Assign(TPascalTypeVerticalDeviceMetricsTable(Source).FGroups);
+  end;
 end;
 
 function TPascalTypeVerticalDeviceMetricsTable.GetGroupCount: Word;
@@ -2407,13 +2237,6 @@ end;
 class function TPascalTypeVerticalDeviceMetricsTable.GetTableType: TTableType;
 begin
   Result.AsAnsiChar := 'VDMX';
-end;
-
-procedure TPascalTypeVerticalDeviceMetricsTable.ResetToDefaults;
-begin
-  FVersion := 0;
-  SetLength(FRatios, 0);
-  FGroups.Clear;
 end;
 
 procedure TPascalTypeVerticalDeviceMetricsTable.LoadFromStream(Stream: TStream);
@@ -2507,54 +2330,30 @@ end;
 
 { TPascalTypeVerticalHeaderTable }
 
-procedure TPascalTypeVerticalHeaderTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeVerticalHeaderTable.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypeVerticalHeaderTable(Dest) do
-    begin
-      FVersion := Self.FVersion;
-      FAscent := Self.FAscent;
-      FDescent := Self.FDescent;
-      FLineGap := Self.FLineGap;
-      FAdvanceHeightMax := Self.FAdvanceHeightMax;
-      FMinTopSideBearing := Self.FMinTopSideBearing;
-      FMinBottomSideBearing := Self.FMinBottomSideBearing;
-      FYMaxExtent := Self.FYMaxExtent;
-      FCaretSlopeRise := Self.FCaretSlopeRise;
-      FCaretSlopeRun := Self.FCaretSlopeRun;
-      FCaretOffset := Self.FCaretOffset;
-      FMetricDataFormat := Self.FMetricDataFormat;
-      FNumOfLongVerMetrics := Self.FNumOfLongVerMetrics;
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TPascalTypeVerticalHeaderTable then
+  begin
+    FVersion := TPascalTypeVerticalHeaderTable(Source).FVersion;
+    FAscent := TPascalTypeVerticalHeaderTable(Source).FAscent;
+    FDescent := TPascalTypeVerticalHeaderTable(Source).FDescent;
+    FLineGap := TPascalTypeVerticalHeaderTable(Source).FLineGap;
+    FAdvanceHeightMax := TPascalTypeVerticalHeaderTable(Source).FAdvanceHeightMax;
+    FMinTopSideBearing := TPascalTypeVerticalHeaderTable(Source).FMinTopSideBearing;
+    FMinBottomSideBearing := TPascalTypeVerticalHeaderTable(Source).FMinBottomSideBearing;
+    FYMaxExtent := TPascalTypeVerticalHeaderTable(Source).FYMaxExtent;
+    FCaretSlopeRise := TPascalTypeVerticalHeaderTable(Source).FCaretSlopeRise;
+    FCaretSlopeRun := TPascalTypeVerticalHeaderTable(Source).FCaretSlopeRun;
+    FCaretOffset := TPascalTypeVerticalHeaderTable(Source).FCaretOffset;
+    FMetricDataFormat := TPascalTypeVerticalHeaderTable(Source).FMetricDataFormat;
+    FNumOfLongVerMetrics := TPascalTypeVerticalHeaderTable(Source).FNumOfLongVerMetrics;
+  end;
 end;
 
 class function TPascalTypeVerticalHeaderTable.GetTableType: TTableType;
 begin
   Result.AsAnsiChar := 'vhea';
-end;
-
-procedure TPascalTypeVerticalHeaderTable.ResetToDefaults;
-begin
-  // not implemented yet
-  FVersion.Value := 1;
-  FVersion.Fract := 0;
-  FAscent := 0;
-  FDescent := 0;
-  FLineGap := 0;
-  FAdvanceHeightMax := 0;
-  FMinTopSideBearing := 0;
-  FMinBottomSideBearing := 0;
-  FYMaxExtent := 0;
-  FCaretSlopeRise := 0;
-  FCaretSlopeRun := 0;
-  FCaretOffset := 0;
-  FillChar(FReserved[0], 8, 0);
-  FMetricDataFormat := 0;
-  FNumOfLongVerMetrics := 0;
-
-  inherited;
 end;
 
 procedure TPascalTypeVerticalHeaderTable.LoadFromStream(Stream: TStream);
@@ -2817,6 +2616,12 @@ begin
   Changed;
 end;
 
+constructor TPascalTypeVerticalHeaderTable.Create(const AStorage: IPascalTypeStorageTable);
+begin
+  inherited;
+  FVersion.Value := 1;
+end;
+
 procedure TPascalTypeVerticalHeaderTable.DescentChanged;
 begin
   Changed;
@@ -2860,15 +2665,11 @@ end;
 
 { TPascalTypeVerticalMetricsTable }
 
-procedure TPascalTypeVerticalMetricsTable.AssignTo(Dest: TPersistent);
+procedure TPascalTypeVerticalMetricsTable.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypeVerticalMetricsTable(Dest) do
-    begin
-      FVerticalMetrics := Self.FVerticalMetrics;
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TPascalTypeVerticalMetricsTable then
+    FVerticalMetrics := TPascalTypeVerticalMetricsTable(Source).FVerticalMetrics;
 end;
 
 class function TPascalTypeVerticalMetricsTable.GetTableType: TTableType;
@@ -2876,8 +2677,7 @@ begin
   Result.AsAnsiChar := 'vdmx';
 end;
 
-function TPascalTypeVerticalMetricsTable.GetVerticalMetric(Index: Integer)
-  : TVerticalMetric;
+function TPascalTypeVerticalMetricsTable.GetVerticalMetric(Index: Integer): TVerticalMetric;
 begin
   if (Index >= 0) and (Index < Length(FVerticalMetrics)) then
     Result := FVerticalMetrics[Index]
@@ -2888,13 +2688,6 @@ end;
 function TPascalTypeVerticalMetricsTable.GetVerticalMetricCount: Integer;
 begin
   Result := Length(FVerticalMetrics);
-end;
-
-procedure TPascalTypeVerticalMetricsTable.ResetToDefaults;
-begin
-  inherited;
-
-  SetLength(FVerticalMetrics, 0);
 end;
 
 procedure TPascalTypeVerticalMetricsTable.LoadFromStream(Stream: TStream);

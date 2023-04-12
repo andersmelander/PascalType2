@@ -45,9 +45,11 @@ type
     FGlyphIdArray: array [0..255] of Byte; // An array that maps character codes to glyph index values.
   protected
     class function GetFormat: Word; override;
-    procedure ResetToDefaults; override;
-    procedure AssignTo(Dest: TPersistent); override;
   public
+    constructor Create; override;
+
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -60,9 +62,9 @@ type
     FLanguage: Word; // Please see 'Note on the language field in 'cmap' subtables' in this document.
   protected
     class function GetFormat: Word; override;
-    procedure ResetToDefaults; override;
-    procedure AssignTo(Dest: TPersistent); override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -84,9 +86,9 @@ type
     FGlyphIdArray: array of Word;     // Glyph index array (arbitrary length)  protected
   protected
     class function GetFormat: Word; override;
-    procedure ResetToDefaults; override;
-    procedure AssignTo(Dest: TPersistent); override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -101,9 +103,9 @@ type
     function GetEntryCount: Word;
   protected
     class function GetFormat: Word; override;
-    procedure ResetToDefaults; override;
-    procedure AssignTo(Dest: TPersistent); override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -124,9 +126,9 @@ type
     FCoverageArray: array of TCharMapSegmentedCoverageRecord;
   protected
     class function GetFormat: Word; override;
-    procedure ResetToDefaults; override;
-    procedure AssignTo(Dest: TPersistent); override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -141,19 +143,19 @@ uses
 
 { TPascalTypeFormat0CharacterMap }
 
-class function TPascalTypeFormat0CharacterMap.GetFormat: Word;
-begin
-  Result := 0;
-end;
-
-procedure TPascalTypeFormat0CharacterMap.ResetToDefaults;
+constructor TPascalTypeFormat0CharacterMap.Create;
 var
   GlyphIdIndex: Byte;
 begin
-  FLength := 0;
-  FLanguage := 0;
+  inherited;
+
   for GlyphIdIndex := Low(Byte) to High(Byte) do
     FGlyphIdArray[GlyphIdIndex] := GlyphIdIndex;
+end;
+
+class function TPascalTypeFormat0CharacterMap.GetFormat: Word;
+begin
+  Result := 0;
 end;
 
 procedure TPascalTypeFormat0CharacterMap.LoadFromStream(Stream: TStream);
@@ -183,17 +185,15 @@ begin
   WriteSwappedWord(Stream, FLanguage);
 end;
 
-procedure TPascalTypeFormat0CharacterMap.AssignTo(Dest: TPersistent);
+procedure TPascalTypeFormat0CharacterMap.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypeFormat0CharacterMap(Dest) do
-    begin
-      FLength := Self.FLength;
-      FLanguage := Self.FLanguage;
-      FGlyphIdArray := Self.FGlyphIdArray;
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TPascalTypeFormat0CharacterMap then
+  begin
+    FLength := TPascalTypeFormat0CharacterMap(Source).FLength;
+    FLanguage := TPascalTypeFormat0CharacterMap(Source).FLanguage;
+    FGlyphIdArray := TPascalTypeFormat0CharacterMap(Source).FGlyphIdArray;
+  end;
 end;
 
 function TPascalTypeFormat0CharacterMap.CharacterToGlyph(CharacterIndex: Integer): Integer;
@@ -212,22 +212,14 @@ begin
   Result := 2;
 end;
 
-procedure TPascalTypeFormat2CharacterMap.ResetToDefaults;
+procedure TPascalTypeFormat2CharacterMap.Assign(Source: TPersistent);
 begin
-  FLength := 0;
-  FLanguage := 0;
-end;
-
-procedure TPascalTypeFormat2CharacterMap.AssignTo(Dest: TPersistent);
-begin
-  if Dest is Self.ClassType then
-    with TPascalTypeFormat2CharacterMap(Dest) do
-    begin
-      FLength := Self.FLength;
-      FLanguage := Self.FLanguage;
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TPascalTypeFormat2CharacterMap then
+  begin
+    FLength := TPascalTypeFormat2CharacterMap(Source).FLength;
+    FLanguage := TPascalTypeFormat2CharacterMap(Source).FLanguage;
+  end;
 end;
 
 function TPascalTypeFormat2CharacterMap.CharacterToGlyph(CharacterIndex: Integer): Integer;
@@ -271,31 +263,23 @@ begin
   Result := 4;
 end;
 
-procedure TPascalTypeFormat4CharacterMap.ResetToDefaults;
+procedure TPascalTypeFormat4CharacterMap.Assign(Source: TPersistent);
 begin
-  FLength := 0;
-  FLanguage := 0;
-end;
-
-procedure TPascalTypeFormat4CharacterMap.AssignTo(Dest: TPersistent);
-begin
-  if Dest is Self.ClassType then
-    with TPascalTypeFormat4CharacterMap(Dest) do
-    begin
-      FLength := Self.FLength;
-      FLanguage := Self.FLanguage;
-      FSegCountX2 := Self.FSegCountX2;
-      FSearchRange := Self.FSearchRange;
-      FEntrySelector := Self.FEntrySelector;
-      FRangeShift := Self.FRangeShift;
-      FEndCount := Self.FEndCount;
-      FStartCount := Self.FStartCount;
-      FIdDelta := Self.FIdDelta;
-      FIdRangeOffset := Self.FIdRangeOffset;
-      FGlyphIdArray := Self.FGlyphIdArray;
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TPascalTypeFormat4CharacterMap then
+  begin
+    FLength := TPascalTypeFormat4CharacterMap(Source).FLength;
+    FLanguage := TPascalTypeFormat4CharacterMap(Source).FLanguage;
+    FSegCountX2 := TPascalTypeFormat4CharacterMap(Source).FSegCountX2;
+    FSearchRange := TPascalTypeFormat4CharacterMap(Source).FSearchRange;
+    FEntrySelector := TPascalTypeFormat4CharacterMap(Source).FEntrySelector;
+    FRangeShift := TPascalTypeFormat4CharacterMap(Source).FRangeShift;
+    FEndCount := TPascalTypeFormat4CharacterMap(Source).FEndCount;
+    FStartCount := TPascalTypeFormat4CharacterMap(Source).FStartCount;
+    FIdDelta := TPascalTypeFormat4CharacterMap(Source).FIdDelta;
+    FIdRangeOffset := TPascalTypeFormat4CharacterMap(Source).FIdRangeOffset;
+    FGlyphIdArray := TPascalTypeFormat4CharacterMap(Source).FGlyphIdArray;
+  end;
 end;
 
 function TPascalTypeFormat4CharacterMap.CharacterToGlyph(CharacterIndex: Integer): Integer;
@@ -465,17 +449,15 @@ end;
 
 { TPascalTypeFormat6CharacterMap }
 
-procedure TPascalTypeFormat6CharacterMap.AssignTo(Dest: TPersistent);
+procedure TPascalTypeFormat6CharacterMap.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypeFormat6CharacterMap(Dest) do
-    begin
-      FLanguage := Self.FLanguage;
-      FFirstCode := Self.FFirstCode;
-      FGlyphIdArray := Self.FGlyphIdArray;
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TPascalTypeFormat6CharacterMap then
+  begin
+    FLanguage := TPascalTypeFormat6CharacterMap(Source).FLanguage;
+    FFirstCode := TPascalTypeFormat6CharacterMap(Source).FFirstCode;
+    FGlyphIdArray := TPascalTypeFormat6CharacterMap(Source).FGlyphIdArray;
+  end;
 end;
 
 function TPascalTypeFormat6CharacterMap.CharacterToGlyph(CharacterIndex: Integer): Integer;
@@ -494,13 +476,6 @@ end;
 class function TPascalTypeFormat6CharacterMap.GetFormat: Word;
 begin
   Result := 6
-end;
-
-procedure TPascalTypeFormat6CharacterMap.ResetToDefaults;
-begin
-  FLanguage := 0;
-  FFirstCode := 0;
-  SetLength(FGlyphIdArray, 0);
 end;
 
 procedure TPascalTypeFormat6CharacterMap.LoadFromStream(Stream: TStream);
@@ -570,16 +545,14 @@ end;
 
 { TPascalTypeFormat12CharacterMap }
 
-procedure TPascalTypeFormat12CharacterMap.AssignTo(Dest: TPersistent);
+procedure TPascalTypeFormat12CharacterMap.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypeFormat12CharacterMap(Dest) do
-    begin
-      FLanguage := Self.FLanguage;
-      FCoverageArray := Self.FCoverageArray;
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TPascalTypeFormat12CharacterMap then
+  begin
+    FLanguage := TPascalTypeFormat12CharacterMap(Source).FLanguage;
+    FCoverageArray := TPascalTypeFormat12CharacterMap(Source).FCoverageArray;
+  end;
 end;
 
 function TPascalTypeFormat12CharacterMap.CharacterToGlyph(CharacterIndex: Integer): Integer;
@@ -607,12 +580,6 @@ end;
 class function TPascalTypeFormat12CharacterMap.GetFormat: Word;
 begin
   Result := 12;
-end;
-
-procedure TPascalTypeFormat12CharacterMap.ResetToDefaults;
-begin
-  FLanguage := 0;
-  SetLength(FCoverageArray, 0);
 end;
 
 procedure TPascalTypeFormat12CharacterMap.LoadFromStream(Stream: TStream);

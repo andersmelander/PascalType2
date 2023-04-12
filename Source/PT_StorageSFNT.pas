@@ -63,7 +63,7 @@ type
     function GetTableByTableType(TableType: TTableType): TCustomPascalTypeNamedTable; virtual; abstract;
     function GetTableByTableClass(TableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable; virtual; abstract;
 
-    procedure DirectoryTableReaded(DirectoryTable: TPascalTypeDirectoryTable); virtual;
+    procedure DirectoryTableReaded(DirectoryTable: TPascalTypeDirectoryTable); virtual; // TODO : Rename
     procedure LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry); virtual; abstract;
 
 {$IFDEF ChecksumTest}
@@ -306,7 +306,7 @@ end;
 procedure TCustomPascalTypeStorageSFNT.DirectoryTableReaded(DirectoryTable: TPascalTypeDirectoryTable);
 begin
   // optimize table read order
-  DirectoryTable.TableList.SortByOffset;
+  DirectoryTable.TableList.Sort;
 end;
 
 function TCustomPascalTypeStorageSFNT.GetFontFamilyName: WideString;

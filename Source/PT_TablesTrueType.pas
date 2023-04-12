@@ -45,15 +45,13 @@ type
     FControlValues: array of SmallInt;
     function GetControlValue(Index: Integer): SmallInt;
     function GetControlValueCount: Integer;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -70,13 +68,11 @@ type
     FInstructions: array of Byte;
     function GetInstruction(Index: Integer): Byte;
     function GetInstructionCount: Integer;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -103,11 +99,9 @@ type
     FInstructions: array of Byte;
     function GetInstruction(Index: Integer): Byte;
     function GetInstructionCount: Integer;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -131,10 +125,6 @@ type
     FYMax        : SmallInt; // Maximum y for coordinate data.
     FInstructions: TTrueTypeFontGlyphInstructionTable;
 
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
-
     function GetContourCount: Integer; virtual; abstract;
 
     procedure GlyphIndexChanged; virtual;
@@ -146,6 +136,8 @@ type
   public
     constructor Create(const Storage: IPascalTypeStorageTable); reintroduce; virtual;
     destructor Destroy; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -184,10 +176,11 @@ type
     function GetIsClockwise: Boolean;
     function GetArea: Integer;
   protected
-    procedure AssignTo(Dest: TPersistent); override;
     procedure PointCountChanged; virtual;
     property Points: TContourPointRecordArray read FPoints;
   public
+    procedure Assign(Source: TPersistent); override;
+
     property Area                 : Integer read GetArea;
     property IsClockwise          : Boolean read GetIsClockwise;
     property Point[Index: Integer]: TContourPointRecord read GetPoint write SetPoint;
@@ -213,12 +206,11 @@ type
     function GetContour(Index: Integer): TPascalTypeTrueTypeContour;
     procedure FreeContourArrayItems;
   protected
-    procedure ResetToDefaults; override;
-    procedure AssignTo(Dest: TPersistent); override;
-
     function GetContourCount: Integer; override;
   public
     destructor Destroy; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -254,15 +246,14 @@ type
     procedure SetFlags(const Value: Word);
     procedure SetGlyphIndex(const Value: Word);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-    procedure ResetToDefaults; override;
-
     procedure FlagsChanged; virtual;
     procedure GlyphIndexChanged; virtual;
 
     function FlagMoreComponents: boolean;
     function FlagHasInstructions: boolean;
   public
+    procedure Assign(Source: TPersistent); override;
+
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
@@ -278,13 +269,11 @@ type
     function GetGlyphCount: Integer;
     function GetCompositeGlyph(Index: Integer): TPascalTypeCompositeGlyph;
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
-
     function GetContourCount: Integer; override;
   public
     destructor Destroy; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -299,14 +288,12 @@ type
     function GetGlyphDataCount: Integer;
     function GetGlyphData(Index: Integer): TCustomTrueTypeFontGlyphData;
     procedure FreeGlyphDataListItems;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -323,12 +310,10 @@ type
     FLocations: array of Cardinal;
     function GetLocation(Index: Integer): Cardinal;
     function GetLocationCount: Cardinal;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
   public
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -340,8 +325,7 @@ type
 
   // table 'prep'
 
-  TTrueTypeFontControlValueProgramTable = class
-    (TCustomTrueTypeFontInstructionTable)
+  TTrueTypeFontControlValueProgramTable = class(TCustomTrueTypeFontInstructionTable)
   public
     class function GetTableType: TTableType; override;
   end;
@@ -366,15 +350,11 @@ begin
   inherited;
 end;
 
-procedure TTrueTypeFontControlValueTable.AssignTo(Dest: TPersistent);
+procedure TTrueTypeFontControlValueTable.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TTrueTypeFontControlValueTable(Dest) do
-    begin
-      FControlValues := Self.FControlValues;
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TTrueTypeFontControlValueTable then
+    FControlValues := TTrueTypeFontControlValueTable(Source).FControlValues;
 end;
 
 class function TTrueTypeFontControlValueTable.GetTableType: TTableType;
@@ -382,18 +362,11 @@ begin
   Result.AsAnsiChar := 'cvt ';
 end;
 
-procedure TTrueTypeFontControlValueTable.ResetToDefaults;
+function TTrueTypeFontControlValueTable.GetControlValue(Index: Integer): SmallInt;
 begin
-  SetLength(FControlValues, 0);
-end;
-
-function TTrueTypeFontControlValueTable.GetControlValue(Index: Integer)
-  : SmallInt;
-begin
-  if (Index < Length(FControlValues)) then
-    Result := Swap16(FControlValues[Index])
-  else
+  if (Index > High(FControlValues)) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := Swap16(FControlValues[Index]);
 end;
 
 function TTrueTypeFontControlValueTable.GetControlValueCount: Integer;
@@ -437,29 +410,18 @@ begin
   inherited;
 end;
 
-procedure TCustomTrueTypeFontInstructionTable.AssignTo(Dest: TPersistent);
+procedure TCustomTrueTypeFontInstructionTable.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TCustomTrueTypeFontInstructionTable(Dest) do
-    begin
-      FInstructions := Self.FInstructions;
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TCustomTrueTypeFontInstructionTable then
+    FInstructions := TCustomTrueTypeFontInstructionTable(Source).FInstructions;
 end;
 
-procedure TCustomTrueTypeFontInstructionTable.ResetToDefaults;
+function TCustomTrueTypeFontInstructionTable.GetInstruction(Index: Integer): Byte;
 begin
-  SetLength(FInstructions, 0);
-end;
-
-function TCustomTrueTypeFontInstructionTable.GetInstruction
-  (Index: Integer): Byte;
-begin
-  if (Index < Length(FInstructions)) then
-    Result := FInstructions[Index]
-  else
+  if (Index > High(FInstructions)) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FInstructions[Index];
 end;
 
 function TCustomTrueTypeFontInstructionTable.GetInstructionCount: Integer;
@@ -469,23 +431,21 @@ end;
 
 procedure TCustomTrueTypeFontInstructionTable.LoadFromStream(Stream: TStream);
 begin
-  with Stream do
-  begin
-    SetLength(FInstructions, Size);
+  SetLength(FInstructions, Stream.Size);
 
-    // check for minimal table size
-    if Position + Length(FInstructions) > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check for minimal table size
+  if Stream.Position + Length(FInstructions) > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read control values
-    Read(FInstructions[0], Length(FInstructions) * SizeOf(Word));
-  end;
+  // read control values
+  Stream.Read(FInstructions[0], Length(FInstructions) * SizeOf(Word));
 end;
 
 procedure TCustomTrueTypeFontInstructionTable.SaveToStream(Stream: TStream);
 begin
   // write instructions
-  Stream.Write(FInstructions[0], Length(FInstructions));
+  if (Length(FInstructions) > 0) then
+    Stream.Write(FInstructions[0], Length(FInstructions));
 end;
 
 
@@ -499,34 +459,24 @@ end;
 
 { TTrueTypeFontGlyphInstructionTable }
 
-procedure TTrueTypeFontGlyphInstructionTable.AssignTo(Dest: TPersistent);
+procedure TTrueTypeFontGlyphInstructionTable.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TTrueTypeFontGlyphInstructionTable(Dest) do
-    begin
-      FInstructions := Self.FInstructions;
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TTrueTypeFontGlyphInstructionTable then
+    FInstructions := TTrueTypeFontGlyphInstructionTable(Source).FInstructions;
 end;
 
 function TTrueTypeFontGlyphInstructionTable.GetInstruction
   (Index: Integer): Byte;
 begin
-  if (Index < Length(FInstructions)) then
-    Result := FInstructions[Index]
-  else
+  if (Index > High(FInstructions)) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FInstructions[Index];
 end;
 
 function TTrueTypeFontGlyphInstructionTable.GetInstructionCount: Integer;
 begin
   Result := Length(FInstructions);
-end;
-
-procedure TTrueTypeFontGlyphInstructionTable.ResetToDefaults;
-begin
-  SetLength(FInstructions, 0);
 end;
 
 procedure TTrueTypeFontGlyphInstructionTable.LoadFromStream(Stream: TStream);
@@ -573,8 +523,8 @@ end;
 
 constructor TCustomTrueTypeFontGlyphData.Create(const Storage: IPascalTypeStorageTable);
 begin
-  FInstructions := TTrueTypeFontGlyphInstructionTable.Create(Storage);
   inherited Create(Storage);
+  FInstructions := TTrueTypeFontGlyphInstructionTable.Create(Storage);
 end;
 
 destructor TCustomTrueTypeFontGlyphData.Destroy;
@@ -604,28 +554,17 @@ begin
   Changed;
 end;
 
-procedure TCustomTrueTypeFontGlyphData.AssignTo(Dest: TPersistent);
+procedure TCustomTrueTypeFontGlyphData.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TCustomTrueTypeFontGlyphData(Dest) do
-    begin
-      FNumberOfContours := Self.FNumberOfContours;
-      FXMin := Self.FXMin;
-      FYMin := Self.FYMin;
-      FXMax := Self.FXMax;
-      FYMax := Self.FYMax;
-    end
-  else
-    inherited;
-end;
-
-procedure TCustomTrueTypeFontGlyphData.ResetToDefaults;
-begin
-  FNumberOfContours := 0;
-  FXMin := 0;
-  FYMin := 0;
-  FXMax := 0;
-  FYMax := 0;
+  inherited;
+  if Source is TCustomTrueTypeFontGlyphData then
+  begin
+    FNumberOfContours := TCustomTrueTypeFontGlyphData(Source).FNumberOfContours;
+    FXMin := TCustomTrueTypeFontGlyphData(Source).FXMin;
+    FYMin := TCustomTrueTypeFontGlyphData(Source).FYMin;
+    FXMax := TCustomTrueTypeFontGlyphData(Source).FXMax;
+    FYMax := TCustomTrueTypeFontGlyphData(Source).FYMax;
+  end;
 end;
 
 procedure TCustomTrueTypeFontGlyphData.LoadFromStream(Stream: TStream);
@@ -766,15 +705,13 @@ end;
 
 { TPascalTypeTrueTypeContour }
 
-procedure TPascalTypeTrueTypeContour.AssignTo(Dest: TPersistent);
+procedure TPascalTypeTrueTypeContour.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypeTrueTypeContour(Dest) do
-    begin
-      FPoints := Self.FPoints;
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TPascalTypeTrueTypeContour then
+    // Note: Dynamic arrays are reference types. This just copies the pointer.
+    // See SetPoint.
+    FPoints := TPascalTypeTrueTypeContour(Source).Points;
 end;
 
 function TPascalTypeTrueTypeContour.GetArea: Integer;
@@ -813,6 +750,8 @@ procedure TPascalTypeTrueTypeContour.SetPoint(Index: Integer; const Value: TCont
 begin
   if (Index < 0) or (Index > High(FPoints)) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  // Ensure that our array has a reference count of 1 (in case it was copied with Assign)
+  SetLength(FPoints, Length(FPoints));
   FPoints[Index] := Value;
 end;
 
@@ -844,33 +783,31 @@ begin
   inherited;
 end;
 
-procedure TTrueTypeFontSimpleGlyphData.AssignTo(Dest: TPersistent);
+procedure TTrueTypeFontSimpleGlyphData.Assign(Source: TPersistent);
 var
   ContourIndex: Integer;
 begin
-  if Dest is Self.ClassType then
-    with TTrueTypeFontSimpleGlyphData(Dest) do
+  inherited;
+  if Source is TTrueTypeFontSimpleGlyphData then
+  begin
+    // eventually clear not used contours
+    for ContourIndex := Length(TTrueTypeFontSimpleGlyphData(Source).FContours) to High(FContours) do
+      FreeAndNil(FContours[ContourIndex]);
+
+    // set length of countour array
+    SetLength(FContours, Length(TTrueTypeFontSimpleGlyphData(Source).FContours));
+
+    // assign contours
+    for ContourIndex := 0 to High(FContours) do
     begin
-      // eventually clear not used contours
-      for ContourIndex := Length(Self.FContours) to High(FContours) do
-        FreeAndNil(FContours[ContourIndex]);
+      // eventually create the contour
+      if (FContours[ContourIndex] = nil) then
+        FContours[ContourIndex] := TPascalTypeTrueTypeContour.Create;
 
-      // set length of countour array
-      SetLength(FContours, Length(Self.FContours));
-
-      // assign contours
-      for ContourIndex := 0 to High(Self.FContours) do
-      begin
-        // eventually create the contour
-        if (FContours[ContourIndex] = nil) then
-          FContours[ContourIndex] := TPascalTypeTrueTypeContour.Create;
-
-        // assign contour
-        FContours[ContourIndex].Assign(Self.FContours[ContourIndex]);
-      end;
-    end
-  else
-    inherited;
+      // assign contour
+      FContours[ContourIndex].Assign(TTrueTypeFontSimpleGlyphData(Source).FContours[ContourIndex]);
+    end;
+  end;
 end;
 
 procedure TTrueTypeFontSimpleGlyphData.FreeContourArrayItems;
@@ -879,15 +816,6 @@ var
 begin
   for ContourIndex := 0 to High(FContours) do
     FreeAndNil(FContours[ContourIndex]);
-end;
-
-procedure TTrueTypeFontSimpleGlyphData.ResetToDefaults;
-begin
-  FInstructions.ResetToDefaults;
-
-  // free contour list
-  FreeContourArrayItems;
-  SetLength(FContours, 0);
 end;
 
 function TTrueTypeFontSimpleGlyphData.GetContour(Index: Integer): TPascalTypeTrueTypeContour;
@@ -1144,25 +1072,15 @@ end;
 
 { TPascalTypeCompositeGlyph }
 
-procedure TPascalTypeCompositeGlyph.AssignTo(Dest: TPersistent);
+procedure TPascalTypeCompositeGlyph.Assign(Source: TPersistent);
 begin
-  if Dest is Self.ClassType then
-    with TTrueTypeFontCompositeGlyphData(Dest) do
-    begin
-      FFlags := Self.FFlags;
-      FGlyphIndex := Self.FGlyphIndex;
-      FArgument := Self.FArgument;
-    end
-  else
-    inherited;
-end;
-
-procedure TPascalTypeCompositeGlyph.ResetToDefaults;
-begin
-  FFlags := 0;
-  FGlyphIndex := 0;
-  FArgument[0] := 0;
-  FArgument[1] := 0;
+  inherited;
+  if Source is TPascalTypeCompositeGlyph then
+  begin
+    FFlags := TPascalTypeCompositeGlyph(Source).FFlags;
+    FGlyphIndex := TPascalTypeCompositeGlyph(Source).FGlyphIndex;
+    FArgument := TPascalTypeCompositeGlyph(Source).FArgument;
+  end;
 end;
 
 procedure TPascalTypeCompositeGlyph.LoadFromStream(Stream: TStream);
@@ -1343,33 +1261,31 @@ begin
   inherited;
 end;
 
-procedure TTrueTypeFontCompositeGlyphData.AssignTo(Dest: TPersistent);
+procedure TTrueTypeFontCompositeGlyphData.Assign(Source: TPersistent);
 var
   GlyphsIndex: Integer;
 begin
-  if Dest is Self.ClassType then
-    with TTrueTypeFontCompositeGlyphData(Dest) do
+  inherited;
+  if Source is Self.ClassType then
+  begin
+    // eventually clear not used contours
+    for GlyphsIndex := Length(TTrueTypeFontCompositeGlyphData(Source).FGlyphs) to High(FGlyphs) do
+      FreeAndNil(FGlyphs[GlyphsIndex]);
+
+    // set length of countour array
+    SetLength(FGlyphs, Length(TTrueTypeFontCompositeGlyphData(Source).FGlyphs));
+
+    // assign contours
+    for GlyphsIndex := 0 to High(FGlyphs) do
     begin
-      // eventually clear not used contours
-      for GlyphsIndex := Length(Self.FGlyphs) to High(FGlyphs) do
-        FreeAndNil(FGlyphs[GlyphsIndex]);
+      // eventually create the contour
+      if (FGlyphs[GlyphsIndex] = nil) then
+        FGlyphs[GlyphsIndex] := TPascalTypeCompositeGlyph.Create;
 
-      // set length of countour array
-      SetLength(FGlyphs, Length(Self.FGlyphs));
-
-      // assign contours
-      for GlyphsIndex := 0 to High(Self.FGlyphs) do
-      begin
-        // eventually create the contour
-        if (FGlyphs[GlyphsIndex] = nil) then
-          FGlyphs[GlyphsIndex] := TPascalTypeCompositeGlyph.Create;
-
-        // assign contour
-        FGlyphs[GlyphsIndex].Assign(Self.FGlyphs[GlyphsIndex]);
-      end;
-    end
-  else
-    inherited;
+      // assign contour
+      FGlyphs[GlyphsIndex].Assign(TTrueTypeFontCompositeGlyphData(Source).FGlyphs[GlyphsIndex]);
+    end;
+  end;
 end;
 
 function TTrueTypeFontCompositeGlyphData.GetCompositeGlyph(Index: Integer): TPascalTypeCompositeGlyph;
@@ -1400,18 +1316,6 @@ end;
 function TTrueTypeFontCompositeGlyphData.GetGlyphCount: Integer;
 begin
   Result := Length(FGlyphs);
-end;
-
-procedure TTrueTypeFontCompositeGlyphData.ResetToDefaults;
-var
-  SubGlyphIndex: Integer;
-begin
-  FInstructions.ResetToDefaults;
-
-  // free Glyph list
-  for SubGlyphIndex := 0 to High(FGlyphs) do
-    FreeAndNil(FGlyphs[SubGlyphIndex]);
-  SetLength(FGlyphs, 0);
 end;
 
 procedure TTrueTypeFontCompositeGlyphData.LoadFromStream(Stream: TStream);
@@ -1474,34 +1378,32 @@ begin
   inherited;
 end;
 
-procedure TTrueTypeFontGlyphDataTable.AssignTo(Dest: TPersistent);
+procedure TTrueTypeFontGlyphDataTable.Assign(Source: TPersistent);
 var
   GlyphsIndex: Integer;
   GlyphClass : TTrueTypeFontGlyphDataClass;
 begin
-  if Dest is Self.ClassType then
-    with TTrueTypeFontGlyphDataTable(Dest) do
+  inherited;
+  if Source is TTrueTypeFontGlyphDataTable then
+  begin
+    // free all glyph data
+    FreeGlyphDataListItems;
+
+    // set length of countour array
+    SetLength(FGlyphDataList, Length(TTrueTypeFontGlyphDataTable(Source).FGlyphDataList));
+
+    // assign contours
+    for GlyphsIndex := 0 to Length(FGlyphDataList) - 1 do
     begin
-      // free all glyph data
-      FreeGlyphDataListItems;
+      GlyphClass := TTrueTypeFontGlyphDataClass(TTrueTypeFontGlyphDataTable(Source).FGlyphDataList[GlyphsIndex].ClassType);
 
-      // set length of countour array
-      SetLength(FGlyphDataList, Length(Self.FGlyphDataList));
+      // eventually create the contour
+      FGlyphDataList[GlyphsIndex] := GlyphClass.Create(Storage);
 
-      // assign contours
-      for GlyphsIndex := 0 to Length(Self.FGlyphDataList) - 1 do
-      begin
-        GlyphClass := TTrueTypeFontGlyphDataClass(Self.FGlyphDataList[GlyphsIndex].ClassType);
-
-        // eventually create the contour
-        FGlyphDataList[GlyphsIndex] := GlyphClass.Create(Storage);
-
-        // assign contour
-        FGlyphDataList[GlyphsIndex].Assign(Self.FGlyphDataList[GlyphsIndex]);
-      end;
-    end
-  else
-    inherited;
+      // assign contour
+      FGlyphDataList[GlyphsIndex].Assign(TTrueTypeFontGlyphDataTable(Source).FGlyphDataList[GlyphsIndex]);
+    end;
+  end;
 end;
 
 function TTrueTypeFontGlyphDataTable.GetGlyphData(Index: Integer): TCustomTrueTypeFontGlyphData;
@@ -1519,15 +1421,6 @@ end;
 class function TTrueTypeFontGlyphDataTable.GetTableType: TTableType;
 begin
   Result.AsAnsiChar := 'glyf';
-end;
-
-procedure TTrueTypeFontGlyphDataTable.ResetToDefaults;
-begin
-  // free glyph list items
-  FreeGlyphDataListItems;
-
-  // set glyph data list length to zero
-  SetLength(FGlyphDataList, 0);
 end;
 
 procedure TTrueTypeFontGlyphDataTable.FreeGlyphDataListItems;
@@ -1591,7 +1484,7 @@ begin
       FGlyphDataList[LocIndex].LoadFromStream(Stream);
     except
       on e: EPascalTypeError do
-        raise EPascalTypeError.CreateFmt('Error loading glyph #%d'#10 + e.Message, [LocIndex]);
+        Exception.RaiseOuterException(EPascalTypeError.CreateFmt('Error loading glyph #%d'#10 + e.Message, [LocIndex]));
     end;
   end;
 
@@ -1612,20 +1505,11 @@ end;
 
 { TTrueTypeFontLocationTable }
 
-procedure TTrueTypeFontLocationTable.ResetToDefaults;
+procedure TTrueTypeFontLocationTable.Assign(Source: TPersistent);
 begin
-  SetLength(FLocations, 0);
-end;
-
-procedure TTrueTypeFontLocationTable.AssignTo(Dest: TPersistent);
-begin
-  if Dest is Self.ClassType then
-    with TTrueTypeFontLocationTable(Dest) do
-    begin
-      FLocations := Self.FLocations;
-    end
-  else
-    inherited;
+  inherited;
+  if Source is TTrueTypeFontLocationTable then
+    FLocations := TTrueTypeFontLocationTable(Source).FLocations;
 end;
 
 function TTrueTypeFontLocationTable.GetLocation(Index: Integer): Cardinal;

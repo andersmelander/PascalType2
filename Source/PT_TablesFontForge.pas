@@ -46,13 +46,13 @@ type
     FVersion: Word;
     procedure SetVersion(const Value: Word); // currently 0x0001
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
-
     procedure VersionChanged; virtual;
   public
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -75,16 +75,16 @@ type
     procedure SetTimeStamp(const Value: Int64);
     procedure SetVersion(const Value: Cardinal);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
-
     procedure CreationChanged; virtual;
     procedure LastChanged; virtual;
     procedure TimeStampChanged; virtual;
     procedure VersionChanged; virtual;
   public
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -104,13 +104,13 @@ type
     FVersion: TFixedPoint; // currently 0x00010000
     procedure SetVersion(const Value: TFixedPoint);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
-
     procedure VersionChanged; virtual;
   public
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -127,13 +127,13 @@ type
     FVersion: TFixedPoint; // currently 0x00010000
     procedure SetVersion(const Value: TFixedPoint);
   protected
-    procedure AssignTo(Dest: TPersistent); override;
-
-    procedure ResetToDefaults; override;
-
     procedure VersionChanged; virtual;
   public
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+
     class function GetTableType: TTableType; override;
+
+    procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
@@ -148,26 +148,22 @@ uses
 
 { TPascalTypeFontForgeX11BDFTable }
 
-procedure TPascalTypeFontForgeX11BDFTable.AssignTo(Dest: TPersistent);
+constructor TPascalTypeFontForgeX11BDFTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypeFontForgeTimeStampTable(Dest) do
-    begin
-      FVersion := Self.FVersion;
-    end
-  else
-    inherited;
+  inherited;
+  FVersion := 1;
+end;
+
+procedure TPascalTypeFontForgeX11BDFTable.Assign(Source: TPersistent);
+begin
+  inherited;
+  if Source is TPascalTypeFontForgeX11BDFTable then
+    FVersion := TPascalTypeFontForgeTimeStampTable(Source).FVersion;
 end;
 
 class function TPascalTypeFontForgeX11BDFTable.GetTableType: TTableType;
 begin
   Result := 'BDF ';
-end;
-
-procedure TPascalTypeFontForgeX11BDFTable.ResetToDefaults;
-begin
-  FVersion := 1;
-  inherited;
 end;
 
 procedure TPascalTypeFontForgeX11BDFTable.LoadFromStream(Stream: TStream);
@@ -219,32 +215,27 @@ end;
 
 { TPascalTypeFontForgeTimeStampTable }
 
-procedure TPascalTypeFontForgeTimeStampTable.AssignTo(Dest: TPersistent);
+constructor TPascalTypeFontForgeTimeStampTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypeFontForgeTimeStampTable(Dest) do
-    begin
-      FVersion := Self.FVersion;
-      FTimeStamp := Self.FTimeStamp;
-      FCreation := Self.FCreation;
-      FLastMod := Self.FLastMod;
-    end
-  else
-    inherited;
+  inherited;
+  FVersion := 1;
+end;
+
+procedure TPascalTypeFontForgeTimeStampTable.Assign(Source: TPersistent);
+begin
+  inherited;
+  if Source is TPascalTypeFontForgeTimeStampTable then
+  begin
+    FVersion := TPascalTypeFontForgeTimeStampTable(Source).FVersion;
+    FTimeStamp := TPascalTypeFontForgeTimeStampTable(Source).FTimeStamp;
+    FCreation := TPascalTypeFontForgeTimeStampTable(Source).FCreation;
+    FLastMod := TPascalTypeFontForgeTimeStampTable(Source).FLastMod;
+  end;
 end;
 
 class function TPascalTypeFontForgeTimeStampTable.GetTableType: TTableType;
 begin
   Result := 'FFTM';
-end;
-
-procedure TPascalTypeFontForgeTimeStampTable.ResetToDefaults;
-begin
-  inherited;
-  FVersion := 1;
-  FTimeStamp := 0;
-  FCreation := 0;
-  FLastMod := 0;
 end;
 
 procedure TPascalTypeFontForgeTimeStampTable.LoadFromStream(Stream: TStream);
@@ -354,27 +345,22 @@ end;
 
 { TPascalTypeFontForgeExtensionTable }
 
-procedure TPascalTypeFontForgeExtensionTable.AssignTo(Dest: TPersistent);
+constructor TPascalTypeFontForgeExtensionTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
-  if Dest is Self.ClassType then
-    with TPascalTypeFontForgeTexTable(Dest) do
-    begin
-      FVersion := Self.FVersion;
-    end
-  else
-    inherited;
+  inherited;
+  FVersion.Value := 1;
+end;
+
+procedure TPascalTypeFontForgeExtensionTable.Assign(Source: TPersistent);
+begin
+  inherited;
+  if Source is TPascalTypeFontForgeTexTable then
+    FVersion := TPascalTypeFontForgeTexTable(Source).FVersion;
 end;
 
 class function TPascalTypeFontForgeExtensionTable.GetTableType: TTableType;
 begin
   Result := 'PfEd';
-end;
-
-procedure TPascalTypeFontForgeExtensionTable.ResetToDefaults;
-begin
-  inherited;
-  FVersion.Value := 1;
-  FVersion.Fract := 0;
 end;
 
 procedure TPascalTypeFontForgeExtensionTable.LoadFromStream(Stream: TStream);
@@ -424,22 +410,17 @@ end;
 
 { TPascalTypeFontForgeTexTable }
 
-procedure TPascalTypeFontForgeTexTable.AssignTo(Dest: TPersistent);
-begin
-  if Dest is Self.ClassType then
-    with TPascalTypeFontForgeTexTable(Dest) do
-    begin
-      FVersion := Self.FVersion;
-    end
-  else
-    inherited;
-end;
-
-procedure TPascalTypeFontForgeTexTable.ResetToDefaults;
+constructor TPascalTypeFontForgeTexTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
   inherited;
   FVersion.Value := 1;
-  FVersion.Fract := 0;
+end;
+
+procedure TPascalTypeFontForgeTexTable.Assign(Source: TPersistent);
+begin
+  inherited;
+  if Source is TPascalTypeFontForgeTexTable then
+    FVersion := TPascalTypeFontForgeTexTable(Source).FVersion;
 end;
 
 class function TPascalTypeFontForgeTexTable.GetTableType: TTableType;

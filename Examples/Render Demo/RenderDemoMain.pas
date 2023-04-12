@@ -113,6 +113,8 @@ begin
  FreeAndNil(FFontEngine);
  FreeAndNil(FFontEngine32);
 
+ FBitmap.Free;
+
  with FFontScanner do
   begin
    Terminate;
