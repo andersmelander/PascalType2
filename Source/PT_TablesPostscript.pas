@@ -35,7 +35,7 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, Contnrs, SysUtils, PT_Types, PT_Classes, PT_Tables;
+  Classes, SysUtils, PT_Types, PT_Classes, PT_Tables;
 
 type
   TCustomPascalTypePostscriptIndexTable = class(TCustomPascalTypeTable)
@@ -109,7 +109,6 @@ type
     function GetOperandCount: Integer;
     procedure ClearOperands;
   protected
-    procedure Clear; virtual;
   public
     destructor Destroy; override;
 
@@ -133,7 +132,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    procedure Clear; deprecated;
+    procedure Clear;
 
     property VersionStringIndex: Integer index 0 read GetStringIndex;
     property NoticeStringIndex: Integer index 1 read GetStringIndex;
@@ -1060,16 +1059,6 @@ begin
     FDictOperator.Assign(TPascalTypePostscriptDictPair(Source).FDictOperator);
   end else
     inherited;
-end;
-
-procedure TPascalTypePostscriptDictPair.Clear;
-begin
-  inherited;
-
-  FreeAndNil(FDictOperator);
-
-  ClearOperands;
-  SetLength(FOperands, 0);
 end;
 
 procedure TPascalTypePostscriptDictPair.ClearOperands;

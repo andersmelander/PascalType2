@@ -35,7 +35,7 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, Contnrs, PT_Types, PT_Classes, PT_Tables, PT_TablesShared;
+  Classes, PT_Types, PT_Classes, PT_Tables, PT_TablesShared;
 
 type
   TCustomPascalTypeNamedVersionTable = class(TCustomPascalTypeNamedTable)
@@ -162,7 +162,7 @@ type
   // http://developer.apple.com/fonts/TTRefMan/RM06/Chap6avar.html
   TPascalTypeAxisVariationTable = class(TCustomPascalTypeNamedVersionTable)
   private
-    FSegments: TObjectList;
+    FSegments: TPascalTypeTableList<TPascalTypeAxisVariationSegmentTable>;
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
@@ -252,7 +252,7 @@ type
   // http://developer.apple.com/fonts/TTRefMan/RM06/Chap6bloc.html
   TPascalTypeBitmapLocationTable = class(TCustomPascalTypeNamedVersionTable)
   private
-    FBitmapSizeList: TObjectList;
+    FBitmapSizeList: TPascalTypeTableList<TPascalTypeBitmapSizeTable>;
     function GetBitmapSizeTable(Index: Integer): TPascalTypeBitmapSizeTable;
     function GetBitmapSizeTableCount: Integer;
   public
@@ -267,8 +267,7 @@ type
     procedure SaveToStream(Stream: TStream); override;
 
     property BitmapSizeTableCount: Integer read GetBitmapSizeTableCount;
-    property BitmapSizeTable[Index: Integer]: TPascalTypeBitmapSizeTable
-      read GetBitmapSizeTable;
+    property BitmapSizeTable[Index: Integer]: TPascalTypeBitmapSizeTable read GetBitmapSizeTable;
   end;
 
 
@@ -337,7 +336,7 @@ type
 
   TPascalTypeFontDescriptionTable = class(TCustomPascalTypeNamedVersionTable)
   private
-    FDescritors: TObjectList;
+    FDescritors: TPascalTypeTableList<TCustomPascalTypeTaggedValueTable>;
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
@@ -371,7 +370,7 @@ type
 
   TPascalTypeFeatureTable = class(TCustomPascalTypeNamedVersionTable)
   private
-    FFeatures: TObjectList;
+    FFeatures: TPascalTypeTableList<TPascalTypeAppleFeatureTable>;
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); override;
     destructor Destroy; override;
@@ -470,20 +469,6 @@ type
 
   // table 'mort'
 
-  TCustomPascalTypeGlyphMetamorphosisTable = class(TCustomPascalTypeNamedVersionTable)
-  private
-    function GetChainCount: Cardinal;
-  protected
-    FChains: TObjectList;
-  public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
-    destructor Destroy; override;
-
-    procedure Assign(Source: TPersistent); override;
-
-    property ChainCount: Cardinal read GetChainCount;
-  end;
-
   TFeatureSubtableRecord = packed record
     FeatureType    : Word;     // The feature type.
     FeatureSetting : Word;     // The feature selector.
@@ -509,6 +494,20 @@ type
     property DefaultFlags: Cardinal read FDefaultFlags write SetDefaultFlags;
     property FeatureCount: Cardinal read GetFeatureCount;
     property Feature[Index: Cardinal]: TFeatureSubtableRecord read GetFeature;
+  end;
+
+  TCustomPascalTypeGlyphMetamorphosisTable = class(TCustomPascalTypeNamedVersionTable)
+  private
+    function GetChainCount: Cardinal;
+  protected
+    FChains: TPascalTypeTableList<TPascalTypeGlyphMetamorphosisChainTable>;
+  public
+    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    destructor Destroy; override;
+
+    procedure Assign(Source: TPersistent); override;
+
+    property ChainCount: Cardinal read GetChainCount;
   end;
 
   // not entirely implemented, for more details see
@@ -1141,7 +1140,7 @@ end;
 constructor TPascalTypeAxisVariationTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
   inherited Create(AStorage);
-  FSegments := TObjectList.Create;
+  FSegments := TPascalTypeTableList<TPascalTypeAxisVariationSegmentTable>.Create;
 end;
 
 destructor TPascalTypeAxisVariationTable.Destroy;
@@ -1151,24 +1150,11 @@ begin
 end;
 
 procedure TPascalTypeAxisVariationTable.Assign(Source: TPersistent);
-var
-  i: integer;
-  Segment: TPascalTypeAxisVariationSegmentTable;
 begin
   inherited;
 
   if Source is TPascalTypeAxisVariationTable then
-  begin
-    FSegments.Clear;
-
-    for i := 0 to TPascalTypeAxisVariationTable(Source).FSegments.Count-1 do
-    begin
-      Segment := TPascalTypeAxisVariationSegmentTable.Create;
-      FSegments.Add(Segment);
-
-      Segment.Assign(TPascalTypeAxisVariationSegmentTable(TPascalTypeAxisVariationTable(Source).FSegments[i]));
-    end;
-  end;
+    FSegments.Assign(TPascalTypeAxisVariationTable(Source).FSegments);
 end;
 
 class function TPascalTypeAxisVariationTable.GetTableType: TTableType;
@@ -1194,13 +1180,11 @@ begin
     for AxisIndex := 0 to AxisCount - 1 do
     begin
       // create segment object
-      Segment := TPascalTypeAxisVariationSegmentTable.Create;
+      // add segment to segment list
+      Segment := FSegments.Add;
 
       // load segment from stream
       Segment.LoadFromStream(Stream);
-
-      // add segment to segment list
-      FSegments.Add(Segment);
     end;
   end;
 end;
@@ -1372,8 +1356,8 @@ end;
 
 constructor TPascalTypeBitmapLocationTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
-  FBitmapSizeList := TObjectList.Create;
   inherited;
+  FBitmapSizeList := TPascalTypeTableList<TPascalTypeBitmapSizeTable>.Create;
 end;
 
 destructor TPascalTypeBitmapLocationTable.Destroy;
@@ -1386,18 +1370,15 @@ procedure TPascalTypeBitmapLocationTable.Assign(Source: TPersistent);
 begin
   inherited;
 
-  // TODO
   if Source is TPascalTypeBitmapLocationTable then
-    // TPascalTypeBitmapLocationTable(Source)
-    ;
+    FBitmapSizeList.Assign(TPascalTypeBitmapLocationTable(Source).FBitmapSizeList);
 end;
 
 function TPascalTypeBitmapLocationTable.GetBitmapSizeTable(Index: Integer)
 : TPascalTypeBitmapSizeTable;
 begin
   if (Index >= 0) and (Index < FBitmapSizeList.Count) then
-    Result :=
-      TPascalTypeBitmapSizeTable(FBitmapSizeList[Index])
+    Result := FBitmapSizeList[Index]
   else
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
 end;
@@ -1431,13 +1412,11 @@ begin
     for BitmapSizeIndex := 0 to BitmapSizeCount - 1 do
     begin
       // create bitmap size table
-      BitmapSizeTable := TPascalTypeBitmapSizeTable.Create;
+      // add bitmap size table
+      BitmapSizeTable := FBitmapSizeList.Add;
 
       // load bitmap size table
       BitmapSizeTable.LoadFromStream(Stream);
-
-      // add bitmap size table
-      FBitmapSizeList.Add(BitmapSizeTable);
     end;
   end;
 end;
@@ -1453,10 +1432,8 @@ begin
 
   // write bitmap size tables
   for BitmapSizeIndex := 0 to FBitmapSizeList.Count - 1 do
-  begin
     // save bitmap size table to stream
-    TPascalTypeBitmapSizeTable(FBitmapSizeList).SaveToStream(Stream);
-  end;
+    FBitmapSizeList[BitmapSizeIndex].SaveToStream(Stream);
 end;
 
 
@@ -1626,8 +1603,8 @@ end;
 
 constructor TPascalTypeFontDescriptionTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
-  FDescritors := TObjectList.Create;
   inherited;
+  FDescritors := TPascalTypeTableList<TCustomPascalTypeTaggedValueTable>.Create;
 end;
 
 destructor TPascalTypeFontDescriptionTable.Destroy;
@@ -1651,11 +1628,9 @@ begin
     for i := 0 to TPascalTypeFontDescriptionTable(Source).FDescritors.Count-1 do
     begin
       TagClass := TPascalTypeTaggedValueTableClass(TCustomPascalTypeTaggedValueTable(TPascalTypeFontDescriptionTable(Source).FDescritors[i]).ClassType);
-      Descritor := TagClass.Create;
+      Descritor := FDescritors.Add(TagClass);
 
       Descritor.Assign(TCustomPascalTypeTaggedValueTable(TPascalTypeFontDescriptionTable(Source).FDescritors[i]));
-
-      FDescritors.Add(Descritor);
     end;
   end;
 end;
@@ -1723,7 +1698,7 @@ begin
     WriteSwappedCardinal(Stream, FDescritors.Count);
 
     for DescIndex := 0 to FDescritors.Count - 1 do
-      with TCustomPascalTypeTaggedValueTable(FDescritors[DescIndex]) do
+      with FDescritors[DescIndex] do
       begin
         // write tag
         Value32 := Cardinal(TableType);
@@ -1789,8 +1764,8 @@ end;
 
 constructor TPascalTypeFeatureTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
-  FFeatures := TObjectList.Create;
   inherited Create(AStorage);
+  FFeatures := TPascalTypeTableList<TPascalTypeAppleFeatureTable>.Create;
 end;
 
 destructor TPascalTypeFeatureTable.Destroy;
@@ -1800,24 +1775,11 @@ begin
 end;
 
 procedure TPascalTypeFeatureTable.Assign(Source: TPersistent);
-var
-  i: integer;
-  AppleFeature: TPascalTypeAppleFeatureTable;
 begin
   inherited;
 
   if Source is TPascalTypeFeatureTable then
-  begin
-    FFeatures.Clear;
-
-    for i := 0 to TPascalTypeFeatureTable(Source).FFeatures.Count-1 do
-    begin
-      AppleFeature := TPascalTypeAppleFeatureTable.Create;
-      FFeatures.Add(AppleFeature);
-      AppleFeature.Assign(TPascalTypeAppleFeatureTable(TPascalTypeFeatureTable(Source).FFeatures[i]));
-    end;
-
-  end;
+    FFeatures.Assign(TPascalTypeFeatureTable(Source).FFeatures);
 end;
 
 class function TPascalTypeFeatureTable.GetTableType: TTableType;
@@ -1857,13 +1819,11 @@ begin
     for FeatureNameIndex := 0 to FeatureNameCount - 1 do
     begin
       // create apple feature
-      AppleFeature := TPascalTypeAppleFeatureTable.Create;
+      // add feature to list
+      AppleFeature := FFeatures.Add;
 
       // load apple feature from stream
       AppleFeature.LoadFromStream(Stream);
-
-      // add feature to list
-      FFeatures.Add(AppleFeature);
     end;
 
   end;
@@ -2295,7 +2255,7 @@ end;
 
 constructor TCustomPascalTypeGlyphMetamorphosisTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
-  FChains := TObjectList.Create;
+  FChains := TPascalTypeTableList<TPascalTypeGlyphMetamorphosisChainTable>.Create;
   inherited;
 end;
 
@@ -2315,9 +2275,7 @@ begin
   inherited;
 
   if Source is TCustomPascalTypeGlyphMetamorphosisTable then
-    // TCustomPascalTypeGlyphMetamorphosisTable(Source)
-    // TODO : FChains.Assign(FChains);
-    ;
+    FChains.Assign(TCustomPascalTypeGlyphMetamorphosisTable(Source).FChains);
 end;
 
 { TPascalTypeGlyphMetamorphosisChainTable }
@@ -2336,8 +2294,7 @@ end;
 function TPascalTypeGlyphMetamorphosisChainTable.GetFeature(Index: Cardinal): TFeatureSubtableRecord;
 begin
   if (Index < Cardinal(Length(FFeatureArray))) then
-    Result :=
-      FFeatureArray[Index]
+    Result := FFeatureArray[Index]
   else
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
 end;
@@ -2347,8 +2304,7 @@ begin
   Result := Length(FFeatureArray);
 end;
 
-procedure TPascalTypeGlyphMetamorphosisChainTable.LoadFromStream(
-  Stream: TStream);
+procedure TPascalTypeGlyphMetamorphosisChainTable.LoadFromStream(Stream: TStream);
 var
   StartPosition: Int64;
   ChainLength:  Cardinal;
@@ -2473,13 +2429,11 @@ begin
     for ChainIndex := 0 to NumChain - 1 do
     begin
       // create chain table
-      ChainTable := TPascalTypeGlyphMetamorphosisChainTable.Create;
+      // add chain table to lists
+      ChainTable := FChains.Add;
 
       // load chain table from stream
       ChainTable.LoadFromStream(Stream);
-
-      // add chain table to lists
-      FChains.Add(ChainTable);
     end;
   end;
 end;
@@ -2497,8 +2451,7 @@ begin
 
     // save chain tables to stream
     for ChainIndex := 0 to FChains.Count - 1 do
-      with TPascalTypeGlyphMetamorphosisChainTable(FChains[ChainIndex]) do
-        SaveToStream(Stream);
+      FChains[ChainIndex].SaveToStream(Stream);
   end;
 end;
 
@@ -2658,13 +2611,11 @@ begin
     for ChainIndex := 0 to NumChain - 1 do
     begin
       // create chain table
-      ChainTable := TPascalTypeExtendedGlyphMetamorphosisChainTable.Create;
+      // add chain table to lists
+      ChainTable := TPascalTypeExtendedGlyphMetamorphosisChainTable(FChains.Add(TPascalTypeExtendedGlyphMetamorphosisChainTable));
 
       // load chain table from stream
       ChainTable.LoadFromStream(Stream);
-
-      // add chain table to lists
-      FChains.Add(ChainTable);
     end;
   end;
 end;
@@ -2983,8 +2934,7 @@ begin
 
     for KindNameIndex := 0 to KindNameCount - 1 do
     begin
-      FKindNames
-        [KindNameIndex] := TPascalTypeZapfKindName.Create;
+      FKindNames[KindNameIndex] := TPascalTypeZapfKindName.Create;
       FKindNames[KindNameIndex].LoadFromStream(Stream);
     end;
 

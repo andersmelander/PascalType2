@@ -35,7 +35,7 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, Contnrs, PT_Types, PT_Tables, PT_TablesOpenType;
+  Classes, PT_Types, PT_Tables, PT_TablesOpenType;
 
 type
   // see: http://www.microsoft.com/typography/otspec/languagetags.htm

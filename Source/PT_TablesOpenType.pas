@@ -35,7 +35,7 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, Contnrs, PT_Types, PT_Classes, PT_Tables;
+  Classes, PT_Types, PT_Classes, PT_Tables;
 
 type
   TCustomOpenTypeNamedTable = class(TCustomPascalTypeNamedTable)

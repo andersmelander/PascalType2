@@ -35,7 +35,7 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, Contnrs, SysUtils, PT_Types, PT_Classes;
+  Classes, SysUtils, PT_Types, PT_Classes;
 
 type
   // Unknown Table
@@ -552,8 +552,6 @@ type
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
-
-    procedure Clear; deprecated;
 
     property Data[Index: Byte]: Byte read GetData write SetData;
     property FamilyType: Byte read GetInternalFamilyType;
@@ -3415,11 +3413,6 @@ begin
   inherited;
   if Source is TCustomPascalTypePanoseTable then
     FData := TCustomPascalTypePanoseTable(Source).FData;
-end;
-
-procedure TCustomPascalTypePanoseTable.Clear;
-begin
-  FData := Default(TPanoseArray);
 end;
 
 function TCustomPascalTypePanoseTable.GetData(Index: Byte): Byte;

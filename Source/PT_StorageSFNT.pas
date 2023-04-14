@@ -39,12 +39,12 @@ interface
 {$ENDIF}
 
 uses
-  Classes, SysUtils, Types, Contnrs, PT_Types, PT_Classes, PT_Storage,
+  Generics.Collections,
+  Classes, SysUtils, Types, PT_Types, PT_Classes, PT_Storage,
   PT_Tables, PT_TableDirectory;
 
 type
-  TCustomPascalTypeStorageSFNT = class(TCustomPascalTypeStorage,
-    IPascalTypeStorageTable)
+  TCustomPascalTypeStorageSFNT = class(TCustomPascalTypeStorage, IPascalTypeStorageTable)
   private
     // required tables
     FHeaderTable: TPascalTypeHeaderTable;
@@ -115,7 +115,7 @@ type
     FCharacterMap: TPascalTypeCharacterMapTable;
     FOS2Table: TPascalTypeOS2Table;
 
-    FOptionalTables: TObjectList;
+    FOptionalTables: TObjectList<TCustomPascalTypeNamedTable>;
 
     function GetTableCount: Integer;
     function GetOptionalTableCount: Integer;
@@ -663,7 +663,7 @@ begin
   FCharacterMap := TPascalTypeCharacterMapTable.Create(Self);
 
   // create optional table list
-  FOptionalTables := TObjectList.Create;
+  FOptionalTables := TObjectList<TCustomPascalTypeNamedTable>.Create;
 end;
 
 destructor TPascalTypeStorage.Destroy;
@@ -732,7 +732,7 @@ function TPascalTypeStorage.GetOptionalTable(Index: Integer): TCustomPascalTypeN
 begin
   if (Index < 0) or (Index >= FOptionalTables.Count) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
-  Result := TCustomPascalTypeNamedTable(FOptionalTables[Index]);
+  Result := FOptionalTables[Index];
 end;
 
 function TPascalTypeStorage.GetOptionalTableCount: Integer;
@@ -778,8 +778,8 @@ begin
     Result := FPostScriptTable
   else
     for TableIndex := 0 to FOptionalTables.Count - 1 do
-      if ATableType.AsCardinal = TCustomPascalTypeNamedTable(FOptionalTables[TableIndex]).TableType.AsCardinal then
-        Exit(TCustomPascalTypeNamedTable(FOptionalTables[TableIndex]));
+      if ATableType.AsCardinal = FOptionalTables[TableIndex].TableType.AsCardinal then
+        Exit(FOptionalTables[TableIndex]);
 end;
 
 function TPascalTypeStorage.ContainsTable(TableType: TTableType): Boolean;
@@ -816,8 +816,8 @@ begin
     Result := FPostScriptTable
   else
     for TableIndex := 0 to FOptionalTables.Count - 1 do
-      if TCustomPascalTypeNamedTable(FOptionalTables[TableIndex]).ClassType = TableClass then
-        Exit(TCustomPascalTypeNamedTable(FOptionalTables[TableIndex]));
+      if FOptionalTables[TableIndex].ClassType = TableClass then
+        Exit(FOptionalTables[TableIndex]);
 end;
 
 function TPascalTypeStorage.GetTableByTableName(const TableName: TTableName): TCustomPascalTypeNamedTable;
@@ -849,8 +849,8 @@ begin
     Result := FPostScriptTable
   else
     for TableIndex := 0 to FOptionalTables.Count - 1 do
-      if CompareTableType(TCustomPascalTypeNamedTable(FOptionalTables[TableIndex]).TableType, TableName) then
-        Exit(TCustomPascalTypeNamedTable(FOptionalTables[TableIndex]));
+      if CompareTableType(FOptionalTables[TableIndex].TableType, TableName) then
+        Exit(FOptionalTables[TableIndex]);
 end;
 
 function TPascalTypeStorage.GetTableCount: Integer;
@@ -972,8 +972,7 @@ begin
 
       // build directory table
       for TableIndex := 0 to FOptionalTables.Count - 1 do
-        with TCustomPascalTypeNamedTable(FOptionalTables[TableIndex]) do
-          AddTableEntry(TableType);
+        AddTableEntry(FOptionalTables[TableIndex].TableType);
 
       // write temporary directory to determine its size
       SaveToStream(Stream);

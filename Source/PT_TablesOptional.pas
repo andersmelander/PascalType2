@@ -35,7 +35,7 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, Contnrs, PT_Types, PT_Classes, PT_Tables;
+  Classes, PT_Types, PT_Classes, PT_Tables;
 
 type
   // table 'DSIG'
@@ -164,7 +164,7 @@ type
   TPascalTypeHorizontalDeviceMetricsTable = class(TCustomPascalTypeNamedTable)
   private
     FVersion  : Word; // Table version number (0)
-    FSubtables: TObjectList;
+    FSubtables: TPascalTypeTableInterfaceList<TPascalTypeHorizontalDeviceMetricsSubTable>;
     procedure SetVersion(const Value: Word);
     function GetDeviceRecordCount: Word;
     function GetDeviceRecord(Index: Word): TPascalTypeHorizontalDeviceMetricsSubTable;
@@ -274,7 +274,7 @@ type
 
   TPascalTypeKerningTable = class(TCustomPascalTypeNamedTable)
   private
-    FKerningSubtableList: TObjectList;
+    FKerningSubtableList: TPascalTypeTableList<TPascalTypeKerningSubTable>;
     FVersion            : Word;
     procedure SetVersion(const Value: Word);
     function GetKerningSubtableCount: Integer;
@@ -436,7 +436,7 @@ type
   private
     FVersion: Word; // Version number (0 or 1).
     FRatios : array of TVDMXRatioRecord;
-    FGroups : TObjectList;
+    FGroups : TPascalTypeTableList<TPascalTypeVDMXGroupTable>;
     procedure SetVersion(const Value: Word);
     function GetRatioCount: Word;
     function GetGroupCount: Word;
@@ -1071,8 +1071,8 @@ end;
 
 constructor TPascalTypeHorizontalDeviceMetricsTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
-  FSubtables := TObjectList.Create;
   inherited;
+  FSubtables := TPascalTypeTableInterfaceList<TPascalTypeHorizontalDeviceMetricsSubTable>.Create(AStorage);
 end;
 
 destructor TPascalTypeHorizontalDeviceMetricsTable.Destroy;
@@ -1095,7 +1095,7 @@ function TPascalTypeHorizontalDeviceMetricsTable.GetDeviceRecord(Index: Word): T
 begin
   if (Index > FSubtables.Count) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
-  Result := TPascalTypeHorizontalDeviceMetricsSubTable(FSubtables[Index]);
+  Result := FSubtables[Index];
 end;
 
 function TPascalTypeHorizontalDeviceMetricsTable.GetDeviceRecordCount: Word;
@@ -1145,13 +1145,11 @@ begin
       Position := OffsetPosition + RecordIndex * SizeDeviceRecord;
 
       // create subtable entry
-      SubTableRecord := TPascalTypeHorizontalDeviceMetricsSubTable.Create(Storage);
+      // add subtable entry to subtables
+      SubTableRecord := FSubtables.Add;
 
       // load subtable entry from stream
       SubTableRecord.LoadFromStream(Stream);
-
-      // add subtable entry to subtables
-      FSubtables.Add(SubTableRecord);
     end;
   end;
 end;
@@ -1564,7 +1562,7 @@ end;
 constructor TPascalTypeKerningTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
   inherited;
-  FKerningSubtableList := TObjectList.Create;
+  FKerningSubtableList := TPascalTypeTableList<TPascalTypeKerningSubTable>.Create;
 end;
 
 destructor TPascalTypeKerningTable.Destroy;
@@ -1586,7 +1584,7 @@ end;
 function TPascalTypeKerningTable.GetKerningSubtable(Index: Integer): TPascalTypeKerningSubTable;
 begin
   if (Index >= 0) and (Index < FKerningSubtableList.Count) then
-    Result := TPascalTypeKerningSubTable(FKerningSubtableList[Index])
+    Result := FKerningSubtableList[Index]
   else
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
 end;
@@ -1634,18 +1632,9 @@ begin
 
     for SubTableIndex := 0 to SubTableCount - 1 do
     begin
-      SubTable := TPascalTypeKerningSubTable.Create;
-      try
-
-        // load from stream
-        SubTable.LoadFromStream(Stream);
-
-      except
-        SubTable.Free;
-        raise;
-      end;
-
-      FKerningSubtableList.Add(SubTable);
+      SubTable := FKerningSubtableList.Add;
+      // load from stream
+      SubTable.LoadFromStream(Stream);
     end;
   end;
 end;
@@ -1662,8 +1651,7 @@ begin
 
   // save to stream
   for SubTableIndex := 0 to FKerningSubtableList.Count - 1 do
-    TPascalTypeKerningSubTable(FKerningSubtableList[SubTableIndex])
-      .SaveToStream(Stream);
+    FKerningSubtableList[SubTableIndex].SaveToStream(Stream);
 end;
 
 procedure TPascalTypeKerningTable.SetVersion(const Value: Word);
@@ -2204,7 +2192,7 @@ end;
 constructor TPascalTypeVerticalDeviceMetricsTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
   inherited;
-  FGroups := TObjectList.Create;
+  FGroups := TPascalTypeTableList<TPascalTypeVDMXGroupTable>.Create;
 end;
 
 destructor TPascalTypeVerticalDeviceMetricsTable.Destroy;
@@ -2290,13 +2278,11 @@ begin
     for RatioIndex := 0 to NumRecs - 1 do
     begin
       // create new group
-      Group := TPascalTypeVDMXGroupTable.Create;
+      // add group to list
+      Group := FGroups.Add;
 
       // load gropu from stream
       Group.LoadFromStream(Stream);
-
-      // add group to list
-      FGroups.Add(Group);
     end;
   end;
 end;

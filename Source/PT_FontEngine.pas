@@ -35,7 +35,8 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, Contnrs, Sysutils, PT_Types, PT_Storage, PT_StorageSFNT, PT_Tables,
+  Generics.Collections,
+  Classes, Sysutils, PT_Types, PT_Storage, PT_StorageSFNT, PT_Tables,
   PT_CharacterMap, PT_TablesOptional;
 
 type
@@ -45,7 +46,7 @@ type
 
   TPascalTypeScaledContour = class(TPersistent)
   protected
-    FPrimitives: TList;
+//    FPrimitives: TObjectList<>;
   public
     constructor Create; virtual;
     destructor Destroy; override;
@@ -53,7 +54,7 @@ type
 
   TPascalTypeScaledGlyph = class(TPersistent)
   private
-    FContours: TObjectList;
+    FContours: TObjectList<TPascalTypeScaledContour>;
     function GetContour(Index: Integer): TPascalTypeScaledContour;
     function GetContourCount: Integer;
   protected
@@ -148,12 +149,12 @@ uses
 constructor TPascalTypeScaledContour.Create;
 begin
   inherited;
-  FPrimitives := TObjectList.Create;
+//  FPrimitives := TObjectList<>.Create;
 end;
 
 destructor TPascalTypeScaledContour.Destroy;
 begin
-  FreeAndNil(FPrimitives);
+//  FreeAndNil(FPrimitives);
   inherited;
 end;
 
@@ -163,7 +164,7 @@ end;
 constructor TPascalTypeScaledGlyph.Create;
 begin
   inherited Create;
-  FContours := TObjectList.Create;
+  FContours := TObjectList<TPascalTypeScaledContour>.Create;
 end;
 
 destructor TPascalTypeScaledGlyph.Destroy;
@@ -174,10 +175,9 @@ end;
 
 function TPascalTypeScaledGlyph.GetContour(Index: Integer): TPascalTypeScaledContour;
 begin
-  if (Index >= 0) and (Index < FContours.Count) then
-    Result := TPascalTypeScaledContour(FContours[Index])
-  else
+  if (Index < 0) or (Index >= FContours.Count) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FContours[Index];
 end;
 
 function TPascalTypeScaledGlyph.GetContourCount: Integer;

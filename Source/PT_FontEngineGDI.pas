@@ -36,7 +36,7 @@ interface
 
 uses
   {$IFDEF FPC}LCLIntf, LCLType, {$IFDEF MSWINDOWS} Windows, {$ENDIF}
-  {$ELSE}Windows, {$ENDIF} Classes, Contnrs, Sysutils, Graphics,
+  {$ELSE}Windows, {$ENDIF} Classes, Sysutils, Graphics,
   PT_Types, PT_Storage, PT_FontEngine, PT_Tables, PT_TablesTrueType;
 
 type

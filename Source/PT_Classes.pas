@@ -36,7 +36,7 @@ interface
 
 uses
   Generics.Collections,
-  Classes, Contnrs, SysUtils, PT_Types;
+  Classes, SysUtils, PT_Types;
 
 type
   TCustomPascalTypeNamedTable = class;
@@ -95,6 +95,7 @@ type
   TPascalTypeTableList<T: TCustomPascalTypeTable> = class(TObjectList<T>)
   public
     function Add: T; overload; virtual;
+    function Add(ATableClass: TCustomPascalTypeTableClass): T; overload;
     procedure Assign(Source: TPascalTypeTableList<T>);
   end;
 
@@ -221,6 +222,12 @@ end;
 function TPascalTypeTableList<T>.Add: T;
 begin
   Result := T.Create;
+  Add(Result);
+end;
+
+function TPascalTypeTableList<T>.Add(ATableClass: TCustomPascalTypeTableClass): T;
+begin
+  Result := T(ATableClass.Create);
   Add(Result);
 end;
 
