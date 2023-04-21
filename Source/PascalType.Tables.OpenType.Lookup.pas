@@ -394,9 +394,9 @@ var
   LookupTableClass: TOpenTypeLookupTableClass;
   LookupType: Word;
 begin
-  inherited;
-
   StartPos := Stream.Position;
+
+  inherited;
 
   // check (minimum) table size
   if Stream.Position + 2 > Stream.Size then

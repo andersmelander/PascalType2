@@ -107,7 +107,6 @@ type
   private
     FSubstituteGlyphIDs: TGlyphIDs;
   protected
-    function GetSubstituteGlyphIDs: TGlyphIDs;
   public
     procedure Assign(Source: TPersistent); override;
 
@@ -116,7 +115,7 @@ type
 
     function SubstituteGlyph(AGlyphID: Word): Word; override;
 
-    property SubstituteGlyphIDs: TGlyphIDs read GetSubstituteGlyphIDs;
+    property SubstituteGlyphIDs: TGlyphIDs read FSubstituteGlyphIDs;
   end;
 
 
@@ -204,11 +203,6 @@ begin
   inherited;
   if Source is TOpenTypeSubstitutionSubTableSingleList then
     FSubstituteGlyphIDs := TOpenTypeSubstitutionSubTableSingleList(Source).FSubstituteGlyphIDs;
-end;
-
-function TOpenTypeSubstitutionSubTableSingleList.GetSubstituteGlyphIDs: TGlyphIDs;
-begin
-  Result := FSubstituteGlyphIDs;
 end;
 
 procedure TOpenTypeSubstitutionSubTableSingleList.LoadFromStream(Stream: TStream);
