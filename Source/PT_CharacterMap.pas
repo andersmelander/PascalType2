@@ -46,7 +46,7 @@ type
   protected
     class function GetFormat: Word; override;
   public
-    constructor Create; override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
 
     procedure Assign(Source: TPersistent); override;
 
@@ -143,7 +143,7 @@ uses
 
 { TPascalTypeFormat0CharacterMap }
 
-constructor TPascalTypeFormat0CharacterMap.Create;
+constructor TPascalTypeFormat0CharacterMap.Create(AParent: TCustomPascalTypeTable);
 var
   GlyphIdIndex: Byte;
 begin

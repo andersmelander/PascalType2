@@ -48,7 +48,7 @@ type
   protected
     procedure VersionChanged; virtual;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
 
     class function GetTableType: TTableType; override;
 
@@ -80,7 +80,7 @@ type
     procedure TimeStampChanged; virtual;
     procedure VersionChanged; virtual;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
 
     class function GetTableType: TTableType; override;
 
@@ -106,7 +106,7 @@ type
   protected
     procedure VersionChanged; virtual;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
 
     class function GetTableType: TTableType; override;
 
@@ -129,7 +129,7 @@ type
   protected
     procedure VersionChanged; virtual;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
 
     class function GetTableType: TTableType; override;
 
@@ -148,7 +148,7 @@ uses
 
 { TPascalTypeFontForgeX11BDFTable }
 
-constructor TPascalTypeFontForgeX11BDFTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeFontForgeX11BDFTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
   FVersion := 1;
@@ -215,7 +215,7 @@ end;
 
 { TPascalTypeFontForgeTimeStampTable }
 
-constructor TPascalTypeFontForgeTimeStampTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeFontForgeTimeStampTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
   FVersion := 1;
@@ -345,7 +345,7 @@ end;
 
 { TPascalTypeFontForgeExtensionTable }
 
-constructor TPascalTypeFontForgeExtensionTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeFontForgeExtensionTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
   FVersion.Value := 1;
@@ -410,7 +410,7 @@ end;
 
 { TPascalTypeFontForgeTexTable }
 
-constructor TPascalTypeFontForgeTexTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeFontForgeTexTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
   FVersion.Value := 1;

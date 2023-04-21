@@ -83,7 +83,7 @@ type
     procedure FlagsChanged; virtual;
     procedure VersionChanged; virtual;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -137,7 +137,7 @@ type
 
   // table 'hdmx'
 
-  TPascalTypeHorizontalDeviceMetricsSubTable = class(TCustomPascalTypeInterfaceTable)
+  TPascalTypeHorizontalDeviceMetricsSubTable = class(TCustomPascalTypeTable)
   private
     Fppem    : Byte;
     FMaxWidth: Byte;
@@ -172,7 +172,7 @@ type
   protected
     procedure VersionChanged; virtual;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
 
     procedure Assign(Source: TPersistent); override;
@@ -251,7 +251,7 @@ type
     procedure IsReplaceChanged; virtual;
     procedure VersionChanged; virtual;
   public
-    constructor Create; override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
 
     procedure Assign(Source: TPersistent); override;
@@ -282,7 +282,7 @@ type
   protected
     procedure VersionChanged; virtual;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -375,7 +375,7 @@ type
     procedure WidthTypeChanged; virtual;
     procedure XHeightChanged; virtual;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
 
     class function GetTableType: TTableType; override;
 
@@ -443,7 +443,7 @@ type
   protected
     procedure VersionChanged; virtual;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -505,7 +505,7 @@ type
     procedure VersionChanged; virtual;
     procedure YMaxExtentChanged; virtual;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
 
     class function GetTableType: TTableType; override;
 
@@ -667,7 +667,7 @@ end;
 
 { TPascalTypeDigitalSignatureTable }
 
-constructor TPascalTypeDigitalSignatureTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeDigitalSignatureTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
   FVersion := 1;
@@ -1069,10 +1069,10 @@ end;
 
 { TPascalTypeHorizontalDeviceMetricsTable }
 
-constructor TPascalTypeHorizontalDeviceMetricsTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeHorizontalDeviceMetricsTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
-  FSubtables := TPascalTypeTableInterfaceList<TPascalTypeHorizontalDeviceMetricsSubTable>.Create(AStorage);
+  FSubtables := TPascalTypeTableInterfaceList<TPascalTypeHorizontalDeviceMetricsSubTable>.Create(Self);
 end;
 
 destructor TPascalTypeHorizontalDeviceMetricsTable.Destroy;
@@ -1339,7 +1339,7 @@ end;
 
 { TPascalTypeKerningSubTable }
 
-constructor TPascalTypeKerningSubTable.Create;
+constructor TPascalTypeKerningSubTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
   FFormatTable := TPascalTypeKerningFormat0SubTable.Create;
@@ -1559,7 +1559,7 @@ end;
 
 { TPascalTypeKerningTable }
 
-constructor TPascalTypeKerningTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeKerningTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
   FKerningSubtableList := TPascalTypeTableList<TPascalTypeKerningSubTable>.Create;
@@ -1755,7 +1755,7 @@ end;
 
 { TPascalTypePCL5Table }
 
-constructor TPascalTypePCL5Table.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypePCL5Table.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
   FVersion.Value := 1;
@@ -2189,7 +2189,7 @@ end;
 
 { TPascalTypeVerticalDeviceMetricsTable }
 
-constructor TPascalTypeVerticalDeviceMetricsTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeVerticalDeviceMetricsTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
   FGroups := TPascalTypeTableList<TPascalTypeVDMXGroupTable>.Create;
@@ -2602,7 +2602,7 @@ begin
   Changed;
 end;
 
-constructor TPascalTypeVerticalHeaderTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeVerticalHeaderTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
   FVersion.Value := 1;

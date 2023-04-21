@@ -1,4 +1,4 @@
-unit PT_TablesOpenTypeLanguages;
+unit PascalType.Tables.OpenType.Languages;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -35,7 +35,11 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, PT_Types, PT_Tables, PT_TablesOpenType;
+  Classes,
+  PT_Types,
+  PT_Tables,
+  PascalType.Tables.OpenType,
+  PascalType.Tables.OpenType.LanguageSystem;
 
 type
   // see: http://www.microsoft.com/typography/otspec/languagetags.htm

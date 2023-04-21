@@ -46,6 +46,7 @@ uses
 type
   TCustomPascalTypeStorageSFNT = class(TCustomPascalTypeStorage, IPascalTypeStorageTable)
   private
+    FRootTable: TCustomPascalTypeTable;
     // required tables
     FHeaderTable: TPascalTypeHeaderTable;
     FHorizontalHeader: TPascalTypeHorizontalHeaderTable;
@@ -65,6 +66,8 @@ type
 
     procedure DirectoryTableReaded(DirectoryTable: TPascalTypeDirectoryTable); virtual; // TODO : Rename
     procedure LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry); virtual; abstract;
+
+    property RootTable: TCustomPascalTypeTable read FRootTable;
 
 {$IFDEF ChecksumTest}
     procedure ValidateChecksum(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry); virtual;
@@ -281,16 +284,38 @@ end;
 
 { TCustomPascalTypeStorageSFNT }
 
+type
+  TPascalTypeTableRoot = class(TCustomPascalTypeTable)
+  private
+    FStorage: IPascalTypeStorageTable;
+  protected
+    function GetStorage: IPascalTypeStorageTable; override;
+  public
+    constructor Create(const AStorage: IPascalTypeStorageTable); reintroduce;
+  end;
+
+constructor TPascalTypeTableRoot.Create(const AStorage: IPascalTypeStorageTable);
+begin
+  inherited Create;
+  FStorage := AStorage;
+end;
+
+function TPascalTypeTableRoot.GetStorage: IPascalTypeStorageTable;
+begin
+  Result := FStorage;
+end;
+
 constructor TCustomPascalTypeStorageSFNT.Create;
 begin
   inherited;
+  FRootTable := TPascalTypeTableRoot.Create(Self);
 
   // create required tables
-  FHeaderTable := TPascalTypeHeaderTable.Create(Self);
-  FHorizontalHeader := TPascalTypeHorizontalHeaderTable.Create(Self);
-  FMaximumProfile := TPascalTypeMaximumProfileTable.Create(Self);
-  FNameTable := TPascalTypeNameTable.Create(Self);
-  FPostScriptTable := TPascalTypePostscriptTable.Create(Self);
+  FHeaderTable := TPascalTypeHeaderTable.Create(FRootTable);
+  FHorizontalHeader := TPascalTypeHorizontalHeaderTable.Create(FRootTable);
+  FMaximumProfile := TPascalTypeMaximumProfileTable.Create(FRootTable);
+  FNameTable := TPascalTypeNameTable.Create(FRootTable);
+  FPostScriptTable := TPascalTypePostscriptTable.Create(FRootTable);
 end;
 
 destructor TCustomPascalTypeStorageSFNT.Destroy;
@@ -441,7 +466,7 @@ var
   DirectoryTable: TPascalTypeDirectoryTable;
   TableIndex    : Integer;
 begin
-  DirectoryTable := TPascalTypeDirectoryTable.Create;
+  DirectoryTable := TPascalTypeDirectoryTable.Create(FRootTable);
   with DirectoryTable, Stream do
     try
       LoadFromStream(Stream);
@@ -659,8 +684,8 @@ begin
   inherited;
 
   // create required tables
-  FHorizontalMetrics := TPascalTypeHorizontalMetricsTable.Create(Self);
-  FCharacterMap := TPascalTypeCharacterMapTable.Create(Self);
+  FHorizontalMetrics := TPascalTypeHorizontalMetricsTable.Create(RootTable);
+  FCharacterMap := TPascalTypeCharacterMapTable.Create(RootTable);
 
   // create optional table list
   FOptionalTables := TObjectList<TCustomPascalTypeNamedTable>.Create;
@@ -884,7 +909,7 @@ begin
     TableClass := FindPascalTypeTableByType(TableEntry.TableType);
     if TableClass <> nil then
     begin
-      CurrentTable := TableClass.Create(Self);
+      CurrentTable := TableClass.Create(RootTable);
       try
         // load table from stream
         try
@@ -946,7 +971,7 @@ begin
       end;
     end else
     begin
-      CurrentTable := TPascalTypeUnknownTable.Create(Self, TableEntry.TableType);
+      CurrentTable := TPascalTypeUnknownTable.Create(RootTable, TableEntry.TableType);
       CurrentTable.LoadFromStream(Stream);
       FOptionalTables.Add(CurrentTable);
     end;
@@ -964,7 +989,7 @@ var
   MemoryStream  : TMemoryStream;
 begin
   // create directory table
-  DirectoryTable := TPascalTypeDirectoryTable.Create;
+  DirectoryTable := TPascalTypeDirectoryTable.Create(RootTable);
 
   with DirectoryTable, Stream do
     try

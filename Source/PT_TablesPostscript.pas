@@ -183,7 +183,7 @@ type
   protected
     procedure VersionChanged; virtual;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -217,7 +217,7 @@ type
     FVertOriginYMetrics: array of TVertOriginYMetrics;
   protected
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
 
     class function GetTableType: TTableType; override;
 
@@ -1665,7 +1665,7 @@ end;
 
 { TPascalTypeCompactFontFormatTable }
 
-constructor TPascalTypeCompactFontFormatTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeCompactFontFormatTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
   FNameTable := TPascalTypePostscriptNameIndexTable.Create;
@@ -1877,7 +1877,7 @@ end;
 
 { TPascalTypeVerticalOriginTable }
 
-constructor TPascalTypeVerticalOriginTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeVerticalOriginTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
   FMajorVersion := 1;

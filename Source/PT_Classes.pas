@@ -56,20 +56,27 @@ type
 
 
   TCustomPascalTypeTable = class(TInterfacedPersistent, IStreamPersist)
+  private
+    FParent: TCustomPascalTypeTable;
   protected
     procedure Changed; virtual;
+    function GetStorage: IPascalTypeStorageTable; virtual;
+//    constructor CreateHidden;
   public
-    constructor Create; virtual;
+    constructor Create(AParent: TCustomPascalTypeTable = nil); virtual;
 
     procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream); virtual; abstract;
     procedure SaveToStream(Stream: TStream); virtual; abstract;
+
+    property Parent: TCustomPascalTypeTable read FParent;
+    property Storage: IPascalTypeStorageTable read GetStorage;
   end;
-  TCustomPascalTypeTableClass = class of TCustomPascalTypeTable;
+  TPascalTypeTableClass = class of TCustomPascalTypeTable;
 
 
-  TCustomPascalTypeInterfaceTable = class(TCustomPascalTypeTable)
+  TXCustomPascalTypeInterfaceTable = class(TCustomPascalTypeTable)
   private
     FStorage: IPascalTypeStorageTable;
   protected
@@ -78,10 +85,10 @@ type
   public
     constructor Create(const AStorage: IPascalTypeStorageTable); reintroduce; overload; virtual;
   end;
-  TCustomPascalTypeInterfaceTableClass = class of TCustomPascalTypeInterfaceTable;
+  TXCustomPascalTypeInterfaceTableClass = class of TXCustomPascalTypeInterfaceTable;
 
 
-  TCustomPascalTypeNamedTable = class(TCustomPascalTypeInterfaceTable)
+  TCustomPascalTypeNamedTable = class(TCustomPascalTypeTable)
   protected
     function GetInternalTableType: TTableType; virtual;
   public
@@ -95,19 +102,19 @@ type
   TPascalTypeTableList<T: TCustomPascalTypeTable> = class(TObjectList<T>)
   public
     function Add: T; overload; virtual;
-    function Add(ATableClass: TCustomPascalTypeTableClass): T; overload;
+    function Add(ATableClass: TPascalTypeTableClass): T; overload;
     procedure Assign(Source: TPascalTypeTableList<T>);
   end;
 
   TPascalTypeTableInterfaceList<T: TCustomPascalTypeTable> = class(TPascalTypeTableList<T>)
   private
-    FStorage: IPascalTypeStorageTable;
+    FParent: TCustomPascalTypeTable;
   protected
-    property Storage: IPascalTypeStorageTable read FStorage;
+    property Parent: TCustomPascalTypeTable read FParent;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable);
+    constructor Create(AParent: TCustomPascalTypeTable);
     function Add: T; overload; override;
-    function Add(ATableClass: TCustomPascalTypeInterfaceTableClass): T; overload;
+    function Add(ATableClass: TPascalTypeTableClass): T; overload;
     procedure Assign(Source: TPascalTypeTableList<T>);
   end;
 
@@ -225,7 +232,7 @@ begin
   Add(Result);
 end;
 
-function TPascalTypeTableList<T>.Add(ATableClass: TCustomPascalTypeTableClass): T;
+function TPascalTypeTableList<T>.Add(ATableClass: TPascalTypeTableClass): T;
 begin
   Result := T(ATableClass.Create);
   Add(Result);
@@ -239,7 +246,7 @@ begin
   Clear;
   for SourceItem in Source do
   begin
-    DestItem := T(TCustomPascalTypeTableClass(SourceItem.ClassType).Create);
+    DestItem := T(TPascalTypeTableClass(SourceItem.ClassType).Create);
     Add(DestItem);
     DestItem.Assign(SourceItem);
   end;
@@ -249,13 +256,13 @@ end;
 
 function TPascalTypeTableInterfaceList<T>.Add: T;
 begin
-  Result := T(TCustomPascalTypeInterfaceTableClass(T).Create(FStorage));
+  Result := T(TPascalTypeTableClass(T).Create(FParent));
   Add(Result);
 end;
 
-function TPascalTypeTableInterfaceList<T>.Add(ATableClass: TCustomPascalTypeInterfaceTableClass): T;
+function TPascalTypeTableInterfaceList<T>.Add(ATableClass: TPascalTypeTableClass): T;
 begin
-  Result := T(ATableClass.Create(FStorage));
+  Result := T(ATableClass.Create(FParent));
   Add(Result);
 end;
 
@@ -267,22 +274,37 @@ begin
   Clear;
   for SourceItem in Source do
   begin
-    DestItem := Add(TCustomPascalTypeInterfaceTableClass(SourceItem.ClassType));
+    DestItem := Add(TPascalTypeTableClass(SourceItem.ClassType));
     DestItem.Assign(SourceItem);
   end;
 end;
 
-constructor TPascalTypeTableInterfaceList<T>.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeTableInterfaceList<T>.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited Create;
-  FStorage := AStorage;
+  FParent := AParent;
 end;
 
 { TCustomPascalTypeTable }
 
-constructor TCustomPascalTypeTable.Create;
+constructor TCustomPascalTypeTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited Create;
+  FParent := AParent;
+end;
+
+(*
+constructor TCustomPascalTypeTable.CreateHidden;
+begin
+end;
+*)
+
+function TCustomPascalTypeTable.GetStorage: IPascalTypeStorageTable;
+begin
+  if (Parent <> nil) then
+    Result := Parent.Storage
+  else
+    Result := nil;
 end;
 
 procedure TCustomPascalTypeTable.Assign(Source: TPersistent);
@@ -300,16 +322,16 @@ begin
 end;
 
 
-{ TCustomPascalTypeInterfaceTable }
+{ TXCustomPascalTypeInterfaceTable }
 
-procedure TCustomPascalTypeInterfaceTable.Changed;
+procedure TXCustomPascalTypeInterfaceTable.Changed;
 begin
   inherited;
   // if FStorage is IPascalTypeStorageChange
   // then (FStorage as IPascalTypeStorageChange).Changed;
 end;
 
-constructor TCustomPascalTypeInterfaceTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TXCustomPascalTypeInterfaceTable.Create(const AStorage: IPascalTypeStorageTable);
 begin
   inherited Create;
   FStorage := AStorage;

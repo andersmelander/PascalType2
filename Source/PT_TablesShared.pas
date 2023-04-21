@@ -132,7 +132,7 @@ type
     procedure PpemYChanged; virtual;
     procedure StartGlyphIndexChanged; virtual;
   public
-    constructor Create; override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
 
     procedure Assign(Source: TPersistent); override;
@@ -427,11 +427,11 @@ end;
 
 { TPascalTypeBitmapSizeTable }
 
-constructor TPascalTypeBitmapSizeTable.Create;
+constructor TPascalTypeBitmapSizeTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
-  FHorizontalMetrics := TPascalTypeBitmapLineMetrics.Create;
-  FVerticalMetrics := TPascalTypeBitmapLineMetrics.Create;
+  FHorizontalMetrics := TPascalTypeBitmapLineMetrics.Create(Self);
+  FVerticalMetrics := TPascalTypeBitmapLineMetrics.Create(Self);
 end;
 
 destructor TPascalTypeBitmapSizeTable.Destroy;

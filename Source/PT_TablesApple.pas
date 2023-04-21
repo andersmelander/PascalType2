@@ -45,7 +45,7 @@ type
   protected
     procedure VersionChanged; virtual;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
 
     procedure Assign(Source: TPersistent); override;
 
@@ -164,7 +164,7 @@ type
   private
     FSegments: TPascalTypeTableList<TPascalTypeAxisVariationSegmentTable>;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -256,7 +256,7 @@ type
     function GetBitmapSizeTable(Index: Integer): TPascalTypeBitmapSizeTable;
     function GetBitmapSizeTableCount: Integer;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -338,7 +338,7 @@ type
   private
     FDescritors: TPascalTypeTableList<TCustomPascalTypeTaggedValueTable>;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -372,7 +372,7 @@ type
   private
     FFeatures: TPascalTypeTableList<TPascalTypeAppleFeatureTable>;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -502,7 +502,7 @@ type
   protected
     FChains: TPascalTypeTableList<TPascalTypeGlyphMetamorphosisChainTable>;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
 
     procedure Assign(Source: TPersistent); override;
@@ -621,7 +621,7 @@ type
     procedure HorizontalChanged; virtual;
     procedure VerticalChanged; virtual;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -739,7 +739,7 @@ var
 
 { TCustomPascalTypeNamedVersionTable }
 
-constructor TCustomPascalTypeNamedVersionTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TCustomPascalTypeNamedVersionTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
   FVersion.Value := 1;
@@ -1137,9 +1137,9 @@ end;
 
 { TPascalTypeAxisVariationTable }
 
-constructor TPascalTypeAxisVariationTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeAxisVariationTable.Create(AParent: TCustomPascalTypeTable);
 begin
-  inherited Create(AStorage);
+  inherited;
   FSegments := TPascalTypeTableList<TPascalTypeAxisVariationSegmentTable>.Create;
 end;
 
@@ -1354,7 +1354,7 @@ end;
 
 { TPascalTypeBitmapLocationTable }
 
-constructor TPascalTypeBitmapLocationTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeBitmapLocationTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
   FBitmapSizeList := TPascalTypeTableList<TPascalTypeBitmapSizeTable>.Create;
@@ -1601,7 +1601,7 @@ end;
 
 { TPascalTypeFontDescriptionTable }
 
-constructor TPascalTypeFontDescriptionTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeFontDescriptionTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
   FDescritors := TPascalTypeTableList<TCustomPascalTypeTaggedValueTable>.Create;
@@ -1762,9 +1762,9 @@ end;
 
 { TPascalTypeFeatureTable }
 
-constructor TPascalTypeFeatureTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeFeatureTable.Create(AParent: TCustomPascalTypeTable);
 begin
-  inherited Create(AStorage);
+  inherited;
   FFeatures := TPascalTypeTableList<TPascalTypeAppleFeatureTable>.Create;
 end;
 
@@ -2253,10 +2253,10 @@ end;
 
 { TCustomPascalTypeGlyphMetamorphosisTable }
 
-constructor TCustomPascalTypeGlyphMetamorphosisTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TCustomPascalTypeGlyphMetamorphosisTable.Create(AParent: TCustomPascalTypeTable);
 begin
-  FChains := TPascalTypeTableList<TPascalTypeGlyphMetamorphosisChainTable>.Create;
   inherited;
+  FChains := TPascalTypeTableList<TPascalTypeGlyphMetamorphosisChainTable>.Create;
 end;
 
 destructor TCustomPascalTypeGlyphMetamorphosisTable.Destroy;
@@ -2758,11 +2758,11 @@ begin
     FFormat := TPascalTypeTrackingTable(Source).FFormat;
 end;
 
-constructor TPascalTypeTrackingTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeTrackingTable.Create(AParent: TCustomPascalTypeTable);
 begin
+  inherited;
   FHorizontal := TPascalTypeTrackingDataTable.Create;
   FVertical := TPascalTypeTrackingDataTable.Create;
-  inherited;
 end;
 
 destructor TPascalTypeTrackingTable.Destroy;

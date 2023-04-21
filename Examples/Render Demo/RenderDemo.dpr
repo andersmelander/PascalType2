@@ -1,6 +1,11 @@
 program RenderDemo;
 
 uses
+  madExcept,
+  madLinkDisAsm,
+  madListHardware,
+  madListProcesses,
+  madListModules,
   Forms,
   RenderDemoMain in 'RenderDemoMain.pas' {FmRenderDemo},
   PT_ByteCodeInterpreter in '..\..\Source\PT_ByteCodeInterpreter.pas',
@@ -18,10 +23,10 @@ uses
   PT_TablesApple in '..\..\Source\PT_TablesApple.pas',
   PT_TablesBitmap in '..\..\Source\PT_TablesBitmap.pas',
   PT_TablesFontForge in '..\..\Source\PT_TablesFontForge.pas',
-  PT_TablesOpenType in '..\..\Source\PT_TablesOpenType.pas',
-  PT_TablesOpenTypeFeatures in '..\..\Source\PT_TablesOpenTypeFeatures.pas',
-  PT_TablesOpenTypeLanguages in '..\..\Source\PT_TablesOpenTypeLanguages.pas',
-  PT_TablesOpenTypeScripts in '..\..\Source\PT_TablesOpenTypeScripts.pas',
+  PascalType.Tables.OpenType.GSUB in '..\..\Source\PascalType.Tables.OpenType.GSUB.pas',
+  PascalType.Tables.OpenType.Features in '..\..\Source\PascalType.Tables.OpenType.Features.pas',
+  PascalType.Tables.OpenType.Languages in '..\..\Source\PascalType.Tables.OpenType.Languages.pas',
+  PascalType.Tables.OpenType.Scripts in '..\..\Source\PascalType.Tables.OpenType.Scripts.pas',
   PT_TablesOptional in '..\..\Source\PT_TablesOptional.pas',
   PT_TablesPostscript in '..\..\Source\PT_TablesPostscript.pas',
   PT_TablesPostscriptOperators in '..\..\Source\PT_TablesPostscriptOperators.pas',
@@ -31,7 +36,20 @@ uses
   PT_Types in '..\..\Source\PT_Types.pas',
   PT_UnicodeNames in '..\..\Source\PT_UnicodeNames.pas',
   PT_Windows in '..\..\Source\PT_Windows.pas',
-  RenderDemoFontNameScanner in 'RenderDemoFontNameScanner.pas';
+  RenderDemoFontNameScanner in 'RenderDemoFontNameScanner.pas',
+  PascalType.Tables.OpenType in '..\..\Source\PascalType.Tables.OpenType.pas',
+  PascalType.Tables.OpenType.GPOS in '..\..\Source\PascalType.Tables.OpenType.GPOS.pas',
+  PascalType.Tables.OpenType.Common in '..\..\Source\PascalType.Tables.OpenType.Common.pas',
+  PascalType.Tables.OpenType.Coverage in '..\..\Source\PascalType.Tables.OpenType.Coverage.pas',
+  PascalType.Tables.OpenType.Substitution in '..\..\Source\PascalType.Tables.OpenType.Substitution.pas',
+  PascalType.Tables.OpenType.Lookup in '..\..\Source\PascalType.Tables.OpenType.Lookup.pas',
+  PascalType.Tables.OpenType.BASE in '..\..\Source\PascalType.Tables.OpenType.BASE.pas',
+  PascalType.Tables.OpenType.GDEF in '..\..\Source\PascalType.Tables.OpenType.GDEF.pas',
+  PascalType.Tables.OpenType.JSTF in '..\..\Source\PascalType.Tables.OpenType.JSTF.pas',
+  PascalType.Tables.OpenType.LanguageSystem in '..\..\Source\PascalType.Tables.OpenType.LanguageSystem.pas',
+  PascalType.Tables.OpenType.Script in '..\..\Source\PascalType.Tables.OpenType.Script.pas',
+  PascalType.Tables.OpenType.Feature in '..\..\Source\PascalType.Tables.OpenType.Feature.pas',
+  PascalType.Tables.OpenType.Substitution.Single in '..\..\Source\PascalType.Tables.OpenType.Substitution.Single.pas';
 
 {$R *.res}
 

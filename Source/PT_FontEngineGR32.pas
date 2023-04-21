@@ -175,13 +175,13 @@ begin
         tmPitchAndFamily := 0;
     end;
 
-    if (Storage.PostScriptTable.IsFixedPitch = 0) then
+    if (Self.Storage.PostScriptTable.IsFixedPitch = 0) then
       tmPitchAndFamily := tmPitchAndFamily + TMPF_FIXED_PITCH;
-    if Storage.ContainsTable('glyf') then
+    if Self.Storage.ContainsTable('glyf') then
       tmPitchAndFamily := tmPitchAndFamily + TMPF_VECTOR + TMPF_TRUETYPE;
-    if Storage.ContainsTable('CFF ') then
+    if Self.Storage.ContainsTable('CFF ') then
       tmPitchAndFamily := tmPitchAndFamily + TMPF_VECTOR;
-    if Storage.ContainsTable('HDMX') then
+    if Self.Storage.ContainsTable('HDMX') then
       tmPitchAndFamily := tmPitchAndFamily + TMPF_DEVICE;
 
 (*
@@ -281,13 +281,13 @@ begin
       else
         tmPitchAndFamily := 0;
     end;
-    if (Storage.PostScriptTable.IsFixedPitch = 0) then
+    if (Self.Storage.PostScriptTable.IsFixedPitch = 0) then
       tmPitchAndFamily := tmPitchAndFamily + TMPF_FIXED_PITCH;
-    if Storage.ContainsTable('glyf') then
+    if Self.Storage.ContainsTable('glyf') then
       tmPitchAndFamily := tmPitchAndFamily + TMPF_VECTOR + TMPF_TRUETYPE;
-    if Storage.ContainsTable('CFF ') then
+    if Self.Storage.ContainsTable('CFF ') then
       tmPitchAndFamily := tmPitchAndFamily + TMPF_VECTOR;
-    if Storage.ContainsTable('HDMX') then
+    if Self.Storage.ContainsTable('HDMX') then
       tmPitchAndFamily := tmPitchAndFamily + TMPF_DEVICE;
 
     if Assigned(AddendumTable) then
@@ -394,7 +394,7 @@ begin
     otmsUnderscorePosition := RoundedScaleY(PostScriptTable.UnderlinePosition);
 
     // copy panose data
-    Panose := Storage.Panose;
+    Panose := Self.Storage.Panose;
     if Assigned(Panose) then
       with otmPanoseNumber, Panose do
       begin
@@ -528,9 +528,9 @@ begin
     otmsUnderscorePosition := RoundedScaleY(PostScriptTable.UnderlinePosition);
 
     // copy panose data
-    Panose := Storage.Panose;
-    if Assigned(Storage.Panose) then
-      with otmPanoseNumber, Storage.Panose do
+    Panose := Self.Storage.Panose;
+    if Assigned(Self.Storage.Panose) then
+      with otmPanoseNumber, Self.Storage.Panose do
       begin
         bFamilyType      := FamilyType;
         bSerifStyle      := Data[0];

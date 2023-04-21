@@ -47,7 +47,7 @@ type
   protected
     function GetInternalTableType: TTableType; override;
   public
-    constructor Create(const Storage: IPascalTypeStorageTable; TableType: TTableType); reintroduce; virtual;
+    constructor Create(AParent: TCustomPascalTypeTable; TableType: TTableType); reintroduce; virtual;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -62,7 +62,7 @@ type
 
   // glyph data prototype table
 
-  TCustomPascalTypeGlyphDataTable = class(TCustomPascalTypeInterfaceTable);
+  TCustomPascalTypeGlyphDataTable = class(TCustomPascalTypeTable);
 
 
   // Header Table
@@ -120,7 +120,7 @@ type
     procedure YMaxChanged; virtual;
     procedure YMinChanged; virtual;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
 
     class function GetTableType: TTableType; override;
 
@@ -304,7 +304,7 @@ type
     procedure NumGlyphsChanged; virtual;
     procedure VersionChanged; virtual;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
 
     class function GetTableType: TTableType; override;
 
@@ -377,7 +377,7 @@ type
     procedure VersionChanged; virtual;
     procedure XMaxExtentChanged; virtual;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
 
     class function GetTableType: TTableType; override;
 
@@ -415,7 +415,7 @@ type
     function GetHorizontalMetric(Index: Integer): THorizontalMetric;
     function GetHorizontalMetricCount: Integer;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
 
     class function GetTableType: TTableType; override;
 
@@ -1214,7 +1214,7 @@ type
     procedure SuperscriptOffsetYChanged; virtual;
     procedure SuperscriptSizeYChanged; virtual;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -1270,7 +1270,7 @@ type
     FNames: array of ShortString;
     function GetGlyphIndexCount: Integer; // Glyph names with length bytes [variable] (a Pascal string).
   public
-    constructor Create; override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
 
     procedure Assign(Source: TPersistent); override;
@@ -1315,7 +1315,7 @@ type
     procedure UnderlinePositionChanged; virtual;
     procedure UnderlineThicknessChanged; virtual;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -1379,9 +1379,9 @@ var
 
 { TPascalTypeUnknownTable }
 
-constructor TPascalTypeUnknownTable.Create(const Storage: IPascalTypeStorageTable; TableType: TTableType);
+constructor TPascalTypeUnknownTable.Create(AParent: TCustomPascalTypeTable; TableType: TTableType);
 begin
-  inherited Create(Storage);
+  inherited Create(AParent);
   FTableType := TableType;
   FStream := TMemoryStream.Create;
 end;
@@ -1431,7 +1431,7 @@ end;
 
 { TPascalTypeHeaderTable }
 
-constructor TPascalTypeHeaderTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeHeaderTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
 
@@ -1728,7 +1728,7 @@ end;
 
 procedure TPascalTypeHeaderTable.SetVersion(const Value: TFixedPoint);
 begin
-  if (FVersion.Fract <> Value.Fract) or (FVersion.Value <> Value.Value) then
+  if (FVersion <> Value) then
   begin
     FVersion := Value;
     VersionChanged;
@@ -2202,7 +2202,7 @@ end;
 
 { TPascalTypeHorizontalHeaderTable }
 
-constructor TPascalTypeHorizontalHeaderTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeHorizontalHeaderTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
   FVersion.Value := 1;
@@ -2531,7 +2531,7 @@ end;
 
 { TPascalTypeHorizontalMetricsTable }
 
-constructor TPascalTypeHorizontalMetricsTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeHorizontalMetricsTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
   SetLength(FHorizontalMetrics, 1);
@@ -3030,7 +3030,7 @@ end;
 
 { TPascalTypeMaximumProfileTable }
 
-constructor TPascalTypeMaximumProfileTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeMaximumProfileTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
   FVersion.Value := 1;
@@ -4779,7 +4779,7 @@ end;
 
 { TPascalTypeOS2Table }
 
-constructor TPascalTypeOS2Table.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeOS2Table.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
   FWeight := 400;
@@ -5679,7 +5679,7 @@ end;
 
 { TPascalTypePostscriptTable }
 
-constructor TPascalTypePostscriptTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypePostscriptTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
   FVersion.Value := 2;
@@ -5713,7 +5713,7 @@ begin
     if (TPascalTypePostscriptTable(Source).FPostscriptV2Table <> nil) then
     begin
       if (FPostscriptV2Table = nil) then
-        FPostscriptV2Table := TPascalTypePostscriptVersion2Table.Create;
+        FPostscriptV2Table := TPascalTypePostscriptVersion2Table.Create(Self);
       FPostscriptV2Table.Assign(TPascalTypePostscriptTable(Source).FPostscriptV2Table);
     end else
       FreeAndNil(FPostscriptV2Table);
@@ -5771,7 +5771,7 @@ begin
     if FVersion.Value = 2 then
     begin
       if (FPostscriptV2Table = nil) then
-        FPostscriptV2Table := TPascalTypePostscriptVersion2Table.Create;
+        FPostscriptV2Table := TPascalTypePostscriptVersion2Table.Create(Self);
       FPostscriptV2Table.LoadFromStream(Stream);
     end;
   end;
@@ -5943,7 +5943,7 @@ end;
 
 { TPascalTypePostscriptVersion2Table }
 
-constructor TPascalTypePostscriptVersion2Table.Create;
+constructor TPascalTypePostscriptVersion2Table.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
 end;

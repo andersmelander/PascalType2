@@ -153,9 +153,9 @@ type
   );
 
   TGetGlyphOutlineUnion = record
-  case Boolean of
-   True  : (Format : TGetGlyphOutlineFormat);
-   False : (Flags  : TGetGlyphOutlineFlags);
+    case Boolean of
+      True  : (Format : TGetGlyphOutlineFormat);
+      False : (Flags  : TGetGlyphOutlineFlags);
   end;
 
   {$Z2}
@@ -475,11 +475,7 @@ type
     niFontSpecific
   );
 
-  TCoverageFormat = (
-    cfList = 1,
-    cfRange = 2
-  );
-
+  // GPOS lookup Types
   TGlyphPosition = (
     gpSingleAdjustment         = 1, // Adjust position of a single glyph
     gpPairAdjustment           = 2, // Adjust position of a pair of glyphs
@@ -492,7 +488,9 @@ type
     gpExtensionPositioning     = 9  // Extension mechanism for other positionings
   );
 
+  // GSUB lookup types
   TGlyphSubstitution = (
+    gsInvalid                      = 0,
     gsSingle                       = 1, // Replace one glyph with one glyph
     gsMultiple                     = 2, // Replace one glyph with more than one glyph
     gsAlternate                    = 3, // Replace one glyph with one of many glyphs

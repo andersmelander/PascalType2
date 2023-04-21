@@ -45,7 +45,7 @@ type
   protected
     procedure VersionChanged; virtual;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
 
     procedure Assign(Source: TPersistent); override;
 
@@ -62,7 +62,7 @@ type
   private
   protected
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -81,7 +81,7 @@ type
     function GetBitmapSizeTable(Index: Integer): TPascalTypeBitmapSizeTable;
     function GetBitmapSizeTableCount: Integer;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -117,7 +117,7 @@ type
     procedure SubstitutePpemXChanged; virtual;
     procedure SubstitutePpemYChanged; virtual;
   public
-    constructor Create; override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
 
     procedure Assign(Source: TPersistent); override;
@@ -144,7 +144,7 @@ type
     function GetBitmapScaleTable(Index: Integer): TPascalTypeBitmapScaleTable;
     function GetBitmapScaleTableCount: Integer;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); override;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -166,7 +166,7 @@ uses
 
 { TCustomPascalTypeEmbeddedBitmapTable }
 
-constructor TCustomPascalTypeEmbeddedBitmapTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TCustomPascalTypeEmbeddedBitmapTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
   FVersion.Value := 2;
@@ -223,7 +223,7 @@ end;
 
 { TPascalTypeEmbeddedBitmapDataTable }
 
-constructor TPascalTypeEmbeddedBitmapDataTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeEmbeddedBitmapDataTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
 
@@ -264,10 +264,10 @@ end;
 
 { TPascalTypeEmbeddedBitmapLocationTable }
 
-constructor TPascalTypeEmbeddedBitmapLocationTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeEmbeddedBitmapLocationTable.Create(AParent: TCustomPascalTypeTable);
 begin
-  FBitmapSizeList := TPascalTypeTableList<TPascalTypeBitmapSizeTable>.Create;
   inherited;
+  FBitmapSizeList := TPascalTypeTableList<TPascalTypeBitmapSizeTable>.Create;
 end;
 
 destructor TPascalTypeEmbeddedBitmapLocationTable.Destroy;
@@ -348,11 +348,11 @@ end;
 
 { TPascalTypeBitmapScaleTable }
 
-constructor TPascalTypeBitmapScaleTable.Create;
+constructor TPascalTypeBitmapScaleTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
-  FHorizontalMetrics := TPascalTypeBitmapLineMetrics.Create;
-  FVerticalMetrics := TPascalTypeBitmapLineMetrics.Create;
+  FHorizontalMetrics := TPascalTypeBitmapLineMetrics.Create(Self);
+  FVerticalMetrics := TPascalTypeBitmapLineMetrics.Create(Self);
 end;
 
 destructor TPascalTypeBitmapScaleTable.Destroy;
@@ -492,10 +492,10 @@ end;
 
 { TPascalTypeEmbeddedBitmapScalingTable }
 
-constructor TPascalTypeEmbeddedBitmapScalingTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeEmbeddedBitmapScalingTable.Create(AParent: TCustomPascalTypeTable);
 begin
-  FBitmapScaleList := TPascalTypeTableList<TPascalTypeBitmapScaleTable>.Create;
   inherited;
+  FBitmapScaleList := TPascalTypeTableList<TPascalTypeBitmapScaleTable>.Create;
 end;
 
 destructor TPascalTypeEmbeddedBitmapScalingTable.Destroy;

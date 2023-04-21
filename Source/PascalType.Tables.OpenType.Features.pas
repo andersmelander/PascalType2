@@ -1,4 +1,4 @@
-unit PT_TablesOpenTypeFeatures;
+unit PascalType.Tables.OpenType.Features;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -35,7 +35,8 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, PT_Types, PT_Tables, PT_TablesOpenType;
+  PT_Types,
+  PascalType.Tables.OpenType.Feature;
 
 type
   // see: http://www.microsoft.com/typography/otspec/features_ae.htm#aalt
