@@ -69,7 +69,6 @@ object FmRenderDemo: TFmRenderDemo
     Top = 8
     Width = 174
     Height = 21
-    Style = csDropDownList
     Anchors = [akTop, akRight]
     TabOrder = 1
     OnChange = ComboBoxFontChange

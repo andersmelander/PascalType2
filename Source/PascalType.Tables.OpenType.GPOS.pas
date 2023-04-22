@@ -74,6 +74,9 @@ type
 
 implementation
 
+uses
+  PascalType.Tables.OpenType.Positioning;
+
 //------------------------------------------------------------------------------
 //
 //              TOpenTypeGlyphPositionTable
@@ -90,7 +93,7 @@ end;
 
 function TOpenTypeGlyphPositionTable.GetLookupTableClass(ALookupType: Word): TOpenTypeLookupTableClass;
 begin
-  Result := nil; // TODO : TCustomOpenTypePositionLookupTable
+  Result := TCustomOpenTypePositioningLookupTable.GetPositioningLookupTableClass(TGlyphPositioning(ALookupType));
 end;
 
 class function TOpenTypeGlyphPositionTable.GetTableType: TTableType;
