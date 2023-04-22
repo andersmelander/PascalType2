@@ -150,7 +150,7 @@ type
 
 
   // 'cmap' tables
-
+  // https://learn.microsoft.com/en-us/typography/opentype/spec/cmap
   TCustomPascalTypeCharacterMap = class(TCustomPascalTypeTable)
   protected
     class function GetFormat: Word; virtual; abstract;

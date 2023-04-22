@@ -71,6 +71,7 @@ type
     function CharacterToGlyph(CharacterIndex: Integer): Integer; override;
   end;
 
+  // https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#format-4-segment-mapping-to-delta-values
   TPascalTypeFormat4CharacterMap = class(TCustomPascalTypeCharacterMap)
   private
     FLength: Word;                    // This is the length in bytes of the subtable.
@@ -95,6 +96,7 @@ type
     function CharacterToGlyph(CharacterIndex: Integer): Integer; override;
   end;
 
+  // https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#format-6-trimmed-table-mapping
   TPascalTypeFormat6CharacterMap = class(TCustomPascalTypeCharacterMap)
   private
     FLanguage: Word;              // Please see “Note on the language field in 'cmap' subtables“ in this document.
@@ -421,9 +423,13 @@ begin
     Word(FIdDelta[SegIndex]) := ReadSwappedWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
+(*
+Disabled: I see no reason why the last entry must be 1. It isn't documented either.
+A value of 0 has been observed in the Architecture font. Actually the whole FIdDelta table is zero.
   // confirm ID delta is valid
   if FIdDelta[High(FIdDelta)] <> 1 then
     raise EPascalTypeError.CreateFmt(RCStrCharMapErrorIdDelta, [FIdDelta[High(FIdDelta)]]);
+*)
 {$ENDIF}
 
   // read ID range offset
@@ -507,12 +513,12 @@ begin
       FGlyphIdArray[EntryIndex] := ReadSwappedWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
-    if Position <> StartPos + TableLength then
+    if Position <> StartPos-SizeOf(Word) + TableLength then
       raise EPascalTypeError.Create
         ('Character map error: Wrong length of subtable!');
 {$ENDIF}
     // seek end of table
-    Position := StartPos + TableLength;
+    Position := StartPos-SizeOf(Word) + TableLength;
   end;
 end;
 

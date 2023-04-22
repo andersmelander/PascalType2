@@ -128,6 +128,7 @@ type
     property ClassRangeRecord[Index: Integer]: TClassRangeRecord read GetClassRangeRecord;
   end;
 
+  // https://learn.microsoft.com/en-us/typography/opentype/spec/gdef#mark-glyph-sets-table
   TOpenTypeMarkGlyphSetTable = class(TCustomPascalTypeTable)
   private
     FTableFormat: Word; // Format identifier == 1
@@ -403,29 +404,35 @@ var
 begin
   inherited;
 
-  with Stream do
+  // check (minimum) table size
+  if Stream.Position + 4 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  // read version
+  FTableFormat := ReadSwappedWord(Stream);
+
+  if FTableFormat > 1 then
+    raise EPascalTypeError.Create(RCStrUnknownVersion);
+
+  // read coverage length
+  SetLength(FCoverage, ReadSwappedWord(Stream));
+
+  // check (minimum) table size
+  if Stream.Position + Length(FCoverage) * SizeOf(Cardinal) > Stream.Size then
   begin
-    // check (minimum) table size
-    if Position + 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-    // read version
-    FTableFormat := ReadSwappedWord(Stream);
-
-    if FTableFormat > 1 then
-      raise EPascalTypeError.Create(RCStrUnknownVersion);
-
-    // read coverage length
-    SetLength(FCoverage, ReadSwappedWord(Stream));
-
-    // check (minimum) table size
-    if Position + Length(FCoverage) * SizeOf(Cardinal) > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-    // read coverage data
-    for CoverageIndex := 0 to High(FCoverage) do
-      FCoverage[CoverageIndex] := ReadSwappedCardinal(Stream);
+    if Stream.Position + Length(FCoverage) * SizeOf(Word) = Stream.Size then
+    begin
+      // Comic Sans has an incorrect offset table. It uses Words instead of DWords.
+      for CoverageIndex := 0 to High(FCoverage) do
+        FCoverage[CoverageIndex] := ReadSwappedWord(Stream);
+      exit;
+    end;
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
   end;
+
+  // read coverage data
+  for CoverageIndex := 0 to High(FCoverage) do
+    FCoverage[CoverageIndex] := ReadSwappedCardinal(Stream);
 end;
 
 procedure TOpenTypeMarkGlyphSetTable.SaveToStream(Stream: TStream);

@@ -188,6 +188,7 @@ type
   end;
 
   // table 'kern'
+  // https://learn.microsoft.com/en-us/typography/opentype/spec/kern
   TCustomPascalTypeKerningFormatSubTable = class(TCustomPascalTypeTable)
   public
     function GetKerningValue(LeftGlyphIndex, RightGlyphIndex: Word): Word;
@@ -203,6 +204,7 @@ type
     Value : SmallInt; // The kerning value for the above pair, in FUnits. If this value is greater than zero, the characters will be moved apart. If this value is less than zero, the character will be moved closer together.
   end;
 
+  // https://learn.microsoft.com/en-us/typography/opentype/spec/kern#format-0
   TPascalTypeKerningFormat0SubTable = class(TCustomPascalTypeKerningFormatSubTable)
   private
     FPairs: array of TKerningFormat0SubTable;
@@ -325,7 +327,8 @@ type
 
 
   // table 'PCLT'
-
+  // https://learn.microsoft.com/en-us/typography/opentype/spec/pclt
+  // TODO : Why do we even support this table type?
   TPascalTypePCL5Table = class(TCustomPascalTypeNamedTable)
   private
     FVersion            : TFixedPoint;
@@ -1240,11 +1243,13 @@ begin
     // read number of pairs
     SetLength(FPairs, ReadSwappedWord(Stream));
 
+    // Note: Cambria Light Bold has zero in SearchRange
+
     // read search range
     SearchRange := ReadSwappedWord(Stream);
 
     // confirm search range has a valid value
-    if SearchRange > Round(6 * (1 shl FloorLog2(Length(FPairs)))) then
+    if (SearchRange <> 0) and (SearchRange > Round(6 * (1 shl FloorLog2(Length(FPairs))))) then
       raise EPascalTypeError.Create(RCStrErrorInKerningSubTable + ': ' +
         RCStrWrongSearchRange);
 
@@ -1252,7 +1257,7 @@ begin
     EntrySelector := ReadSwappedWord(Stream);
 
     // confirm entry selector has a valid value
-    if EntrySelector < Round(Log2(SearchRange / 6)) then
+    if (SearchRange <> 0) and (EntrySelector < Round(Log2(SearchRange / 6))) then
       raise EPascalTypeError.Create(RCStrErrorInKerningSubTable + ': ' +
         RCStrWrongEntrySelector);
 
@@ -1261,7 +1266,7 @@ begin
 
 {$IFDEF AmbigiousExceptions}
     // confirm range shift has a valid value
-    if RangeShift <> (6 * Length(FPairs) - SearchRange) then
+    if (SearchRange <> 0) and (RangeShift <> (6 * Length(FPairs) - SearchRange)) then
       raise EPascalTypeError.Create(RCStrErrorInKerningSubTable + ': ' +
         RCStrWrongRangeShift);
 {$ENDIF}
@@ -1819,6 +1824,7 @@ begin
     // read version
     FVersion.Fixed := ReadSwappedCardinal(Stream);
 
+    // A value of zero observed in the Architecture font
     if Version.Value <> 1 then
       raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
