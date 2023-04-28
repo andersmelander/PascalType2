@@ -678,6 +678,7 @@ end;
 procedure TPascalTypeFontEngineGDI.RasterizeSimpleGlyph(
   Glyph: TTrueTypeFontSimpleGlyphData; Canvas: TCanvas; X, Y: Integer);
 var
+  Ascent: integer;
   ContourIndex: Integer;
   PointIndex: Integer;
   CurrentPoint: TPoint;
@@ -686,13 +687,17 @@ var
   WasOnCurve: Boolean;
   IsOnCurve: Boolean;
 begin
+  Ascent := Max(TPascalTypeHeaderTable(TPascalTypeStorage(Storage).HeaderTable).YMax,
+    TPascalTypeHorizontalHeaderTable(TPascalTypeStorage(Storage).HorizontalHeader).Ascent);
+  Y := Y + Round(Ascent * ScalerY);
+
   with Canvas, Glyph do
   begin
     // set pen to solid black
     Pen.Color := clBlack;
     Pen.Style := psSolid;
 
-    Y := Y + Abs(FontHeight);
+//    Y := Y + Abs(FontHeight);
 
     for ContourIndex := 0 to ContourCount - 1 do
       with Contour[ContourIndex] do

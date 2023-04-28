@@ -828,9 +828,12 @@ procedure TPascalTypeFontEngineGR32.RenderText(Text: string; Canvas: TCustomPath
 var
   CharIndex: Integer;
   GlyphIndex: Integer;
+  Pos: TFloatPoint;
 begin
   Canvas.BeginUpdate;
   try
+    Pos.X := X;
+    Pos.Y := Y;
     for CharIndex := 1 to Length(Text) do
     begin
       if Text[CharIndex] <= #31 then
@@ -844,10 +847,10 @@ begin
         GlyphIndex := GetGlyphByCharacter(Text[CharIndex]);
 
         // rasterize character
-        RasterizeGlyph(GlyphIndex, Canvas, X, Y);
+        RasterizeGlyph(GlyphIndex, Canvas, Round(Pos.X), Round(Pos.Y));
 
         // advance cursor
-        X := X + Round(GetAdvanceWidth(GlyphIndex));
+        Pos.X := Pos.X + GetAdvanceWidth(GlyphIndex);
       end;
     end;
 

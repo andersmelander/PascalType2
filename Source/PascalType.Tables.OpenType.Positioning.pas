@@ -83,9 +83,9 @@ type
   TCustomOpenTypePositioningSubTable = class abstract(TCustomOpenTypeLookupSubTableWithCoverage)
   private
   protected
-    function LoadValueRecordFromStream(Stream: TStream; var ValueRecord: TOpenTypeValueRecord; ValueFormat: Word): integer;
-    function SaveValueRecordToStream(Stream: TStream; const ValueRecord: TOpenTypeValueRecord; ValueFormat: Word): integer;
-    function CreateValueFormat(const ValueRecord: TOpenTypeValueRecord; var ValueFormat: Word): integer;
+    class function LoadValueRecordFromStream(Stream: TStream; var ValueRecord: TOpenTypeValueRecord; ValueFormat: Word): integer;
+    class function SaveValueRecordToStream(Stream: TStream; const ValueRecord: TOpenTypeValueRecord; ValueFormat: Word): integer;
+    class function CreateValueFormat(const ValueRecord: TOpenTypeValueRecord; var ValueFormat: Word): integer;
   public
   end;
 
@@ -140,7 +140,7 @@ end;
 //              TCustomOpenTypePositioningSubTable
 //
 //------------------------------------------------------------------------------
-function TCustomOpenTypePositioningSubTable.CreateValueFormat(const ValueRecord: TOpenTypeValueRecord; var ValueFormat: Word): integer;
+class function TCustomOpenTypePositioningSubTable.CreateValueFormat(const ValueRecord: TOpenTypeValueRecord; var ValueFormat: Word): integer;
 var
   pValue: PWord;
   Mask: Word;
@@ -162,7 +162,7 @@ begin
   end;
 end;
 
-function TCustomOpenTypePositioningSubTable.LoadValueRecordFromStream(Stream: TStream; var ValueRecord: TOpenTypeValueRecord;
+class function TCustomOpenTypePositioningSubTable.LoadValueRecordFromStream(Stream: TStream; var ValueRecord: TOpenTypeValueRecord;
   ValueFormat: Word): integer;
 var
   pValue: PWord;
@@ -185,7 +185,7 @@ begin
   end;
 end;
 
-function TCustomOpenTypePositioningSubTable.SaveValueRecordToStream(Stream: TStream; const ValueRecord: TOpenTypeValueRecord;
+class function TCustomOpenTypePositioningSubTable.SaveValueRecordToStream(Stream: TStream; const ValueRecord: TOpenTypeValueRecord;
   ValueFormat: Word): integer;
 var
   pValue: PWord;
