@@ -34,6 +34,8 @@ interface
 
 {$I PT_Compiler.inc}
 
+{-$define DEBUG_CURVE}
+
 uses
   {$IFDEF FPC}LCLIntf, LCLType, {$IFDEF MSWINDOWS} Windows, {$ENDIF}
   {$ELSE}Windows, {$ENDIF} Classes, Contnrs, Sysutils, Graphics,
@@ -743,33 +745,42 @@ begin
   Origin.X := X;
   Origin.Y := Y + Ascent * ScalerY;
 
+{$ifdef DEBUG_CURVE}
+  var DebugPath := TFlattenedPath.Create;
+{$endif DEBUG_CURVE}
+
   for ContourIndex := 0 to Glyph.ContourCount - 1 do
   begin
     Contour := Glyph.Contour[ContourIndex];
+
+    if (Contour.PointCount < 2) then
+      continue;
+
+    CurrentPoint.X := Origin.X + Contour.Point[0].XPos * ScalerX;
+    CurrentPoint.Y := Origin.Y - Contour.Point[0].YPos * ScalerY;
 
     // Process the start point
     if Contour.Point[0].FlagIsOnCurve then
     begin
       // It's a curve-point
-      CurrentPoint.X := Origin.X + Contour.Point[0].XPos * ScalerX;
-      CurrentPoint.Y := Origin.Y - Contour.Point[0].YPos * ScalerY;
       PathState := psCurve;
     end else
     begin
+      ControlPoint := CurrentPoint;
       // It's a control-point. See if the prior point in the closed polygon
       // (i.e. last point in the array) is a curve-point.
-      ControlPoint := CurrentPoint;
       if Contour.Point[Contour.PointCount-1].FlagIsOnCurve then
       begin
         // Last point was a curve-point. Use it as the current point and use
         // the first point as the control-point.
-        ControlPoint := CurrentPoint;
+        // Seen with: Kalinga Bold, small letter "r"
         CurrentPoint.X := Origin.X + Contour.Point[Contour.PointCount-1].XPos * ScalerX;
         CurrentPoint.Y := Origin.Y - Contour.Point[Contour.PointCount-1].YPos * ScalerY;
       end else
       begin
         // Both first and last points are control-points.
         // Synthesize a curve-point in between the two control-points.
+        // Seen with: SimSun-ExtB, small letter "a"
         CurrentPoint.X := Origin.X + (Contour.Point[0].XPos + Contour.Point[Contour.PointCount-1].XPos) * 0.5 * ScalerX;
         CurrentPoint.Y := Origin.Y - (Contour.Point[0].YPos + Contour.Point[Contour.PointCount-1].YPos) * 0.5 * ScalerY;
       end;
@@ -778,6 +789,9 @@ begin
 
     // Move to the first curve-point (the one we just found above)
     Canvas.MoveTo(CurrentPoint.X, CurrentPoint.Y);
+{$ifdef DEBUG_CURVE}
+    DebugPath.Circle(CurrentPoint, 3);
+{$endif DEBUG_CURVE}
 
     // Note that we take advange of the fact that Point[PointCount] returns Point[0]
     for PointIndex := 1 to Contour.PointCount do
@@ -794,13 +808,32 @@ begin
 
       case StateTransition.Emit of
         emitNone:
-          ControlPoint := CurrentPoint;
+          begin
+            ControlPoint := CurrentPoint;
+{$ifdef DEBUG_CURVE}
+            var r: TFloatRect;
+            r.TopLeft := ControlPoint;
+            r.BottomRight := ControlPoint;
+            InflateRect(r, 2, 2);
+            DebugPath.Rectangle(r);
+{$endif DEBUG_CURVE}
+          end;
 
         emitLine:
-          Canvas.LineTo(CurrentPoint.X, CurrentPoint.Y);
+          begin
+            Canvas.LineTo(CurrentPoint.X, CurrentPoint.Y);
+{$ifdef DEBUG_CURVE}
+            DebugPath.Circle(CurrentPoint, 3);
+{$endif DEBUG_CURVE}
+          end;
 
         emitQuadratic:
-          Canvas.ConicTo(ControlPoint, CurrentPoint);
+          begin
+            Canvas.ConicTo(ControlPoint, CurrentPoint);
+{$ifdef DEBUG_CURVE}
+            DebugPath.Circle(CurrentPoint, 3);
+{$endif DEBUG_CURVE}
+          end;
 
         emitHalfway:
           begin
@@ -808,12 +841,28 @@ begin
             MidPoint.Y := (ControlPoint.Y + CurrentPoint.Y) * 0.5;
             Canvas.ConicTo(ControlPoint, MidPoint);
             ControlPoint := CurrentPoint;
+{$ifdef DEBUG_CURVE}
+            DebugPath.Circle(MidPoint, 3);
+            var r: TFloatRect;
+            r.TopLeft := ControlPoint;
+            r.BottomRight := ControlPoint;
+            InflateRect(r, 2, 2);
+            DebugPath.Rectangle(r);
+{$endif DEBUG_CURVE}
           end;
       end;
     end;
-    
+
     Canvas.EndPath(True);
   end;
+{$ifdef DEBUG_CURVE}
+  for var i := 0 to High(DebugPath.Path) do
+    if (DebugPath.PathClosed[i]) then
+      Canvas.Polygon(DebugPath.Path[i])
+    else
+      Canvas.Polyline(DebugPath.Path[i]);
+  DebugPath.Free;
+{$endif DEBUG_CURVE}
 end;
 
 ////////////////////////////////////////////////////////////////////////////////

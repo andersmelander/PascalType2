@@ -229,8 +229,7 @@ var
   SubTableType: Word;
   SubTableOffsets: array of Word;
   SubTable: TCustomOpenTypeLookupSubTable;
-  SubTableClass: TPascalTypeTableClass;
-//  SubTableClass: TOpenTypeLookupSubTableClass;
+  SubTableClass: TOpenTypeLookupSubTableClass;
 begin
   StartPos := Stream.Position;
 
@@ -262,15 +261,15 @@ begin
     SubTableType := ReadSwappedWord(Stream);
     SubTableClass := GetSubTableClass(SubTableType);
 
-    if (SubTableClass <> nil) then
-    begin
-      // add to subtable list
-      SubTable := FSubTableList.Add(SubTableClass);
+    if (SubTableClass = nil) then
+      continue;
 
-      // load subtable
-      Stream.Seek(-SizeOf(Word), soFromCurrent);
-      SubTable.LoadFromStream(Stream);
-    end;
+    // add to subtable list
+    SubTable := FSubTableList.Add(SubTableClass);
+
+    // load subtable
+    Stream.Seek(-SizeOf(Word), soFromCurrent);
+    SubTable.LoadFromStream(Stream);
   end;
 end;
 

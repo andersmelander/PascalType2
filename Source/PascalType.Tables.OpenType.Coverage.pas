@@ -120,7 +120,7 @@ type
 // https://learn.microsoft.com/en-us/typography/opentype/spec/chapter2#coverage-format-2
 //------------------------------------------------------------------------------
 type
-  TCoverageRangeRecord = packed record
+  TCoverageRangeRecord = record
     StartGlyph         : Word; // First GlyphID in the range
     EndGlyph           : Word; // Last GlyphID in the range
     StartCoverageIndex : Word; // Coverage Index of first GlyphID in range
@@ -186,11 +186,16 @@ begin
 end;
 
 class function TCustomOpenTypeCoverageTable.ClassByFormat(ACoverageFormat: TCoverageFormat): TOpenTypeCoverageTableClass;
-const
-  CoverageClasses: array[TCoverageFormat] of TOpenTypeCoverageTableClass =
-    (TOpenTypeCoverageListTable, TOpenTypeCoverageRangeTable);
 begin
-  Result := CoverageClasses[ACoverageFormat];
+  case ACoverageFormat of
+    cfList:
+      Result := TOpenTypeCoverageListTable;
+
+    cfRange:
+      Result := TOpenTypeCoverageRangeTable;
+  else
+    Result := nil;
+  end;
 end;
 
 

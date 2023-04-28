@@ -2349,6 +2349,8 @@ begin
 end;
 
 procedure TPascalTypeVerticalHeaderTable.LoadFromStream(Stream: TStream);
+var
+  i: integer;
 begin
   inherited;
 
@@ -2368,13 +2370,13 @@ begin
     // then raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
     // read ascent
-    FAscent := ReadSwappedWord(Stream);
+    FAscent := ReadSwappedSmallInt(Stream);
 
     // read descent
-    FDescent := ReadSwappedWord(Stream);
+    FDescent := ReadSwappedSmallInt(Stream);
 
     // read line gap
-    FLineGap := ReadSwappedWord(Stream);
+    FLineGap := ReadSwappedSmallInt(Stream);
 
     // read advanced height max
     FAdvanceHeightMax := ReadSwappedSmallInt(Stream);
@@ -2399,13 +2401,14 @@ begin
 
 {$IFDEF AmbigiousExceptions}
     // read reserved
-    if ReadSwappedSmallInt(Stream) <> 0 then
-      raise EPascalTypeError.Create(RCStrReservedValueError);
+    for i := 0 to 3 do
+      if ReadSwappedSmallInt(Stream) <> 0 then
+        raise EPascalTypeError.Create(RCStrReservedValueError);
 {$ELSE}
-    Seek(4, soCurrent);
+    Seek(4*SizeOf(SmallInt), soCurrent);
 {$ENDIF}
     // read metric data format
-    FMetricDataFormat := ReadSwappedWord(Stream);
+    FMetricDataFormat := ReadSwappedWord(Stream); // Unused - Set to 0
 
     // read metric data format
     FNumOfLongVerMetrics := ReadSwappedWord(Stream);
@@ -2413,6 +2416,8 @@ begin
 end;
 
 procedure TPascalTypeVerticalHeaderTable.SaveToStream(Stream: TStream);
+var
+  i: integer;
 begin
   inherited;
 
@@ -2450,7 +2455,8 @@ begin
   WriteSwappedSmallInt(Stream, FCaretOffset);
 
   // write reserved
-  WriteSwappedCardinal(Stream, 0);
+  for i := 0 to 3 do
+    WriteSwappedCardinal(Stream, 0);
 
   // write metric data format
   WriteSwappedWord(Stream, FMetricDataFormat);

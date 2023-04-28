@@ -2554,7 +2554,7 @@ procedure TPascalTypeHorizontalMetricsTable.LoadFromStream(Stream: TStream);
 var
   HorHead  : TPascalTypeHorizontalHeaderTable;
   MaxProf  : TPascalTypeMaximumProfileTable;
-  LastWidth: SmallInt;
+  LastWidth: Word;
   MtxIndex : Integer;
 const
   CMaxProfTableType: TTableType = (AsAnsiChar: 'maxp');
@@ -2582,7 +2582,7 @@ begin
     for MtxIndex := 0 to HorHead.NumOfLongHorMetrics - 1 do
     begin
       // read advance width
-      FHorizontalMetrics[MtxIndex].AdvanceWidth := ReadSwappedSmallInt(Stream);
+      FHorizontalMetrics[MtxIndex].AdvanceWidth := ReadSwappedWord(Stream);
 
       // read left side bearing
       FHorizontalMetrics[MtxIndex].Bearing := ReadSwappedSmallInt(Stream);
@@ -2625,7 +2625,7 @@ begin
     for MtxIndex := 0 to HorHead.NumOfLongHorMetrics - 1 do
     begin
       // write advance width
-      WriteSwappedSmallInt(Stream, FHorizontalMetrics[MtxIndex].AdvanceWidth);
+      WriteSwappedWord(Stream, FHorizontalMetrics[MtxIndex].AdvanceWidth);
 
       // write left side bearing
       WriteSwappedSmallInt(Stream, FHorizontalMetrics[MtxIndex].Bearing);
@@ -2633,7 +2633,7 @@ begin
 
     for MtxIndex := HorHead.NumOfLongHorMetrics to High(FHorizontalMetrics) do
       // write advance width / left side bearing at once
-      WriteSwappedSmallInt(Stream, FHorizontalMetrics[MtxIndex].AdvanceWidth);
+      WriteSwappedWord(Stream, FHorizontalMetrics[MtxIndex].AdvanceWidth);
   end;
 end;
 

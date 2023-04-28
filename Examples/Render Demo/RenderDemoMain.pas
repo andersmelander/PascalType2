@@ -221,10 +221,16 @@ begin
        Bitmap32.Clear(clWhite32);
        var Canvas32 := TCanvas32.Create(Bitmap32);
        try
-         var Brush32 := Canvas32.Brushes.Add(TSolidBrush) as TSolidBrush;
-         Brush32.FillColor := clBlack32;
-         Brush32.FillMode := pfNonZero;
-
+//(*
+         var BrushFill := Canvas32.Brushes.Add(TSolidBrush) as TSolidBrush;
+         BrushFill.FillColor := clBlack32;
+         BrushFill.FillMode := pfNonZero;
+//*)
+//(*
+         var BrushStroke := Canvas32.Brushes.Add(TStrokeBrush) as TStrokeBrush;
+         BrushStroke.FillColor := clTrRed32;
+         BrushStroke.StrokeWidth := 1;
+//*)
          FFontEngine32.RenderText(FText, Canvas32);
        finally
          Canvas32.Free;
