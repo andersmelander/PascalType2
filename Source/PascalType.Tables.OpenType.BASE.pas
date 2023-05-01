@@ -277,33 +277,29 @@ end;
 procedure TOpenTypeAxisTable.LoadFromStream(Stream: TStream);
 var
   StartPos: Int64;
-  Value16 : Word;
+  Offset: Word;
 begin
+  StartPos := Stream.Position;
+
   inherited;
 
-  with Stream do
+  // check (minimum) table size
+  if Stream.Position + 2 > Stream.Size then
+    raise EPascalTypeError.Create(RCStrTableIncomplete);
+
+  // read baseline tag list table offset (maybe 0)
+  Offset := ReadSwappedWord(Stream);
+  if Offset <> 0 then
   begin
-    // remember start position
-    StartPos := Position;
+    // locate baseline tag list table
+    Stream.Position := StartPos + Offset;
 
-    // check (minimum) table size
-    if Position + 4 > Size then
-      raise EPascalTypeError.Create(RCStrTableIncomplete);
+    // eventually create baseline tag list table
+    if (FBaseLineTagList = nil) then
+      FBaseLineTagList := TOpenTypeBaselineTagListTable.Create;
 
-    // read baseline tag list table offset (maybe 0)
-    Read(Value16, SizeOf(Word));
-    if Value16 > 0 then
-    begin
-      // locate baseline tag list table
-      Position := StartPos + Value16;
-
-      // eventually create baseline tag list table
-      if (FBaseLineTagList = nil) then
-        FBaseLineTagList := TOpenTypeBaselineTagListTable.Create;
-
-      // load baseline tag list table from stream
-      FBaseLineTagList.LoadFromStream(Stream);
-    end;
+    // load baseline tag list table from stream
+    FBaseLineTagList.LoadFromStream(Stream);
   end;
 end;
 
@@ -365,53 +361,52 @@ end;
 procedure TOpenTypeBaselineTable.LoadFromStream(Stream: TStream);
 var
   StartPos: Int64;
-  Value16 : Word;
+  HorzOffset: Word;
+  VertOffset: Word;
 begin
+  StartPos := Stream.Position;
+
   inherited;
 
-  with Stream do
+  // check version alread read
+  if Version.Value <> 1 then
+    raise EPascalTypeError.Create(RCStrUnsupportedVersion);
+
+  // remember start position as position minus the version already read
+
+  // check (minimum) table size
+  if Stream.Position + 4 > Stream.Size then
+    raise EPascalTypeError.Create(RCStrTableIncomplete);
+
+  // read horizontal axis table offset (maybe 0)
+  HorzOffset := ReadSwappedWord(Stream);
+  // read vertical axis table offset (maybe 0)
+  VertOffset := ReadSwappedWord(Stream);
+
+  if HorzOffset <> 0 then
   begin
-    // check version alread read
-    if Version.Value <> 1 then
-      raise EPascalTypeError.Create(RCStrUnsupportedVersion);
+    // locate horizontal axis table
+    Stream.Position := StartPos + HorzOffset;
 
-    // remember start position as position minus the version already read
-    StartPos := Position - 4;
+    // eventually create horizontal axis table
+    if (FHorizontalAxis = nil) then
+      FHorizontalAxis := TOpenTypeAxisTable.Create;
 
-    // check (minimum) table size
-    if Position + 4 > Size then
-      raise EPascalTypeError.Create(RCStrTableIncomplete);
+    // load horizontal axis table from stream
+    FHorizontalAxis.LoadFromStream(Stream);
+  end;
 
-    // read horizontal axis table offset (maybe 0)
-    Read(Value16, SizeOf(Word));
-    if Value16 > 0 then
-    begin
-      // locate horizontal axis table
-      Position := StartPos + Value16;
+  if VertOffset <> 0 then
+  begin
+    // locate horizontal axis table
+    Stream.Position := StartPos + VertOffset;
 
-      // eventually create horizontal axis table
-      if (FHorizontalAxis = nil) then
-        FHorizontalAxis := TOpenTypeAxisTable.Create;
+    // eventually create horizontal axis table
+    if (FVerticalAxis = nil) then
+      FVerticalAxis := TOpenTypeAxisTable.Create;
 
-      // load horizontal axis table from stream
-      FHorizontalAxis.LoadFromStream(Stream);
-    end;
-
-    // read vertical axis table offset (maybe 0)
-    Read(Value16, SizeOf(Word));
-    if Value16 > 0 then
-    begin
-      // locate horizontal axis table
-      Position := StartPos + Value16;
-
-      // eventually create horizontal axis table
-      if (FVerticalAxis = nil) then
-        FVerticalAxis := TOpenTypeAxisTable.Create;
-
-      // load horizontal axis table from stream
-      FVerticalAxis.LoadFromStream(Stream);
-    end;
-
+    // load horizontal axis table from stream
+    FVerticalAxis.LoadFromStream(Stream);
   end;
 end;
 

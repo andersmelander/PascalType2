@@ -367,10 +367,37 @@ begin
     if FStorage.CharacterMap.CharacterMapSubtable[CharMapIndex] is TPascalTypeCharacterMapMicrosoftDirectory then
     begin
       CharacterMapDirectory := TPascalTypeCharacterMapMicrosoftDirectory(FStorage.CharacterMap.CharacterMapSubtable[CharMapIndex]);
-      if CharacterMapDirectory.PlatformSpecificID = meUnicodeBMP then
-      begin
-        Result := CharacterMapDirectory.CharacterToGlyph(Integer(Character));
-        break;
+      case CharacterMapDirectory.PlatformSpecificID of
+        meUnicodeBMP:
+          begin
+            Result := CharacterMapDirectory.CharacterToGlyph(Integer(Character));
+            // TODO : Only break if result<>0?
+            break;
+          end;
+
+        // meSymbol included. How else are we going to use symbol fonts?
+        // Seen with: "Symbol"
+        meSymbol:
+          begin
+            // https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#windows-platform-platform-id--3
+            //
+            // The symbol encoding was created to support fonts with arbitrary ornaments or symbols
+            // not supported in Unicode or other standard encodings. A format 4 subtable would be used,
+            // typically with up to 224 graphic characters assigned at code positions beginning with 0xF020.
+            // This corresponds to a sub-range within the Unicode Private-Use Area (PUA), though this is not
+            // a Unicode encoding. In legacy usage, some applications would represent the symbol characters
+            // in text using a single-byte encoding, and then map 0x20 to the OS/2.usFirstCharIndex value in
+            // the font.
+            //
+            // This works with "Symbol" but not with "Marlett", small letter "a"
+            if (FStorage.OS2Table <> nil) then
+              Character := Word(Integer(Character) - Ord(' ') + FStorage.OS2Table.UnicodeFirstCharacterIndex)
+            else
+              Character := Word(Integer(Character) - Ord(' ') + $F020);
+            Result := CharacterMapDirectory.CharacterToGlyph(Character);
+            // TODO : Only break if result<>0?
+            break;
+          end;
       end;
     end;
 {$ENDIF}

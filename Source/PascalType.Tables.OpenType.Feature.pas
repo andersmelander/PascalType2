@@ -236,7 +236,7 @@ end;
 
 procedure TCustomOpenTypeFeatureTable.LoadFromStream(Stream: TStream);
 var
-  LookupIndex: Word;
+  LookupIndex: integer;
 begin
   inherited;
 

@@ -317,6 +317,7 @@ begin
     Result := FGlyphIdArray[(CharacterIndex - FStartCount[SegmentIndex]) and $0000FFFF];
 
     *)
+    // TODO : This doesn't work with "Input", small letter "a"
     Result := FGlyphIdArray[(CharacterIndex - FStartCount[SegmentIndex]) and $0000FFFF];
 
     // check for missing character and add offset eventually

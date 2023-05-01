@@ -1267,8 +1267,7 @@ begin
 {$IFDEF AmbigiousExceptions}
     // confirm range shift has a valid value
     if (SearchRange <> 0) and (RangeShift <> (6 * Length(FPairs) - SearchRange)) then
-      raise EPascalTypeError.Create(RCStrErrorInKerningSubTable + ': ' +
-        RCStrWrongRangeShift);
+      raise EPascalTypeError.Create(RCStrErrorInKerningSubTable + ': ' + RCStrWrongRangeShift);
 {$ENDIF}
     for PairIndex := 0 to High(FPairs) do
       with FPairs[PairIndex] do

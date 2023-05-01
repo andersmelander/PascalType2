@@ -170,14 +170,14 @@ begin
   if Stream.Position + 2 > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  FDeltaGlyphID := ReadSwappedWord(Stream);
+  FDeltaGlyphID := ReadSwappedSmallInt(Stream);
 end;
 
 procedure TOpenTypeSubstitutionSubTableSingleOffset.SaveToStream(Stream: TStream);
 begin
   inherited;
 
-  WriteSwappedWord(Stream, FDeltaGlyphID);
+  WriteSwappedSmallInt(Stream, FDeltaGlyphID);
 end;
 
 function TOpenTypeSubstitutionSubTableSingleOffset.SubstituteGlyph(AGlyphID: Word): Word;
