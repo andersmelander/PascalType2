@@ -239,18 +239,24 @@ type
       GLYF_RESERVED15                = $8000;
       GLYF_RESERVED                  = GLYF_RESERVED5 or GLYF_RESERVED13 or GLYF_RESERVED14 or GLYF_RESERVED15;
   private
-    FFlags     : Word; // Component flag
-    FGlyphIndex: Word; // Glyph index of component
-    FArgument  : array [0..1] of Integer;
-    FScale     : TSmallScaleMatrix;
+    FFlags: Word;       // Component flag
+    FGlyphIndex: Word;  // Glyph index of component
+    FOffsetXY: array[0..1] of SmallInt;
+    FPointIndex: array[0..1] of Word;
+    FAffineTransformationMatrix: TSmallScaleMatrix;
     procedure SetFlags(const Value: Word);
     procedure SetGlyphIndex(const Value: Word);
+    function GetHasAffineTransformationMatrix: boolean;
+    function GetArgsAreOffset: boolean;
+    function GetArgsArePointIndex: boolean;
   protected
     procedure FlagsChanged; virtual;
     procedure GlyphIndexChanged; virtual;
 
     function FlagMoreComponents: boolean;
     function FlagHasInstructions: boolean;
+    function FlagHasAffineTransformationMatrix: boolean;
+    function FlagArgsAreOffset: boolean;
   public
     procedure Assign(Source: TPersistent); override;
 
@@ -259,8 +265,14 @@ type
 
     property Flags: Word read FFlags write SetFlags;
     property GlyphIndex: Word read FGlyphIndex write SetGlyphIndex;
-    property ArgumentX: Integer read FArgument[0];
-    property ArgumentY: Integer read FArgument[1];
+    property HasOffset: boolean read GetArgsAreOffset;
+    property HasGlyphPointIndex: boolean read GetArgsArePointIndex;
+    property OffsetX: SmallInt read FOffsetXY[0];
+    property OffsetY: SmallInt read FOffsetXY[1];
+    property ParentGlyphPointIndex: Word read FPointIndex[0];
+    property ChildGlyphPointIndex: Word read FPointIndex[1];
+    property HasAffineTransformationMatrix: boolean read GetHasAffineTransformationMatrix;
+    property AffineTransformationMatrix: TSmallScaleMatrix read FAffineTransformationMatrix write FAffineTransformationMatrix;
   end;
 
   TTrueTypeFontCompositeGlyphData = class(TCustomTrueTypeFontGlyphData)
@@ -1004,14 +1016,15 @@ begin
   begin
     FFlags := TPascalTypeCompositeGlyph(Source).FFlags;
     FGlyphIndex := TPascalTypeCompositeGlyph(Source).FGlyphIndex;
-    FArgument := TPascalTypeCompositeGlyph(Source).FArgument;
+    FOffsetXY := TPascalTypeCompositeGlyph(Source).FOffsetXY;
+    FAffineTransformationMatrix := TPascalTypeCompositeGlyph(Source).FAffineTransformationMatrix;
   end;
 end;
 
 procedure TPascalTypeCompositeGlyph.LoadFromStream(Stream: TStream);
 var
-  Argument: array [0..1] of SmallInt;
-  Bytes: array [0..1] of byte;
+  Bytes: array [0..1] of Byte;
+  ShortInts: array [0..1] of ShortInt;
 {$IFDEF UseFloatingPoint}
 const
   CFixedPoint2Dot14Scale: Single = 1 / 16384;
@@ -1033,33 +1046,58 @@ begin
   // read argument 1
   if (FFlags and GLYF_ARG_1_AND_2_ARE_WORDS <> 0) then
   begin
-    Argument[0] := ReadSwappedSmallInt(Stream);
-    Argument[1] := ReadSwappedSmallInt(Stream);
+    if (FFlags and GLYF_ARGS_ARE_XY_VALUES <> 0) then
+    begin
+      FOffsetXY[0] := ReadSwappedSmallInt(Stream);
+      FOffsetXY[1] := ReadSwappedSmallInt(Stream);
+      FPointIndex[0] := 0;
+      FPointIndex[1] := 0;
+    end else
+    begin
+      FPointIndex[0] := ReadSwappedWord(Stream);
+      FPointIndex[1] := ReadSwappedWord(Stream);
+      FOffsetXY[0] := 0;
+      FOffsetXY[1] := 0;
+    end;
   end else
   begin
-    Stream.Read(Bytes[0], 1);
-    Stream.Read(Bytes[1], 1);
-    Argument[0] := Bytes[0];
-    Argument[1] := Bytes[1];
+    if (FFlags and GLYF_ARGS_ARE_XY_VALUES <> 0) then
+    begin
+      Stream.Read(ShortInts[0], 1);
+      Stream.Read(ShortInts[1], 1);
+      FOffsetXY[0] := ShortInts[0];
+      FOffsetXY[1] := ShortInts[1];
+      FPointIndex[0] := 0;
+      FPointIndex[1] := 0;
+    end else
+    begin
+      Stream.Read(Bytes[0], 1);
+      Stream.Read(Bytes[1], 1);
+      FPointIndex[0] := Bytes[0];
+      FPointIndex[1] := Bytes[1];
+      FOffsetXY[0] := 0;
+      FOffsetXY[1] := 0;
+    end;
   end;
 
   if (FFlags and GLYF_WE_HAVE_A_SCALE <> 0) then
   begin
     // read scale
 {$IFDEF UseFloatingPoint}
-    FScale[0, 0] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
+    FAffineTransformationMatrix[0, 0] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
 {$ELSE}
-    FScale[0, 0] := ReadSwappedSmallInt(Stream);
+    FAffineTransformationMatrix[0, 0] := ReadSwappedSmallInt(Stream);
 {$ENDIF}
     // set other values implicitly
-    FScale[0, 1] := 0;
-    FScale[1, 0] := 0;
-    FScale[1, 1] := FScale[0, 0];
+    FAffineTransformationMatrix[0, 1] := 0;
+    FAffineTransformationMatrix[1, 0] := 0;
+    FAffineTransformationMatrix[1, 1] := FAffineTransformationMatrix[0, 0];
 
 {$IFDEF AmbigiousExceptions}
-    // make sure the GLYF_RESERVED flag is set to 0
+    // GLYF_WE_HAVE_A_SCALE and GLYF_WE_HAVE_AN_X_AND_Y_SCALE are mutually exclusive
     if (FFlags and GLYF_WE_HAVE_AN_X_AND_Y_SCALE <> 0) then
       raise EPascalTypeError.Create(RCStrCompositeGlyphFlagError);
+    // GLYF_WE_HAVE_A_SCALE and GLYF_WE_HAVE_A_TWO_BY_TWO are mutually exclusive
     if (FFlags and GLYF_WE_HAVE_A_TWO_BY_TWO <> 0) then
       raise EPascalTypeError.Create(RCStrCompositeGlyphFlagError);
 {$ENDIF}
@@ -1068,20 +1106,20 @@ begin
   begin
     // read x-scale
 {$IFDEF UseFloatingPoint}
-    FScale[0, 0] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
+    FAffineTransformationMatrix[0, 0] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
 {$ELSE}
-    FScale[0, 0] := ReadSwappedSmallInt(Stream);
+    FAffineTransformationMatrix[0, 0] := ReadSwappedSmallInt(Stream);
 {$ENDIF}
 
     // read y-scale
 {$IFDEF UseFloatingPoint}
-    FScale[1, 1] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
+    FAffineTransformationMatrix[1, 1] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
 {$ELSE}
-    FScale[1, 1] := ReadSwappedSmallInt(Stream);
+    FAffineTransformationMatrix[1, 1] := ReadSwappedSmallInt(Stream);
 {$ENDIF}
     // set other values implicitly
-    FScale[0, 1] := 0;
-    FScale[1, 0] := 0;
+    FAffineTransformationMatrix[0, 1] := 0;
+    FAffineTransformationMatrix[1, 0] := 0;
 
 {$IFDEF AmbigiousExceptions}
     // make sure the GLYF_RESERVED flag is set to 0
@@ -1095,38 +1133,55 @@ begin
   begin
     // read x-scale
 {$IFDEF UseFloatingPoint}
-    FScale[0, 0] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
+    FAffineTransformationMatrix[0, 0] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
 {$ELSE}
-    FScale[0, 0] := ReadSwappedSmallInt(Stream);
+    FAffineTransformationMatrix[0, 0] := ReadSwappedSmallInt(Stream);
 {$ENDIF}
 
     // read scale01
 {$IFDEF UseFloatingPoint}
-    FScale[0, 1] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
+    FAffineTransformationMatrix[0, 1] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
 {$ELSE}
-    FScale[0, 1] := ReadSwappedSmallInt(Stream);
+    FAffineTransformationMatrix[0, 1] := ReadSwappedSmallInt(Stream);
 {$ENDIF}
 
     // read scale10
 {$IFDEF UseFloatingPoint}
-    FScale[1, 0] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
+    FAffineTransformationMatrix[1, 0] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
 {$ELSE}
-    FScale[1, 0] := ReadSwappedSmallInt(Stream);
+    FAffineTransformationMatrix[1, 0] := ReadSwappedSmallInt(Stream);
 {$ENDIF}
 
     // read y-scale
 {$IFDEF UseFloatingPoint}
-    FScale[1, 1] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
+    FAffineTransformationMatrix[1, 1] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
 {$ELSE}
-    FScale[1, 1] := ReadSwappedSmallInt(Stream);
+    FAffineTransformationMatrix[1, 1] := ReadSwappedSmallInt(Stream);
 {$ENDIF}
 {$IFDEF AmbigiousExceptions}
-    // make sure the GLYF_RESERVED flag is set to 0
+    // GLYF_WE_HAVE_A_TWO_BY_TWO and GLYF_WE_HAVE_A_SCALE are mutually exclusive
     if (FFlags and GLYF_WE_HAVE_A_SCALE <> 0) then // Unnecessary: We have already tested for this above...
       raise EPascalTypeError.Create(RCStrCompositeGlyphFlagError);
+    // GLYF_WE_HAVE_A_TWO_BY_TWO and GLYF_WE_HAVE_AN_X_AND_Y_SCALE are mutually exclusive
     if (FFlags and GLYF_WE_HAVE_AN_X_AND_Y_SCALE <> 0) then // Unnecessary: We have already tested for this above...
       raise EPascalTypeError.Create(RCStrCompositeGlyphFlagError);
 {$ENDIF}
+  end else
+  begin
+    FAffineTransformationMatrix[0, 0] := 1;
+    FAffineTransformationMatrix[0, 1] := 0;
+    FAffineTransformationMatrix[1, 0] := 0;
+    FAffineTransformationMatrix[1, 1] := 1;
+  end;
+
+  if (FFlags and GLYF_ARGS_ARE_XY_VALUES <> 0) then
+  begin
+    FAffineTransformationMatrix[0, 2] := FOffsetXY[0];
+    FAffineTransformationMatrix[1, 2] := FOffsetXY[1];
+  end else
+  begin
+    FAffineTransformationMatrix[0, 2] := 0;
+    FAffineTransformationMatrix[1, 2] := 0;
   end;
 end;
 
@@ -1154,6 +1209,16 @@ begin
   end;
 end;
 
+function TPascalTypeCompositeGlyph.FlagArgsAreOffset: boolean;
+begin
+  Result := (FFlags and GLYF_ARGS_ARE_XY_VALUES <> 0);
+end;
+
+function TPascalTypeCompositeGlyph.FlagHasAffineTransformationMatrix: boolean;
+begin
+  Result := (FFlags and (GLYF_WE_HAVE_A_SCALE or GLYF_WE_HAVE_AN_X_AND_Y_SCALE or GLYF_WE_HAVE_A_TWO_BY_TWO) <> 0);
+end;
+
 function TPascalTypeCompositeGlyph.FlagHasInstructions: boolean;
 begin
   Result := (FFlags and GLYF_WE_HAVE_INSTRUCTIONS <> 0);
@@ -1167,6 +1232,21 @@ end;
 procedure TPascalTypeCompositeGlyph.FlagsChanged;
 begin
   Changed;
+end;
+
+function TPascalTypeCompositeGlyph.GetArgsAreOffset: boolean;
+begin
+  Result := FlagArgsAreOffset and ((OffsetX <> 0) or (OffsetY <> 0));
+end;
+
+function TPascalTypeCompositeGlyph.GetArgsArePointIndex: boolean;
+begin
+  Result := (not FlagArgsAreOffset);
+end;
+
+function TPascalTypeCompositeGlyph.GetHasAffineTransformationMatrix: boolean;
+begin
+  Result := FlagHasAffineTransformationMatrix;
 end;
 
 procedure TPascalTypeCompositeGlyph.GlyphIndexChanged;

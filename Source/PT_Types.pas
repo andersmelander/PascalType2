@@ -129,7 +129,8 @@ type
   TSmallScaleType = type TF2Dot14;
   {$ENDIF}
 
-  TSmallScaleMatrix = array [0..1, 0..1] of TSmallScaleType;
+  // 2 by 3 affine transformation matrix
+  TSmallScaleMatrix = array [0..1, 0..2] of TSmallScaleType;
 
   TShortFrac = type SmallInt;
 

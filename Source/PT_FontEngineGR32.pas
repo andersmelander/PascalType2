@@ -672,23 +672,176 @@ begin
 end;
 
 ////////////////////////////////////////////////////////////////////////////////
+type
+  TNestedCanvas = class(TFlattenedPath)
+  private
+    FParentCanvas: TCustomPath;
+  protected
+    procedure DoChanged; override;
+    procedure DrawPath; virtual;
+  public
+    constructor Create(ACanvas: TCustomPath); reintroduce;
+  end;
+
+constructor TNestedCanvas.Create(ACanvas: TCustomPath);
+begin
+  inherited Create;
+  FParentCanvas := ACanvas;
+end;
+
+procedure TNestedCanvas.DoChanged;
+begin
+  inherited;
+
+  DrawPath;
+  Clear;
+end;
+
+procedure TNestedCanvas.DrawPath;
+var
+  i: integer;
+begin
+  FParentCanvas.EndPath;
+
+  if (ClosedCount = Length(Path)) then
+    FParentCanvas.PolyPolygon(Path)
+  else
+    for i := 0 to High(Path) do
+    begin
+      if (PathClosed[i]) then
+        FParentCanvas.Polygon(Path[i])
+      else
+        FParentCanvas.Polyline(Path[i]);
+    end;
+
+  FParentCanvas.EndPath;
+end;
+
+type
+  TNestedAffineTransformationCanvas = class(TNestedCanvas)
+  private
+    FAffineTransformationMatrix: TSmallScaleMatrix;
+    FScaleX: TScaleType;
+    FScaleY: TScaleType;
+  protected
+    procedure DrawPath; override;
+  public
+    constructor Create(ACanvas: TCustomPath; const AAffineTransformationMatrix: TSmallScaleMatrix; AScaleX, AScaleY: TScaleType); reintroduce;
+  end;
+
+constructor TNestedAffineTransformationCanvas.Create(ACanvas: TCustomPath; const AAffineTransformationMatrix: TSmallScaleMatrix; AScaleX, AScaleY: TScaleType);
+begin
+  inherited Create(ACanvas);
+  FAffineTransformationMatrix := AAffineTransformationMatrix;
+  FScaleX := AScaleX;
+  FScaleY := AScaleY;
+end;
+
+procedure TNestedAffineTransformationCanvas.DrawPath;
+const
+  q: Single = 33.0 / 35536.0;
+var
+  i, j: integer;
+  m0, n0: double;
+  m, n: double;
+  TempX: Single;
+  p: TFloatPoint;
+  OffsetX, OffsetY: Single;
+begin
+  // See: https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6glyf.html#COMPOUNDGLYPHS
+
+  m0 := Max(Abs(FAffineTransformationMatrix[0,0]), Abs(FAffineTransformationMatrix[0,1]));
+  n0 := Max(Abs(FAffineTransformationMatrix[1,0]), Abs(FAffineTransformationMatrix[1,1]));
+
+  if (m0 <> 0) and (n0 <> 0) then
+  begin
+    if (Abs(FAffineTransformationMatrix[0,0]) - Abs(FAffineTransformationMatrix[1,0]) <= q) then
+      m := 2 * m0
+    else
+      m := m0;
+
+    if (Abs(FAffineTransformationMatrix[0,1]) - Abs(FAffineTransformationMatrix[1,1]) <= q) then
+      n := 2 * n0
+    else
+      n := n0;
+
+    OffsetX := FAffineTransformationMatrix[0,2] * m * FScaleX;
+    OffsetY := FAffineTransformationMatrix[1,2] * n * FScaleY;
+
+    // Transform all points in path before we replay them
+    for i := 0 to High(Path) do
+      for j := 0 to High(Path[i]) do
+      begin
+        TempX :=        FAffineTransformationMatrix[0,0] * Path[i, j].X + FAffineTransformationMatrix[1,0] * Path[i, j].Y + OffsetX;
+        Path[i, j].Y := FAffineTransformationMatrix[0,1] * Path[i, j].X + FAffineTransformationMatrix[1,1] * Path[i, j].Y - OffsetY;
+        Path[i, j].X := TempX;
+      end;
+
+  end else
+  if (FAffineTransformationMatrix[0,2] <> 0) or (FAffineTransformationMatrix[1,2] <> 0) then
+  begin
+    OffsetX := FAffineTransformationMatrix[0,2] * FScaleX;
+    OffsetY := FAffineTransformationMatrix[1,2] * FScaleY;
+
+    // Simple translation
+    for i := 0 to High(Path) do
+      for j := 0 to High(Path[i]) do
+      begin
+        p := Path[i, j];
+        p.X := p.X + OffsetX;
+        p.Y := p.Y - OffsetY;
+        Path[i, j] := p;
+      end;
+  end;
+
+  inherited;
+end;
+
+
 
 procedure TPascalTypeFontEngineGR32.RasterizeGlyph(GlyphIndex: Integer; Canvas: TCustomPath; X, Y: Integer);
 var
   CompositeGlyphData: TTrueTypeFontCompositeGlyphData;
   CompositeGlyph: TPascalTypeCompositeGlyph;
   i: integer;
+  TransformPath: TCustomPath;
+  CompositePath: TCustomPath;
+  Origin: TPoint;
 begin
+  // TODO : Point-to-point translation (GLYF_ARGS_ARE_XY_VALUES not set) must be done on the unflattened curve points.
   if Storage.GlyphData[GlyphIndex] is TTrueTypeFontSimpleGlyphData then
     RasterizeSimpleGlyph(TTrueTypeFontSimpleGlyphData(Storage.GlyphData[GlyphIndex]), Canvas, X, Y)
   else
   if Storage.GlyphData[GlyphIndex] is TTrueTypeFontCompositeGlyphData then
   begin
     CompositeGlyphData := TTrueTypeFontCompositeGlyphData(Storage.GlyphData[GlyphIndex]);
+
     for i := 0 to CompositeGlyphData.GlyphCount-1 do
     begin
       CompositeGlyph := CompositeGlyphData.Glyph[i];
-      RasterizeGlyph(CompositeGlyph.GlyphIndex, Canvas, X+CompositeGlyph.ArgumentX, Y+CompositeGlyph.ArgumentY)
+
+      TransformPath := nil;
+      if (CompositeGlyph.HasAffineTransformationMatrix) then
+      begin
+        // TODO : Transformation should be done on unflattened coords
+        TransformPath := TNestedAffineTransformationCanvas.Create(Canvas, CompositeGlyph.AffineTransformationMatrix, ScalerX, ScalerY);
+        CompositePath := TransformPath;
+      end else
+        CompositePath := Canvas;
+
+      if (not CompositeGlyph.HasAffineTransformationMatrix) and (CompositeGlyph.HasOffset) then
+        // TODO : Need float coords
+        Origin := Point(X+RoundedScaleX(CompositeGlyph.OffsetX), Y-RoundedScaleY(CompositeGlyph.OffsetY))
+      else
+        Origin := Point(X, Y);
+
+      try
+
+        RasterizeGlyph(CompositeGlyph.GlyphIndex, CompositePath, Origin.X, Origin.Y)
+
+      finally
+        TransformPath.Free;
+      end;
     end;
   end;
 end;
