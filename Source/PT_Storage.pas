@@ -35,19 +35,26 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, SysUtils, Types, PT_Types, PT_Classes, PT_TableDirectory,
+  Classes, SysUtils, Types,
+  PT_Types,
+  PT_Classes,
+  PT_TableDirectory,
   PT_Tables;
 
 type
-  TCustomPascalTypeStorage = class(TInterfacedPersistent, IStreamPersist,
-    IPascalTypeStorageChange)
+  TCustomPascalTypeStorage = class(TInterfacedPersistent, IStreamPersist, IPascalTypeStorageChange)
   private
     FOnChanged: TNotifyEvent;
   protected
+    // IPascalTypeStorageChange
     procedure Changed; virtual;
+
   public
+    // IStreamPersist
     procedure LoadFromStream(Stream: TStream); virtual; abstract;
     procedure SaveToStream(Stream: TStream); virtual; abstract;
+
+  public
     procedure LoadFromFile(FileName: TFileName);
     procedure SaveToFile(FileName: TFileName);
 

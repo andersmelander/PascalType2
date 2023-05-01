@@ -35,7 +35,9 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, SysUtils, PT_Types, PT_Classes;
+  Classes, SysUtils,
+  PT_Types,
+  PT_Classes;
 
 type
   // Unknown Table

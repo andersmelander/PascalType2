@@ -35,7 +35,10 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, SysUtils, PT_Types, PT_Classes, PT_Tables;
+  Classes, SysUtils,
+  PT_Types,
+  PT_Classes,
+  PT_Tables;
 
 type
   // table 'cvt '
@@ -125,6 +128,7 @@ type
     FYMax        : SmallInt; // Maximum y for coordinate data.
     FInstructions: TTrueTypeFontGlyphInstructionTable;
 
+    function GetIsComposite: boolean; virtual; abstract;
     function GetContourCount: Integer; virtual; abstract;
 
     procedure GlyphIndexChanged; virtual;
@@ -142,49 +146,42 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
+    property IsComposite: boolean read GetIsComposite;
+
     property NumberOfContours: SmallInt read FNumberOfContours write SetNumberOfContours;
     property XMin: SmallInt read FXMin write SetXMin;
     property YMin: SmallInt read FYMin write SetYMin;
     property XMax: SmallInt read FXMax write SetXMax;
     property YMax: SmallInt read FYMax write SetYMax;
 
+    // Index of glyph in the 'glyf' table - Expensive!
     property GlyphIndex: Integer read GetGlyphIndex;
 
     property Instructions: TTrueTypeFontGlyphInstructionTable read FInstructions;
+    // ContourCount: Count of contours in leaf (simple) glyphs
     property ContourCount: Integer read GetContourCount;
   end;
 
   TTrueTypeFontGlyphDataClass = class of TCustomTrueTypeFontGlyphData;
 
-  TContourPointRecord = record
-    XPos: SmallInt;
-    YPos: SmallInt;
-    Flags: Byte;
-
-    function FlagIsOnCurve: boolean;
-  end;
-  PContourPointRecord = ^TContourPointRecord;
-
   TPascalTypeTrueTypeContour = class(TPersistent)
-  private type
-    TContourPointRecordArray = array of TContourPointRecord;
   private
-    FPoints: TContourPointRecordArray;
-    function GetPoint(Index: Integer): TContourPointRecord;
+    FPoints: TPascalTypeContour;
+    function GetPoint(Index: Integer): TContourPoint;
     function GetPointCount: Integer;
-    procedure SetPoint(Index: Integer; const Value: TContourPointRecord);
+    procedure SetPoint(Index: Integer; const Value: TContourPoint);
     procedure SetPointCount(const Value: Integer);
     function GetIsClockwise: Boolean;
-    function GetArea: Integer;
+    function GetArea: Single;
   protected
     procedure PointCountChanged; virtual;
-    property Points: TContourPointRecordArray read FPoints;
+    property Points: TPascalTypeContour read FPoints;
   public
     procedure Assign(Source: TPersistent); override;
 
-    property Area                 : Integer read GetArea;
+    property Area                 : Single read GetArea;
     property IsClockwise          : Boolean read GetIsClockwise;
-    property Point[Index: Integer]: TContourPointRecord read GetPoint write SetPoint;
+    property Point[Index: Integer]: TContourPoint read GetPoint write SetPoint;
     property PointCount: Integer read GetPointCount write SetPointCount;
   end;
 
@@ -201,11 +198,14 @@ type
       GLYF_OVERLAP_SIMPLE       = $40;
       GLYF_RESERVED8            = $80;
       GLYF_RESERVED             = GLYF_RESERVED8;
+  strict private
+    FPath: array of TPascalTypeTrueTypeContour;
   private
-    FContours: array of TPascalTypeTrueTypeContour;
     function GetContour(Index: Integer): TPascalTypeTrueTypeContour;
+    function GetPath: TPascalTypePath;
     procedure FreeContourArrayItems;
   protected
+    function GetIsComposite: boolean; override;
     function GetContourCount: Integer; override;
   public
     destructor Destroy; override;
@@ -216,6 +216,7 @@ type
     procedure SaveToStream(Stream: TStream); override;
 
     property Contour[Index: Integer]: TPascalTypeTrueTypeContour read GetContour;
+    property Path: TPascalTypePath read GetPath;
   end;
 
   TPascalTypeCompositeGlyph = class(TCustomPascalTypeTable)
@@ -281,6 +282,7 @@ type
     function GetGlyphCount: Integer;
     function GetCompositeGlyph(Index: Integer): TPascalTypeCompositeGlyph;
   protected
+    function GetIsComposite: boolean; override;
     function GetContourCount: Integer; override;
   public
     destructor Destroy; override;
@@ -295,8 +297,9 @@ type
   end;
 
   TTrueTypeFontGlyphDataTable = class(TCustomPascalTypeNamedTable)
-  private
+  strict private
     FGlyphDataList: array of TCustomTrueTypeFontGlyphData;
+  private
     function GetGlyphDataCount: Integer;
     function GetGlyphData(Index: Integer): TCustomTrueTypeFontGlyphData;
     procedure FreeGlyphDataListItems;
@@ -548,17 +551,18 @@ end;
 function TCustomTrueTypeFontGlyphData.GetGlyphIndex: Integer;
 var
   GlyphDataTable: TTrueTypeFontGlyphDataTable;
-  GlyphIndex    : Integer;
+  i: Integer;
 begin
   GlyphDataTable := TTrueTypeFontGlyphDataTable(Storage.GetTableByTableName('glyf'));
+
   Result := -1;
-  if (GlyphDataTable <> nil) then
-    for GlyphIndex := 0 to GlyphDataTable.GlyphDataCount - 1 do
-      if GlyphDataTable.GlyphData[GlyphIndex] = Self then
-      begin
-        Result := GlyphIndex;
-        Exit;
-      end;
+
+  if (GlyphDataTable = nil) then
+    exit;
+
+  for i := 0 to GlyphDataTable.GlyphDataCount - 1 do
+    if GlyphDataTable.GlyphData[i] = Self then
+      Exit(i);
 end;
 
 procedure TCustomTrueTypeFontGlyphData.GlyphIndexChanged;
@@ -708,13 +712,6 @@ begin
 end;
 
 
-{ TContourPointRecord }
-
-function TContourPointRecord.FlagIsOnCurve: boolean;
-begin
-  Result := (Flags and TTrueTypeFontSimpleGlyphData.GLYF_ON_CURVE <> 0);
-end;
-
 { TPascalTypeTrueTypeContour }
 
 procedure TPascalTypeTrueTypeContour.Assign(Source: TPersistent);
@@ -726,7 +723,7 @@ begin
     FPoints := TPascalTypeTrueTypeContour(Source).Points;
 end;
 
-function TPascalTypeTrueTypeContour.GetArea: Integer;
+function TPascalTypeTrueTypeContour.GetArea: Single;
 var
   PointIndex: Integer;
 begin
@@ -737,7 +734,7 @@ begin
     Exit;
   end;
 
-  Result := (FPoints[0].XPos * FPoints[1].YPos - FPoints[1].XPos * FPoints[0].YPos) div 2;
+  Result := (FPoints[0].XPos * FPoints[1].YPos - FPoints[1].XPos * FPoints[0].YPos) * 0.5;
   for PointIndex := 1 to High(FPoints) - 1 do
     Result := Result * (FPoints[0].XPos * FPoints[1].YPos - FPoints[1].XPos * FPoints[0].YPos);
 end;
@@ -747,7 +744,7 @@ begin
   Result := (Area >= 0);
 end;
 
-function TPascalTypeTrueTypeContour.GetPoint(Index: Integer): TContourPointRecord;
+function TPascalTypeTrueTypeContour.GetPoint(Index: Integer): TContourPoint;
 begin
   if (Index >= 0) and (Index <= High(FPoints)) then
     Result := FPoints[Index]
@@ -758,7 +755,7 @@ begin
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
 end;
 
-procedure TPascalTypeTrueTypeContour.SetPoint(Index: Integer; const Value: TContourPointRecord);
+procedure TPascalTypeTrueTypeContour.SetPoint(Index: Integer; const Value: TContourPoint);
 begin
   if (Index < 0) or (Index > High(FPoints)) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
@@ -803,21 +800,21 @@ begin
   if Source is TTrueTypeFontSimpleGlyphData then
   begin
     // eventually clear not used contours
-    for ContourIndex := Length(TTrueTypeFontSimpleGlyphData(Source).FContours) to High(FContours) do
-      FreeAndNil(FContours[ContourIndex]);
+    for ContourIndex := Length(TTrueTypeFontSimpleGlyphData(Source).FPath) to High(FPath) do
+      FreeAndNil(FPath[ContourIndex]);
 
     // set length of countour array
-    SetLength(FContours, Length(TTrueTypeFontSimpleGlyphData(Source).FContours));
+    SetLength(FPath, Length(TTrueTypeFontSimpleGlyphData(Source).FPath));
 
     // assign contours
-    for ContourIndex := 0 to High(FContours) do
+    for ContourIndex := 0 to High(FPath) do
     begin
       // eventually create the contour
-      if (FContours[ContourIndex] = nil) then
-        FContours[ContourIndex] := TPascalTypeTrueTypeContour.Create;
+      if (FPath[ContourIndex] = nil) then
+        FPath[ContourIndex] := TPascalTypeTrueTypeContour.Create;
 
       // assign contour
-      FContours[ContourIndex].Assign(TTrueTypeFontSimpleGlyphData(Source).FContours[ContourIndex]);
+      FPath[ContourIndex].Assign(TTrueTypeFontSimpleGlyphData(Source).FPath[ContourIndex]);
     end;
   end;
 end;
@@ -826,20 +823,34 @@ procedure TTrueTypeFontSimpleGlyphData.FreeContourArrayItems;
 var
   ContourIndex: Integer;
 begin
-  for ContourIndex := 0 to High(FContours) do
-    FreeAndNil(FContours[ContourIndex]);
+  for ContourIndex := 0 to High(FPath) do
+    FreeAndNil(FPath[ContourIndex]);
 end;
 
 function TTrueTypeFontSimpleGlyphData.GetContour(Index: Integer): TPascalTypeTrueTypeContour;
 begin
-  if (Index < 0) or (Index > High(FContours)) then
+  if (Index < 0) or (Index > High(FPath)) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
-  Result := FContours[Index];
+  Result := FPath[Index];
 end;
 
 function TTrueTypeFontSimpleGlyphData.GetContourCount: Integer;
 begin
-  Result := Length(FContours);
+  Result := Length(FPath);
+end;
+
+function TTrueTypeFontSimpleGlyphData.GetIsComposite: boolean;
+begin
+  Result := False;
+end;
+
+function TTrueTypeFontSimpleGlyphData.GetPath: TPascalTypePath;
+var
+  i: integer;
+begin
+  SetLength(Result, Length(FPath));
+  for i := 0 to High(FPath) do
+    Result[i] := FPath[i].Points;
 end;
 
 procedure TTrueTypeFontSimpleGlyphData.LoadFromStream(Stream: TStream);
@@ -854,7 +865,7 @@ var
   Flag        : Byte;
   FlagCount   : Byte;
   Value8      : Byte;
-  ContourPoint: PContourPointRecord;
+  ContourPoint: PContourPoint;
 begin
   inherited;
 
@@ -890,17 +901,17 @@ begin
   FInstructions.LoadFromStream(Stream);
 
   // clear eventuall existing contours
-  for ContourIndex := FNumberOfContours to High(FContours) do
-    FreeAndNil(FContours[ContourIndex]);
-  SetLength(FContours, FNumberOfContours);
+  for ContourIndex := FNumberOfContours to High(FPath) do
+    FreeAndNil(FPath[ContourIndex]);
+  SetLength(FPath, FNumberOfContours);
 
   for ContourIndex := 0 to FNumberOfContours - 1 do
   begin
-    Contour := FContours[ContourIndex];
+    Contour := FPath[ContourIndex];
     if (Contour = nil) then
     begin
       Contour := TPascalTypeTrueTypeContour.Create;
-      FContours[ContourIndex] := Contour;
+      FPath[ContourIndex] := Contour;
     end;
 
     if ContourIndex = 0 then
@@ -911,9 +922,9 @@ begin
 
   // Contour flags
   FlagCount := 0;
-  for ContourIndex := 0 to High(FContours) do
+  for ContourIndex := 0 to High(FPath) do
   begin
-    Contour := FContours[ContourIndex];
+    Contour := FPath[ContourIndex];
 
     for PointIndex  := 0 to High(Contour.FPoints) do
     begin
@@ -940,9 +951,9 @@ begin
 
   // read x-coordinates
   LastPoint := 0;
-  for ContourIndex := 0 to High(FContours) do
+  for ContourIndex := 0 to High(FPath) do
   begin
-    Contour := FContours[ContourIndex];
+    Contour := FPath[ContourIndex];
 
     for PointIndex := 0 to High(Contour.FPoints) do
     begin
@@ -973,7 +984,7 @@ begin
   LastPoint := 0;
   for ContourIndex := 0 to FNumberOfContours - 1 do
   begin
-    Contour := FContours[ContourIndex];
+    Contour := FPath[ContourIndex];
 
     for PointIndex  := 0 to High(Contour.FPoints) do
     begin
@@ -1303,24 +1314,27 @@ end;
 function TTrueTypeFontCompositeGlyphData.GetContourCount: Integer;
 var
   GlyphDataTable: TTrueTypeFontGlyphDataTable;
-  SubGlyphIndex : Integer;
-  GlyphScanIndex: Integer;
+  Glyph: TPascalTypeCompositeGlyph;
 begin
   Result := 0;
+
+
   GlyphDataTable := TTrueTypeFontGlyphDataTable(Storage.GetTableByTableName('glyf'));
-  if (GlyphDataTable <> nil) then
-    for SubGlyphIndex := 0 to GetGlyphCount - 1 do
-      for GlyphScanIndex := 0 to GlyphDataTable.GetGlyphDataCount - 1 do
-        if GlyphScanIndex = Glyph[SubGlyphIndex].FGlyphIndex then
-        begin
-          Result := Result + GlyphDataTable.GlyphData[GlyphScanIndex].ContourCount;
-          Break;
-        end;
+  if (GlyphDataTable = nil) then
+    exit;
+
+  for Glyph in FGlyphs do
+    Result := Result + GlyphDataTable.GlyphData[Glyph.GlyphIndex].ContourCount;
 end;
 
 function TTrueTypeFontCompositeGlyphData.GetGlyphCount: Integer;
 begin
   Result := Length(FGlyphs);
+end;
+
+function TTrueTypeFontCompositeGlyphData.GetIsComposite: boolean;
+begin
+  Result := True;
 end;
 
 procedure TTrueTypeFontCompositeGlyphData.LoadFromStream(Stream: TStream);

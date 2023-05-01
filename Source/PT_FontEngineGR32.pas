@@ -39,14 +39,21 @@ interface
 uses
   {$IFDEF FPC}LCLIntf, LCLType, {$IFDEF MSWINDOWS} Windows, {$ENDIF}
   {$ELSE}Windows, {$ENDIF} Classes, Contnrs, Sysutils, Graphics,
+
   GR32_Paths,
-  PT_Types, PT_Storage, PT_FontEngine, PT_Tables, PT_TablesTrueType;
+
+  PT_Types,
+  PT_Classes,
+  PT_Storage,
+  PT_FontEngine,
+  PT_Tables,
+  PT_TablesTrueType;
 
 type
   TPascalTypeFontEngineGR32 = class(TCustomPascalTypeFontEngine)
   protected
     procedure RasterizeGlyph(GlyphIndex: Integer; Canvas: TCustomPath; X, Y: Integer);
-    procedure RasterizeSimpleGlyph(Glyph: TTrueTypeFontSimpleGlyphData; Canvas: TCustomPath; X, Y: Integer);
+    procedure RasterizeGlyphPath(const GlyphPath: TPascalTypePath; Canvas: TCustomPath; X, Y: Single);
   public
     procedure RenderText(Text: string; Canvas: TCustomPath); overload; virtual;
     procedure RenderText(Text: string; Canvas: TCustomPath; X, Y: Integer); overload; virtual;
@@ -672,178 +679,12 @@ begin
 end;
 
 ////////////////////////////////////////////////////////////////////////////////
-type
-  TNestedCanvas = class(TFlattenedPath)
-  private
-    FParentCanvas: TCustomPath;
-  protected
-    procedure DoChanged; override;
-    procedure DrawPath; virtual;
-  public
-    constructor Create(ACanvas: TCustomPath); reintroduce;
-  end;
-
-constructor TNestedCanvas.Create(ACanvas: TCustomPath);
-begin
-  inherited Create;
-  FParentCanvas := ACanvas;
-end;
-
-procedure TNestedCanvas.DoChanged;
-begin
-  inherited;
-
-  DrawPath;
-  Clear;
-end;
-
-procedure TNestedCanvas.DrawPath;
-var
-  i: integer;
-begin
-  FParentCanvas.EndPath;
-
-  if (ClosedCount = Length(Path)) then
-    FParentCanvas.PolyPolygon(Path)
-  else
-    for i := 0 to High(Path) do
-    begin
-      if (PathClosed[i]) then
-        FParentCanvas.Polygon(Path[i])
-      else
-        FParentCanvas.Polyline(Path[i]);
-    end;
-
-  FParentCanvas.EndPath;
-end;
-
-type
-  TNestedAffineTransformationCanvas = class(TNestedCanvas)
-  private
-    FAffineTransformationMatrix: TSmallScaleMatrix;
-    FScaleX: TScaleType;
-    FScaleY: TScaleType;
-  protected
-    procedure DrawPath; override;
-  public
-    constructor Create(ACanvas: TCustomPath; const AAffineTransformationMatrix: TSmallScaleMatrix; AScaleX, AScaleY: TScaleType); reintroduce;
-  end;
-
-constructor TNestedAffineTransformationCanvas.Create(ACanvas: TCustomPath; const AAffineTransformationMatrix: TSmallScaleMatrix; AScaleX, AScaleY: TScaleType);
-begin
-  inherited Create(ACanvas);
-  FAffineTransformationMatrix := AAffineTransformationMatrix;
-  FScaleX := AScaleX;
-  FScaleY := AScaleY;
-end;
-
-procedure TNestedAffineTransformationCanvas.DrawPath;
-const
-  q: Single = 33.0 / 35536.0;
-var
-  i, j: integer;
-  m0, n0: double;
-  m, n: double;
-  TempX: Single;
-  p: TFloatPoint;
-  OffsetX, OffsetY: Single;
-begin
-  // See: https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6glyf.html#COMPOUNDGLYPHS
-
-  m0 := Max(Abs(FAffineTransformationMatrix[0,0]), Abs(FAffineTransformationMatrix[0,1]));
-  n0 := Max(Abs(FAffineTransformationMatrix[1,0]), Abs(FAffineTransformationMatrix[1,1]));
-
-  if (m0 <> 0) and (n0 <> 0) then
-  begin
-    if (Abs(FAffineTransformationMatrix[0,0]) - Abs(FAffineTransformationMatrix[1,0]) <= q) then
-      m := 2 * m0
-    else
-      m := m0;
-
-    if (Abs(FAffineTransformationMatrix[0,1]) - Abs(FAffineTransformationMatrix[1,1]) <= q) then
-      n := 2 * n0
-    else
-      n := n0;
-
-    OffsetX := FAffineTransformationMatrix[0,2] * m * FScaleX;
-    OffsetY := FAffineTransformationMatrix[1,2] * n * FScaleY;
-
-    // Transform all points in path before we replay them
-    for i := 0 to High(Path) do
-      for j := 0 to High(Path[i]) do
-      begin
-        TempX :=        FAffineTransformationMatrix[0,0] * Path[i, j].X + FAffineTransformationMatrix[1,0] * Path[i, j].Y + OffsetX;
-        Path[i, j].Y := FAffineTransformationMatrix[0,1] * Path[i, j].X + FAffineTransformationMatrix[1,1] * Path[i, j].Y - OffsetY;
-        Path[i, j].X := TempX;
-      end;
-
-  end else
-  if (FAffineTransformationMatrix[0,2] <> 0) or (FAffineTransformationMatrix[1,2] <> 0) then
-  begin
-    OffsetX := FAffineTransformationMatrix[0,2] * FScaleX;
-    OffsetY := FAffineTransformationMatrix[1,2] * FScaleY;
-
-    // Simple translation
-    for i := 0 to High(Path) do
-      for j := 0 to High(Path[i]) do
-      begin
-        p := Path[i, j];
-        p.X := p.X + OffsetX;
-        p.Y := p.Y - OffsetY;
-        Path[i, j] := p;
-      end;
-  end;
-
-  inherited;
-end;
-
-
-
 procedure TPascalTypeFontEngineGR32.RasterizeGlyph(GlyphIndex: Integer; Canvas: TCustomPath; X, Y: Integer);
 var
-  CompositeGlyphData: TTrueTypeFontCompositeGlyphData;
-  CompositeGlyph: TPascalTypeCompositeGlyph;
-  i: integer;
-  TransformPath: TCustomPath;
-  CompositePath: TCustomPath;
-  Origin: TPoint;
+  GlyphPath: TPascalTypePath;
 begin
-  // TODO : Point-to-point translation (GLYF_ARGS_ARE_XY_VALUES not set) must be done on the unflattened curve points.
-  if Storage.GlyphData[GlyphIndex] is TTrueTypeFontSimpleGlyphData then
-    RasterizeSimpleGlyph(TTrueTypeFontSimpleGlyphData(Storage.GlyphData[GlyphIndex]), Canvas, X, Y)
-  else
-  if Storage.GlyphData[GlyphIndex] is TTrueTypeFontCompositeGlyphData then
-  begin
-    CompositeGlyphData := TTrueTypeFontCompositeGlyphData(Storage.GlyphData[GlyphIndex]);
-
-    for i := 0 to CompositeGlyphData.GlyphCount-1 do
-    begin
-      CompositeGlyph := CompositeGlyphData.Glyph[i];
-
-      TransformPath := nil;
-      if (CompositeGlyph.HasAffineTransformationMatrix) then
-      begin
-        // TODO : Transformation should be done on unflattened coords
-        TransformPath := TNestedAffineTransformationCanvas.Create(Canvas, CompositeGlyph.AffineTransformationMatrix, ScalerX, ScalerY);
-        CompositePath := TransformPath;
-      end else
-        CompositePath := Canvas;
-
-      if (not CompositeGlyph.HasAffineTransformationMatrix) and (CompositeGlyph.HasOffset) then
-        // TODO : Need float coords
-        Origin := Point(X+RoundedScaleX(CompositeGlyph.OffsetX), Y-RoundedScaleY(CompositeGlyph.OffsetY))
-      else
-        Origin := Point(X, Y);
-
-      try
-
-        RasterizeGlyph(CompositeGlyph.GlyphIndex, CompositePath, Origin.X, Origin.Y)
-
-      finally
-        TransformPath.Free;
-      end;
-    end;
-  end;
+  GlyphPath := Storage.GetGlyphPath(GlyphIndex);
+  RasterizeGlyphPath(GlyphPath, Canvas, X, Y);
 end;
 
 type
@@ -878,20 +719,19 @@ const
   );
 
 
-procedure TPascalTypeFontEngineGR32.RasterizeSimpleGlyph(Glyph: TTrueTypeFontSimpleGlyphData;
-  Canvas: TCustomPath; X, Y: Integer);
+procedure TPascalTypeFontEngineGR32.RasterizeGlyphPath(const GlyphPath: TPascalTypePath; Canvas: TCustomPath; X, Y: Single);
 var
   Ascent: integer;
   Origin: TFloatPoint;
-  ContourIndex: Integer;
   PointIndex: Integer;
   CurrentPoint: TFloatPoint;
   ControlPoint: TFloatPoint;
   MidPoint: TFloatPoint;
   IsOnCurve: Boolean;
-  Contour: TPascalTypeTrueTypeContour;
+  Contour: TPascalTypeContour;
   PathState: TPathState;
   StateTransition: TStateTransition;
+  i: integer;
 begin
   Ascent := Max(TPascalTypeHeaderTable(TPascalTypeStorage(Storage).HeaderTable).YMax,
     TPascalTypeHorizontalHeaderTable(TPascalTypeStorage(Storage).HorizontalHeader).Ascent);
@@ -902,18 +742,16 @@ begin
   var DebugPath := TFlattenedPath.Create;
 {$endif DEBUG_CURVE}
 
-  for ContourIndex := 0 to Glyph.ContourCount - 1 do
+  for Contour in GlyphPath do
   begin
-    Contour := Glyph.Contour[ContourIndex];
-
-    if (Contour.PointCount < 2) then
+    if (Length(Contour) < 2) then
       continue;
 
-    CurrentPoint.X := Origin.X + Contour.Point[0].XPos * ScalerX;
-    CurrentPoint.Y := Origin.Y - Contour.Point[0].YPos * ScalerY;
+    CurrentPoint.X := Origin.X + Contour[0].XPos * ScalerX;
+    CurrentPoint.Y := Origin.Y - Contour[0].YPos * ScalerY;
 
     // Process the start point
-    if Contour.Point[0].FlagIsOnCurve then
+    if (Contour[0].Flags and TTrueTypeFontSimpleGlyphData.GLYF_ON_CURVE <> 0) then
     begin
       // It's a curve-point
       PathState := psCurve;
@@ -922,20 +760,20 @@ begin
       ControlPoint := CurrentPoint;
       // It's a control-point. See if the prior point in the closed polygon
       // (i.e. last point in the array) is a curve-point.
-      if Contour.Point[Contour.PointCount-1].FlagIsOnCurve then
+      if (Contour[High(Contour)].Flags and TTrueTypeFontSimpleGlyphData.GLYF_ON_CURVE <> 0) then
       begin
         // Last point was a curve-point. Use it as the current point and use
         // the first point as the control-point.
         // Seen with: Kalinga Bold, small letter "r"
-        CurrentPoint.X := Origin.X + Contour.Point[Contour.PointCount-1].XPos * ScalerX;
-        CurrentPoint.Y := Origin.Y - Contour.Point[Contour.PointCount-1].YPos * ScalerY;
+        CurrentPoint.X := Origin.X + Contour[High(Contour)].XPos * ScalerX;
+        CurrentPoint.Y := Origin.Y - Contour[High(Contour)].YPos * ScalerY;
       end else
       begin
         // Both first and last points are control-points.
         // Synthesize a curve-point in between the two control-points.
         // Seen with: SimSun-ExtB, small letter "a"
-        CurrentPoint.X := Origin.X + (Contour.Point[0].XPos + Contour.Point[Contour.PointCount-1].XPos) * 0.5 * ScalerX;
-        CurrentPoint.Y := Origin.Y - (Contour.Point[0].YPos + Contour.Point[Contour.PointCount-1].YPos) * 0.5 * ScalerY;
+        CurrentPoint.X := Origin.X + (Contour[0].XPos + Contour[High(Contour)].XPos) * 0.5 * ScalerX;
+        CurrentPoint.Y := Origin.Y - (Contour[0].YPos + Contour[High(Contour)].YPos) * 0.5 * ScalerY;
       end;
       PathState := psControl;
     end;
@@ -946,15 +784,16 @@ begin
     DebugPath.Circle(CurrentPoint, 3);
 {$endif DEBUG_CURVE}
 
-    // Note that we take advange of the fact that Point[PointCount] returns Point[0]
-    for PointIndex := 1 to Contour.PointCount do
+    // Note that PointIndex wraps around to zero
+    PointIndex := 1;
+    for i := 0 to High(Contour) do
     begin
       // Get the next point
-      CurrentPoint.X := Origin.X + Round(Contour.Point[PointIndex].XPos * ScalerX);
-      CurrentPoint.Y := Origin.Y - Round(Contour.Point[PointIndex].YPos * ScalerY);
+      CurrentPoint.X := Origin.X + Round(Contour[PointIndex].XPos * ScalerX);
+      CurrentPoint.Y := Origin.Y - Round(Contour[PointIndex].YPos * ScalerY);
 
       // Is it a curve-point?
-      IsOnCurve := Contour.Point[PointIndex].FlagIsOnCurve;
+      IsOnCurve := (Contour[PointIndex].Flags and TTrueTypeFontSimpleGlyphData.GLYF_ON_CURVE <> 0);
 
       StateTransition := StateMachine[IsOnCurve, PathState];
       PathState := StateTransition.NextState;
@@ -1004,6 +843,7 @@ begin
 {$endif DEBUG_CURVE}
           end;
       end;
+      PointIndex := (PointIndex + 1) mod Length(Contour);
     end;
 
     Canvas.EndPath(True);

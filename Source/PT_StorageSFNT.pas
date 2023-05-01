@@ -40,12 +40,16 @@ interface
 
 uses
   Generics.Collections,
-  Classes, SysUtils, Types, PT_Types, PT_Classes, PT_Storage,
-  PT_Tables, PT_TableDirectory;
+  Classes, SysUtils, Types,
+  PT_Types,
+  PT_Classes,
+  PT_Storage,
+  PT_Tables,
+  PT_TableDirectory;
 
 type
   TCustomPascalTypeStorageSFNT = class(TCustomPascalTypeStorage, IPascalTypeStorageTable)
-  private
+  strict private
     FRootTable: TCustomPascalTypeTable;
     // required tables
     FHeaderTable: TPascalTypeHeaderTable;
@@ -53,6 +57,7 @@ type
     FMaximumProfile: TPascalTypeMaximumProfileTable;
     FNameTable: TPascalTypeNameTable;
     FPostScriptTable: TPascalTypePostscriptTable;
+  private
     function GetFontName: WideString;
     function GetFontStyle: TFontStyles;
     function GetFontFamilyName: WideString;
@@ -60,11 +65,12 @@ type
     function GetFontVersion: WideString;
     function GetUniqueIdentifier: WideString;
   protected
-    function GetTableByTableName(const TableName: TTableName): TCustomPascalTypeNamedTable; virtual; abstract;
-    function GetTableByTableType(TableType: TTableType): TCustomPascalTypeNamedTable; virtual; abstract;
-    function GetTableByTableClass(TableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable; virtual; abstract;
-
-    procedure DirectoryTableReaded(DirectoryTable: TPascalTypeDirectoryTable); virtual; // TODO : Rename
+    // IPascalTypeStorageTable
+    function GetTableByTableName(const ATableName: TTableName): TCustomPascalTypeNamedTable; virtual;
+    function GetTableByTableType(ATableType: TTableType): TCustomPascalTypeNamedTable; virtual;
+    function GetTableByTableClass(ATableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable; virtual;
+  protected
+    procedure DirectoryTableLoaded(DirectoryTable: TPascalTypeDirectoryTable); virtual;
     procedure LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry); virtual; abstract;
 
     property RootTable: TCustomPascalTypeTable read FRootTable;
@@ -96,30 +102,20 @@ type
 
   TPascalTypeStorageScan = class(TCustomPascalTypeStorageSFNT)
   protected
-    function GetTableByTableName(const TableName: TTableName): TCustomPascalTypeNamedTable; override;
-    function GetTableByTableType(TableType: TTableType): TCustomPascalTypeNamedTable; override;
-    function GetTableByTableClass(TableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable; override;
-
     procedure LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry); override;
   public
     procedure SaveToStream(Stream: TStream); override;
-  published
-    property HeaderTable;
-    property HorizontalHeader;
-    property MaximumProfile;
-    property NameTable;
-    property PostScriptTable;
   end;
 
   TPascalTypeStorage = class(TCustomPascalTypeStorageSFNT)
-  private
+  strict private
     // required tables
     FHorizontalMetrics: TPascalTypeHorizontalMetricsTable;
     FCharacterMap: TPascalTypeCharacterMapTable;
     FOS2Table: TPascalTypeOS2Table;
 
     FOptionalTables: TObjectList<TCustomPascalTypeNamedTable>;
-
+  private
     function GetTableCount: Integer;
     function GetOptionalTableCount: Integer;
     function GetOptionalTable(Index: Integer): TCustomPascalTypeNamedTable;
@@ -128,11 +124,13 @@ type
     function GetBoundingBox: TRect;
     function GetGlyphCount: Word;
   protected
+    // IPascalTypeStorageTable
     function GetTableByTableName(const TableName: TTableName): TCustomPascalTypeNamedTable; override;
     function GetTableByTableType(ATableType: TTableType): TCustomPascalTypeNamedTable; override;
     function GetTableByTableClass(TableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable; override;
 
-    procedure DirectoryTableReaded(DirectoryTable : TPascalTypeDirectoryTable); override;
+  protected
+    procedure DirectoryTableLoaded(DirectoryTable : TPascalTypeDirectoryTable); override;
     procedure LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry); override;
   public
     constructor Create; override;
@@ -143,15 +141,18 @@ type
     function GetAdvanceWidth(GlyphIndex: Integer): Word;
     function GetKerning(Last, Next: Integer): Word;
 
+    function GetGlyphPath(GlyphIndex: Integer): TPascalTypePath; // TODO : Use TFloatPoint
+
     property GlyphData[Index: Integer]: TCustomPascalTypeGlyphDataTable read GetGlyphData;
 
     property OptionalTable[Index: Integer]: TCustomPascalTypeNamedTable read GetOptionalTable;
+    property OptionalTableCount: Integer read GetOptionalTableCount;
 
     // redirected properties
     property Panose: TCustomPascalTypePanoseTable read GetPanose;
     property BoundingBox: TRect read GetBoundingBox;
     property GlyphCount: Word read GetGlyphCount;
-  published
+
     // required tables
     property HeaderTable;
     property HorizontalHeader;
@@ -163,13 +164,15 @@ type
     property OS2Table: TPascalTypeOS2Table read FOS2Table;
 
     property TableCount: Integer read GetTableCount;
-    property OptionalTableCount: Integer read GetOptionalTableCount;
   end;
 
 implementation
 
 uses
-  PT_Math, PT_TablesTrueType, PT_ResourceStrings;
+  Math,
+  PT_Math,
+  PT_TablesTrueType,
+  PT_ResourceStrings;
 
 function CalculateCheckSum(Data: Pointer; Size: Integer): Cardinal; overload;
 {$IFDEF PUREPASCAL}
@@ -328,7 +331,7 @@ begin
   inherited;
 end;
 
-procedure TCustomPascalTypeStorageSFNT.DirectoryTableReaded(DirectoryTable: TPascalTypeDirectoryTable);
+procedure TCustomPascalTypeStorageSFNT.DirectoryTableLoaded(DirectoryTable: TPascalTypeDirectoryTable);
 begin
   // optimize table read order
   DirectoryTable.TableList.Sort;
@@ -461,79 +464,146 @@ begin
     Result := Result + [fsUnderline];
 end;
 
+function TCustomPascalTypeStorageSFNT.GetTableByTableClass(ATableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable;
+begin
+  // return nil if the table hasn't been found
+
+  if ATableClass = HeaderTable.ClassType then
+    Result := HeaderTable
+  else
+  if ATableClass = HorizontalHeader.ClassType then
+    Result := HorizontalHeader
+  else
+  if ATableClass = MaximumProfile.ClassType then
+    Result := MaximumProfile
+  else
+  if ATableClass = NameTable.ClassType then
+    Result := NameTable
+  else
+  if ATableClass = PostScriptTable.ClassType then
+    Result := PostScriptTable
+  else
+    Result := nil;
+end;
+
+function TCustomPascalTypeStorageSFNT.GetTableByTableName(const ATableName: TTableName): TCustomPascalTypeNamedTable;
+begin
+  // return nil if the table hasn't been found
+
+  if CompareTableType(HeaderTable.TableType, ATableName) then
+    Result := HeaderTable
+  else
+  if CompareTableType(HorizontalHeader.TableType, ATableName) then
+    Result := HorizontalHeader
+  else
+  if CompareTableType(MaximumProfile.TableType, ATableName) then
+    Result := MaximumProfile
+  else
+  if CompareTableType(NameTable.TableType, ATableName) then
+    Result := NameTable
+  else
+  if CompareTableType(PostScriptTable.TableType, ATableName) then
+    Result := PostScriptTable
+  else
+    Result := nil;
+end;
+
+function TCustomPascalTypeStorageSFNT.GetTableByTableType(ATableType: TTableType): TCustomPascalTypeNamedTable;
+begin
+  // return nil if the table hasn't been found
+  if ATableType.AsCardinal = HeaderTable.TableType.AsCardinal then
+    Result := HeaderTable
+  else
+  if ATableType.AsCardinal = HorizontalHeader.TableType.AsCardinal then
+    Result := HorizontalHeader
+  else
+  if ATableType.AsCardinal = MaximumProfile.TableType.AsCardinal then
+    Result := MaximumProfile
+  else
+  if ATableType.AsCardinal = NameTable.TableType.AsCardinal then
+    Result := NameTable
+  else
+  if ATableType.AsCardinal = PostScriptTable.TableType.AsCardinal then
+    Result := PostScriptTable
+  else
+    Result := nil;
+end;
+
 procedure TCustomPascalTypeStorageSFNT.LoadFromStream(Stream: TStream);
 var
   DirectoryTable: TPascalTypeDirectoryTable;
   TableIndex    : Integer;
 begin
   DirectoryTable := TPascalTypeDirectoryTable.Create(FRootTable);
-  with DirectoryTable, Stream do
-    try
-      LoadFromStream(Stream);
+  try
+    DirectoryTable.LoadFromStream(Stream);
 
-      // directory table has been read, notify
-      DirectoryTableReaded(DirectoryTable);
+    // directory table has been read, notify
+    DirectoryTableLoaded(DirectoryTable);
 
-      // read header table
-      if (HeaderTable = nil) then
-        raise EPascalTypeError.Create(RCStrNoHeaderTable);
-      LoadTableFromStream(Stream, HeaderTable);
+    // read header table
+    if (HeaderTable = nil) then
+      raise EPascalTypeError.Create(RCStrNoHeaderTable);
+    LoadTableFromStream(Stream, DirectoryTable.HeaderTable);
 
-      // read horizontal header table
-      if (HorizontalHeaderDataEntry = nil) then
-        raise EPascalTypeError.Create(RCStrNoHorizontalHeaderTable);
-      LoadTableFromStream(Stream, HorizontalHeaderDataEntry);
+    // read horizontal header table
+    if (DirectoryTable.HorizontalHeaderDataEntry = nil) then
+      raise EPascalTypeError.Create(RCStrNoHorizontalHeaderTable);
+    LoadTableFromStream(Stream, DirectoryTable.HorizontalHeaderDataEntry);
 
-      // read maximum profile table
-      if (MaximumProfileDataEntry = nil) then
-        raise EPascalTypeError.Create(RCStrNoMaximumProfileTable);
-      LoadTableFromStream(Stream, MaximumProfileDataEntry);
+    // read maximum profile table
+    if (DirectoryTable.MaximumProfileDataEntry = nil) then
+      raise EPascalTypeError.Create(RCStrNoMaximumProfileTable);
+    LoadTableFromStream(Stream, DirectoryTable.MaximumProfileDataEntry);
 
-      // eventually read OS/2 table or eventually raise an exception
-      if (OS2TableEntry <> nil) then
-        LoadTableFromStream(Stream, OS2TableEntry)
-      else if (Version = $00010000) then
-        raise EPascalTypeError.Create(RCStrNoOS2Table);
+    // eventually read OS/2 table or eventually raise an exception
+    if (DirectoryTable.OS2TableEntry <> nil) then
+      LoadTableFromStream(Stream, DirectoryTable.OS2TableEntry)
+    else
+    if (DirectoryTable.Version = $00010000) then
+      raise EPascalTypeError.Create(RCStrNoOS2Table);
 
-      // read horizontal metrics table
-      if (HorizontalMetricsDataEntry = nil) then
-        raise EPascalTypeError.Create(RCStrNoHorizontalMetricsTable);
-      LoadTableFromStream(Stream, HorizontalMetricsDataEntry);
+    // read horizontal metrics table
+    if (DirectoryTable.HorizontalMetricsDataEntry = nil) then
+      raise EPascalTypeError.Create(RCStrNoHorizontalMetricsTable);
+    LoadTableFromStream(Stream, DirectoryTable.HorizontalMetricsDataEntry);
 
-      // read character map table
-      if (CharacterMapDataEntry = nil) then
-        raise EPascalTypeError.Create(RCStrNoCharacterMapTable);
-      LoadTableFromStream(Stream, CharacterMapDataEntry);
+    // read character map table
+    if (DirectoryTable.CharacterMapDataEntry = nil) then
+      raise EPascalTypeError.Create(RCStrNoCharacterMapTable);
+    LoadTableFromStream(Stream, DirectoryTable.CharacterMapDataEntry);
 
-      // TODO: check if these are required by tables already read!!!
-      // read index to location table
-      if (LocationDataEntry <> nil) then
-        LoadTableFromStream(Stream, LocationDataEntry)
-      else if (Version = $74727565) then
-        raise EPascalTypeError.Create(RCStrNoIndexToLocationTable);
+    // TODO: check if these are required by tables already read!!!
+    // read index to location table
+    if (DirectoryTable.LocationDataEntry <> nil) then
+      LoadTableFromStream(Stream, DirectoryTable.LocationDataEntry)
+    else
+    if (DirectoryTable.Version = $74727565) then
+      raise EPascalTypeError.Create(RCStrNoIndexToLocationTable);
 
-      // read glyph data table
-      if (GlyphDataEntry <> nil) then
-        LoadTableFromStream(Stream, GlyphDataEntry)
-      else if (Version = $74727565) then
-        raise EPascalTypeError.Create(RCStrNoGlyphDataTable);
+    // read glyph data table
+    if (DirectoryTable.GlyphDataEntry <> nil) then
+      LoadTableFromStream(Stream, DirectoryTable.GlyphDataEntry)
+    else
+    if (DirectoryTable.Version = $74727565) then
+      raise EPascalTypeError.Create(RCStrNoGlyphDataTable);
 
-      // read name table
-      if (NameDataEntry = nil) then
-        raise EPascalTypeError.Create(RCStrNoNameTable);
-      LoadTableFromStream(Stream, NameDataEntry);
+    // read name table
+    if (DirectoryTable.NameDataEntry = nil) then
+      raise EPascalTypeError.Create(RCStrNoNameTable);
+    LoadTableFromStream(Stream, DirectoryTable.NameDataEntry);
 
-      // read postscript table
-      if (PostscriptDataEntry = nil) then
-        raise EPascalTypeError.Create(RCStrNoPostscriptTable);
-      LoadTableFromStream(Stream, PostscriptDataEntry);
+    // read postscript table
+    if (DirectoryTable.PostscriptDataEntry = nil) then
+      raise EPascalTypeError.Create(RCStrNoPostscriptTable);
+    LoadTableFromStream(Stream, DirectoryTable.PostscriptDataEntry);
 
-      // read other table entries from stream
-      for TableIndex := 0 to TableList.Count - 1 do
-        LoadTableFromStream(Stream, TableList[TableIndex]);
-    finally
-      DirectoryTable.Free;
-    end;
+    // read other table entries from stream
+    for TableIndex := 0 to DirectoryTable.TableList.Count - 1 do
+      LoadTableFromStream(Stream, DirectoryTable.TableList[TableIndex]);
+  finally
+    DirectoryTable.Free;
+  end;
 end;
 
 {$IFDEF ChecksumTest}
@@ -573,102 +643,37 @@ end;
 
 { TPascalTypeStorageScan }
 
-function TPascalTypeStorageScan.GetTableByTableClass
-  (TableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable;
-begin
-  if TableClass = FHeaderTable.ClassType then
-    Result := FHeaderTable
-  else if TableClass = FHorizontalHeader.ClassType then
-    Result := FHorizontalHeader
-  else if TableClass = FMaximumProfile.ClassType then
-    Result := FMaximumProfile
-  else if TableClass = FNameTable.ClassType then
-    Result := FNameTable
-  else if TableClass = FPostScriptTable.ClassType then
-    Result := FPostScriptTable
-  else
-    Result := nil;
-end;
-
-function TPascalTypeStorageScan.GetTableByTableName(const TableName: TTableName): TCustomPascalTypeNamedTable;
-begin
-  if CompareTableType(FHeaderTable.TableType, TableName) then
-    Result := FHeaderTable
-  else
-  if CompareTableType(FHorizontalHeader.TableType, TableName) then
-    Result := FHorizontalHeader
-  else
-  if CompareTableType(FMaximumProfile.TableType, TableName) then
-    Result := FMaximumProfile
-  else
-  if CompareTableType(FNameTable.TableType, TableName) then
-    Result := FNameTable
-  else
-  if CompareTableType(FPostScriptTable.TableType, TableName) then
-    Result := FPostScriptTable
-  else
-    Result := nil;
-end;
-
-function TPascalTypeStorageScan.GetTableByTableType(TableType: TTableType): TCustomPascalTypeNamedTable;
-begin
-  if TableType.AsCardinal = FHeaderTable.TableType.AsCardinal then
-    Result := FHeaderTable
-  else if TableType.AsCardinal = FHorizontalHeader.TableType.AsCardinal then
-    Result := FHorizontalHeader
-  else if TableType.AsCardinal = FMaximumProfile.TableType.AsCardinal then
-    Result := FMaximumProfile
-  else if TableType.AsCardinal = FNameTable.TableType.AsCardinal then
-    Result := FNameTable
-  else if TableType.AsCardinal = FPostScriptTable.TableType.AsCardinal then
-    Result := FPostScriptTable
-  else
-    Result := nil;
-end;
-
-procedure TPascalTypeStorageScan.LoadTableFromStream(Stream: TStream;
-  TableEntry: TPascalTypeDirectoryTableEntry);
+procedure TPascalTypeStorageScan.LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry);
 var
   MemoryStream: TMemoryStream;
-  TableClass  : TCustomPascalTypeNamedTableClass;
+  Table: TCustomPascalTypeNamedTable;
 begin
-  MemoryStream := TMemoryStream.Create;
-  with Stream do
-    try
-      // set stream position
-      Position := TableEntry.Offset;
+  Table := GetTableByTableType(TableEntry.TableType);
+  if (Table = nil) then
+    exit;
 
-      // copy from stream
-      MemoryStream.CopyFrom(Stream, 4 * ((TableEntry.Length + 3) div 4));
+  MemoryStream := TMemoryStream.Create;
+  try
+    // set stream position
+    Stream.Position := TableEntry.Offset;
+
+    // copy from stream
+    MemoryStream.CopyFrom(Stream, 4 * ((TableEntry.Length + 3) div 4));
 
 {$IFDEF ChecksumTest}
-      ValidateChecksum(MemoryStream, TableEntry);
+    ValidateChecksum(MemoryStream, TableEntry);
 {$ENDIF}
-      // reset memory stream position
-      MemoryStream.Seek(soFromBeginning, 0);
+    // reset memory stream position
+    MemoryStream.Position := 0;
 
-      // restore original table length
-      MemoryStream.Size := TableEntry.Length;
+    // restore original table length
+    MemoryStream.Size := TableEntry.Length;
 
-      TableClass := FindPascalTypeTableByType(TableEntry.TableType);
-      if TableClass <> nil then
-      begin
-        // load table from stream
-        if TableClass = TPascalTypeHeaderTable then
-          FHeaderTable.LoadFromStream(MemoryStream)
-        else if TableClass = TPascalTypeHorizontalHeaderTable then
-          FHorizontalHeader.LoadFromStream(MemoryStream)
-        else if TableClass = TPascalTypePostscriptTable then
-          FPostScriptTable.LoadFromStream(MemoryStream)
-        else if TableClass = TPascalTypeMaximumProfileTable then
-          FMaximumProfile.LoadFromStream(MemoryStream)
-        else if TableClass = TPascalTypeNameTable then
-          FNameTable.LoadFromStream(MemoryStream);
-      end;
+    Table.LoadFromStream(MemoryStream);
 
-    finally
-      MemoryStream.Free;
-    end;
+  finally
+    MemoryStream.Free;
+  end;
 end;
 
 procedure TPascalTypeStorageScan.SaveToStream(Stream: TStream);
@@ -700,7 +705,7 @@ begin
   inherited;
 end;
 
-procedure TPascalTypeStorage.DirectoryTableReaded(DirectoryTable: TPascalTypeDirectoryTable);
+procedure TPascalTypeStorage.DirectoryTableLoaded(DirectoryTable: TPascalTypeDirectoryTable);
 begin
   inherited;
 
@@ -729,20 +734,159 @@ end;
 
 function TPascalTypeStorage.GetGlyphCount: Word;
 begin
-  Result := FMaximumProfile.NumGlyphs;
+  Result := MaximumProfile.NumGlyphs;
 end;
 
 function TPascalTypeStorage.GetGlyphData(Index: Integer): TCustomPascalTypeGlyphDataTable;
 var
   GlyphDataTable: TTrueTypeFontGlyphDataTable;
 begin
-  // set default return value
   Result := nil;
 
   GlyphDataTable := TTrueTypeFontGlyphDataTable(GetTableByTableName('glyf'));
   if (GlyphDataTable <> nil) then
     if (Index >= 0) and (Index < GlyphDataTable.GlyphDataCount) then
       Result := GlyphDataTable.GlyphData[Index];
+end;
+
+function TPascalTypeStorage.GetGlyphPath(GlyphIndex: Integer): TPascalTypePath;
+
+  procedure AppendPath(var Path: TPascalTypePath; const Append: TPascalTypePath);
+  var
+    NewIndex: integer;
+    Contour: TPascalTypeContour;
+  begin
+    NewIndex := Length(Path);
+    SetLength(Path, Length(Path)+Length(Append));
+    for Contour in Append do
+    begin
+      Path[NewIndex] := Contour;
+      Inc(NewIndex);
+    end;
+  end;
+
+  function AffineTransformation(const Path: TPascalTypePath; const AffineTransformationMatrix: TSmallScaleMatrix): TPascalTypePath;
+  const
+    q: Single = 33.0 / 35536.0;
+  var
+    i, j: integer;
+    m0, n0: double;
+    m, n: double;
+    TempX: Single;
+    OffsetX, OffsetY: Single;
+    Contour: TPascalTypeContour;
+  begin
+    SetLength(Result, Length(Path));
+
+    // See: https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6glyf.html#COMPOUNDGLYPHS
+
+    m0 := Max(Abs(AffineTransformationMatrix[0,0]), Abs(AffineTransformationMatrix[0,1]));
+    n0 := Max(Abs(AffineTransformationMatrix[1,0]), Abs(AffineTransformationMatrix[1,1]));
+
+    if (m0 <> 0) and (n0 <> 0) then
+    begin
+      if (Abs(AffineTransformationMatrix[0,0]) - Abs(AffineTransformationMatrix[1,0]) <= q) then
+        m := 2 * m0
+      else
+        m := m0;
+
+      if (Abs(AffineTransformationMatrix[0,1]) - Abs(AffineTransformationMatrix[1,1]) <= q) then
+        n := 2 * n0
+      else
+        n := n0;
+
+      OffsetX := AffineTransformationMatrix[0,2] * m;
+      OffsetY := AffineTransformationMatrix[1,2] * n;
+
+      // Transform all points in path
+      for i := 0 to High(Path) do
+      begin
+        Contour := Copy(Path[i]);
+        Result[i] := Contour;
+        for j := 0 to High(Contour) do
+        begin
+          TempX :=        AffineTransformationMatrix[0,0] * Contour[j].XPos + AffineTransformationMatrix[1,0] * Contour[j].YPos + OffsetX;
+          Contour[j].YPos := AffineTransformationMatrix[0,1] * Contour[j].XPos + AffineTransformationMatrix[1,1] * Contour[j].YPos + OffsetY;
+          Contour[j].XPos := TempX;
+        end;
+      end;
+
+    end else
+    if (AffineTransformationMatrix[0,2] <> 0) or (AffineTransformationMatrix[1,2] <> 0) then
+    begin
+      OffsetX := AffineTransformationMatrix[0,2];
+      OffsetY := AffineTransformationMatrix[1,2];
+
+      // Simple translation
+      for i := 0 to High(Path) do
+      begin
+        Contour := Copy(Path[i]);
+        Result[i] := Contour;
+        for j := 0 to High(Contour) do
+        begin
+          Contour[j].XPos := Contour[j].XPos + OffsetX;
+          Contour[j].YPos := Contour[j].YPos + OffsetY;
+        end;
+      end;
+    end;
+  end;
+
+  function Translate(var Path: TPascalTypePath; OffsetX, OffsetY: Single): TPascalTypePath;
+  var
+    i, j: integer;
+    Contour: TPascalTypeContour;
+  begin
+    SetLength(Result, Length(Path));
+    // Simple translation
+    for i := 0 to High(Path) do
+    begin
+      Contour := Copy(Path[i]);
+      Result[i] := Contour;
+      for j := 0 to High(Contour) do
+      begin
+        Contour[j].XPos := Contour[j].XPos + OffsetX;
+        Contour[j].YPos := Contour[j].YPos + OffsetY;
+      end;
+    end;
+  end;
+
+  function GetCompositeGlyphPath(ParentGlyph: TTrueTypeFontCompositeGlyphData): TPascalTypePath;
+  var
+    i: integer;
+    CompositeGlyph: TPascalTypeCompositeGlyph;
+    GlyphPath: TPascalTypePath;
+  begin
+    // TODO : Point-to-point translation (GLYF_ARGS_ARE_XY_VALUES not set)
+    SetLength(Result, 0);
+    // Decompose compound ParentGlyph
+    for i := 0 to ParentGlyph.GlyphCount-1 do
+    begin
+      CompositeGlyph := ParentGlyph.Glyph[i];
+
+      // Recurse
+      GlyphPath := GetGlyphPath(CompositeGlyph.GlyphIndex);
+
+      if (CompositeGlyph.HasAffineTransformationMatrix) then
+        GlyphPath := AffineTransformation(GlyphPath, CompositeGlyph.AffineTransformationMatrix)
+      else
+      if (CompositeGlyph.HasOffset) then
+        GlyphPath := Translate(GlyphPath, CompositeGlyph.OffsetX, CompositeGlyph.OffsetY);
+
+      AppendPath(Result, GlyphPath);
+    end;
+  end;
+
+var
+  Glyph: TCustomTrueTypeFontGlyphData;
+begin
+  Glyph := TCustomTrueTypeFontGlyphData(GlyphData[GlyphIndex]);
+
+  if (Glyph is TTrueTypeFontSimpleGlyphData) then
+    Result := TTrueTypeFontSimpleGlyphData(Glyph).Path
+  else
+  if Glyph is TTrueTypeFontCompositeGlyphData then
+    // Recursively fetch glyph contours
+    Result := GetCompositeGlyphPath(TTrueTypeFontCompositeGlyphData(Glyph));
 end;
 
 function TPascalTypeStorage.GetKerning(Last, Next: Integer): Word;
@@ -778,104 +922,65 @@ function TPascalTypeStorage.GetTableByTableType(ATableType: TTableType): TCustom
 var
   TableIndex: Integer;
 begin
-  // return nil if the table hasn't been found
-  Result := nil;
+  Result := inherited GetTableByTableType(ATableType);
 
-  if ATableType.AsCardinal = FHeaderTable.TableType.AsCardinal then
-    Result := FHeaderTable
-  else
-  if ATableType.AsCardinal = FHorizontalHeader.TableType.AsCardinal then
-    Result := FHorizontalHeader
-  else
-  if ATableType.AsCardinal = FHorizontalMetrics.TableType.AsCardinal then
-    Result := FHorizontalMetrics
-  else
-  if ATableType.AsCardinal = FCharacterMap.TableType.AsCardinal then
-    Result := FCharacterMap
-  else
-  if ATableType.AsCardinal = FMaximumProfile.TableType.AsCardinal then
-    Result := FMaximumProfile
-  else
-  if ATableType.AsCardinal = FNameTable.TableType.AsCardinal then
-    Result := FNameTable
-  else
-  if ATableType.AsCardinal = FPostScriptTable.TableType.AsCardinal then
-    Result := FPostScriptTable
-  else
-    for TableIndex := 0 to FOptionalTables.Count - 1 do
-      if ATableType.AsCardinal = FOptionalTables[TableIndex].TableType.AsCardinal then
-        Exit(FOptionalTables[TableIndex]);
-end;
-
-function TPascalTypeStorage.ContainsTable(TableType: TTableType): Boolean;
-begin
-  Result := GetTableByTableType(TableType) <> nil;
+  if (Result = nil) then
+  begin
+    if ATableType.AsCardinal = HorizontalMetrics.TableType.AsCardinal then
+      Result := HorizontalMetrics
+    else
+    if ATableType.AsCardinal = CharacterMap.TableType.AsCardinal then
+      Result := CharacterMap
+    else
+      for TableIndex := 0 to FOptionalTables.Count - 1 do
+        if ATableType.AsCardinal = FOptionalTables[TableIndex].TableType.AsCardinal then
+          Exit(FOptionalTables[TableIndex]);
+  end;
 end;
 
 function TPascalTypeStorage.GetTableByTableClass(TableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable;
 var
   TableIndex: Integer;
 begin
-  // return nil if the table hasn't been found
-  Result := nil;
+  Result := inherited GetTableByTableClass(TableClass);
 
-  if TableClass = FHeaderTable.ClassType then
-    Result := FHeaderTable
-  else
-  if TableClass = FHorizontalHeader.ClassType then
-    Result := FHorizontalHeader
-  else
-  if TableClass = FHorizontalMetrics.ClassType then
-    Result := FHorizontalMetrics
-  else
-  if TableClass = FCharacterMap.ClassType then
-    Result := FCharacterMap
-  else
-  if TableClass = FMaximumProfile.ClassType then
-    Result := FMaximumProfile
-  else
-  if TableClass = FNameTable.ClassType then
-    Result := FNameTable
-  else
-  if TableClass = FPostScriptTable.ClassType then
-    Result := FPostScriptTable
-  else
-    for TableIndex := 0 to FOptionalTables.Count - 1 do
-      if FOptionalTables[TableIndex].ClassType = TableClass then
-        Exit(FOptionalTables[TableIndex]);
+  if (Result = nil) then
+  begin
+    if TableClass = HorizontalMetrics.ClassType then
+      Result := HorizontalMetrics
+    else
+    if TableClass = CharacterMap.ClassType then
+      Result := CharacterMap
+    else
+      for TableIndex := 0 to FOptionalTables.Count - 1 do
+        if FOptionalTables[TableIndex].ClassType = TableClass then
+          Exit(FOptionalTables[TableIndex]);
+  end;
 end;
 
 function TPascalTypeStorage.GetTableByTableName(const TableName: TTableName): TCustomPascalTypeNamedTable;
 var
   TableIndex: Integer;
 begin
-  // return nil if the table hasn't been found
-  Result := nil;
+  Result := inherited GetTableByTableName(TableName);
 
-  if CompareTableType(FHeaderTable.TableType, TableName) then
-    Result := FHeaderTable
-  else
-  if CompareTableType(FHorizontalHeader.TableType, TableName) then
-    Result := FHorizontalHeader
-  else
-  if CompareTableType(FHorizontalMetrics.TableType, TableName) then
-    Result := FHorizontalMetrics
-  else
-  if CompareTableType(FCharacterMap.TableType, TableName) then
-    Result := FCharacterMap
-  else
-  if CompareTableType(FMaximumProfile.TableType, TableName) then
-    Result := FMaximumProfile
-  else
-  if CompareTableType(FNameTable.TableType, TableName) then
-    Result := FNameTable
-  else
-  if CompareTableType(FPostScriptTable.TableType, TableName) then
-    Result := FPostScriptTable
-  else
-    for TableIndex := 0 to FOptionalTables.Count - 1 do
-      if CompareTableType(FOptionalTables[TableIndex].TableType, TableName) then
-        Exit(FOptionalTables[TableIndex]);
+  if (Result = nil) then
+  begin
+    if CompareTableType(HorizontalMetrics.TableType, TableName) then
+      Result := HorizontalMetrics
+    else
+    if CompareTableType(CharacterMap.TableType, TableName) then
+      Result := CharacterMap
+    else
+      for TableIndex := 0 to FOptionalTables.Count - 1 do
+        if CompareTableType(FOptionalTables[TableIndex].TableType, TableName) then
+          Exit(FOptionalTables[TableIndex]);
+  end;
+end;
+
+function TPascalTypeStorage.ContainsTable(TableType: TTableType): Boolean;
+begin
+  Result := GetTableByTableType(TableType) <> nil;
 end;
 
 function TPascalTypeStorage.GetTableCount: Integer;
@@ -917,25 +1022,25 @@ begin
 
           // assign tables
           if TableClass = TPascalTypeHeaderTable then
-            FHeaderTable.Assign(CurrentTable)
+            HeaderTable.Assign(CurrentTable)
           else
           if TableClass = TPascalTypeHorizontalHeaderTable then
-            FHorizontalHeader.Assign(CurrentTable)
+            HorizontalHeader.Assign(CurrentTable)
           else
           if TableClass = TPascalTypeHorizontalMetricsTable then
-            FHorizontalMetrics.Assign(CurrentTable)
+            HorizontalMetrics.Assign(CurrentTable)
           else
           if TableClass = TPascalTypePostscriptTable then
-            FPostScriptTable.Assign(CurrentTable)
+            PostScriptTable.Assign(CurrentTable)
           else
           if TableClass = TPascalTypeMaximumProfileTable then
-            FMaximumProfile.Assign(CurrentTable)
+            MaximumProfile.Assign(CurrentTable)
           else
           if TableClass = TPascalTypeNameTable then
-            FNameTable.Assign(CurrentTable)
+            NameTable.Assign(CurrentTable)
           else
           if TableClass = TPascalTypeCharacterMapTable then
-            FCharacterMap.Assign(CurrentTable)
+            CharacterMap.Assign(CurrentTable)
           else
           if TableClass = TPascalTypeOS2Table then
           begin
@@ -991,56 +1096,55 @@ begin
   // create directory table
   DirectoryTable := TPascalTypeDirectoryTable.Create(RootTable);
 
-  with DirectoryTable, Stream do
-    try
-      ClearAndBuildRequiredEntries;
+  try
+    DirectoryTable.ClearAndBuildRequiredEntries;
 
-      // build directory table
-      for TableIndex := 0 to FOptionalTables.Count - 1 do
-        AddTableEntry(FOptionalTables[TableIndex].TableType);
+    // build directory table
+    for TableIndex := 0 to FOptionalTables.Count - 1 do
+      DirectoryTable.AddTableEntry(FOptionalTables[TableIndex].TableType);
 
-      // write temporary directory to determine its size
-      SaveToStream(Stream);
+    // write temporary directory to determine its size
+    SaveToStream(Stream);
 
-      // build directory table
-      for TableIndex := 0 to TableCount - 1 do
-        with TableList[TableIndex] do
-        begin
-          NamedTable := GetTableByTableType(TableType);
-          Assert(NamedTable <> nil);
+    // build directory table
+    for TableIndex := 0 to TableCount - 1 do
+    begin
+      NamedTable := GetTableByTableType(DirectoryTable.TableList[TableIndex].TableType);
+      Assert(NamedTable <> nil);
 
-          Offset := Stream.Position;
-          MemoryStream := TMemoryStream.Create;
-          try
-            NamedTable.SaveToStream(MemoryStream);
+      DirectoryTable.TableList[TableIndex].Offset := Stream.Position;
 
-            // store original stream length
-            Length := MemoryStream.Size;
+      MemoryStream := TMemoryStream.Create;
+      try
+        NamedTable.SaveToStream(MemoryStream);
 
-            // extend to a modulo 4 size
-            MemoryStream.Size := 4 * ((Length + 3) div 4);
+        // store original stream length
+        DirectoryTable.TableList[TableIndex].Length := MemoryStream.Size;
 
-            // calculate checksum
-            Checksum := CalculateCheckSum(MemoryStream);
+        // extend to a modulo 4 size
+        MemoryStream.Size := 4 * ((DirectoryTable.TableList[TableIndex].Length + 3) div 4);
 
-            // reset stream position
-            MemoryStream.Position := 0;
+        // calculate checksum
+        DirectoryTable.TableList[TableIndex].Checksum := CalculateCheckSum(MemoryStream);
 
-            // copy streams
-            CopyFrom(MemoryStream, Length);
-          finally
-            MemoryStream.Free;
-          end;
-        end;
+        // reset stream position
+        MemoryStream.Position := 0;
 
-      // reset stream position
-      Seek(0, soFromBeginning);
-
-      // write final directory
-      SaveToStream(Stream);
-    finally
-      DirectoryTable.Free;
+        // copy streams
+        Stream.CopyFrom(MemoryStream, DirectoryTable.TableList[TableIndex].Length);
+      finally
+        MemoryStream.Free;
+      end;
     end;
+
+    // reset stream position
+    Stream.Position := 0;
+
+    // write final directory
+    SaveToStream(Stream);
+  finally
+    DirectoryTable.Free;
+  end;
 end;
 
 end.

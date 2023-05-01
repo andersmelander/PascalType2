@@ -39,7 +39,7 @@ uses
   Classes, Sysutils, PT_Types, PT_Storage, PT_StorageSFNT, PT_Tables,
   PT_CharacterMap, PT_TablesOptional;
 
-type
+        type
   TFontPoint = packed record
     X, Y: TScaleType;
   end;
@@ -124,13 +124,10 @@ type
     procedure SaveToFile(const FileName: TFileName);
 
     property FontName: string read GetFontName;
-    property FontHeight: Integer read FFontHeight write SetFontHeight
-      default -11;
+    property FontHeight: Integer read FFontHeight write SetFontHeight default -11;
     property FontSize: Integer read GetFontSize write SetFontSize stored False;
-    property PixelPerInchX: Integer read FPixelPerInchX write SetPixelPerInchX
-      default 96;
-    property PixelPerInchY: Integer read FPixelPerInchY write SetPixelPerInchY
-      default 96;
+    property PixelPerInchX: Integer read FPixelPerInchX write SetPixelPerInchX default 96;
+    property PixelPerInchY: Integer read FPixelPerInchY write SetPixelPerInchY default 96;
   end;
 
   TPascalTypeFontEngine = class(TCustomPascalTypeFontEngine)

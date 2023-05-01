@@ -36,7 +36,19 @@ interface
 
 uses
   Generics.Collections,
-  Classes, SysUtils, PT_Types;
+  Classes, SysUtils,
+  PT_Types;
+
+type
+  TContourPoint = record
+    XPos: Single;
+    YPos: Single;
+    Flags: Byte;
+  end;
+  PContourPoint = ^TContourPoint;
+
+  TPascalTypeContour = array of TContourPoint;
+  TPascalTypePath = array of TPascalTypeContour;
 
 type
   TCustomPascalTypeNamedTable = class;
@@ -140,7 +152,8 @@ procedure CopySwappedWord(Source: PWord; Destination: PWord; Size: Integer);
 implementation
 
 uses
-  PT_Math, PT_ResourceStrings;
+  PT_Math,
+  PT_ResourceStrings;
 
 function ReadSwappedWord(Stream: TStream): Word;
 begin
