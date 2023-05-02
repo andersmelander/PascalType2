@@ -9,7 +9,7 @@ uses
   PT_FontEngine in '..\..\Source\PT_FontEngine.pas',
   PT_FontEngineGDI in '..\..\Source\PT_FontEngineGDI.pas',
   PT_Math in '..\..\Source\PT_Math.pas',
-  PT_PanoseClassifications in '..\..\Source\PT_PanoseClassifications.pas',
+  PascalType.Tables.TrueType.Panose.Classifications in '..\..\Source\PascalType.Tables.TrueType.Panose.Classifications.pas',
   PT_ResourceStrings in '..\..\Source\PT_ResourceStrings.pas',
   PT_Storage in '..\..\Source\PT_Storage.pas',
   PT_StorageSFNT in '..\..\Source\PT_StorageSFNT.pas',
@@ -55,7 +55,8 @@ uses
   PascalType.Tables.TrueType.vmtx in '..\..\Source\PascalType.Tables.TrueType.vmtx.pas',
   PascalType.Tables.TrueType.hhea in '..\..\Source\PascalType.Tables.TrueType.hhea.pas',
   PascalType.Tables.TrueType.vhea in '..\..\Source\PascalType.Tables.TrueType.vhea.pas',
-  PascalType.Tables.TrueType.os2 in '..\..\Source\PascalType.Tables.TrueType.os2.pas';
+  PascalType.Tables.TrueType.os2 in '..\..\Source\PascalType.Tables.TrueType.os2.pas',
+  PascalType.Tables.TrueType.Panose in '..\..\Source\PascalType.Tables.TrueType.Panose.pas';
 
 {$R *.res}
 

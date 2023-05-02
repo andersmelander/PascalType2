@@ -114,7 +114,7 @@
         <DCCReference Include="..\..\Source\PT_FontEngine.pas"/>
         <DCCReference Include="..\..\Source\PT_FontEngineGDI.pas"/>
         <DCCReference Include="..\..\Source\PT_Math.pas"/>
-        <DCCReference Include="..\..\Source\PT_PanoseClassifications.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.Panose.Classifications.pas"/>
         <DCCReference Include="..\..\Source\PT_ResourceStrings.pas"/>
         <DCCReference Include="..\..\Source\PT_Storage.pas"/>
         <DCCReference Include="..\..\Source\PT_StorageSFNT.pas"/>
@@ -161,6 +161,7 @@
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.hhea.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.vhea.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.os2.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.Panose.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

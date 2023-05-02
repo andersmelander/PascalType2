@@ -1,4 +1,4 @@
-unit PT_PanoseClassifications;
+unit PascalType.Tables.TrueType.Panose.Classifications;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -37,8 +37,17 @@ interface
 uses
   Classes, Sysutils,
   PT_Types,
-  PascalType.Tables.TrueType.os2;
+  PascalType.Tables.TrueType.Panose;
 
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeLatinTextPanoseTable
+//
+//------------------------------------------------------------------------------
+// Latin text
+//------------------------------------------------------------------------------
+// https://monotype.github.io/panose/pan2.htm
+//------------------------------------------------------------------------------
 type
   TPascalTypeLatinTextPanoseTable = class(TCustomPascalTypePanoseTable)
   private
@@ -84,6 +93,17 @@ type
     property XHeight   : Byte read GetXHeight write SetXHeight;
   end;
 
+
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeLatinHandWrittenPanoseTable
+//
+//------------------------------------------------------------------------------
+// Latin hand written
+//------------------------------------------------------------------------------
+// https://monotype.github.io/panose/pan3.htm
+//------------------------------------------------------------------------------
+type
   TPascalTypeLatinHandWrittenPanoseTable = class(TCustomPascalTypePanoseTable)
   private
     function GetAspectRatio: Byte;
@@ -128,6 +148,17 @@ type
     property XAscent    : Byte read GetXAscent write SetXAscent;
   end;
 
+
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeLatinDecorativePanoseTable
+//
+//------------------------------------------------------------------------------
+// Latin decorative
+//------------------------------------------------------------------------------
+// https://monotype.github.io/panose/pan4.htm
+//------------------------------------------------------------------------------
+type
   TPascalTypeLatinDecorativePanoseTable = class(TCustomPascalTypePanoseTable)
   private
     function GetAspect: Byte;
@@ -172,6 +203,17 @@ type
     property RangeOfCharacters: Byte read GetRangeOfCharacters write SetRangeOfCharacters;
   end;
 
+
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeLatinSymbolPanoseTable
+//
+//------------------------------------------------------------------------------
+// Latin pictoral
+//------------------------------------------------------------------------------
+// https://monotype.github.io/panose/pan5.htm
+//------------------------------------------------------------------------------
+type
   TPascalTypeLatinSymbolPanoseTable = class(TCustomPascalTypePanoseTable)
   private
     function GetAspectRatioCharacter119: Byte;
@@ -215,6 +257,12 @@ type
     property AspectRatioCharacter211: Byte read GetAspectRatioCharacter211 write SetAspectRatioCharacter211;
   end;
 
+
+//------------------------------------------------------------------------------
+//
+//              String representations
+//
+//------------------------------------------------------------------------------
 function LatinTextSerifStyleToString(SerifStyle: Byte): string;
 function LatinTextWeightToString(Weight: Byte): string;
 function LatinTextProportionToString(Proportion: Byte): string;
@@ -254,6 +302,11 @@ function LatinSymboleAspectRatioCharacter119ToString(AspectRatio: Byte): string;
 function LatinSymboleAspectRatioCharacter157ToString(AspectRatio: Byte): string;
 function LatinSymboleAspectRatioCharacter163ToString(AspectRatio: Byte): string;
 function LatinSymboleAspectRatioCharacter211ToString(AspectRatio: Byte): string;
+
+
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 
 implementation
 
@@ -372,7 +425,6 @@ begin
     Result := 'Unknown';
 end;
 
-/// /////////////////////////////////////////////////////////////////////////////
 
 function LatinHandWrittenToolKindToString(ToolKind: Byte): string;
 const
@@ -590,8 +642,7 @@ begin
     Result := 'Unknown';
 end;
 
-function LatinDecorativeRangeOfCharactersToString(RangeOfCharacters
-  : Byte): string;
+function LatinDecorativeRangeOfCharactersToString(RangeOfCharacters: Byte): string;
 const
   CLatinDecorativeRangeOfCharactersText: array [0..5] of string = ('Any',
     'No Fit', 'Extended Collection', 'Litterals', 'No Lower Case',
@@ -602,8 +653,6 @@ begin
   else
     Result := 'Unknown';
 end;
-
-/// /////////////////////////////////////////////////////////////////////////////
 
 function LatinSymboleKindToString(Kind: Byte): string;
 const
@@ -639,8 +688,7 @@ begin
     Result := 'Unknown';
 end;
 
-function LatinSymboleAspectRatioContrastToString(AspectRatioContrast
-  : Byte): string;
+function LatinSymboleAspectRatioContrastToString(AspectRatioContrast: Byte): string;
 begin
   if AspectRatioContrast = 1 then
     Result := 'No Fit'
@@ -709,8 +757,11 @@ begin
 end;
 
 
-{ TPascalTypeLatinTextPanoseTable }
-
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeLatinTextPanoseTable
+//
+//------------------------------------------------------------------------------
 class function TPascalTypeLatinTextPanoseTable.GetFamilyType: Byte;
 begin
   Result := 2;
@@ -888,8 +939,11 @@ begin
 end;
 
 
-{ TPascalTypeLatinHandWrittenPanoseTable }
-
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeLatinHandWrittenPanoseTable
+//
+//------------------------------------------------------------------------------
 class function TPascalTypeLatinHandWrittenPanoseTable.GetFamilyType: Byte;
 begin
   Result := 3;
@@ -1068,8 +1122,11 @@ begin
 end;
 
 
-{ TPascalTypeLatinDecorativePanoseTable }
-
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeLatinDecorativePanoseTable
+//
+//------------------------------------------------------------------------------
 class function TPascalTypeLatinDecorativePanoseTable.GetFamilyType: Byte;
 begin
   Result := 4;
@@ -1249,8 +1306,11 @@ begin
 end;
 
 
-{ TPascalTypeLatinSymbolPanoseTable }
-
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeLatinSymbolPanoseTable
+//
+//------------------------------------------------------------------------------
 class function TPascalTypeLatinSymbolPanoseTable.GetFamilyType: Byte;
 begin
   Result := 5;
@@ -1433,10 +1493,17 @@ begin
   Changed;
 end;
 
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+
 initialization
 
-RegisterPascalTypePanoses([TPascalTypeLatinTextPanoseTable,
-  TPascalTypeLatinHandWrittenPanoseTable, TPascalTypeLatinDecorativePanoseTable,
-  TPascalTypeLatinSymbolPanoseTable]);
+  RegisterPascalTypePanoses([
+    TPascalTypeLatinTextPanoseTable,
+    TPascalTypeLatinHandWrittenPanoseTable,
+    TPascalTypeLatinDecorativePanoseTable,
+    TPascalTypeLatinSymbolPanoseTable
+    ]);
 
 end.

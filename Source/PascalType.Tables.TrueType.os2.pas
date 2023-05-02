@@ -42,7 +42,8 @@ uses
   Classes,
   PT_Types,
   PT_Classes,
-  PT_Tables;
+  PT_Tables,
+  PascalType.Tables.TrueType.Panose;
 
 //------------------------------------------------------------------------------
 //
@@ -54,52 +55,6 @@ uses
 // https://learn.microsoft.com/en-us/typography/opentype/spec/os2
 // https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6OS2.html
 //------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-//              TCustomPascalTypePanoseTable
-//------------------------------------------------------------------------------
-type
-  TCustomPascalTypePanoseTable = class abstract(TCustomPascalTypeTable)
-  private type
-    TPanoseArray = array[0..8] of Byte;
-  private
-    function GetData(Index: Byte): Byte;
-    procedure SetData(Index: Byte; const Value: Byte);
-  protected
-    FData: TPanoseArray;
-
-    function GetInternalFamilyType: Byte; virtual;
-    class function GetFamilyType: Byte; virtual; abstract;
-  public
-    procedure Assign(Source: TPersistent); override;
-
-    procedure LoadFromStream(Stream: TStream); override;
-    procedure SaveToStream(Stream: TStream); override;
-
-    property Data[Index: Byte]: Byte read GetData write SetData;
-    property FamilyType: Byte read GetInternalFamilyType;
-  end;
-
-  TPascalTypePanoseClass = class of TCustomPascalTypePanoseTable;
-
-
-//------------------------------------------------------------------------------
-//              TPascalTypeDefaultPanoseTable
-//------------------------------------------------------------------------------
-type
-  TPascalTypeDefaultPanoseTable = class(TCustomPascalTypePanoseTable)
-  private
-    FFamilyType: Byte;
-  protected
-    function GetInternalFamilyType: Byte; override;
-  public
-    procedure LoadFromStream(Stream: TStream); override;
-    procedure SaveToStream(Stream: TStream); override;
-    class function GetFamilyType: Byte; override;
-
-    property FamilyType: Byte read FFamilyType;
-  end;
-
 
 //------------------------------------------------------------------------------
 //              TPascalTypeUnicodeRangeTable
@@ -751,14 +706,6 @@ type
 
 
 //------------------------------------------------------------------------------
-//              Panose class registration
-//------------------------------------------------------------------------------
-procedure RegisterPascalTypePanose(PanoseClass: TPascalTypePanoseClass);
-procedure RegisterPascalTypePanoses(PanoseClasses: array of TPascalTypePanoseClass);
-function FindPascalTypePanoseByType(PanoseType: Byte): TPascalTypePanoseClass;
-
-
-//------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
@@ -774,129 +721,6 @@ resourcestring
   RCStrErrorAscender = 'Error: Typographic ascender should be equal to the ascender defined in the horizontal header table';
   RCStrErrorDescender = 'Error: Typographic descender should be equal to the descender defined in the horizontal header table';
   RCStrErrorLineGap = 'Error: Typographic line gap should be equal to the line gap defined in the horizontal header table';
-
-//------------------------------------------------------------------------------
-//              Panose class registration
-//------------------------------------------------------------------------------
-var
-  GPanoseClasses: array of TPascalTypePanoseClass;
-
-function IsPascalTypePanoseRegistered(PanoseClass: TPascalTypePanoseClass): Boolean;
-var
-  PanoseClassIndex: Integer;
-begin
-  Result := False;
-  for PanoseClassIndex := 0 to High(GPanoseClasses) do
-    if GPanoseClasses[PanoseClassIndex] = PanoseClass then
-    begin
-      Result := True;
-      Exit;
-    end;
-end;
-
-procedure RegisterPascalTypePanose(PanoseClass: TPascalTypePanoseClass);
-begin
-  Assert(IsPascalTypePanoseRegistered(PanoseClass) = False);
-  SetLength(GPanoseClasses, Length(GPanoseClasses) + 1);
-  GPanoseClasses[High(GPanoseClasses)] := PanoseClass;
-end;
-
-procedure RegisterPascalTypePanoses(PanoseClasses: array of TPascalTypePanoseClass);
-var
-  PanoseClassIndex: Integer;
-begin
-  for PanoseClassIndex := 0 to High(PanoseClasses) do
-    RegisterPascalTypePanose(PanoseClasses[PanoseClassIndex]);
-end;
-
-function FindPascalTypePanoseByType(PanoseType: Byte): TPascalTypePanoseClass;
-var
-  PanoseClassIndex: Integer;
-begin
-  Result := nil;
-  for PanoseClassIndex := 0 to High(GPanoseClasses) do
-    if GPanoseClasses[PanoseClassIndex].GetFamilyType = PanoseType then
-    begin
-      Result := GPanoseClasses[PanoseClassIndex];
-      Exit;
-    end;
-  // raise EPascalTypeError.Create('Unknown Table Class: ' + TableType);
-end;
-
-
-//------------------------------------------------------------------------------
-//              TCustomPascalTypePanoseTable
-//------------------------------------------------------------------------------
-procedure TCustomPascalTypePanoseTable.Assign(Source: TPersistent);
-begin
-  inherited;
-  if Source is TCustomPascalTypePanoseTable then
-    FData := TCustomPascalTypePanoseTable(Source).FData;
-end;
-
-function TCustomPascalTypePanoseTable.GetData(Index: Byte): Byte;
-begin
-  if not(Index in [Low(TPanoseArray)..High(TPanoseArray)]) then
-    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
-  Result := FData[Index];
-end;
-
-function TCustomPascalTypePanoseTable.GetInternalFamilyType: Byte;
-begin
-  Result := GetFamilyType;
-end;
-
-procedure TCustomPascalTypePanoseTable.SetData(Index: Byte; const Value: Byte);
-begin
-  if not(Index in [Low(TPanoseArray)..High(TPanoseArray)]) then
-    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
-  FData[Index] := Value;
-end;
-
-procedure TCustomPascalTypePanoseTable.LoadFromStream(Stream: TStream);
-begin
-  inherited;
-
-  Stream.Read(FData[0], SizeOf(TPanoseArray));
-end;
-
-procedure TCustomPascalTypePanoseTable.SaveToStream(Stream: TStream);
-begin
-  inherited;
-
-  Stream.Write(FData[0], SizeOf(TPanoseArray));
-end;
-
-
-//------------------------------------------------------------------------------
-//              TPascalTypeDefaultPanoseTable
-//------------------------------------------------------------------------------
-function TPascalTypeDefaultPanoseTable.GetInternalFamilyType: Byte;
-begin
-  Result := FFamilyType;
-end;
-
-class function TPascalTypeDefaultPanoseTable.GetFamilyType: Byte;
-begin
-  Result := 0; // not specified and thus identifier for unknown panose type
-end;
-
-procedure TPascalTypeDefaultPanoseTable.LoadFromStream(Stream: TStream);
-begin
-  // read family type frem stream prior to any other data
-  Stream.Read(FFamilyType, 1);
-
-  inherited;
-end;
-
-procedure TPascalTypeDefaultPanoseTable.SaveToStream(Stream: TStream);
-begin
-  // write family type frem stream prior to any other data
-  Stream.Write(FFamilyType, 1);
-
-  inherited;
-end;
-
 
 //------------------------------------------------------------------------------
 //              TPascalTypeUnicodeRangeTable

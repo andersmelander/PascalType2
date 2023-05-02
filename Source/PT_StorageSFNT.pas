@@ -48,7 +48,8 @@ uses
   PT_TableDirectory,
   PascalType.Tables.TrueType.hmtx,
   PascalType.Tables.TrueType.hhea,
-  PascalType.Tables.TrueType.os2;
+  PascalType.Tables.TrueType.os2,
+  PascalType.Tables.TrueType.Panose;
 
 type
   TCustomPascalTypeStorageSFNT = class(TCustomPascalTypeStorage, IPascalTypeStorageTable)
