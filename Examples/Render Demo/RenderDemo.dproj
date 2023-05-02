@@ -155,7 +155,9 @@
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Positioning.Single.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Positioning.Pair.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.ClassDefinition.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.GLYF.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.glyf.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.hmtx.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.vmtx.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

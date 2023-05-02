@@ -539,31 +539,6 @@ type
   end;
 
 
-  // table 'vmtx'
-
-  TVerticalMetric = record
-    AdvanceHeight: Word;
-    TopSideBearing: SmallInt;
-  end;
-
-  TPascalTypeVerticalMetricsTable = class(TCustomPascalTypeNamedTable)
-  private
-    FVerticalMetrics: array of TVerticalMetric;
-    function GetVerticalMetric(Index: Integer): TVerticalMetric;
-    function GetVerticalMetricCount: Integer;
-  protected
-  public
-    class function GetTableType: TTableType; override;
-
-    procedure Assign(Source: TPersistent); override;
-
-    procedure LoadFromStream(Stream: TStream); override;
-    procedure SaveToStream(Stream: TStream); override;
-
-    property VerticalMetric[Index: Integer]: TVerticalMetric read GetVerticalMetric;
-    property VerticalMetricCount: Integer read GetVerticalMetricCount;
-  end;
-
 implementation
 
 uses
@@ -2660,119 +2635,12 @@ begin
 end;
 
 
-{ TPascalTypeVerticalMetricsTable }
-
-procedure TPascalTypeVerticalMetricsTable.Assign(Source: TPersistent);
-begin
-  inherited;
-  if Source is TPascalTypeVerticalMetricsTable then
-    FVerticalMetrics := TPascalTypeVerticalMetricsTable(Source).FVerticalMetrics;
-end;
-
-class function TPascalTypeVerticalMetricsTable.GetTableType: TTableType;
-begin
-  Result.AsAnsiChar := 'vdmx';
-end;
-
-function TPascalTypeVerticalMetricsTable.GetVerticalMetric(Index: Integer): TVerticalMetric;
-begin
-  if (Index >= 0) and (Index < Length(FVerticalMetrics)) then
-    Result := FVerticalMetrics[Index]
-  else
-    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
-end;
-
-function TPascalTypeVerticalMetricsTable.GetVerticalMetricCount: Integer;
-begin
-  Result := Length(FVerticalMetrics);
-end;
-
-procedure TPascalTypeVerticalMetricsTable.LoadFromStream(Stream: TStream);
-var
-  MtxIndex      : Integer;
-  VerticalHeader: TPascalTypeVerticalHeaderTable;
-  MaximumProfile: TPascalTypeMaximumProfileTable;
-begin
-  inherited;
-
-  // locate vertical metrics header
-  VerticalHeader := TPascalTypeVerticalHeaderTable(Storage.GetTableByTableClass(TPascalTypeVerticalHeaderTable));
-  MaximumProfile := TPascalTypeMaximumProfileTable(Storage.GetTableByTableName('maxp'));
-  Assert(MaximumProfile <> nil);
-
-  // check if vertical metrics header is available
-  if VerticalHeader = nil then
-    raise EPascalTypeError.Create(RCStrNoVerticalHeader);
-
-  // set length of vertical metrics
-  SetLength(FVerticalMetrics, MaximumProfile.NumGlyphs);
-
-  with Stream do
-  begin
-    for MtxIndex := 0 to VerticalHeader.NumOfLongVerMetrics - 1 do
-      with FVerticalMetrics[MtxIndex] do
-      begin
-        // read advance width
-        AdvanceHeight := ReadSwappedSmallInt(Stream);
-
-        // read left side bearing
-        TopSideBearing := ReadSwappedSmallInt(Stream);
-      end;
-
-    for MtxIndex := VerticalHeader.NumOfLongVerMetrics to Length
-      (FVerticalMetrics) - 1 do
-      with FVerticalMetrics[MtxIndex] do
-      begin
-        // read advance width / left side bearing at once
-        AdvanceHeight := ReadSwappedSmallInt(Stream);
-        TopSideBearing := AdvanceHeight;
-      end;
-  end;
-end;
-
-procedure TPascalTypeVerticalMetricsTable.SaveToStream(Stream: TStream);
-var
-  MtxIndex      : Integer;
-  VerticalHeader: TPascalTypeVerticalHeaderTable;
-begin
-  inherited;
-
-  // locate vertical metrics header
-  VerticalHeader := TPascalTypeVerticalHeaderTable(Storage.GetTableByTableClass(TPascalTypeVerticalHeaderTable));
-
-  // check if vertical metrics header is available
-  if VerticalHeader = nil then
-    raise EPascalTypeError.Create(RCStrNoVerticalHeader);
-
-  with Stream do
-  begin
-    for MtxIndex := 0 to VerticalHeader.NumOfLongVerMetrics - 1 do
-      with FVerticalMetrics[MtxIndex] do
-      begin
-        // write advance width
-        WriteSwappedSmallInt(Stream, AdvanceHeight);
-
-        // write left side bearing
-        WriteSwappedSmallInt(Stream, TopSideBearing);
-      end;
-
-    for MtxIndex := VerticalHeader.NumOfLongVerMetrics to Length
-      (FVerticalMetrics) - 1 do
-      with FVerticalMetrics[MtxIndex] do
-      begin
-        // write advance width / left side bearing at once
-        WriteSwappedSmallInt(Stream, AdvanceHeight);
-      end;
-  end;
-end;
-
 initialization
 
-RegisterPascalTypeTables([TPascalTypeDigitalSignatureTable,
-  TPascalTypeGridFittingAndScanConversionProcedureTable,
-  TPascalTypeHorizontalDeviceMetricsTable, TPascalTypeKerningTable,
-  TPascalTypeLinearThresholdTable, TPascalTypePCL5Table,
-  TPascalTypeVerticalDeviceMetricsTable, TPascalTypeVerticalHeaderTable,
-  TPascalTypeVerticalMetricsTable]);
+  RegisterPascalTypeTables([TPascalTypeDigitalSignatureTable,
+    TPascalTypeGridFittingAndScanConversionProcedureTable,
+    TPascalTypeHorizontalDeviceMetricsTable, TPascalTypeKerningTable,
+    TPascalTypeLinearThresholdTable, TPascalTypePCL5Table,
+    TPascalTypeVerticalDeviceMetricsTable, TPascalTypeVerticalHeaderTable]);
 
 end.

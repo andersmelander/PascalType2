@@ -45,7 +45,8 @@ uses
   PT_Classes,
   PT_Storage,
   PT_Tables,
-  PT_TableDirectory;
+  PT_TableDirectory,
+  PascalType.Tables.TrueType.hmtx;
 
 type
   TCustomPascalTypeStorageSFNT = class(TCustomPascalTypeStorage, IPascalTypeStorageTable)

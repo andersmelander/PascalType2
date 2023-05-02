@@ -1,4 +1,4 @@
-unit PascalType.Tables.TrueType.GLYF;
+unit PascalType.Tables.TrueType.glyf;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
