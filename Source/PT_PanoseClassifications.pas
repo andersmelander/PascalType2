@@ -35,7 +35,9 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, Sysutils, PT_Types, PT_Tables;
+  Classes, Sysutils,
+  PT_Types,
+  PascalType.Tables.TrueType.os2;
 
 type
   TPascalTypeLatinTextPanoseTable = class(TCustomPascalTypePanoseTable)
@@ -75,8 +77,7 @@ type
     property Weight         : Byte read GetWeight write SetWeight;
     property Proportion     : Byte read GetProportion write SetProportion;
     property Contrast       : Byte read GetContrast write SetContrast;
-    property StrokeVariation: Byte read GetStrokeVariation
-      write SetStrokeVariation;
+    property StrokeVariation: Byte read GetStrokeVariation write SetStrokeVariation;
     property ArmStyle  : Byte read GetArmStyle write SetArmStyle;
     property Letterform: Byte read GetLetterform write SetLetterform;
     property Midline   : Byte read GetMidline write SetMidline;
@@ -168,8 +169,7 @@ type
     property Treatment   : Byte read GetTreatment write SetTreatment;
     property Lining      : Byte read GetLining write SetLining;
     property Topology    : Byte read GetTopology write SetTopology;
-    property RangeOfCharacters: Byte read GetRangeOfCharacters
-      write SetRangeOfCharacters;
+    property RangeOfCharacters: Byte read GetRangeOfCharacters write SetRangeOfCharacters;
   end;
 
   TPascalTypeLatinSymbolPanoseTable = class(TCustomPascalTypePanoseTable)
@@ -243,14 +243,12 @@ function LatinDecorativeSerifVariantToString(SerifVariant: Byte): string;
 function LatinDecorativeTreatmentToString(Treatment: Byte): string;
 function LatinDecorativeLiningToString(Lining: Byte): string;
 function LatinDecorativeTopologyToString(Topology: Byte): string;
-function LatinDecorativeRangeOfCharactersToString(RangeOfCharacters
-  : Byte): string;
+function LatinDecorativeRangeOfCharactersToString(RangeOfCharacters: Byte): string;
 
 function LatinSymboleKindToString(Kind: Byte): string;
 function LatinSymboleWeightToString(Weight: Byte): string;
 function LatinSymboleSpacingToString(Spacing: Byte): string;
-function LatinSymboleAspectRatioContrastToString(AspectRatioContrast
-  : Byte): string;
+function LatinSymboleAspectRatioContrastToString(AspectRatioContrast: Byte): string;
 function LatinSymboleAspectRatioCharacter94ToString(AspectRatio: Byte): string;
 function LatinSymboleAspectRatioCharacter119ToString(AspectRatio: Byte): string;
 function LatinSymboleAspectRatioCharacter157ToString(AspectRatio: Byte): string;

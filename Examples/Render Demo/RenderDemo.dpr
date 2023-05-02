@@ -54,7 +54,8 @@ uses
   PascalType.Tables.TrueType.hmtx in '..\..\Source\PascalType.Tables.TrueType.hmtx.pas',
   PascalType.Tables.TrueType.vmtx in '..\..\Source\PascalType.Tables.TrueType.vmtx.pas',
   PascalType.Tables.TrueType.hhea in '..\..\Source\PascalType.Tables.TrueType.hhea.pas',
-  PascalType.Tables.TrueType.vhea in '..\..\Source\PascalType.Tables.TrueType.vhea.pas';
+  PascalType.Tables.TrueType.vhea in '..\..\Source\PascalType.Tables.TrueType.vhea.pas',
+  PascalType.Tables.TrueType.os2 in '..\..\Source\PascalType.Tables.TrueType.os2.pas';
 
 {$R *.res}
 
