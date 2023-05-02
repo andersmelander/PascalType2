@@ -36,10 +36,15 @@ interface
 
 uses
   Generics.Collections,
-  Classes, Sysutils, PT_Types, PT_Storage, PT_StorageSFNT, PT_Tables,
-  PT_CharacterMap, PT_TablesOptional;
+  Classes, Sysutils,
+  PT_Types,
+  PT_Storage,
+  PT_StorageSFNT,
+  PT_Tables,
+  PT_CharacterMap,
+  PT_TablesOptional;
 
-        type
+type
   TFontPoint = packed record
     X, Y: TScaleType;
   end;

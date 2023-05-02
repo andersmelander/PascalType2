@@ -158,6 +158,8 @@
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.glyf.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.hmtx.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.vmtx.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.hhea.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.vhea.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

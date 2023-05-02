@@ -42,7 +42,7 @@ uses
   PT_FontEngine,
   PT_Tables,
   PT_TablesTrueType,
-  PascalType.Tables.TrueType.GLYF;
+  PascalType.Tables.TrueType.glyf;
 
 type
   TPascalTypeFontEngineGDI = class(TCustomPascalTypeFontEngine)
@@ -74,7 +74,9 @@ function ConvertLocalPointerToGlobalPointer(Local, Base: Pointer): Pointer;
 implementation
 
 uses
-  Math, PT_StorageSFNT;
+  Math,
+  PT_StorageSFNT,
+  PascalType.Tables.TrueType.hhea;
 
 function ConvertLocalPointerToGlobalPointer(Local, Base: Pointer): Pointer;
 begin

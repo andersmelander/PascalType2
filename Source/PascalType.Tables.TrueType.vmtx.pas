@@ -88,7 +88,7 @@ implementation
 uses
   SysUtils,
   PT_ResourceStrings,
-  PT_TablesOptional;
+  PascalType.Tables.TrueType.vhea;
 
 //------------------------------------------------------------------------------
 //

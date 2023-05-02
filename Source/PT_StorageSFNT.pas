@@ -46,7 +46,8 @@ uses
   PT_Storage,
   PT_Tables,
   PT_TableDirectory,
-  PascalType.Tables.TrueType.hmtx;
+  PascalType.Tables.TrueType.hmtx,
+  PascalType.Tables.TrueType.hhea;
 
 type
   TCustomPascalTypeStorageSFNT = class(TCustomPascalTypeStorage, IPascalTypeStorageTable)
@@ -173,7 +174,7 @@ uses
   Math,
   PT_Math,
   PT_TablesTrueType,
-  PascalType.Tables.TrueType.GLYF,
+  PascalType.Tables.TrueType.glyf,
   PT_ResourceStrings;
 
 function CalculateCheckSum(Data: Pointer; Size: Integer): Cardinal; overload;
