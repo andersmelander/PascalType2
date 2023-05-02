@@ -49,7 +49,8 @@ uses
   PascalType.Tables.OpenType.Positioning in '..\..\Source\PascalType.Tables.OpenType.Positioning.pas',
   PascalType.Tables.OpenType.Positioning.Single in '..\..\Source\PascalType.Tables.OpenType.Positioning.Single.pas',
   PascalType.Tables.OpenType.Positioning.Pair in '..\..\Source\PascalType.Tables.OpenType.Positioning.Pair.pas',
-  PascalType.Tables.OpenType.ClassDefinition in '..\..\Source\PascalType.Tables.OpenType.ClassDefinition.pas';
+  PascalType.Tables.OpenType.ClassDefinition in '..\..\Source\PascalType.Tables.OpenType.ClassDefinition.pas',
+  PascalType.Tables.TrueType.GLYF in '..\..\Source\PascalType.Tables.TrueType.GLYF.pas';
 
 {$R *.res}
 

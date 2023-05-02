@@ -172,6 +172,7 @@ uses
   Math,
   PT_Math,
   PT_TablesTrueType,
+  PascalType.Tables.TrueType.GLYF,
   PT_ResourceStrings;
 
 function CalculateCheckSum(Data: Pointer; Size: Integer): Cardinal; overload;

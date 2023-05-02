@@ -81,7 +81,8 @@ implementation
 uses
   Math,
   GR32,
-  PT_StorageSFNT;
+  PT_StorageSFNT,
+  PascalType.Tables.TrueType.GLYF;
 
 function ConvertLocalPointerToGlobalPointer(Local, Base: Pointer): Pointer;
 begin

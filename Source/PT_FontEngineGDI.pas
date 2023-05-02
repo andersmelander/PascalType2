@@ -37,7 +37,12 @@ interface
 uses
   {$IFDEF FPC}LCLIntf, LCLType, {$IFDEF MSWINDOWS} Windows, {$ENDIF}
   {$ELSE}Windows, {$ENDIF} Classes, Sysutils, Graphics,
-  PT_Types, PT_Storage, PT_FontEngine, PT_Tables, PT_TablesTrueType;
+  PT_Types,
+  PT_Storage,
+  PT_FontEngine,
+  PT_Tables,
+  PT_TablesTrueType,
+  PascalType.Tables.TrueType.GLYF;
 
 type
   TPascalTypeFontEngineGDI = class(TCustomPascalTypeFontEngine)
