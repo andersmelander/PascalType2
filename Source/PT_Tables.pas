@@ -153,18 +153,21 @@ type
 
   // 'cmap' tables
   // https://learn.microsoft.com/en-us/typography/opentype/spec/cmap
-  TCustomPascalTypeCharacterMap = class(TCustomPascalTypeTable)
+  TCustomPascalTypeCharacterMap = class abstract(TCustomPascalTypeTable)
   protected
     class function GetFormat: Word; virtual; abstract;
   public
+    procedure LoadFromStream(Stream: TStream); override;
+    procedure SaveToStream(Stream: TStream); override;
+
     function CharacterToGlyph(CharacterIndex: Integer): Integer; virtual; abstract;
 
     property Format: Word read GetFormat;
   end;
 
-  TCustomPascalTypeCharacterMapClass = class of TCustomPascalTypeCharacterMap;
+  TPascalTypeCharacterMapClass = class of TCustomPascalTypeCharacterMap;
 
-  TCustomPascalTypeCharacterMapDirectory = class(TCustomPascalTypeTable)
+  TCustomPascalTypeCharacterMapDirectory = class abstract(TCustomPascalTypeTable)
   private
     FCharacterMap: TCustomPascalTypeCharacterMap;
     FEncodingID  : Word;
@@ -519,9 +522,9 @@ type
       read FPostscriptV2Table;
   end;
 
-procedure RegisterPascalTypeCharacterMap(CharacterMapClass: TCustomPascalTypeCharacterMapClass);
-procedure RegisterPascalTypeCharacterMaps(CharacterMapClasses: array of TCustomPascalTypeCharacterMapClass);
-function FindPascalTypeCharacterMapByFormat(Format: Word): TCustomPascalTypeCharacterMapClass;
+procedure RegisterPascalTypeCharacterMap(CharacterMapClass: TPascalTypeCharacterMapClass);
+procedure RegisterPascalTypeCharacterMaps(CharacterMapClasses: array of TPascalTypeCharacterMapClass);
+function FindPascalTypeCharacterMapByFormat(Format: Word): TPascalTypeCharacterMapClass;
 
 procedure RegisterPascalTypeTable(TableClass: TCustomPascalTypeNamedTableClass);
 procedure RegisterPascalTypeTables(TableClasses: array of TCustomPascalTypeNamedTableClass);
@@ -544,7 +547,7 @@ resourcestring
   RCStrCharacterMapNotSet = 'Character map not set properly!';
 
 var
-  GCharacterMapClasses: array of TCustomPascalTypeCharacterMapClass;
+  GCharacterMapClasses: array of TPascalTypeCharacterMapClass;
   GTableClasses       : array of TCustomPascalTypeNamedTableClass;
 
 
@@ -1051,7 +1054,7 @@ begin
       FreeAndNil(FCharacterMap);
 
       // create new character map
-      FCharacterMap := TCustomPascalTypeCharacterMapClass(TCustomPascalTypeCharacterMapDirectory(Source).FCharacterMap.ClassType).Create;
+      FCharacterMap := TPascalTypeCharacterMapClass(TCustomPascalTypeCharacterMapDirectory(Source).FCharacterMap.ClassType).Create;
     end;
 
     // assign character map
@@ -1079,27 +1082,30 @@ end;
 
 procedure TCustomPascalTypeCharacterMapDirectory.LoadFromStream(Stream: TStream);
 var
-  Value16 : Word;
-  MapClass: TCustomPascalTypeCharacterMapClass;
+  MapFormat : Word;
+  MapClass: TPascalTypeCharacterMapClass;
   OldMap  : TCustomPascalTypeCharacterMap;
 begin
   // check (minimum) table size
-  if Stream.Position + 2 > Stream.Size then
+  if Stream.Position + SizeOf(Word) > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read format
-  Value16 := ReadSwappedWord(Stream);
-  MapClass := FindPascalTypeCharacterMapByFormat(Value16);
+  MapFormat := ReadSwappedWord(Stream);
+  MapClass := FindPascalTypeCharacterMapByFormat(MapFormat);
 
   if (MapClass = nil) then
-    raise EPascalTypeError.CreateFmt(RCStrUnknownCharacterMap, [Value16]);
+    raise EPascalTypeError.CreateFmt(RCStrUnknownCharacterMap, [MapFormat]);
 
   OldMap := FCharacterMap;
   FCharacterMap := MapClass.Create;
   OldMap.Free;
 
   if (FCharacterMap <> nil) then
+  begin
+    Stream.Seek(-SizeOf(Word), soFromCurrent);
     FCharacterMap.LoadFromStream(Stream);
+  end;
 end;
 
 procedure TCustomPascalTypeCharacterMapDirectory.SaveToStream(Stream: TStream);
@@ -2469,7 +2475,7 @@ end;
 /// /////////////////////////////////////////////////////////////////////////////
 
 function IsPascalTypeCharacterMapRegistered(CharacterMapClass
-  : TCustomPascalTypeCharacterMapClass): Boolean;
+  : TPascalTypeCharacterMapClass): Boolean;
 var
   CharacterMapClassIndex: Integer;
 begin
@@ -2500,7 +2506,7 @@ begin
 end;
 
 procedure RegisterPascalTypeCharacterMap(CharacterMapClass
-  : TCustomPascalTypeCharacterMapClass);
+  : TPascalTypeCharacterMapClass);
 begin
   Assert(IsPascalTypeCharacterMapRegistered(CharacterMapClass) = False);
   SetLength(GCharacterMapClasses, Length(GCharacterMapClasses) + 1);
@@ -2508,7 +2514,7 @@ begin
 end;
 
 procedure RegisterPascalTypeCharacterMaps(CharacterMapClasses
-  : array of TCustomPascalTypeCharacterMapClass);
+  : array of TPascalTypeCharacterMapClass);
 var
   CharacterMapClassIndex: Integer;
 begin
@@ -2522,7 +2528,7 @@ begin
 end;
 
 function FindPascalTypeCharacterMapByFormat(Format: Word)
-  : TCustomPascalTypeCharacterMapClass;
+  : TPascalTypeCharacterMapClass;
 var
   CharacterMapClassIndex: Integer;
 begin
@@ -2595,6 +2601,23 @@ begin
       Exit;
     end;
   // raise EPascalTypeError.Create('Unknown Table Class: ' + TableType);
+end;
+
+{ TCustomPascalTypeCharacterMap }
+
+procedure TCustomPascalTypeCharacterMap.LoadFromStream(Stream: TStream);
+begin
+  inherited;
+
+  if (ReadSwappedWord(Stream) <> Format) then
+    raise Exception.Create('CharacterMap format mismatch');
+end;
+
+procedure TCustomPascalTypeCharacterMap.SaveToStream(Stream: TStream);
+begin
+  inherited;
+
+  WriteSwappedWord(Stream, Format);
 end;
 
 initialization

@@ -1163,8 +1163,12 @@ begin
 
 {$IFDEF AmbigiousExceptions}
     // confirm range shift has a valid value
+    // "Calibri" fails this one. Since I can't really imagine that we will use the value
+    // the test has been disabled.
+(*
     if (SearchRange <> 0) and (RangeShift <> (6 * Length(FPairs) - SearchRange)) then
       raise EPascalTypeError.Create(RCStrErrorInKerningSubTable + ': ' + RCStrWrongRangeShift);
+*)
 {$ENDIF}
     for PairIndex := 0 to High(FPairs) do
       with FPairs[PairIndex] do
@@ -1720,7 +1724,7 @@ begin
     // read version
     FVersion.Fixed := ReadSwappedCardinal(Stream);
 
-    // A value of zero observed in the Architecture font
+    // A value of zero observed in the "Architecture" and "Technical" fonts
     if Version.Value <> 1 then
       raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 

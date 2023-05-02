@@ -140,7 +140,9 @@ type
 implementation
 
 uses
-  Math, PT_Math, PT_ResourceStrings;
+  Math,
+  PT_Math,
+  PT_ResourceStrings;
 
 
 { TPascalTypeFormat0CharacterMap }
@@ -162,20 +164,19 @@ end;
 
 procedure TPascalTypeFormat0CharacterMap.LoadFromStream(Stream: TStream);
 begin
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  inherited;
 
-    // read length
-    FLength := ReadSwappedWord(Stream);
+  // check (minimum) table size
+  if Stream.Position + 2*SizeOf(Word) > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read language
-    FLanguage := ReadSwappedWord(Stream);
+  // read length
+  FLength := ReadSwappedWord(Stream);
 
-    Read(FGlyphIdArray[0], 256);
-  end;
+  // read language
+  FLanguage := ReadSwappedWord(Stream);
+
+  Stream.Read(FGlyphIdArray[0], 256);
 end;
 
 procedure TPascalTypeFormat0CharacterMap.SaveToStream(Stream: TStream);
@@ -185,6 +186,8 @@ begin
 
   // write language
   WriteSwappedWord(Stream, FLanguage);
+
+  Stream.Write(FGlyphIdArray[0], 256);
 end;
 
 procedure TPascalTypeFormat0CharacterMap.Assign(Source: TPersistent);
@@ -231,30 +234,24 @@ end;
 
 procedure TPascalTypeFormat2CharacterMap.LoadFromStream(Stream: TStream);
 begin
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 2*SizeOf(Word) > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read length
-    FLength := ReadSwappedWord(Stream);
+  // read length
+  FLength := ReadSwappedWord(Stream);
 
-    // read language
-    FLanguage := ReadSwappedWord(Stream);
-  end;
+  // read language
+  FLanguage := ReadSwappedWord(Stream);
 end;
 
 procedure TPascalTypeFormat2CharacterMap.SaveToStream(Stream: TStream);
 begin
-  with Stream do
-  begin
-    // write length
-    WriteSwappedWord(Stream, FLength);
+  // write length
+  WriteSwappedWord(Stream, FLength);
 
-    // write language
-    WriteSwappedWord(Stream, FLanguage);
-  end;
+  // write language
+  WriteSwappedWord(Stream, FLanguage);
 end;
 
 
@@ -342,15 +339,17 @@ var
 begin
   StartPos := Stream.Position;
 
+  inherited;
+
   // check (minimum) table size
-  if StartPos + 4 > Stream.Size then
+  if Stream.Position + 2*SizeOf(Word) > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read length
   FLength := ReadSwappedWord(Stream);
 
   // check (minimum) table size
-  if StartPos + FLength - 4 > Stream.Size then
+  if StartPos + FLength > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read language
@@ -437,7 +436,7 @@ A value of 0 has been observed in the Architecture font. Actually the whole FIdD
   for SegIndex := 0 to High(FIdRangeOffset) do
     FIdRangeOffset[SegIndex] := ReadSwappedWord(Stream);
 
-  SetLength(FGlyphIdArray, (FLength - 2 - (Stream.Position - StartPos)) div 2);
+  SetLength(FGlyphIdArray, (FLength - (Stream.Position - StartPos)) div SizeOf(Word));
 
   // read glyph ID array
   for SegIndex := 0 to High(FGlyphIdArray) do
@@ -451,6 +450,8 @@ begin
 
   // write language
   WriteSwappedWord(Stream, FLanguage);
+
+  // TODO : ...
 end;
 
 
@@ -487,40 +488,25 @@ end;
 
 procedure TPascalTypeFormat6CharacterMap.LoadFromStream(Stream: TStream);
 var
-  StartPos: Int64;
   EntryIndex: Integer;
   TableLength: Word;
 begin
   inherited;
 
-  with Stream do
-  begin
-    // remember start position
-    StartPos := Position;
+  // read table size
+  TableLength := ReadSwappedWord(Stream);
 
-    // read table size
-    TableLength := ReadSwappedWord(Stream);
+  // read language
+  FLanguage := ReadSwappedWord(Stream);
 
-    // read language
-    FLanguage := ReadSwappedWord(Stream);
+  // read first code
+  FFirstCode := ReadSwappedWord(Stream);
 
-    // read first code
-    FFirstCode := ReadSwappedWord(Stream);
+  // read number of character codes in subrange
+  SetLength(FGlyphIdArray, ReadSwappedWord(Stream));
 
-    // read number of character codes in subrange
-    SetLength(FGlyphIdArray, ReadSwappedWord(Stream));
-
-    for EntryIndex := 0 to High(FGlyphIdArray) do
-      FGlyphIdArray[EntryIndex] := ReadSwappedWord(Stream);
-
-{$IFDEF AmbigiousExceptions}
-    if Position <> StartPos-SizeOf(Word) + TableLength then
-      raise EPascalTypeError.Create
-        ('Character map error: Wrong length of subtable!');
-{$ENDIF}
-    // seek end of table
-    Position := StartPos-SizeOf(Word) + TableLength;
-  end;
+  for EntryIndex := 0 to High(FGlyphIdArray) do
+    FGlyphIdArray[EntryIndex] := ReadSwappedWord(Stream);
 end;
 
 procedure TPascalTypeFormat6CharacterMap.SaveToStream(Stream: TStream);
@@ -529,24 +515,21 @@ var
 begin
   inherited;
 
-  with Stream do
-  begin
-    // write table size
-    WriteSwappedWord(Stream, 8 + 2 * Length(FGlyphIdArray));
+  // write table size
+  WriteSwappedWord(Stream, 8 + 2 * Length(FGlyphIdArray));
 
-    // write language
-    WriteSwappedWord(Stream, FLanguage);
+  // write language
+  WriteSwappedWord(Stream, FLanguage);
 
-    // write first code
-    WriteSwappedWord(Stream, FFirstCode);
+  // write first code
+  WriteSwappedWord(Stream, FFirstCode);
 
-    // write number of character codes in subrange
-    WriteSwappedWord(Stream, Length(FGlyphIdArray));
+  // write number of character codes in subrange
+  WriteSwappedWord(Stream, Length(FGlyphIdArray));
 
-    // write glyph indices
-    for EntryIndex := 0 to High(FGlyphIdArray) do
-      WriteSwappedWord(Stream, FGlyphIdArray[EntryIndex]);
-  end;
+  // write glyph indices
+  for EntryIndex := 0 to High(FGlyphIdArray) do
+    WriteSwappedWord(Stream, FGlyphIdArray[EntryIndex]);
 end;
 
 
@@ -595,41 +578,41 @@ var
   TableLength: Cardinal;
   GroupIndex: Cardinal;
 begin
-  with Stream do
-  begin
-    StartPos := Position;
+  StartPos := Stream.Position;
+
+  inherited;
 
 {$IFDEF AmbigiousExceptions}
-    if ReadSwappedWord(Stream) <> 0 then
-      raise EPascalTypeError.Create(RCStrReservedValueError);
+  if ReadSwappedWord(Stream) <> 0 then
+    raise EPascalTypeError.Create(RCStrReservedValueError);
 {$ELSE}
-    Seek(2, soFromCurrent);
+  Stream.Seek(2, soFromCurrent);
 {$ENDIF}
-    // read table length
-    TableLength := ReadSwappedCardinal(Stream);
+  // read table length
+  TableLength := ReadSwappedCardinal(Stream);
 
-    // read language
-    FLanguage := ReadSwappedCardinal(Stream);
+  // read language
+  FLanguage := ReadSwappedCardinal(Stream);
 
-    // read group count
-    SetLength(FCoverageArray, ReadSwappedCardinal(Stream));
+  // read group count
+  SetLength(FCoverageArray, ReadSwappedCardinal(Stream));
 
-    for GroupIndex := 0 to High(FCoverageArray) do
-      with FCoverageArray[GroupIndex] do
-      begin
-        // read start character code
-        StartCharCode := ReadSwappedCardinal(Stream);
+  for GroupIndex := 0 to High(FCoverageArray) do
+    with FCoverageArray[GroupIndex] do
+    begin
+      // read start character code
+      StartCharCode := ReadSwappedCardinal(Stream);
 
-        // read end character code
-        EndCharCode := ReadSwappedCardinal(Stream);
+      // read end character code
+      EndCharCode := ReadSwappedCardinal(Stream);
 
-        // read start glyph ID
-        StartGlyphID := ReadSwappedCardinal(Stream);
-      end;
+      // read start glyph ID
+      StartGlyphID := ReadSwappedCardinal(Stream);
+    end;
 
-    // seek end of this table
-    Position := StartPos + TableLength - 2;
-  end;
+  // seek end of this table
+  // TODO : Why?
+  Stream.Position := StartPos + TableLength;
 end;
 
 procedure TPascalTypeFormat12CharacterMap.SaveToStream(Stream: TStream);
