@@ -873,6 +873,7 @@ var
   CharIndex: Integer;
   GlyphIndex: Integer;
   Pos: TFloatPoint;
+  GlyphMetric: TGlyphMetric;
 begin
   Canvas.BeginUpdate;
   try
@@ -894,7 +895,8 @@ begin
         RasterizeGlyph(GlyphIndex, Canvas, Round(Pos.X), Round(Pos.Y));
 
         // advance cursor
-        Pos.X := Pos.X + GetAdvanceWidth(GlyphIndex);
+        GlyphMetric := GetGlyphMetric(GlyphIndex);
+        Pos.X := Pos.X + GlyphMetric.HorizontalMetric.AdvanceWidth;
       end;
     end;
 

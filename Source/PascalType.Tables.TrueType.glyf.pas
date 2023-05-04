@@ -176,8 +176,7 @@ type
   TTrueTypeFontSimpleGlyphData = class(TCustomTrueTypeFontGlyphData)
   public
     const
-      // https://learn.microsoft.com/en-us/typography/opentype/spec/glyf
-      GLYF_ON_CURVE             = $01; // Data point is on curve (i.e. not a control point)
+      GLYF_ON_CURVE             = $01;
       GLYF_X_SHORT_VECTOR       = $02;
       GLYF_Y_SHORT_VECTOR       = $04;
       GLYF_REPEAT_FLAG          = $08;
@@ -219,7 +218,7 @@ type
 //------------------------------------------------------------------------------
 type
   TPascalTypeCompositeGlyph = class(TCustomPascalTypeTable)
-  private
+  public
     const
       GLYF_ARG_1_AND_2_ARE_WORDS     = $0001;
       GLYF_ARGS_ARE_XY_VALUES        = $0002;

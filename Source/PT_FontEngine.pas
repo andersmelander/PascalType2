@@ -49,6 +49,18 @@ type
     X, Y: TScaleType;
   end;
 
+type
+  TGlyphMetric = record
+    HorizontalMetric: record
+      AdvanceWidth: TScaleType;
+      Bearing: TScaleType;
+    end;
+    VerticalMetric: record
+      AdvanceHeight: TScaleType;
+      TopSideBearing: TScaleType;
+    end;
+  end;
+
   TPascalTypeScaledContour = class(TPersistent)
   protected
 //    FPrimitives: TObjectList<>;
@@ -107,6 +119,7 @@ type
     function RoundedScaleX(Value: Integer): Integer;
     function RoundedScaleY(Value: Integer): Integer;
 
+    function GetGlyphMetric(GlyphIndex: Integer): TGlyphMetric;
     function GetAdvanceWidth(GlyphIndex: Integer): TScaleType;
     function GetKerning(Last, Next: Integer): TScaleType;
 
@@ -427,6 +440,18 @@ end;
 function TCustomPascalTypeFontEngine.GetGlyphByCharacter(Character: AnsiChar): Integer;
 begin
   Result := GetGlyphByCharacter(Word(Character));
+end;
+
+function TCustomPascalTypeFontEngine.GetGlyphMetric(GlyphIndex: Integer): TGlyphMetric;
+var
+  TrueTypeGlyphMetric: TTrueTypeGlyphMetric;
+begin
+  TrueTypeGlyphMetric := Storage.GetGlyphMetric(GlyphIndex);
+
+  Result.HorizontalMetric.AdvanceWidth := RoundedScaleX(TrueTypeGlyphMetric.HorizontalMetric.AdvanceWidth);
+  Result.HorizontalMetric.Bearing := RoundedScaleX(TrueTypeGlyphMetric.HorizontalMetric.AdvanceWidth);
+  Result.VerticalMetric.AdvanceHeight := RoundedScaleY(TrueTypeGlyphMetric.VerticalMetric.AdvanceHeight);
+  Result.VerticalMetric.TopSideBearing := RoundedScaleY(TrueTypeGlyphMetric.VerticalMetric.TopSideBearing);
 end;
 
 function TCustomPascalTypeFontEngine.GetKerning(Last, Next: Integer): TScaleType;

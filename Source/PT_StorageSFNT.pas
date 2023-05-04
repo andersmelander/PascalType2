@@ -48,8 +48,15 @@ uses
   PT_TableDirectory,
   PascalType.Tables.TrueType.hmtx,
   PascalType.Tables.TrueType.hhea,
+  PascalType.Tables.TrueType.vmtx,
   PascalType.Tables.TrueType.os2,
   PascalType.Tables.TrueType.Panose;
+
+type
+  TTrueTypeGlyphMetric = record
+    HorizontalMetric: THorizontalMetric;
+    VerticalMetric: TVerticalMetric;
+  end;
 
 type
   TCustomPascalTypeStorageSFNT = class(TCustomPascalTypeStorage, IPascalTypeStorageTable)
@@ -142,10 +149,11 @@ type
 
     procedure SaveToStream(Stream: TStream); override;
     function ContainsTable(TableType: TTableType): Boolean;
-    function GetAdvanceWidth(GlyphIndex: Integer): Word;
-    function GetKerning(Last, Next: Integer): Word;
+    function GetGlyphMetric(GlyphIndex: Word): TTrueTypeGlyphMetric;
+    function GetAdvanceWidth(GlyphIndex: Word): Word; deprecated 'Use GetGlyphMetric';
+    function GetKerning(Last, Next: Word): Word;
 
-    function GetGlyphPath(GlyphIndex: Integer): TPascalTypePath; // TODO : Use TFloatPoint
+    function GetGlyphPath(GlyphIndex: Word): TPascalTypePath; // TODO : Use TFloatPoint
 
     property GlyphData[Index: Integer]: TCustomPascalTypeGlyphDataTable read GetGlyphData;
 
@@ -721,9 +729,9 @@ begin
   FreeAndNil(FOS2Table);
 end;
 
-function TPascalTypeStorage.GetAdvanceWidth(GlyphIndex: Integer): Word;
+function TPascalTypeStorage.GetAdvanceWidth(GlyphIndex: Word): Word;
 begin
-  if (GlyphIndex >= 0) and (GlyphIndex < FHorizontalMetrics.HorizontalMetricCount) then
+  if (GlyphIndex < FHorizontalMetrics.HorizontalMetricCount) then
     Result := FHorizontalMetrics.HorizontalMetric[GlyphIndex].AdvanceWidth
   else
     Result := FHorizontalMetrics.HorizontalMetric[0].AdvanceWidth;
@@ -754,7 +762,68 @@ begin
       Result := GlyphDataTable.GlyphData[Index];
 end;
 
-function TPascalTypeStorage.GetGlyphPath(GlyphIndex: Integer): TPascalTypePath;
+function TPascalTypeStorage.GetGlyphMetric(GlyphIndex: Word): TTrueTypeGlyphMetric;
+var
+  GlyphDataTable: TTrueTypeFontGlyphDataTable;
+
+  procedure DoGetGlyphMetric(GlyphIndex: Word; var MetricIndex: Word);
+  var
+    Glyph: TCustomTrueTypeFontGlyphData;
+    i: integer;
+    CompositeGlyphData: TTrueTypeFontCompositeGlyphData;
+    ComponentGlyphMetric: TTrueTypeGlyphMetric;
+  begin
+    Glyph := GlyphDataTable.GlyphData[GlyphIndex];
+
+    // If glyph is a simple glyph then we will just use its index as the metric index.
+    if (Glyph is TTrueTypeFontSimpleGlyphData) then
+      // The default MetricIndex value has already been set by the caller.
+      exit;
+
+    // If glyph is a composite glyph, then we will either use its index or one of
+    // its components index as the metric index.
+    if Glyph is TTrueTypeFontCompositeGlyphData then
+    begin
+      // The default MetricIndex value has already been set by the caller.
+      CompositeGlyphData := TTrueTypeFontCompositeGlyphData(Glyph);
+
+      // Recursively process composite glyph components
+      for i := 0 to CompositeGlyphData.GlyphCount-1 do
+        if (CompositeGlyphData.Glyph[i].Flags and TPascalTypeCompositeGlyph.GLYF_USE_MY_METRICS <> 0) then
+        begin
+          // We will use the index of the component. Set MetricIndex and recurse.
+          MetricIndex := CompositeGlyphData.Glyph[i].GlyphIndex;
+
+          DoGetGlyphMetric(CompositeGlyphData.Glyph[i].GlyphIndex, MetricIndex);
+
+          // In theory multiple components could set USE_MY_METRICS but we
+          // ignore that as it doesn't make sense.
+          exit;
+        end;
+    end;
+  end;
+
+var
+  MetricIndex: Word;
+  VerticalMetricsTable: TPascalTypeVerticalMetricsTable;
+begin
+  Result := Default(TTrueTypeGlyphMetric);
+  GlyphDataTable := TTrueTypeFontGlyphDataTable(GetTableByTableName('glyf'));
+  if (GlyphDataTable = nil) then
+    exit;
+
+  MetricIndex := GlyphIndex;
+  DoGetGlyphMetric(GlyphIndex, MetricIndex);
+
+  Result.HorizontalMetric := FHorizontalMetrics.HorizontalMetric[MetricIndex];
+
+  VerticalMetricsTable := TPascalTypeVerticalMetricsTable(GetTableByTableType(TPascalTypeVerticalMetricsTable.GetTableType));
+  // TODO : Fall back to something for vertical metric if 'vmtx' isn't present
+  if (VerticalMetricsTable <> nil) then
+    Result.VerticalMetric := VerticalMetricsTable.VerticalMetric[MetricIndex];
+end;
+
+function TPascalTypeStorage.GetGlyphPath(GlyphIndex: Word): TPascalTypePath;
 
   procedure AppendPath(var Path: TPascalTypePath; const Append: TPascalTypePath);
   var
@@ -894,7 +963,7 @@ begin
     Result := GetCompositeGlyphPath(TTrueTypeFontCompositeGlyphData(Glyph));
 end;
 
-function TPascalTypeStorage.GetKerning(Last, Next: Integer): Word;
+function TPascalTypeStorage.GetKerning(Last, Next: Word): Word;
 // var
 // KernTable : TPascalType
 begin
