@@ -1125,63 +1125,66 @@ end;
 procedure TPascalTypeKerningFormat0SubTable.LoadFromStream(Stream: TStream);
 var
   PairIndex    : Integer;
+{$ifdef KERN_BSEARCH}
   SearchRange  : Word;
   EntrySelector: Word;
   RangeShift   : Word;
+{$endif KERN_BSEARCH}
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 8 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 4*SizeOf(Word) > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read number of pairs
-    SetLength(FPairs, ReadSwappedWord(Stream));
+  // read number of pairs
+  SetLength(FPairs, ReadSwappedWord(Stream));
 
-    // Note: Cambria Light Bold has zero in SearchRange
+{$ifdef KERN_BSEARCH}
+  // Note: Cambria Light Bold has zero in SearchRange
 
-    // read search range
-    SearchRange := ReadSwappedWord(Stream);
+  // read search range
+  SearchRange := ReadSwappedWord(Stream);
 
-    // confirm search range has a valid value
-    if (SearchRange <> 0) and (SearchRange > Round(6 * (1 shl FloorLog2(Length(FPairs))))) then
-      raise EPascalTypeError.Create(RCStrErrorInKerningSubTable + ': ' +
-        RCStrWrongSearchRange);
+  // confirm search range has a valid value
+  if (SearchRange <> 0) and (SearchRange > Round(6 * (1 shl FloorLog2(Length(FPairs))))) then
+    raise EPascalTypeError.Create(RCStrErrorInKerningSubTable + ': ' +
+      RCStrWrongSearchRange);
 
-    // read entry selector
-    EntrySelector := ReadSwappedWord(Stream);
+  // read entry selector
+  EntrySelector := ReadSwappedWord(Stream);
 
-    // confirm entry selector has a valid value
-    if (SearchRange <> 0) and (EntrySelector < Round(Log2(SearchRange / 6))) then
-      raise EPascalTypeError.Create(RCStrErrorInKerningSubTable + ': ' +
-        RCStrWrongEntrySelector);
+  // confirm entry selector has a valid value
+  if (SearchRange <> 0) and (EntrySelector < Round(Log2(SearchRange / 6))) then
+    raise EPascalTypeError.Create(RCStrErrorInKerningSubTable + ': ' +
+      RCStrWrongEntrySelector);
 
-    // read range shift
-    RangeShift := ReadSwappedWord(Stream);
+  // read range shift
+  RangeShift := ReadSwappedWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
-    // confirm range shift has a valid value
-    // "Calibri" fails this one. Since I can't really imagine that we will use the value
-    // the test has been disabled.
+  // confirm range shift has a valid value
+  // "Calibri" fails this one. Since I can't really imagine that we will use the value
+  // the test has been disabled.
 (*
-    if (SearchRange <> 0) and (RangeShift <> (6 * Length(FPairs) - SearchRange)) then
-      raise EPascalTypeError.Create(RCStrErrorInKerningSubTable + ': ' + RCStrWrongRangeShift);
+  if (SearchRange <> 0) and (RangeShift <> (6 * Length(FPairs) - SearchRange)) then
+    raise EPascalTypeError.Create(RCStrErrorInKerningSubTable + ': ' + RCStrWrongRangeShift);
 *)
 {$ENDIF}
-    for PairIndex := 0 to High(FPairs) do
-      with FPairs[PairIndex] do
-      begin
-        // read left
-        Left := ReadSwappedWord(Stream);
+{$else KERN_BSEARCH}
+  Stream.Seek(3*SizeOf(Word), soFromCurrent);
+{$endif KERN_BSEARCH}
 
-        // read right
-        Right := ReadSwappedWord(Stream);
+  for PairIndex := 0 to High(FPairs) do
+  begin
+    // read left
+    FPairs[PairIndex].Left := ReadSwappedWord(Stream);
 
-        // read value
-        Value := ReadSwappedSmallInt(Stream);
-      end;
+    // read right
+    FPairs[PairIndex].Right := ReadSwappedWord(Stream);
+
+    // read value
+    FPairs[PairIndex].Value := ReadSwappedSmallInt(Stream);
   end;
 end;
 
@@ -1194,36 +1197,33 @@ var
 begin
   inherited;
 
-  with Stream do
-  begin
-    // write number of pairs
-    WriteSwappedWord(Stream, Length(FPairs));
+  // write number of pairs
+  WriteSwappedWord(Stream, Length(FPairs));
 
-    // write search range
-    SearchRange := Round(6 * (Power(2, Floor(Log2(Length(FPairs))))));
-    WriteSwappedWord(Stream, SearchRange);
+  // write search range
+  SearchRange := Round(6 * (Power(2, Floor(Log2(Length(FPairs))))));
+  WriteSwappedWord(Stream, SearchRange);
 
-    // write entry selector
-    EntrySelector := Round(Log2(SearchRange / 6));
-    WriteSwappedWord(Stream, EntrySelector);
+  // write entry selector
+  EntrySelector := Round(Log2(SearchRange / 6));
+  WriteSwappedWord(Stream, EntrySelector);
 
-    // write range shift
-    RangeShift := 6 * Length(FPairs) - SearchRange;
-    WriteSwappedWord(Stream, RangeShift);
+  // write range shift
+  RangeShift := 6 * Length(FPairs) - SearchRange;
+  WriteSwappedWord(Stream, RangeShift);
 
-    for PairIndex := 0 to High(FPairs) do
-      with FPairs[PairIndex] do
-      begin
-        // write left
-        WriteSwappedWord(Stream, Left);
+  for PairIndex := 0 to High(FPairs) do
+    with FPairs[PairIndex] do
+    begin
+      // write left
+      WriteSwappedWord(Stream, Left);
 
-        // write right
-        WriteSwappedWord(Stream, Right);
+      // write right
+      WriteSwappedWord(Stream, Right);
 
-        // write value
-        WriteSwappedWord(Stream, Value);
-      end;
-  end;
+      // write value
+      WriteSwappedWord(Stream, Value);
+    end;
 end;
 
 

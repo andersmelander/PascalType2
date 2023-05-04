@@ -35,14 +35,27 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, SysUtils, PT_Types, PT_Classes, PT_Tables;
+  Classes, SysUtils,
+  PT_Types,
+  PT_Classes,
+  PT_Tables;
 
+
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeFormat0CharacterMap
+//
+//------------------------------------------------------------------------------
+// Format 0: Byte encoding table
+//------------------------------------------------------------------------------
+// https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#format-0-byte-encoding-table
+//------------------------------------------------------------------------------
 type
   TPascalTypeFormat0CharacterMap = class(TCustomPascalTypeCharacterMap)
   private
     FLength: Word; // This is the length in bytes of the subtable.
     FLanguage: Word; // Please see 'Note on the language field in 'cmap' subtables' in this document.
-    FGlyphIdArray: array [0..255] of Byte; // An array that maps character codes to glyph index values.
+    FGlyphIdArray: array[Byte] of Byte; // An array that maps character codes to glyph index values.
   protected
     class function GetFormat: Word; override;
   public
@@ -53,9 +66,20 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function CharacterToGlyph(CharacterIndex: Integer): Integer; override;
+    function CharacterToGlyph(CharacterIndex: Word): Integer; override;
   end;
 
+
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeFormat2CharacterMap
+//
+//------------------------------------------------------------------------------
+// Format 2: High-byte mapping through table
+//------------------------------------------------------------------------------
+// https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#format-2-high-byte-mapping-through-table
+//------------------------------------------------------------------------------
+type
   TPascalTypeFormat2CharacterMap = class(TCustomPascalTypeCharacterMap)
   private
     FLength: Word; // This is the length in bytes of the subtable.
@@ -68,23 +92,35 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function CharacterToGlyph(CharacterIndex: Integer): Integer; override;
+    function CharacterToGlyph(CharacterIndex: Word): Integer; override;
   end;
 
-  // https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#format-4-segment-mapping-to-delta-values
+
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeFormat4CharacterMap
+//
+//------------------------------------------------------------------------------
+// Format 4: Segment mapping to delta values
+//------------------------------------------------------------------------------
+// https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#format-4-segment-mapping-to-delta-values
+//------------------------------------------------------------------------------
+type
   TPascalTypeFormat4CharacterMap = class(TCustomPascalTypeCharacterMap)
   private
     FLength: Word;                    // This is the length in bytes of the subtable.
     FLanguage: Word;                  // Please see 'Note on the language field in 'cmap' subtables' in this document.
+{$ifdef CMAP_BSEARCH}
     FSegCountX2: Word;                // 2 x segCount.
     FSearchRange: Word;               // 2 x (2**floor(log2(segCount)))
     FEntrySelector: Word;             // log2(searchRange / 2)
     FRangeShift: Word;                // 2 x segCount - searchRange
-    FEndCount: array of Word;         // End characterCode for each segment, last=0xFFFF.
-    FStartCount: array of Word;       // Start character code for each segment.
+{$endif CMAP_BSEARCH}
+    FEndCode: array of Word;          // End characterCode for each segment, last=0xFFFF.
+    FStartCode: array of Word;        // Start character code for each segment.
     FIdDelta: array of SmallInt;      // Delta for all character codes in segment.
     FIdRangeOffset: array of Word;    // Offsets into glyphIdArray or 0
-    FGlyphIdArray: array of Word;     // Glyph index array (arbitrary length)  protected
+    FGlyphIdArray: array of Word;     // Glyph index array (arbitrary length)
   protected
     class function GetFormat: Word; override;
   public
@@ -93,10 +129,20 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function CharacterToGlyph(CharacterIndex: Integer): Integer; override;
+    function CharacterToGlyph(CharacterIndex: Word): Integer; override;
   end;
 
-  // https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#format-6-trimmed-table-mapping
+
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeFormat6CharacterMap
+//
+//------------------------------------------------------------------------------
+// Format 6: Trimmed table mapping
+//------------------------------------------------------------------------------
+// https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#format-6-trimmed-table-mapping
+//------------------------------------------------------------------------------
+type
   TPascalTypeFormat6CharacterMap = class(TCustomPascalTypeCharacterMap)
   private
     FLanguage: Word;              // Please see “Note on the language field in 'cmap' subtables“ in this document.
@@ -111,11 +157,22 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function CharacterToGlyph(CharacterIndex: Integer): Integer; override;
+    function CharacterToGlyph(CharacterIndex: Word): Integer; override;
 
     property EntryCount: Word read GetEntryCount;
   end;
 
+
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeFormat6CharacterMap
+//
+//------------------------------------------------------------------------------
+// Format 12: Segmented coverage
+//------------------------------------------------------------------------------
+// https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#format-12-segmented-coverage
+//------------------------------------------------------------------------------
+type
   TCharMapSegmentedCoverageRecord = packed record
     StartCharCode: Cardinal; // First character code in this group
     EndCharCode: Cardinal;   // Last character code in this group
@@ -134,8 +191,12 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function CharacterToGlyph(CharacterIndex: Integer): Integer; override;
+    function CharacterToGlyph(CharacterIndex: Word): Integer; override;
   end;
+
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 
 implementation
 
@@ -167,7 +228,7 @@ begin
   inherited;
 
   // check (minimum) table size
-  if Stream.Position + 2*SizeOf(Word) > Stream.Size then
+  if Stream.Position + 2*SizeOf(Word) + SizeOf(FGlyphIdArray) > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read length
@@ -176,7 +237,7 @@ begin
   // read language
   FLanguage := ReadSwappedWord(Stream);
 
-  Stream.Read(FGlyphIdArray[0], 256);
+  Stream.Read(FGlyphIdArray, SizeOf(FGlyphIdArray));
 end;
 
 procedure TPascalTypeFormat0CharacterMap.SaveToStream(Stream: TStream);
@@ -187,7 +248,7 @@ begin
   // write language
   WriteSwappedWord(Stream, FLanguage);
 
-  Stream.Write(FGlyphIdArray[0], 256);
+  Stream.Write(FGlyphIdArray, SizeOf(FGlyphIdArray));
 end;
 
 procedure TPascalTypeFormat0CharacterMap.Assign(Source: TPersistent);
@@ -201,12 +262,11 @@ begin
   end;
 end;
 
-function TPascalTypeFormat0CharacterMap.CharacterToGlyph(CharacterIndex: Integer): Integer;
+function TPascalTypeFormat0CharacterMap.CharacterToGlyph(CharacterIndex: Word): Integer;
 begin
-  if CharacterIndex in [0..255] then
-    Result := FGlyphIdArray[CharacterIndex]
-  else
+  if (CharacterIndex > High(Byte)) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [CharacterIndex]);
+  Result := FGlyphIdArray[CharacterIndex];
 end;
 
 
@@ -227,13 +287,15 @@ begin
   end;
 end;
 
-function TPascalTypeFormat2CharacterMap.CharacterToGlyph(CharacterIndex: Integer): Integer;
+function TPascalTypeFormat2CharacterMap.CharacterToGlyph(CharacterIndex: Word): Integer;
 begin
   Result := CharacterIndex;
 end;
 
 procedure TPascalTypeFormat2CharacterMap.LoadFromStream(Stream: TStream);
 begin
+  inherited;
+
   // check (minimum) table size
   if Stream.Position + 2*SizeOf(Word) > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
@@ -269,64 +331,70 @@ begin
   begin
     FLength := TPascalTypeFormat4CharacterMap(Source).FLength;
     FLanguage := TPascalTypeFormat4CharacterMap(Source).FLanguage;
+{$ifdef CMAP_BSEARCH}
     FSegCountX2 := TPascalTypeFormat4CharacterMap(Source).FSegCountX2;
     FSearchRange := TPascalTypeFormat4CharacterMap(Source).FSearchRange;
     FEntrySelector := TPascalTypeFormat4CharacterMap(Source).FEntrySelector;
     FRangeShift := TPascalTypeFormat4CharacterMap(Source).FRangeShift;
-    FEndCount := TPascalTypeFormat4CharacterMap(Source).FEndCount;
-    FStartCount := TPascalTypeFormat4CharacterMap(Source).FStartCount;
+{$endif CMAP_BSEARCH}
+    FEndCode := TPascalTypeFormat4CharacterMap(Source).FEndCode;
+    FStartCode := TPascalTypeFormat4CharacterMap(Source).FStartCode;
     FIdDelta := TPascalTypeFormat4CharacterMap(Source).FIdDelta;
     FIdRangeOffset := TPascalTypeFormat4CharacterMap(Source).FIdRangeOffset;
     FGlyphIdArray := TPascalTypeFormat4CharacterMap(Source).FGlyphIdArray;
   end;
 end;
 
-function TPascalTypeFormat4CharacterMap.CharacterToGlyph(CharacterIndex: Integer): Integer;
+function TPascalTypeFormat4CharacterMap.CharacterToGlyph(CharacterIndex: Word): Integer;
 var
   SegmentIndex: Integer;
+  GlyphIndex: integer;
+  Left, Right: Word;
 begin
+  // We can't use TArray.BinarySearch because FPC's implementation of it can only do exact matches :-(
+  Left := 0;
+  Right := Length(FEndCode);
+  SegmentIndex := Right div 2;
+  while (Left < Right) do
+  begin
+    if (FEndCode[SegmentIndex] < CharacterIndex) then
+      Left := SegmentIndex + 1
+    else
+      Right := SegmentIndex;
+    SegmentIndex := (Left + Right) div 2;
+  end;
+
+  (* Sequential scan
   SegmentIndex := 0;
-  while (SegmentIndex < Length(FEndCount)) do
-    if (CharacterIndex <= FEndCount[SegmentIndex]) then
+  while (SegmentIndex < Length(FEndCode)) do
+    if (CharacterIndex <= FEndCode[SegmentIndex]) then
       Break
     else
       Inc(SegmentIndex);
+  *)
 
-  if (CharacterIndex < FStartCount[SegmentIndex]) then
+  if (SegmentIndex > High(FStartCode)) or (CharacterIndex < FStartCode[SegmentIndex]) then
   begin
     // missing glyph
     Result := 0;
     Exit;
   end;
 
-  if FIdRangeOffset[SegmentIndex] = 0 then
+  var RangeOffset := FIdRangeOffset[SegmentIndex];
+  if RangeOffset <> 0 then
   begin
-    Result := (FIdDelta[SegmentIndex] + CharacterIndex) and $0000FFFF;
+    // Thank you Apple and Microsoft for the completely bonkers definition
+    // of this value.
+    GlyphIndex := ((RangeOffset div 2 - Length(FIdRangeOffset)) + SegmentIndex +
+      CharacterIndex - FStartCode[SegmentIndex]) and $0000FFFF;
+
+    Result := FGlyphIdArray[GlyphIndex];
+
+    // Check for missing character and add offset
+    if (Result <> 0) then
+      Result := (Result + FIdDelta[SegmentIndex]) and $0000FFFF;
   end else
-  begin
-    (*
-    ** Issue #5: The following maps to the wrong GlypgID
-
-    Result := (FIdRangeOffset[SegmentIndex] + (CharacterIndex - FStartCount[SegmentIndex])) and $0000FFFF;
-
-    ** but this works:
-
-    Result := FGlyphIdArray[(CharacterIndex - FStartCount[SegmentIndex]) and $0000FFFF];
-
-    *)
-    // TODO : This doesn't work with "Input", small letter "a"
-    Result := FGlyphIdArray[(CharacterIndex - FStartCount[SegmentIndex]) and $0000FFFF];
-
-    // check for missing character and add offset eventually
-    (*
-    ** The following has been disabled as I cannot find rationale for it in the
-    ** documentation:
-
-    if Result = 0 then
-      Result := FIdDelta[SegmentIndex] and $0000FFFF;
-
-    *)
-  end;
+    Result := (CharacterIndex + FIdDelta[SegmentIndex]) and $0000FFFF;
 end;
 
 procedure TPascalTypeFormat4CharacterMap.LoadFromStream(Stream: TStream);
@@ -336,6 +404,13 @@ var
 {$IFDEF AmbigiousExceptions}
   Value16: Word;
 {$ENDIF}
+{$ifdef CMAP_BSEARCH}
+    FSegCountX2 := TPascalTypeFormat4CharacterMap(Source).FSegCountX2;
+    FSearchRange := TPascalTypeFormat4CharacterMap(Source).FSearchRange;
+    FEntrySelector := TPascalTypeFormat4CharacterMap(Source).FEntrySelector;
+    FRangeShift := TPascalTypeFormat4CharacterMap(Source).FRangeShift;
+{$endif CMAP_BSEARCH}
+  Count: integer;
 begin
   StartPos := Stream.Position;
 
@@ -355,14 +430,17 @@ begin
   // read language
   FLanguage := ReadSwappedWord(Stream);
 
+{$ifdef CMAP_BSEARCH}
+
   // read segCountX2
   FSegCountX2 := ReadSwappedWord(Stream);
+  Count := FSegCountX2 div 2;
 
   // read search range
   FSearchRange := ReadSwappedWord(Stream);
 
   // confirm search range has a valid value
-  if FSearchRange <> 2 * (1 shl FloorLog2(FSegCountX2 div 2)) then
+  if FSearchRange <> 2 * (1 shl FloorLog2(Count)) then
     raise EPascalTypeError.Create(RCStrCharMapError + ': ' + 'wrong search range!');
 
   // read entry selector
@@ -381,18 +459,23 @@ begin
     raise EPascalTypeError.Create(RCStrCharMapError + ': ' + 'wrong range shift!');
 {$ENDIF}
 
-  SetLength(FEndCount, FSegCountX2 div 2);
-  SetLength(FStartCount, FSegCountX2 div 2);
-  SetLength(FIdDelta, FSegCountX2 div 2);
-  SetLength(FIdRangeOffset, FSegCountX2 div 2);
+{$else CMAP_BSEARCH}
+  Count := ReadSwappedWord(Stream) div 2;
+  Stream.Seek(3*SizeOf(Word), soFromCurrent);
+{$endif CMAP_BSEARCH}
+
+  SetLength(FEndCode, Count);
+  SetLength(FStartCode, Count);
+  SetLength(FIdDelta, Count);
+  SetLength(FIdRangeOffset, Count);
 
   // read end count
-  for SegIndex := 0 to High(FEndCount) do
-    FEndCount[SegIndex] := ReadSwappedWord(Stream);
+  for SegIndex := 0 to High(FEndCode) do
+    FEndCode[SegIndex] := ReadSwappedWord(Stream);
 
-  // confirm end count is valid
-  if FEndCount[High(FEndCount)] <> $FFFF then
-    raise EPascalTypeError.CreateFmt(RCStrCharMapErrorEndCount, [FEndCount[High(FEndCount)]]);
+  // confirm end code is valid (required for binary search)
+  if FEndCode[High(FEndCode)] <> $FFFF then
+    raise EPascalTypeError.CreateFmt(RCStrCharMapErrorEndCount, [FEndCode[High(FEndCode)]]);
 
 {$IFDEF AmbigiousExceptions}
   // read reserved
@@ -407,14 +490,14 @@ begin
 {$ENDIF}
 
   // read start count
-  for SegIndex := 0 to High(FStartCount) do
+  for SegIndex := 0 to High(FStartCode) do
   begin
-    FStartCount[SegIndex] := ReadSwappedWord(Stream);
+    FStartCode[SegIndex] := ReadSwappedWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
     // confirm start count is valid
-    if FStartCount[SegIndex] > FEndCount[SegIndex] then
-      raise EPascalTypeError.CreateFmt(RCStrCharMapErrorStartCount, [FStartCount[SegIndex]]);
+    if FStartCode[SegIndex] > FEndCode[SegIndex] then
+      raise EPascalTypeError.CreateFmt(RCStrCharMapErrorStartCount, [FStartCode[SegIndex]]);
 {$ENDIF}
   end;
 
@@ -468,7 +551,7 @@ begin
   end;
 end;
 
-function TPascalTypeFormat6CharacterMap.CharacterToGlyph(CharacterIndex: Integer): Integer;
+function TPascalTypeFormat6CharacterMap.CharacterToGlyph(CharacterIndex: Word): Integer;
 begin
   Result := 0;
   if CharacterIndex >= FFirstCode then
@@ -489,12 +572,13 @@ end;
 procedure TPascalTypeFormat6CharacterMap.LoadFromStream(Stream: TStream);
 var
   EntryIndex: Integer;
-  TableLength: Word;
+  // TableLength: Word;
 begin
   inherited;
 
   // read table size
-  TableLength := ReadSwappedWord(Stream);
+  // TableLength := ReadSwappedWord(Stream);
+  Stream.Seek(SizeOf(Word), soFromCurrent);
 
   // read language
   FLanguage := ReadSwappedWord(Stream);
@@ -545,7 +629,7 @@ begin
   end;
 end;
 
-function TPascalTypeFormat12CharacterMap.CharacterToGlyph(CharacterIndex: Integer): Integer;
+function TPascalTypeFormat12CharacterMap.CharacterToGlyph(CharacterIndex: Word): Integer;
 var
   GroupIndex: Integer;
 begin
@@ -622,8 +706,8 @@ end;
 
 initialization
 
-RegisterPascalTypeCharacterMaps([TPascalTypeFormat0CharacterMap,
-  TPascalTypeFormat2CharacterMap, TPascalTypeFormat4CharacterMap,
-  TPascalTypeFormat6CharacterMap, TPascalTypeFormat12CharacterMap]);
+  RegisterPascalTypeCharacterMaps([TPascalTypeFormat0CharacterMap,
+    TPascalTypeFormat2CharacterMap, TPascalTypeFormat4CharacterMap,
+    TPascalTypeFormat6CharacterMap, TPascalTypeFormat12CharacterMap]);
 
 end.

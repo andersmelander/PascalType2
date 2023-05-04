@@ -151,8 +151,16 @@ type
   end;
 
 
+//------------------------------------------------------------------------------
+//
+//              TCustomPascalTypeCharacterMap
+//
+//------------------------------------------------------------------------------
+// Mapping sub table base class
+//------------------------------------------------------------------------------
+// https://learn.microsoft.com/en-us/typography/opentype/spec/cmap
+//------------------------------------------------------------------------------
   // 'cmap' tables
-  // https://learn.microsoft.com/en-us/typography/opentype/spec/cmap
   TCustomPascalTypeCharacterMap = class abstract(TCustomPascalTypeTable)
   protected
     class function GetFormat: Word; virtual; abstract;
@@ -160,13 +168,23 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function CharacterToGlyph(CharacterIndex: Integer): Integer; virtual; abstract;
+    function CharacterToGlyph(CharacterIndex: Word): Integer; virtual; abstract;
 
     property Format: Word read GetFormat;
   end;
 
   TPascalTypeCharacterMapClass = class of TCustomPascalTypeCharacterMap;
 
+
+//------------------------------------------------------------------------------
+//
+//              TCustomPascalTypeCharacterMapDirectory
+//
+//------------------------------------------------------------------------------
+// Character to Glyph Index Mapping Table - Base class
+//------------------------------------------------------------------------------
+// https://learn.microsoft.com/en-us/typography/opentype/spec/cmap
+//------------------------------------------------------------------------------
   TCustomPascalTypeCharacterMapDirectory = class abstract(TCustomPascalTypeTable)
   private
     FCharacterMap: TCustomPascalTypeCharacterMap;
@@ -195,6 +213,16 @@ type
 
   TPascalTypeCharacterMapDirectoryClass = class of TCustomPascalTypeCharacterMapDirectory;
 
+
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeCharacterMapUnicodeDirectory
+//
+//------------------------------------------------------------------------------
+// Character to Glyph Index Mapping Table - Unicode platform
+//------------------------------------------------------------------------------
+// https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#unicode-platform-platform-id--0
+//------------------------------------------------------------------------------
   TPascalTypeCharacterMapUnicodeDirectory = class(TCustomPascalTypeCharacterMapDirectory)
   private
     procedure SetEncodingID(const Value: TUnicodeEncodingID);
@@ -205,6 +233,16 @@ type
     property PlatformSpecificID: TUnicodeEncodingID read GetEncodingID write SetEncodingID;
   end;
 
+
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeCharacterMapMacintoshDirectory
+//
+//------------------------------------------------------------------------------
+// Character to Glyph Index Mapping Table - Macintosh platform
+//------------------------------------------------------------------------------
+// https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#macintosh-platform-platform-id--1
+//------------------------------------------------------------------------------
   TPascalTypeCharacterMapMacintoshDirectory = class(TCustomPascalTypeCharacterMapDirectory)
   private
     procedure SetEncodingID(const Value: TAppleEncodingID);
@@ -215,6 +253,16 @@ type
     property PlatformSpecificID: TAppleEncodingID read GetEncodingID write SetEncodingID;
   end;
 
+
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeCharacterMapMicrosoftDirectory
+//
+//------------------------------------------------------------------------------
+// Character to Glyph Index Mapping Table - Windows platform
+//------------------------------------------------------------------------------
+// https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#windows-platform-platform-id--3
+//------------------------------------------------------------------------------
   TPascalTypeCharacterMapMicrosoftDirectory = class(TCustomPascalTypeCharacterMapDirectory)
   private
     procedure SetEncodingID(const Value: TMicrosoftEncodingID);
@@ -225,6 +273,17 @@ type
     property PlatformSpecificID: TMicrosoftEncodingID read GetEncodingID write SetEncodingID;
   end;
 
+
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeCharacterMapDirectoryGenericEntry
+//
+//------------------------------------------------------------------------------
+// Character to Glyph Index Mapping Table - Custom platform and OTF Windows NT
+// compatibility mapping
+//------------------------------------------------------------------------------
+// https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#custom-platform-platform-id--4-and-otf-windows-nt-compatibility-mapping
+//------------------------------------------------------------------------------
   TPascalTypeCharacterMapDirectoryGenericEntry = class(TCustomPascalTypeCharacterMapDirectory)
   protected
     function GetPlatformID: TPlatformID; override;
@@ -232,6 +291,16 @@ type
     property PlatformSpecificID;
   end;
 
+
+//------------------------------------------------------------------------------
+//
+//              TCustomPascalTypeCharacterMap
+//
+//------------------------------------------------------------------------------
+// Character to Glyph Index Mapping Table
+//------------------------------------------------------------------------------
+// https://learn.microsoft.com/en-us/typography/opentype/spec/cmap
+//------------------------------------------------------------------------------
   TPascalTypeCharacterMapTable = class(TCustomPascalTypeNamedTable)
   private
     FVersion: Word; // Version number (Set to zero)
@@ -1086,6 +1155,8 @@ var
   MapClass: TPascalTypeCharacterMapClass;
   OldMap  : TCustomPascalTypeCharacterMap;
 begin
+  inherited;
+
   // check (minimum) table size
   if Stream.Position + SizeOf(Word) > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
@@ -1127,8 +1198,7 @@ end;
 
 { TPascalTypeCharacterMapDirectoryGenericEntry }
 
-function TPascalTypeCharacterMapDirectoryGenericEntry.GetPlatformID
-  : TPlatformID;
+function TPascalTypeCharacterMapDirectoryGenericEntry.GetPlatformID: TPlatformID;
 begin
   Result := piCustom;
 end;
@@ -1255,23 +1325,24 @@ procedure TPascalTypeCharacterMapTable.LoadFromStream(Stream: TStream);
 var
   StartPos  : Int64;
   MapIndex  : Integer;
-  Value32   : Cardinal;
   PlatformID: Word;
   EncodingID: Word;
+  Offsets: array of Cardinal;
 begin
-  // check (minimum) table size
-  if Stream.Position + 8 > Stream.Size then
-    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
   // store stream start position
   StartPos := Stream.Position;
-  Assert(StartPos = 0); // assert this for the damn hack used in this table!!!
+
+  inherited;
+
+  // check (minimum) table size (table with at least one entry)
+  if Stream.Position + 4*SizeOf(Word) > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read Version
   FVersion := ReadSwappedWord(Stream);
 
   // check version
-  if not(FVersion = 0) then
+  if (FVersion <> 0) then
     raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
   // clear maps
@@ -1279,16 +1350,15 @@ begin
 
   // read subtable count
   SetLength(FMaps, ReadSwappedWord(Stream));
+  SetLength(Offsets, Length(FMaps));
 
   // check (minimum) table size
-  if Stream.Position + Length(FMaps) * 8 > Stream.Size then
+  if Stream.Position + Length(FMaps) * (2 * SizeOf(Word) + SizeOf(Cardinal)) > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read directory entry
   for MapIndex := 0 to High(FMaps) do
   begin
-    Stream.Position := StartPos + 4 + MapIndex * 8;
-
     // read Platform ID
     PlatformID := ReadSwappedWord(Stream);
 
@@ -1307,14 +1377,17 @@ begin
       FMaps[MapIndex] := TPascalTypeCharacterMapDirectoryGenericEntry.Create(EncodingID);
     end;
 
-    // read and apply offset
-    Stream.Read(Value32, SizeOf(Cardinal));
-    Stream.Position := StartPos + Swap32(Value32);
-
-    // load character map entry from stream
-    if (FMaps[MapIndex] <> nil) then
-      FMaps[MapIndex].LoadFromStream(Stream);
+    // read and save offset
+    Offsets[MapIndex] := StartPos + ReadSwappedCardinal(Stream);
   end;
+
+  // load character map entries from stream
+  for MapIndex := 0 to High(FMaps) do
+    if (FMaps[MapIndex] <> nil) then
+    begin
+      Stream.Position := Offsets[MapIndex];
+      FMaps[MapIndex].LoadFromStream(Stream);
+    end;
 end;
 
 procedure TPascalTypeCharacterMapTable.SaveToStream(Stream: TStream);
@@ -1322,7 +1395,6 @@ var
   StartPos : Int64;
   DirIndex : Integer;
   Directory: array of Cardinal;
-  Value32  : Cardinal;
 begin
   // store stream start position
   StartPos := Stream.Position;
@@ -1334,7 +1406,7 @@ begin
   WriteSwappedWord(Stream, Length(FMaps));
 
   // offset directory
-  Stream.Seek(soFromCurrent, 6 * Length(FMaps));
+  Stream.Seek(soFromCurrent, (2*SizeOf(Word)+SizeOf(Cardinal)) * Length(FMaps));
 
   // build directory (to be written later) and write data
   SetLength(Directory, Length(FMaps));
@@ -1357,8 +1429,7 @@ begin
     WriteSwappedWord(Stream, FMaps[DirIndex].EncodingID);
 
     // write offset
-    Value32 := Directory[DirIndex];
-    Stream.Write(Value32, SizeOf(Cardinal));
+    WriteSwappedCardinal(Stream, Directory[DirIndex]);
   end;
 end;
 
