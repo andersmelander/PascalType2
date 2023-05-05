@@ -1089,28 +1089,16 @@ end;
 procedure TPascalTypeAxisVariationSegmentTable.LoadFromStream(Stream: TStream);
 var
   PairIndex: Integer;
-  Value16: Word;
 begin
   inherited;
 
-  with Stream do
+  // read pair count
+  SetLength(FCorrespondenceArray, ReadSwappedWord(Stream));
+
+  for PairIndex := 0 to High(FCorrespondenceArray) do
   begin
-    // read pair count
-    Read(Value16, SizeOf(Word));
-    SetLength(FCorrespondenceArray,
-      Swap16(Value16));
-
-    for PairIndex := 0 to High(FCorrespondenceArray) do
-      with FCorrespondenceArray[PairIndex] do
-      begin
-        // read 'from' coordinate
-        Read(Value16, SizeOf(Word));
-        fromCoord := Swap16(Value16);
-
-        // read 'to' coordinate
-        Read(Value16, SizeOf(Word));
-        toCoord := Swap16(Value16);
-      end;
+    FCorrespondenceArray[PairIndex].fromCoord := ReadSwappedSmallInt(Stream);
+    FCorrespondenceArray[PairIndex].toCoord := ReadSwappedSmallInt(Stream);
   end;
 end;
 
@@ -1124,14 +1112,13 @@ begin
   WriteSwappedWord(Stream, Length(FCorrespondenceArray));
 
   for PairIndex := 0 to High(FCorrespondenceArray) do
-    with FCorrespondenceArray[PairIndex] do
-    begin
-      // write 'from' coordinate
-      WriteSwappedWord(Stream, fromCoord);
+  begin
+    // write 'from' coordinate
+    WriteSwappedSmallInt(Stream, FCorrespondenceArray[PairIndex].fromCoord);
 
-      // write 'to' coordinate
-      WriteSwappedWord(Stream, toCoord);
-    end;
+    // write 'to' coordinate
+    WriteSwappedSmallInt(Stream, FCorrespondenceArray[PairIndex].toCoord);
+  end;
 end;
 
 
@@ -2898,6 +2885,8 @@ var
   KindNameCount: Word;
   KindNameIndex: Word;
 begin
+  StartPos := Stream.Position;
+
   inherited;
 
   with Stream do
@@ -2905,9 +2894,6 @@ begin
     // check (minimum) table size
     if Position + 10 > Size then
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-    // remember start position
-    StartPos := Position;
 
     // read group offset
     GroupOffset := ReadSwappedCardinal(Stream);
