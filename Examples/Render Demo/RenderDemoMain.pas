@@ -241,7 +241,7 @@ begin
          BrushStroke.JoinStyle := jsMiter;
          BrushStroke.EndStyle := esButt;
 //*)
-         FRasterizerGraphics32.RenderText(FText, Canvas32);
+         FRasterizerGraphics32.RenderShapedText(FText, Canvas32);
        finally
          Canvas32.Free;
        end;

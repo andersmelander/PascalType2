@@ -57,7 +57,9 @@ type
   public
     procedure RenderText(const Text: string; Canvas: TCustomPath); overload; virtual;
     procedure RenderText(const Text: string; Canvas: TCustomPath; X, Y: Integer); overload; virtual;
-    
+    procedure RenderShapedText(const Text: string; Canvas: TCustomPath); overload; virtual;
+    procedure RenderShapedText(const Text: string; Canvas: TCustomPath; X, Y: Integer); overload; virtual;
+
     // GDI like functions
     function GetGlyphOutlineA(Character: Cardinal; Format: TGetGlyphOutlineUnion;
       out GlyphMetrics: TGlyphMetrics; BufferSize: Cardinal; Buffer: Pointer;
@@ -81,6 +83,7 @@ implementation
 uses
   Math,
   GR32,
+  PascalType.Shaper,
   PascalType.FontFace.SFNT,
   PascalType.Tables.TrueType.glyf,
   PascalType.Tables.TrueType.hhea;
@@ -865,6 +868,60 @@ end;
 procedure TPascalTypeRasterizerGraphics32.RenderText(const Text: string; Canvas: TCustomPath);
 begin
   RenderText(Text, Canvas, 0, 0);
+end;
+
+procedure TPascalTypeRasterizerGraphics32.RenderShapedText(const Text: string; Canvas: TCustomPath);
+begin
+  RenderShapedText(Text, Canvas, 0, 0);
+end;
+
+procedure TPascalTypeRasterizerGraphics32.RenderShapedText(const Text: string; Canvas: TCustomPath; X, Y: Integer);
+var
+  CharIndex: Integer;
+  GlyphIndex: Integer;
+  Pos: TFloatPoint;
+  GlyphMetric: TGlyphMetric;
+  Shaper: TPascalTypeShaper;
+  NormalizedText: string;
+begin
+  Canvas.BeginUpdate;
+  try
+    Pos.X := X;
+    Pos.Y := Y;
+
+    Shaper := TPascalTypeShaper.Create(FontFace);
+    try
+      NormalizedText := Shaper.NormalizeText(Text);
+
+      for CharIndex := 1 to Length(NormalizedText) do
+      begin
+        if NormalizedText[CharIndex] <= #31 then
+        begin
+          case NormalizedText[CharIndex] of
+            #10: ;// handle CR
+            #13: ;// handle LF
+          end;
+        end else
+        begin
+          // get glyph index
+          GlyphIndex := FontFace.GetGlyphByCharacter(NormalizedText[CharIndex]);
+
+          // rasterize character
+          RasterizeGlyph(GlyphIndex, Canvas, Round(Pos.X), Round(Pos.Y));
+
+          // advance cursor
+          GlyphMetric := GetGlyphMetric(GlyphIndex);
+          Pos.X := Pos.X + GlyphMetric.HorizontalMetric.AdvanceWidth;
+        end;
+      end;
+
+    finally
+      Shaper.Free;
+    end;
+
+  finally
+    Canvas.EndUpdate;
+  end;
 end;
 
 procedure TPascalTypeRasterizerGraphics32.RenderText(const Text: string; Canvas: TCustomPath; X, Y: Integer);
