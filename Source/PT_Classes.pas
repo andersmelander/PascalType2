@@ -340,8 +340,8 @@ end;
 procedure TXCustomPascalTypeInterfaceTable.Changed;
 begin
   inherited;
-  // if FStorage is IPascalTypeStorageChange
-  // then (FStorage as IPascalTypeStorageChange).Changed;
+  // if FFontFace is IPascalTypeFontFaceChange
+  // then (FFontFace as IPascalTypeFontFaceChange).Changed;
 end;
 
 constructor TXCustomPascalTypeInterfaceTable.Create(const AFontFace: IPascalTypeFontFace);

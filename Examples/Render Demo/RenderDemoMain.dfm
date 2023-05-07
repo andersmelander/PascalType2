@@ -47,11 +47,10 @@ object FmRenderDemo: TFmRenderDemo
   object LabelFontEngine: TLabel
     Left = 8
     Top = 417
-    Width = 62
+    Width = 53
     Height = 13
     Anchors = [akLeft, akBottom]
-    Caption = 'Font-Engine:'
-    ExplicitTop = 159
+    Caption = 'Rasterizer:'
   end
   object EditText: TEdit
     Left = 40
@@ -62,7 +61,6 @@ object FmRenderDemo: TFmRenderDemo
     TabOrder = 0
     Text = 'PascalType Render Demo'
     OnChange = EditTextChange
-    ExplicitWidth = 153
   end
   object ComboBoxFont: TComboBox
     Left = 416
@@ -122,8 +120,6 @@ object FmRenderDemo: TFmRenderDemo
     Color = clWhite
     TabOrder = 3
     OnResize = PanelTextResize
-    ExplicitWidth = 455
-    ExplicitHeight = 123
     object PaintBox: TPaintBox
       Left = 0
       Top = 0
@@ -146,7 +142,6 @@ object FmRenderDemo: TFmRenderDemo
     TabOrder = 4
     TabStop = True
     OnClick = RadioButtonWindowsClick
-    ExplicitTop = 158
   end
   object RadioButtonPascalType: TRadioButton
     Left = 144
@@ -154,10 +149,9 @@ object FmRenderDemo: TFmRenderDemo
     Width = 74
     Height = 17
     Anchors = [akLeft, akBottom]
-    Caption = 'PascalType'
+    Caption = 'GDI'
     TabOrder = 5
     OnClick = RadioButtonPascalTypeClick
-    ExplicitTop = 158
   end
   object RadioButtonGraphics32: TRadioButton
     Left = 231
@@ -168,6 +162,5 @@ object FmRenderDemo: TFmRenderDemo
     Caption = 'Graphics32'
     TabOrder = 6
     OnClick = RadioButtonGraphics32Click
-    ExplicitTop = 158
   end
 end

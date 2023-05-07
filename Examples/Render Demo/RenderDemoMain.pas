@@ -48,9 +48,10 @@ type
     procedure RadioButtonWindowsClick(Sender: TObject);
     procedure RadioButtonGraphics32Click(Sender: TObject);
   private
+    FFontFace: TPascalTypeFontFace;
     FRasterizerGDI  : TPascalTypeFontRasterizerGDI;
     FRasterizerGraphics32: TPascalTypeRasterizerGraphics32;
-    FFontScanner : TFontNameStorageScan;
+    FFontScanner : TFontNameScanner;
     FFontArray   : array of TFontNameFile;
     FBitmap      : TBitmap;
     FText        : string;
@@ -88,42 +89,47 @@ uses
 
 procedure TFmRenderDemo.FormCreate(Sender: TObject);
 begin
- SetCurrentDir(GetFontDirectory);
+  SetCurrentDir(GetFontDirectory);
 
- // create bitmap buffer
- FBitmap := TBitmap.Create;
+  // create bitmap buffer
+  FBitmap := TBitmap.Create;
 
- // create FontEngine
- FRasterizerGDI := TPascalTypeFontRasterizerGDI.Create;
- FRasterizerGraphics32 := TPascalTypeRasterizerGraphics32.Create;
+  FFontFace := TPascalTypeFontFace.Create;
 
- // set initial properties
- FBitmap.Canvas.Font.Size := StrToInt(ComboBoxFontSize.Text);
- FRasterizerGDI.FontSize := StrToInt(ComboBoxFontSize.Text);
- FRasterizerGraphics32.FontSize := StrToInt(ComboBoxFontSize.Text);
+  // create rasterizers
+  FRasterizerGDI := TPascalTypeFontRasterizerGDI.Create;
+  FRasterizerGraphics32 := TPascalTypeRasterizerGraphics32.Create;
 
- FFontScanner := TFontNameStorageScan.Create(True);
- with FFontScanner do
+  FRasterizerGDI.FontFace := FFontFace;
+  FRasterizerGraphics32.FontFace := FFontFace;
+
+  // set initial properties
+  FBitmap.Canvas.Font.Size := StrToInt(ComboBoxFontSize.Text);
+  FRasterizerGDI.FontSize := StrToInt(ComboBoxFontSize.Text);
+  FRasterizerGraphics32.FontSize := StrToInt(ComboBoxFontSize.Text);
+
+  FFontScanner := TFontNameScanner.Create(True);
+  with FFontScanner do
   begin
-   OnFontScanned := FontScannedHandler;
-   Resume;
+    OnFontScanned := FontScannedHandler;
+    Start;
   end;
 end;
 
 procedure TFmRenderDemo.FormDestroy(Sender: TObject);
 begin
- // free FontEngine
- FreeAndNil(FRasterizerGDI);
- FreeAndNil(FRasterizerGraphics32);
+  FreeAndNil(FRasterizerGDI);
+  FreeAndNil(FRasterizerGraphics32);
+  FreeAndNil(FFontFace);
 
- FBitmap.Free;
+  FBitmap.Free;
 
- with FFontScanner do
+  with FFontScanner do
   begin
-   Terminate;
-   WaitFor;
+    Terminate;
+    WaitFor;
   end;
- FreeAndNil(FFontScanner);
+  FreeAndNil(FFontScanner);
 end;
 
 procedure TFmRenderDemo.FormShow(Sender: TObject);
@@ -157,16 +163,15 @@ procedure TFmRenderDemo.FontNameChanged;
 var
   FontIndex : Integer;
 begin
- FBitmap.Canvas.Font.Name := FFontName;
- for FontIndex := 0 to High(FFontArray) do
-  if FFontArray[FontIndex].FullFontName = FFontName then
-   begin
-    FRasterizerGDI.LoadFromFile(FFontArray[FontIndex].FileName);
-    FRasterizerGraphics32.LoadFromFile(FFontArray[FontIndex].FileName);
-    Break;
-   end;
+  FBitmap.Canvas.Font.Name := FFontName;
+  for FontIndex := 0 to High(FFontArray) do
+    if FFontArray[FontIndex].FullFontName = FFontName then
+    begin
+      FFontFace.LoadFromFile(FFontArray[FontIndex].FileName);
+      Break;
+    end;
 
- RenderText;
+  RenderText;
 end;
 
 procedure TFmRenderDemo.FontSizeChanged;

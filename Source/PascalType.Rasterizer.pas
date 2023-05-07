@@ -61,6 +61,7 @@ type
     end;
   end;
 
+type
   TPascalTypeScaledContour = class(TPersistent)
   protected
 //    FPrimitives: TObjectList<>;
@@ -90,7 +91,15 @@ type
     property ContourCount: Integer read GetContourCount;
   end;
 
-  TCustomPascalTypeRasterizer = class(TInterfacedPersistent, IStreamPersist)
+//------------------------------------------------------------------------------
+//
+//              TCustomPascalTypeRasterizer
+//
+//------------------------------------------------------------------------------
+// Abstract rasterizer base class
+//------------------------------------------------------------------------------
+type
+  TCustomPascalTypeRasterizer = class abstract(TInterfacedPersistent)
   private
     FFontFace: TPascalTypeFontFace;
     FFontHeight: Integer;
@@ -104,12 +113,8 @@ type
     procedure SetPixelPerInchY(const Value: Integer);
     procedure SetFontHeight(const Value: Integer);
     function GetFontSize: Integer;
-    function GetFontName: string;
+    procedure SetFontFace(const Value: TPascalTypeFontFace);
   protected
-    function GetGlyphByCharacter(Character: Word): Integer; overload;
-    function GetGlyphByCharacter(Character: WideChar): Integer; overload;
-    function GetGlyphByCharacter(Character: AnsiChar): Integer; overload;
-
     procedure CalculateScaler;
     procedure CalculateScalerX;
     procedure CalculateScalerY;
@@ -129,29 +134,23 @@ type
 
     procedure RenderText(const Text: string);
     procedure RenderCharacter(Character: AnsiChar);
-    property FontFace: TPascalTypeFontFace read FFontFace;
+
     property ScalerX: TScaleType read FScalerX;
     property ScalerY: TScaleType read FScalerY;
   public
     constructor Create; virtual;
     destructor Destroy; override;
 
-    procedure LoadFromStream(Stream: TStream); virtual;
-    procedure SaveToStream(Stream: TStream); virtual;
-    procedure LoadFromFile(const FileName: TFileName);
-    procedure SaveToFile(const FileName: TFileName);
-
-    property FontName: string read GetFontName;
+    property FontFace: TPascalTypeFontFace read FFontFace write SetFontFace;
     property FontHeight: Integer read FFontHeight write SetFontHeight default -11;
     property FontSize: Integer read GetFontSize write SetFontSize stored False;
     property PixelPerInchX: Integer read FPixelPerInchX write SetPixelPerInchX default 96;
     property PixelPerInchY: Integer read FPixelPerInchY write SetPixelPerInchY default 96;
   end;
 
-  TPascalTypeFontEngine = class(TCustomPascalTypeRasterizer)
-  public
-    property FontFace;
-  end;
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 
 implementation
 
@@ -201,13 +200,14 @@ begin
 end;
 
 
-{ TCustomPascalTypeRasterizer }
-
+//------------------------------------------------------------------------------
+//
+//              TCustomPascalTypeRasterizer
+//
+//------------------------------------------------------------------------------
 constructor TCustomPascalTypeRasterizer.Create;
 begin
   inherited;
-  FFontFace := TPascalTypeFontFace.Create;
-
   // set default pixel per inch
   FPixelPerInchX := 96;
   FPixelPerInchY := 96;
@@ -216,36 +216,18 @@ end;
 
 destructor TCustomPascalTypeRasterizer.Destroy;
 begin
-  FreeAndNil(FFontFace);
   inherited;
 end;
 
-procedure TCustomPascalTypeRasterizer.LoadFromFile(const FileName: TFileName);
+procedure TCustomPascalTypeRasterizer.SetFontFace(const Value: TPascalTypeFontFace);
 begin
-  FFontFace.LoadFromFile(FileName);
+  if (FFontFace = Value) then
+    exit;
+
+  FFontFace := Value;
 
   // calculate font depenent variables
   CalculateScaler;
-end;
-
-procedure TCustomPascalTypeRasterizer.LoadFromStream(Stream: TStream);
-begin
-  FFontFace.LoadFromStream(Stream);
-
-  // calculate font depenent variables
-  CalculateScaler;
-
-  // SetLength(FScaledGlyphs
-end;
-
-procedure TCustomPascalTypeRasterizer.SaveToFile(const FileName: TFileName);
-begin
-  FFontFace.SaveToFile(FileName);
-end;
-
-procedure TCustomPascalTypeRasterizer.SaveToStream(Stream: TStream);
-begin
-  FFontFace.SaveToStream(Stream);
 end;
 
 procedure TCustomPascalTypeRasterizer.RenderText(const Text: string);
@@ -357,89 +339,9 @@ begin
   Result := RoundedScaleX(FontFace.GetAdvanceWidth(GlyphIndex));
 end;
 
-function TCustomPascalTypeRasterizer.GetFontName: string;
-begin
-  Result := FFontFace.FontName;
-end;
-
 function TCustomPascalTypeRasterizer.GetFontSize: Integer;
 begin
   Result := -Int64(FFontHeight * 72) div FPixelPerInchY;
-end;
-
-function TCustomPascalTypeRasterizer.GetGlyphByCharacter(Character: Word): Integer;
-var
-  CharMapIndex: Integer;
-{$IFDEF MSWINDOWS}
-  CharacterMapDirectory: TPascalTypeCharacterMapMicrosoftDirectory;
-{$ENDIF}
-{$IFDEF OSX}
-  CharacterMapDirectory: TPascalTypeCharacterMapMacintoshDirectory;
-{$ENDIF}
-begin
-  // direct translate character to glyph (will most probably fail!!!
-  Result := Integer(Character);
-
-  for CharMapIndex := 0 to FFontFace.CharacterMap.CharacterMapSubtableCount - 1 do
-{$IFDEF MSWINDOWS}
-    if FFontFace.CharacterMap.CharacterMapSubtable[CharMapIndex] is TPascalTypeCharacterMapMicrosoftDirectory then
-    begin
-      CharacterMapDirectory := TPascalTypeCharacterMapMicrosoftDirectory(FFontFace.CharacterMap.CharacterMapSubtable[CharMapIndex]);
-      case CharacterMapDirectory.PlatformSpecificID of
-        meUnicodeBMP:
-          begin
-            Result := CharacterMapDirectory.CharacterToGlyph(Integer(Character));
-            // TODO : Only break if result<>0?
-            break;
-          end;
-
-        // meSymbol included. How else are we going to use symbol fonts?
-        // Seen with: "Symbol"
-        meSymbol:
-          begin
-            // https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#windows-platform-platform-id--3
-            //
-            // The symbol encoding was created to support fonts with arbitrary ornaments or symbols
-            // not supported in Unicode or other standard encodings. A format 4 subtable would be used,
-            // typically with up to 224 graphic characters assigned at code positions beginning with 0xF020.
-            // This corresponds to a sub-range within the Unicode Private-Use Area (PUA), though this is not
-            // a Unicode encoding. In legacy usage, some applications would represent the symbol characters
-            // in text using a single-byte encoding, and then map 0x20 to the OS/2.usFirstCharIndex value in
-            // the font.
-            //
-            // This works with "Symbol" but not with "Marlett", small letter "a"
-            if (FFontFace.OS2Table <> nil) then
-              Character := Word(Integer(Character) - Ord(' ') + FFontFace.OS2Table.UnicodeFirstCharacterIndex)
-            else
-              Character := Word(Integer(Character) - Ord(' ') + $F020);
-            Result := CharacterMapDirectory.CharacterToGlyph(Character);
-            // TODO : Only break if result<>0?
-            break;
-          end;
-      end;
-    end;
-{$ENDIF}
-{$IFDEF OSX}
-  if FStorage.CharacterMap.CharacterMapSubtable[CharMapIndex] is TPascalTypeCharacterMapMacintoshDirectory then
-  begin
-    CharacterMapDirectory := TPascalTypeCharacterMapMacintoshDirectory(FStorage.CharacterMap.CharacterMapSubtable[CharMapIndex]);
-    if CharacterMapDirectory.PlatformSpecificID = 1 then
-    begin
-      Result := CharacterMapDirectory.CharacterToGlyph(Integer(Character));
-      break;
-    end;
-  end;
-{$ENDIF}
-end;
-
-function TCustomPascalTypeRasterizer.GetGlyphByCharacter(Character: WideChar): Integer;
-begin
-  Result := GetGlyphByCharacter(Word(Character));
-end;
-
-function TCustomPascalTypeRasterizer.GetGlyphByCharacter(Character: AnsiChar): Integer;
-begin
-  Result := GetGlyphByCharacter(Word(Character));
 end;
 
 function TCustomPascalTypeRasterizer.GetGlyphMetric(GlyphIndex: Integer): TGlyphMetric;
@@ -492,3 +394,4 @@ begin
 end;
 
 end.
+

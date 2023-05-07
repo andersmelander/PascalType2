@@ -76,7 +76,7 @@ type
     function GetFontVersion: WideString;
     function GetUniqueIdentifier: WideString;
   protected
-    // IPascalTypeStorageTable
+    // IPascalTypeFontFaceTable
     function GetTableByTableName(const ATableName: TTableName): TCustomPascalTypeNamedTable; virtual;
     function GetTableByTableType(ATableType: TTableType): TCustomPascalTypeNamedTable; virtual;
     function GetTableByTableClass(ATableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable; virtual;
@@ -115,7 +115,7 @@ type
     property UniqueIdentifier: WideString read GetUniqueIdentifier;
   end;
 
-  TPascalTypeStorageScan = class(TCustomPascalTypeFontFace)
+  TPascalTypeFontFaceScan = class(TCustomPascalTypeFontFace)
   protected
     procedure LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry); override;
   public
@@ -139,7 +139,7 @@ type
     function GetBoundingBox: TRect;
     function GetGlyphCount: Word;
   protected
-    // IPascalTypeStorageTable
+    // IPascalTypeFontFaceTable
     function GetTableByTableName(const TableName: TTableName): TCustomPascalTypeNamedTable; override;
     function GetTableByTableType(ATableType: TTableType): TCustomPascalTypeNamedTable; override;
     function GetTableByTableClass(TableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable; override;
@@ -309,22 +309,22 @@ end;
 type
   TPascalTypeTableRoot = class(TCustomPascalTypeTable)
   private
-    FStorage: IPascalTypeFontFace;
+    FFontFace: IPascalTypeFontFace;
   protected
     function GetFontFace: IPascalTypeFontFace; override;
   public
-    constructor Create(const AStorage: IPascalTypeFontFace); reintroduce;
+    constructor Create(const AFontFace: IPascalTypeFontFace); reintroduce;
   end;
 
-constructor TPascalTypeTableRoot.Create(const AStorage: IPascalTypeFontFace);
+constructor TPascalTypeTableRoot.Create(const AFontFace: IPascalTypeFontFace);
 begin
   inherited Create;
-  FStorage := AStorage;
+  FFontFace := AFontFace;
 end;
 
 function TPascalTypeTableRoot.GetFontFace: IPascalTypeFontFace;
 begin
-  Result := FStorage;
+  Result := FFontFace;
 end;
 
 constructor TCustomPascalTypeFontFace.Create;
@@ -670,9 +670,9 @@ begin
 end;
 
 
-{ TPascalTypeStorageScan }
+{ TPascalTypeFontFaceScan }
 
-procedure TPascalTypeStorageScan.LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry);
+procedure TPascalTypeFontFaceScan.LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry);
 var
   MemoryStream: TMemoryStream;
   Table: TCustomPascalTypeNamedTable;
@@ -705,7 +705,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeStorageScan.SaveToStream(Stream: TStream);
+procedure TPascalTypeFontFaceScan.SaveToStream(Stream: TStream);
 begin
   raise EPascalTypeNotImplemented.Create(RCStrNotImplemented);
 end;

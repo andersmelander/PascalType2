@@ -48,7 +48,7 @@ type
   private
     FOnChanged: TNotifyEvent;
   protected
-    // IPascalTypeStorageChange
+    // IPascalTypeFontFaceChange
     procedure Changed; virtual;
 
   public
@@ -60,7 +60,8 @@ type
     procedure LoadFromFile(FileName: TFileName);
     procedure SaveToFile(FileName: TFileName);
 
-    property OnChanged: TNotifyEvent read FOnChanged;
+    // TODO : Needs multicast. FontFace can be shared among rasterizers
+//    property OnChanged: TNotifyEvent read FOnChanged;
   end;
 
 implementation

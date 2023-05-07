@@ -594,13 +594,13 @@ begin
   end;
 
   try
-    GlyphIndex := GetGlyphByCharacter(Text[1]);
+    GlyphIndex := FontFace.GetGlyphByCharacter(Text[1]);
     Advance := GetAdvanceWidth(GlyphIndex);
     CharIndex := 2;
 
     while CharIndex < Length(Text) do
     begin
-      GlyphIndex := GetGlyphByCharacter(Text[CharIndex]);
+      GlyphIndex := FontFace.GetGlyphByCharacter(Text[CharIndex]);
       Advance := Advance + GetAdvanceWidth(GlyphIndex);
 
 (*
@@ -630,7 +630,7 @@ begin
   if (ggoGlyphIndex in Format.Flags) then
     GlyphIndex := Character
   else
-    GlyphIndex := GetGlyphByCharacter(Character);
+    GlyphIndex := FontFace.GetGlyphByCharacter(Character);
 
 (*
  if Buffer = nil then
@@ -652,7 +652,7 @@ begin
   if (ggoGlyphIndex in Format.Flags) then
     GlyphIndex := Character
   else
-    GlyphIndex := GetGlyphByCharacter(Character);
+    GlyphIndex := FontFace.GetGlyphByCharacter(Character);
 
   with GlyphMetrics, TCustomTrueTypeFontGlyphData(FontFace.GlyphData[GlyphIndex]) do
   begin
@@ -793,7 +793,7 @@ begin
      else
      begin
        // get glyph index
-       GlyphIndex := GetGlyphByCharacter(Text[CharIndex]);
+       GlyphIndex := FontFace.GetGlyphByCharacter(Text[CharIndex]);
 
        // rasterize character
        RasterizeGlyph(GlyphIndex, Canvas, X, Y);

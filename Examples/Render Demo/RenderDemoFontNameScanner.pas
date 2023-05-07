@@ -14,11 +14,11 @@ type
   TFontScannedEvent = procedure(Sender: TObject; FileName: TFilename;
     Font: TCustomPascalTypeFontFacePersistent) of object;
 
-  TFontNameStorageScan = class(TThread)
+  TFontNameScanner = class(TThread)
   private
     FOnFontName  : TFontScannedEvent;
     FCurrentFile : TFileName;
-    FStorageScan : TPascalTypeStorageScan;
+    FFontFaceScan : TPascalTypeFontFaceScan;
     procedure FontScanned;
   protected
     procedure Execute; override;
@@ -28,18 +28,18 @@ type
 
 implementation
 
-{ TFontNameStorageScan }
+{ TFontNameScanner }
 
-procedure TFontNameStorageScan.Execute;
+procedure TFontNameScanner.Execute;
 var
   SR: TSearchRec;
 begin
   if FindFirst('*.ttf', faAnyFile, SR) = 0 then
   try
     repeat
-      FStorageScan := TPascalTypeStorageScan.Create;
+      FFontFaceScan := TPascalTypeFontFaceScan.Create;
       try
-        with FStorageScan do
+        with FFontFaceScan do
           try
             // store current file
             FCurrentFile := SR.Name;
@@ -59,7 +59,7 @@ begin
           end;
 
       finally
-        FreeAndNil(FStorageScan);
+        FreeAndNil(FFontFaceScan);
       end;
     until (FindNext(SR) <> 0) or Terminated;
   finally
@@ -67,10 +67,10 @@ begin
   end;
 end;
 
-procedure TFontNameStorageScan.FontScanned;
+procedure TFontNameScanner.FontScanned;
 begin
   if Assigned(FOnFontName) then
-    FOnFontName(Self, FCurrentFile, FStorageScan);
+    FOnFontName(Self, FCurrentFile, FFontFaceScan);
 end;
 
 end.
