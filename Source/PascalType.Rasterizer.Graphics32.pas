@@ -1,4 +1,4 @@
-unit PT_FontEngineGR32;
+unit PascalType.Rasterizer.Graphics32;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -44,20 +44,20 @@ uses
 
   PT_Types,
   PT_Classes,
-  PT_Storage,
-  PT_FontEngine,
+  PascalType.FontFace,
+  PascalType.Rasterizer,
   PT_Tables,
   PT_TablesTrueType;
 
 type
-  TPascalTypeFontEngineGR32 = class(TCustomPascalTypeFontEngine)
+  TPascalTypeRasterizerGraphics32 = class(TCustomPascalTypeRasterizer)
   protected
     procedure RasterizeGlyph(GlyphIndex: Integer; Canvas: TCustomPath; X, Y: Integer);
     procedure RasterizeGlyphPath(const GlyphPath: TPascalTypePath; Canvas: TCustomPath; X, Y: Single);
   public
-    procedure RenderText(Text: string; Canvas: TCustomPath); overload; virtual;
-    procedure RenderText(Text: string; Canvas: TCustomPath; X, Y: Integer); overload; virtual;
-
+    procedure RenderText(const Text: string; Canvas: TCustomPath); overload; virtual;
+    procedure RenderText(const Text: string; Canvas: TCustomPath; X, Y: Integer); overload; virtual;
+    
     // GDI like functions
     function GetGlyphOutlineA(Character: Cardinal; Format: TGetGlyphOutlineUnion;
       out GlyphMetrics: TGlyphMetrics; BufferSize: Cardinal; Buffer: Pointer;
@@ -81,7 +81,7 @@ implementation
 uses
   Math,
   GR32,
-  PT_StorageSFNT,
+  PascalType.FontFace.SFNT,
   PascalType.Tables.TrueType.glyf,
   PascalType.Tables.TrueType.hhea;
 
@@ -91,15 +91,15 @@ begin
 end;
 
 
-{ TPascalTypeFontEngineGR32 }
+{ TPascalTypeRasterizerGraphics32 }
 
-function TPascalTypeFontEngineGR32.GetTextMetricsA(
+function TPascalTypeRasterizerGraphics32.GetTextMetricsA(
   var TextMetric: TTextMetricA): Boolean;
 begin
   Result := False;
 
-  if Assigned(Storage.OS2Table) then
-    with Storage, OS2Table, TextMetric do
+  if Assigned(FontFace.OS2Table) then
+    with FontFace, OS2Table, TextMetric do
     begin
       // find right ascent/descent pair and calculate leading
       if fsfUseTypoMetrics in FontSelectionFlags then
@@ -186,13 +186,13 @@ begin
         tmPitchAndFamily := 0;
     end;
 
-    if (Self.Storage.PostScriptTable.IsFixedPitch = 0) then
+    if (Self.FontFace.PostScriptTable.IsFixedPitch = 0) then
       tmPitchAndFamily := tmPitchAndFamily + TMPF_FIXED_PITCH;
-    if Self.Storage.ContainsTable('glyf') then
+    if Self.FontFace.ContainsTable('glyf') then
       tmPitchAndFamily := tmPitchAndFamily + TMPF_VECTOR + TMPF_TRUETYPE;
-    if Self.Storage.ContainsTable('CFF ') then
+    if Self.FontFace.ContainsTable('CFF ') then
       tmPitchAndFamily := tmPitchAndFamily + TMPF_VECTOR;
-    if Self.Storage.ContainsTable('HDMX') then
+    if Self.FontFace.ContainsTable('HDMX') then
       tmPitchAndFamily := tmPitchAndFamily + TMPF_DEVICE;
 
 (*
@@ -219,13 +219,13 @@ begin
  Result := True;
 end;
 
-function TPascalTypeFontEngineGR32.GetTextMetricsW(
+function TPascalTypeRasterizerGraphics32.GetTextMetricsW(
   var TextMetric: TTextMetricW): Boolean;
 begin
   Result := False;
 
-  if Assigned(Storage.OS2Table) then
-    with Storage, OS2Table, TextMetric do
+  if Assigned(FontFace.OS2Table) then
+    with FontFace, OS2Table, TextMetric do
     begin
       // find right ascent/descent pair and calculate leading
       if fsfUseTypoMetrics in FontSelectionFlags then
@@ -292,13 +292,13 @@ begin
       else
         tmPitchAndFamily := 0;
     end;
-    if (Self.Storage.PostScriptTable.IsFixedPitch = 0) then
+    if (Self.FontFace.PostScriptTable.IsFixedPitch = 0) then
       tmPitchAndFamily := tmPitchAndFamily + TMPF_FIXED_PITCH;
-    if Self.Storage.ContainsTable('glyf') then
+    if Self.FontFace.ContainsTable('glyf') then
       tmPitchAndFamily := tmPitchAndFamily + TMPF_VECTOR + TMPF_TRUETYPE;
-    if Self.Storage.ContainsTable('CFF ') then
+    if Self.FontFace.ContainsTable('CFF ') then
       tmPitchAndFamily := tmPitchAndFamily + TMPF_VECTOR;
-    if Self.Storage.ContainsTable('HDMX') then
+    if Self.FontFace.ContainsTable('HDMX') then
       tmPitchAndFamily := tmPitchAndFamily + TMPF_DEVICE;
 
     if Assigned(AddendumTable) then
@@ -326,7 +326,7 @@ end;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-function TPascalTypeFontEngineGR32.GetOutlineTextMetricsA(
+function TPascalTypeRasterizerGraphics32.GetOutlineTextMetricsA(
   Buffersize: Cardinal; OutlineTextMetric: Pointer): Cardinal;
 begin
   if OutlineTextMetric = nil then
@@ -335,7 +335,7 @@ begin
     Exit;
   end;
 
-  if not Assigned(Storage.OS2Table) or (Buffersize < SizeOf(TOutlineTextmetricA)) then
+  if not Assigned(FontFace.OS2Table) or (Buffersize < SizeOf(TOutlineTextmetricA)) then
   begin
     Result := 0;
     if Buffersize < SizeOf(TOutlineTextmetricA) then
@@ -344,7 +344,7 @@ begin
     Exit;
   end;
 
-  with Storage, OS2Table, POutlineTextmetricA(OutlineTextMetric)^ do
+  with FontFace, OS2Table, POutlineTextmetricA(OutlineTextMetric)^ do
   begin
     otmSize := SizeOf(TOutlineTextmetricA);
 
@@ -405,7 +405,7 @@ begin
     otmsUnderscorePosition := RoundedScaleY(PostScriptTable.UnderlinePosition);
 
     // copy panose data
-    Panose := Self.Storage.Panose;
+    Panose := Self.FontFace.Panose;
     if Assigned(Panose) then
       with otmPanoseNumber, Panose do
       begin
@@ -433,7 +433,7 @@ begin
   end;
 end;
 
-function TPascalTypeFontEngineGR32.GetOutlineTextMetricsW(
+function TPascalTypeRasterizerGraphics32.GetOutlineTextMetricsW(
   Buffersize: Cardinal; OutlineTextMetric: Pointer): Cardinal;
 var
   FamilyNameStr: WideString;
@@ -442,7 +442,7 @@ var
   FullNameStr: WideString;
 begin
   // check if OS/2 table exists (as it is not necessary in the true type spec
-  if not Assigned(Storage.OS2Table) then
+  if not Assigned(FontFace.OS2Table) then
   begin
     Result := 0;
     FillChar(OutlineTextMetric^, Buffersize, 0);
@@ -450,7 +450,7 @@ begin
   end;
 
   // get font string information
-  with Storage, OS2Table do
+  with FontFace, OS2Table do
   begin
     FamilyNameStr := FontFamilyName + #0;
     FaceNameStr   := FontName + #0;
@@ -477,7 +477,7 @@ begin
     Exit;
   end;
 
-  with Storage, OS2Table, POutlineTextmetricW(OutlineTextMetric)^ do
+  with FontFace, OS2Table, POutlineTextmetricW(OutlineTextMetric)^ do
   begin
     otmSize := SizeOf(TOutlineTextmetricW) + 2 * (Length(FamilyNameStr) +
       Length(FaceNameStr) + Length(StyleNameStr) + Length(FullNameStr));
@@ -539,9 +539,9 @@ begin
     otmsUnderscorePosition := RoundedScaleY(PostScriptTable.UnderlinePosition);
 
     // copy panose data
-    Panose := Self.Storage.Panose;
-    if Assigned(Self.Storage.Panose) then
-      with otmPanoseNumber, Self.Storage.Panose do
+    Panose := Self.FontFace.Panose;
+    if Assigned(Self.FontFace.Panose) then
+      with otmPanoseNumber, Self.FontFace.Panose do
       begin
         bFamilyType      := FamilyType;
         bSerifStyle      := Data[0];
@@ -575,7 +575,7 @@ end;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-function TPascalTypeFontEngineGR32.GetTextExtentPoint32A(Text: string;
+function TPascalTypeRasterizerGraphics32.GetTextExtentPoint32A(Text: string;
   var Size: TSize): Boolean;
 var
   GlyphIndex: Integer;
@@ -584,7 +584,7 @@ begin
   Result := False;
 end;
 
-function TPascalTypeFontEngineGR32.GetTextExtentPoint32W(Text: WideString;
+function TPascalTypeRasterizerGraphics32.GetTextExtentPoint32W(Text: WideString;
   var Size: TSize): Boolean;
 var
   CharIndex: Integer;
@@ -626,7 +626,7 @@ end;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-function TPascalTypeFontEngineGR32.GetGlyphOutlineA(Character: Cardinal;
+function TPascalTypeRasterizerGraphics32.GetGlyphOutlineA(Character: Cardinal;
   Format: TGetGlyphOutlineUnion; out GlyphMetrics: TGlyphMetrics;
   BufferSize: Cardinal; Buffer: Pointer;
   const TransformationMatrix: TTransformationMatrix): Cardinal;
@@ -648,7 +648,7 @@ begin
 *)
 end;
 
-function TPascalTypeFontEngineGR32.GetGlyphOutlineW(Character: Cardinal;
+function TPascalTypeRasterizerGraphics32.GetGlyphOutlineW(Character: Cardinal;
   Format: TGetGlyphOutlineUnion; out GlyphMetrics: TGlyphMetrics;
   BufferSize: Cardinal; Buffer: Pointer;
   const TransformationMatrix: TTransformationMatrix): Cardinal;
@@ -661,7 +661,7 @@ begin
   else
     GlyphIndex := GetGlyphByCharacter(Character);
 
-  with GlyphMetrics, TCustomTrueTypeFontGlyphData(Storage.GlyphData[GlyphIndex]) do
+  with GlyphMetrics, TCustomTrueTypeFontGlyphData(FontFace.GlyphData[GlyphIndex]) do
   begin
     gmptGlyphOrigin.X := RoundedScaleX(XMin);
     gmptGlyphOrigin.Y := RoundedScaleX(YMin);
@@ -681,11 +681,11 @@ begin
 end;
 
 ////////////////////////////////////////////////////////////////////////////////
-procedure TPascalTypeFontEngineGR32.RasterizeGlyph(GlyphIndex: Integer; Canvas: TCustomPath; X, Y: Integer);
+procedure TPascalTypeRasterizerGraphics32.RasterizeGlyph(GlyphIndex: Integer; Canvas: TCustomPath; X, Y: Integer);
 var
   GlyphPath: TPascalTypePath;
 begin
-  GlyphPath := Storage.GetGlyphPath(GlyphIndex);
+  GlyphPath := FontFace.GetGlyphPath(GlyphIndex);
   RasterizeGlyphPath(GlyphPath, Canvas, X, Y);
 end;
 
@@ -721,7 +721,7 @@ const
   );
 
 
-procedure TPascalTypeFontEngineGR32.RasterizeGlyphPath(const GlyphPath: TPascalTypePath; Canvas: TCustomPath; X, Y: Single);
+procedure TPascalTypeRasterizerGraphics32.RasterizeGlyphPath(const GlyphPath: TPascalTypePath; Canvas: TCustomPath; X, Y: Single);
 var
   Ascent: integer;
   Origin: TFloatPoint;
@@ -735,8 +735,8 @@ var
   StateTransition: TStateTransition;
   i: integer;
 begin
-  Ascent := Max(TPascalTypeHeaderTable(TPascalTypeStorage(Storage).HeaderTable).YMax,
-    TPascalTypeHorizontalHeaderTable(TPascalTypeStorage(Storage).HorizontalHeader).Ascent);
+  Ascent := Max(TPascalTypeHeaderTable(TPascalTypeFontFace(FontFace).HeaderTable).YMax,
+    TPascalTypeHorizontalHeaderTable(TPascalTypeFontFace(FontFace).HorizontalHeader).Ascent);
   Origin.X := X;
   Origin.Y := Y + Ascent * ScalerY;
 
@@ -862,13 +862,12 @@ end;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-procedure TPascalTypeFontEngineGR32.RenderText(Text: string; Canvas: TCustomPath);
+procedure TPascalTypeRasterizerGraphics32.RenderText(const Text: string; Canvas: TCustomPath);
 begin
   RenderText(Text, Canvas, 0, 0);
 end;
 
-procedure TPascalTypeFontEngineGR32.RenderText(Text: string; Canvas: TCustomPath; X,
-  Y: Integer);
+procedure TPascalTypeRasterizerGraphics32.RenderText(const Text: string; Canvas: TCustomPath; X, Y: Integer);
 var
   CharIndex: Integer;
   GlyphIndex: Integer;
@@ -879,14 +878,16 @@ begin
   try
     Pos.X := X;
     Pos.Y := Y;
+
     for CharIndex := 1 to Length(Text) do
     begin
       if Text[CharIndex] <= #31 then
+      begin
         case Text[CharIndex] of
           #10: ;// handle CR
           #13: ;// handle LF
-        end
-      else
+        end;
+      end else
       begin
         // get glyph index
         GlyphIndex := GetGlyphByCharacter(Text[CharIndex]);

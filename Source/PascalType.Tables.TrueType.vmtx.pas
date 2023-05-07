@@ -128,8 +128,8 @@ begin
   inherited;
 
   // locate vertical metrics header
-  VerticalHeader := TPascalTypeVerticalHeaderTable(Storage.GetTableByTableClass(TPascalTypeVerticalHeaderTable));
-  MaximumProfile := TPascalTypeMaximumProfileTable(Storage.GetTableByTableName('maxp'));
+  VerticalHeader := TPascalTypeVerticalHeaderTable(FontFace.GetTableByTableClass(TPascalTypeVerticalHeaderTable));
+  MaximumProfile := TPascalTypeMaximumProfileTable(FontFace.GetTableByTableName('maxp'));
   Assert(MaximumProfile <> nil);
 
   // check if vertical metrics header is available
@@ -164,7 +164,7 @@ begin
   inherited;
 
   // locate vertical metrics header
-  VerticalHeader := TPascalTypeVerticalHeaderTable(Storage.GetTableByTableClass(TPascalTypeVerticalHeaderTable));
+  VerticalHeader := TPascalTypeVerticalHeaderTable(FontFace.GetTableByTableClass(TPascalTypeVerticalHeaderTable));
 
   // check if vertical metrics header is available
   if VerticalHeader = nil then

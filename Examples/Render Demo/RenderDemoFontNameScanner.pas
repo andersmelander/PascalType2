@@ -3,12 +3,16 @@ unit RenderDemoFontNameScanner;
 interface
 
 uses
-  Windows, Classes, SysUtils, PT_Types, PT_Classes, PT_Tables,
-  PT_Storage, PT_StorageSFNT;
+  Windows, Classes, SysUtils,
+  PT_Types,
+  PT_Classes,
+  PT_Tables,
+  PascalType.FontFace,
+  PascalType.FontFace.SFNT;
 
 type
   TFontScannedEvent = procedure(Sender: TObject; FileName: TFilename;
-    Font: TCustomPascalTypeStorage) of object;
+    Font: TCustomPascalTypeFontFacePersistent) of object;
 
   TFontNameStorageScan = class(TThread)
   private

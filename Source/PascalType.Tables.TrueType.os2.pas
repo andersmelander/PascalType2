@@ -2210,7 +2210,7 @@ can still read the parts we support. The format is forward compatible.
   FWindowsDescent := ReadSwappedWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
-  HorizontalHeader := TPascalTypeHorizontalHeaderTable(Storage.GetTableByTableName('hhea'));
+  HorizontalHeader := TPascalTypeHorizontalHeaderTable(FontFace.GetTableByTableName('hhea'));
   Assert(HorizontalHeader <> nil);
 
   if fsfUseTypoMetrics in FontSelectionFlags then

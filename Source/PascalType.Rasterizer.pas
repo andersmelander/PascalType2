@@ -1,4 +1,4 @@
-unit PT_FontEngine;
+unit PascalType.Rasterizer;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -38,8 +38,8 @@ uses
   Generics.Collections,
   Classes, Sysutils,
   PT_Types,
-  PT_Storage,
-  PT_StorageSFNT,
+  PascalType.FontFace,
+  PascalType.FontFace.SFNT,
   PT_Tables,
   PT_CharacterMap,
   PT_TablesOptional;
@@ -90,9 +90,9 @@ type
     property ContourCount: Integer read GetContourCount;
   end;
 
-  TCustomPascalTypeFontEngine = class(TInterfacedPersistent, IStreamPersist)
+  TCustomPascalTypeRasterizer = class(TInterfacedPersistent, IStreamPersist)
   private
-    FStorage: TPascalTypeStorage;
+    FFontFace: TPascalTypeFontFace;
     FFontHeight: Integer;
     FPixelPerInchX: Integer;
     FPixelPerInchY: Integer;
@@ -129,7 +129,7 @@ type
 
     procedure RenderText(const Text: string);
     procedure RenderCharacter(Character: AnsiChar);
-    property Storage: TPascalTypeStorage read FStorage;
+    property FontFace: TPascalTypeFontFace read FFontFace;
     property ScalerX: TScaleType read FScalerX;
     property ScalerY: TScaleType read FScalerY;
   public
@@ -148,9 +148,9 @@ type
     property PixelPerInchY: Integer read FPixelPerInchY write SetPixelPerInchY default 96;
   end;
 
-  TPascalTypeFontEngine = class(TCustomPascalTypeFontEngine)
+  TPascalTypeFontEngine = class(TCustomPascalTypeRasterizer)
   public
-    property Storage;
+    property FontFace;
   end;
 
 implementation
@@ -201,12 +201,12 @@ begin
 end;
 
 
-{ TCustomPascalTypeFontEngine }
+{ TCustomPascalTypeRasterizer }
 
-constructor TCustomPascalTypeFontEngine.Create;
+constructor TCustomPascalTypeRasterizer.Create;
 begin
   inherited;
-  FStorage := TPascalTypeStorage.Create;
+  FFontFace := TPascalTypeFontFace.Create;
 
   // set default pixel per inch
   FPixelPerInchX := 96;
@@ -214,23 +214,23 @@ begin
   FFontHeight := -11;
 end;
 
-destructor TCustomPascalTypeFontEngine.Destroy;
+destructor TCustomPascalTypeRasterizer.Destroy;
 begin
-  FreeAndNil(FStorage);
+  FreeAndNil(FFontFace);
   inherited;
 end;
 
-procedure TCustomPascalTypeFontEngine.LoadFromFile(const FileName: TFileName);
+procedure TCustomPascalTypeRasterizer.LoadFromFile(const FileName: TFileName);
 begin
-  FStorage.LoadFromFile(FileName);
+  FFontFace.LoadFromFile(FileName);
 
   // calculate font depenent variables
   CalculateScaler;
 end;
 
-procedure TCustomPascalTypeFontEngine.LoadFromStream(Stream: TStream);
+procedure TCustomPascalTypeRasterizer.LoadFromStream(Stream: TStream);
 begin
-  FStorage.LoadFromStream(Stream);
+  FFontFace.LoadFromStream(Stream);
 
   // calculate font depenent variables
   CalculateScaler;
@@ -238,17 +238,17 @@ begin
   // SetLength(FScaledGlyphs
 end;
 
-procedure TCustomPascalTypeFontEngine.SaveToFile(const FileName: TFileName);
+procedure TCustomPascalTypeRasterizer.SaveToFile(const FileName: TFileName);
 begin
-  FStorage.SaveToFile(FileName);
+  FFontFace.SaveToFile(FileName);
 end;
 
-procedure TCustomPascalTypeFontEngine.SaveToStream(Stream: TStream);
+procedure TCustomPascalTypeRasterizer.SaveToStream(Stream: TStream);
 begin
-  FStorage.SaveToStream(Stream);
+  FFontFace.SaveToStream(Stream);
 end;
 
-procedure TCustomPascalTypeFontEngine.RenderText(const Text: string);
+procedure TCustomPascalTypeRasterizer.RenderText(const Text: string);
 var
   CharIndex: Integer;
 begin
@@ -258,21 +258,21 @@ begin
   end;
 end;
 
-procedure TCustomPascalTypeFontEngine.RenderCharacter(Character: AnsiChar);
+procedure TCustomPascalTypeRasterizer.RenderCharacter(Character: AnsiChar);
 begin
 end;
 
-procedure TCustomPascalTypeFontEngine.PixelPerInchXChanged;
-begin
-  // nothing in here yet (trigger recalculation of cache here soon!)
-end;
-
-procedure TCustomPascalTypeFontEngine.PixelPerInchYChanged;
+procedure TCustomPascalTypeRasterizer.PixelPerInchXChanged;
 begin
   // nothing in here yet (trigger recalculation of cache here soon!)
 end;
 
-procedure TCustomPascalTypeFontEngine.ClearScaledGlyphs;
+procedure TCustomPascalTypeRasterizer.PixelPerInchYChanged;
+begin
+  // nothing in here yet (trigger recalculation of cache here soon!)
+end;
+
+procedure TCustomPascalTypeRasterizer.ClearScaledGlyphs;
 var
   GlyphIndex: Integer;
 begin
@@ -281,14 +281,14 @@ begin
   SetLength(FScaledGlyphs, 0);
 end;
 
-procedure TCustomPascalTypeFontEngine.PrecalculateScaledGlyphs;
+procedure TCustomPascalTypeRasterizer.PrecalculateScaledGlyphs;
 var
   GlyphIndex: Integer;
   // HDMXTable: TPascalTypeHorizontalDeviceMetricsSubTable;
 begin
   ClearScaledGlyphs;
-  with Storage do
-    for GlyphIndex := 0 to Storage.GlyphCount - 1 do
+  with FontFace do
+    for GlyphIndex := 0 to FontFace.GlyphCount - 1 do
     begin
       FScaledGlyphs[GlyphIndex] := TPascalTypeScaledGlyph.Create;
 
@@ -309,7 +309,7 @@ begin
     end;
 end;
 
-function TCustomPascalTypeFontEngine.RoundedScaleX(Value: Integer): Integer;
+function TCustomPascalTypeRasterizer.RoundedScaleX(Value: Integer): Integer;
 begin
 {$IFDEF UseFloatingPoint}
   Result := Round(Value * ScalerX);
@@ -318,7 +318,7 @@ begin
 {$ENDIF}
 end;
 
-function TCustomPascalTypeFontEngine.RoundedScaleY(Value: Integer): Integer;
+function TCustomPascalTypeRasterizer.RoundedScaleY(Value: Integer): Integer;
 begin
 {$IFDEF UseFloatingPoint}
   Result := Round(Value * ScalerY);
@@ -327,47 +327,47 @@ begin
 {$ENDIF}
 end;
 
-procedure TCustomPascalTypeFontEngine.FontHeightChanged;
+procedure TCustomPascalTypeRasterizer.FontHeightChanged;
 begin
   CalculateScaler;
 end;
 
-procedure TCustomPascalTypeFontEngine.CalculateScaler;
+procedure TCustomPascalTypeRasterizer.CalculateScaler;
 begin
   CalculateScalerX;
   CalculateScalerY;
 end;
 
-procedure TCustomPascalTypeFontEngine.CalculateScalerX;
+procedure TCustomPascalTypeRasterizer.CalculateScalerX;
 begin
 {$IFDEF UseFloatingPoint}
-  FScalerX := Abs(FFontHeight / FStorage.HeaderTable.UnitsPerEm);
+  FScalerX := Abs(FFontHeight / FFontFace.HeaderTable.UnitsPerEm);
 {$ENDIF}
 end;
 
-procedure TCustomPascalTypeFontEngine.CalculateScalerY;
+procedure TCustomPascalTypeRasterizer.CalculateScalerY;
 begin
 {$IFDEF UseFloatingPoint}
-  FScalerY := Abs(FFontHeight / FStorage.HeaderTable.UnitsPerEm);
+  FScalerY := Abs(FFontHeight / FFontFace.HeaderTable.UnitsPerEm);
 {$ENDIF}
 end;
 
-function TCustomPascalTypeFontEngine.GetAdvanceWidth(GlyphIndex: Integer): TScaleType;
+function TCustomPascalTypeRasterizer.GetAdvanceWidth(GlyphIndex: Integer): TScaleType;
 begin
-  Result := RoundedScaleX(Storage.GetAdvanceWidth(GlyphIndex));
+  Result := RoundedScaleX(FontFace.GetAdvanceWidth(GlyphIndex));
 end;
 
-function TCustomPascalTypeFontEngine.GetFontName: string;
+function TCustomPascalTypeRasterizer.GetFontName: string;
 begin
-  Result := FStorage.FontName;
+  Result := FFontFace.FontName;
 end;
 
-function TCustomPascalTypeFontEngine.GetFontSize: Integer;
+function TCustomPascalTypeRasterizer.GetFontSize: Integer;
 begin
   Result := -Int64(FFontHeight * 72) div FPixelPerInchY;
 end;
 
-function TCustomPascalTypeFontEngine.GetGlyphByCharacter(Character: Word): Integer;
+function TCustomPascalTypeRasterizer.GetGlyphByCharacter(Character: Word): Integer;
 var
   CharMapIndex: Integer;
 {$IFDEF MSWINDOWS}
@@ -380,11 +380,11 @@ begin
   // direct translate character to glyph (will most probably fail!!!
   Result := Integer(Character);
 
-  for CharMapIndex := 0 to FStorage.CharacterMap.CharacterMapSubtableCount - 1 do
+  for CharMapIndex := 0 to FFontFace.CharacterMap.CharacterMapSubtableCount - 1 do
 {$IFDEF MSWINDOWS}
-    if FStorage.CharacterMap.CharacterMapSubtable[CharMapIndex] is TPascalTypeCharacterMapMicrosoftDirectory then
+    if FFontFace.CharacterMap.CharacterMapSubtable[CharMapIndex] is TPascalTypeCharacterMapMicrosoftDirectory then
     begin
-      CharacterMapDirectory := TPascalTypeCharacterMapMicrosoftDirectory(FStorage.CharacterMap.CharacterMapSubtable[CharMapIndex]);
+      CharacterMapDirectory := TPascalTypeCharacterMapMicrosoftDirectory(FFontFace.CharacterMap.CharacterMapSubtable[CharMapIndex]);
       case CharacterMapDirectory.PlatformSpecificID of
         meUnicodeBMP:
           begin
@@ -408,8 +408,8 @@ begin
             // the font.
             //
             // This works with "Symbol" but not with "Marlett", small letter "a"
-            if (FStorage.OS2Table <> nil) then
-              Character := Word(Integer(Character) - Ord(' ') + FStorage.OS2Table.UnicodeFirstCharacterIndex)
+            if (FFontFace.OS2Table <> nil) then
+              Character := Word(Integer(Character) - Ord(' ') + FFontFace.OS2Table.UnicodeFirstCharacterIndex)
             else
               Character := Word(Integer(Character) - Ord(' ') + $F020);
             Result := CharacterMapDirectory.CharacterToGlyph(Character);
@@ -432,21 +432,21 @@ begin
 {$ENDIF}
 end;
 
-function TCustomPascalTypeFontEngine.GetGlyphByCharacter(Character: WideChar): Integer;
+function TCustomPascalTypeRasterizer.GetGlyphByCharacter(Character: WideChar): Integer;
 begin
   Result := GetGlyphByCharacter(Word(Character));
 end;
 
-function TCustomPascalTypeFontEngine.GetGlyphByCharacter(Character: AnsiChar): Integer;
+function TCustomPascalTypeRasterizer.GetGlyphByCharacter(Character: AnsiChar): Integer;
 begin
   Result := GetGlyphByCharacter(Word(Character));
 end;
 
-function TCustomPascalTypeFontEngine.GetGlyphMetric(GlyphIndex: Integer): TGlyphMetric;
+function TCustomPascalTypeRasterizer.GetGlyphMetric(GlyphIndex: Integer): TGlyphMetric;
 var
   TrueTypeGlyphMetric: TTrueTypeGlyphMetric;
 begin
-  TrueTypeGlyphMetric := Storage.GetGlyphMetric(GlyphIndex);
+  TrueTypeGlyphMetric := FontFace.GetGlyphMetric(GlyphIndex);
 
   Result.HorizontalMetric.AdvanceWidth := RoundedScaleX(TrueTypeGlyphMetric.HorizontalMetric.AdvanceWidth);
   Result.HorizontalMetric.Bearing := RoundedScaleX(TrueTypeGlyphMetric.HorizontalMetric.AdvanceWidth);
@@ -454,17 +454,17 @@ begin
   Result.VerticalMetric.TopSideBearing := RoundedScaleY(TrueTypeGlyphMetric.VerticalMetric.TopSideBearing);
 end;
 
-function TCustomPascalTypeFontEngine.GetKerning(Last, Next: Integer): TScaleType;
+function TCustomPascalTypeRasterizer.GetKerning(Last, Next: Integer): TScaleType;
 begin
-  Result := RoundedScaleX(Storage.GetKerning(Last, Next));
+  Result := RoundedScaleX(FontFace.GetKerning(Last, Next));
 end;
 
-procedure TCustomPascalTypeFontEngine.SetFontSize(const Value: Integer);
+procedure TCustomPascalTypeRasterizer.SetFontSize(const Value: Integer);
 begin
   FontHeight := -Int64(Value * FPixelPerInchY) div 72;
 end;
 
-procedure TCustomPascalTypeFontEngine.SetFontHeight(const Value: Integer);
+procedure TCustomPascalTypeRasterizer.SetFontHeight(const Value: Integer);
 begin
   if FFontHeight <> Value then
   begin
@@ -473,7 +473,7 @@ begin
   end;
 end;
 
-procedure TCustomPascalTypeFontEngine.SetPixelPerInchX(const Value: Integer);
+procedure TCustomPascalTypeRasterizer.SetPixelPerInchX(const Value: Integer);
 begin
   if FPixelPerInchX <> Value then
   begin
@@ -482,7 +482,7 @@ begin
   end;
 end;
 
-procedure TCustomPascalTypeFontEngine.SetPixelPerInchY(const Value: Integer);
+procedure TCustomPascalTypeRasterizer.SetPixelPerInchY(const Value: Integer);
 begin
   if FPixelPerInchY <> Value then
   begin

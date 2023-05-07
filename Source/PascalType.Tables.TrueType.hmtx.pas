@@ -126,9 +126,9 @@ const
 begin
   inherited;
 
-  HorHead := TPascalTypeHorizontalHeaderTable(Storage.GetTableByTableName('hhea'));
+  HorHead := TPascalTypeHorizontalHeaderTable(FontFace.GetTableByTableName('hhea'));
   Assert(HorHead <> nil);
-  MaxProf := TPascalTypeMaximumProfileTable(Storage.GetTableByTableType(CMaxProfTableType));
+  MaxProf := TPascalTypeMaximumProfileTable(FontFace.GetTableByTableType(CMaxProfTableType));
   Assert(MaxProf <> nil);
 
   // check if vertical metrics header is available
@@ -172,7 +172,7 @@ begin
   inherited;
 
   // locate horizontal header
-  HorHead := TPascalTypeHorizontalHeaderTable(Storage.GetTableByTableName('hhea'));
+  HorHead := TPascalTypeHorizontalHeaderTable(FontFace.GetTableByTableName('hhea'));
 
   // check if vertical metrics header is available
   if HorHead = nil then

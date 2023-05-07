@@ -111,13 +111,13 @@
         <DCCReference Include="..\..\Source\PT_ByteCodeInterpreter.pas"/>
         <DCCReference Include="..\..\Source\PT_Classes.pas"/>
         <DCCReference Include="..\..\Source\PT_CharacterMap.pas"/>
-        <DCCReference Include="..\..\Source\PT_FontEngine.pas"/>
-        <DCCReference Include="..\..\Source\PT_FontEngineGDI.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Rasterizer.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Rasterizer.GDI.pas"/>
         <DCCReference Include="..\..\Source\PT_Math.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.Panose.Classifications.pas"/>
         <DCCReference Include="..\..\Source\PT_ResourceStrings.pas"/>
-        <DCCReference Include="..\..\Source\PT_Storage.pas"/>
-        <DCCReference Include="..\..\Source\PT_StorageSFNT.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.FontFace.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.FontFace.SFNT.pas"/>
         <DCCReference Include="..\..\Source\PT_TableDirectory.pas"/>
         <DCCReference Include="..\..\Source\PT_Tables.pas"/>
         <DCCReference Include="..\..\Source\PT_TablesApple.pas"/>
@@ -162,6 +162,7 @@
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.vhea.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.os2.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.Panose.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Rasterizer.Graphics32.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

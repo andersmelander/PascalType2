@@ -54,14 +54,14 @@ type
   TCustomPascalTypeNamedTable = class;
   TCustomPascalTypeNamedTableClass = class of TCustomPascalTypeNamedTable;
 
-  IPascalTypeStorageTable = interface(IUnknown)
+  IPascalTypeFontFace = interface(IUnknown)
     ['{A990D67B-BC60-4DA4-9D90-3C1D30AEC003}']
     function GetTableByTableName(const TableName: TTableName): TCustomPascalTypeNamedTable;
     function GetTableByTableType(TableType: TTableType): TCustomPascalTypeNamedTable;
     function GetTableByTableClass(TableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable;
   end;
 
-  IPascalTypeStorageChange = interface(IUnknown)
+  IPascalTypeFontFaceChange = interface(IUnknown)
     ['{4C10BAEF-04DB-42D0-9A6C-5FE155E80AEB}']
     procedure Changed;
   end;
@@ -72,7 +72,7 @@ type
     FParent: TCustomPascalTypeTable;
   protected
     procedure Changed; virtual;
-    function GetStorage: IPascalTypeStorageTable; virtual;
+    function GetFontFace: IPascalTypeFontFace; virtual;
 //    constructor CreateHidden;
   public
     constructor Create(AParent: TCustomPascalTypeTable = nil); virtual;
@@ -83,19 +83,19 @@ type
     procedure SaveToStream(Stream: TStream); virtual; abstract;
 
     property Parent: TCustomPascalTypeTable read FParent;
-    property Storage: IPascalTypeStorageTable read GetStorage;
+    property FontFace: IPascalTypeFontFace read GetFontFace;
   end;
   TPascalTypeTableClass = class of TCustomPascalTypeTable;
 
 
   TXCustomPascalTypeInterfaceTable = class(TCustomPascalTypeTable)
   private
-    FStorage: IPascalTypeStorageTable;
+    FFontFace: IPascalTypeFontFace;
   protected
     procedure Changed; override;
-    property Storage: IPascalTypeStorageTable read FStorage;
+    property FontFace: IPascalTypeFontFace read FFontFace;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); reintroduce; overload; virtual;
+    constructor Create(const AFontFace: IPascalTypeFontFace); reintroduce; overload; virtual;
   end;
   TXCustomPascalTypeInterfaceTableClass = class of TXCustomPascalTypeInterfaceTable;
 
@@ -312,10 +312,10 @@ begin
 end;
 *)
 
-function TCustomPascalTypeTable.GetStorage: IPascalTypeStorageTable;
+function TCustomPascalTypeTable.GetFontFace: IPascalTypeFontFace;
 begin
   if (Parent <> nil) then
-    Result := Parent.Storage
+    Result := Parent.FontFace
   else
     Result := nil;
 end;
@@ -344,10 +344,10 @@ begin
   // then (FStorage as IPascalTypeStorageChange).Changed;
 end;
 
-constructor TXCustomPascalTypeInterfaceTable.Create(const AStorage: IPascalTypeStorageTable);
+constructor TXCustomPascalTypeInterfaceTable.Create(const AFontFace: IPascalTypeFontFace);
 begin
   inherited Create;
-  FStorage := AStorage;
+  FFontFace := AFontFace;
 end;
 
 { TCustomPascalTypeNamedTable }

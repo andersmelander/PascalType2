@@ -6,13 +6,13 @@ uses
   PT_ByteCodeInterpreter in '..\..\Source\PT_ByteCodeInterpreter.pas',
   PT_Classes in '..\..\Source\PT_Classes.pas',
   PT_CharacterMap in '..\..\Source\PT_CharacterMap.pas',
-  PT_FontEngine in '..\..\Source\PT_FontEngine.pas',
-  PT_FontEngineGDI in '..\..\Source\PT_FontEngineGDI.pas',
+  PascalType.Rasterizer in '..\..\Source\PascalType.Rasterizer.pas',
+  PascalType.Rasterizer.GDI in '..\..\Source\PascalType.Rasterizer.GDI.pas',
   PT_Math in '..\..\Source\PT_Math.pas',
   PascalType.Tables.TrueType.Panose.Classifications in '..\..\Source\PascalType.Tables.TrueType.Panose.Classifications.pas',
   PT_ResourceStrings in '..\..\Source\PT_ResourceStrings.pas',
-  PT_Storage in '..\..\Source\PT_Storage.pas',
-  PT_StorageSFNT in '..\..\Source\PT_StorageSFNT.pas',
+  PascalType.FontFace in '..\..\Source\PascalType.FontFace.pas',
+  PascalType.FontFace.SFNT in '..\..\Source\PascalType.FontFace.SFNT.pas',
   PT_TableDirectory in '..\..\Source\PT_TableDirectory.pas',
   PT_Tables in '..\..\Source\PT_Tables.pas',
   PT_TablesApple in '..\..\Source\PT_TablesApple.pas',
@@ -56,7 +56,8 @@ uses
   PascalType.Tables.TrueType.hhea in '..\..\Source\PascalType.Tables.TrueType.hhea.pas',
   PascalType.Tables.TrueType.vhea in '..\..\Source\PascalType.Tables.TrueType.vhea.pas',
   PascalType.Tables.TrueType.os2 in '..\..\Source\PascalType.Tables.TrueType.os2.pas',
-  PascalType.Tables.TrueType.Panose in '..\..\Source\PascalType.Tables.TrueType.Panose.pas';
+  PascalType.Tables.TrueType.Panose in '..\..\Source\PascalType.Tables.TrueType.Panose.pas',
+  PascalType.Rasterizer.Graphics32 in '..\..\Source\PascalType.Rasterizer.Graphics32.pas';
 
 {$R *.res}
 

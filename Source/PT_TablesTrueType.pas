@@ -280,11 +280,11 @@ var
   MaxProfTable : TPascalTypeMaximumProfileTable;
 begin
   // get header table
-  HeaderTable := TPascalTypeHeaderTable(Storage.GetTableByTableName('head'));
+  HeaderTable := TPascalTypeHeaderTable(FontFace.GetTableByTableName('head'));
   Assert(HeaderTable <> nil);
 
   // get maximum profile table
-  MaxProfTable := TPascalTypeMaximumProfileTable(Storage.GetTableByTableName('maxp'));
+  MaxProfTable := TPascalTypeMaximumProfileTable(FontFace.GetTableByTableName('maxp'));
   Assert(MaxProfTable <> nil);
 
   case HeaderTable.IndexToLocationFormat of
@@ -332,11 +332,11 @@ var
   MaxProfTable : TPascalTypeMaximumProfileTable;
 begin
   // get header table
-  HeaderTable := TPascalTypeHeaderTable(Storage.GetTableByTableName('head'));
+  HeaderTable := TPascalTypeHeaderTable(FontFace.GetTableByTableName('head'));
   Assert(HeaderTable <> nil);
 
   // get maximum profile table
-  MaxProfTable := TPascalTypeMaximumProfileTable(Storage.GetTableByTableName('maxp'));
+  MaxProfTable := TPascalTypeMaximumProfileTable(FontFace.GetTableByTableName('maxp'));
   Assert(MaxProfTable <> nil);
 
   // check whether the number of glyps matches the location array length

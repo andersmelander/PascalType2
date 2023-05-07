@@ -893,7 +893,7 @@ var
 begin
   inherited;
 
-  MaxProfile := TPascalTypeMaximumProfileTable(Storage.GetTableByTableName('maxp'));
+  MaxProfile := TPascalTypeMaximumProfileTable(FontFace.GetTableByTableName('maxp'));
 
   with Stream do
   begin

@@ -3151,7 +3151,7 @@ begin
     ExtraInfo := ReadSwappedCardinal(Stream);
 
     // get maximum profile table
-    MaxProfile := TPascalTypeMaximumProfileTable(Storage.GetTableByTableType('maxp'));
+    MaxProfile := TPascalTypeMaximumProfileTable(FontFace.GetTableByTableType('maxp'));
     Assert(MaxProfile <> nil);
 
     // set length of offset array

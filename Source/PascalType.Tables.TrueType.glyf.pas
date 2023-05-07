@@ -378,7 +378,7 @@ var
   Value16   : Word;
   MaxProfile: TPascalTypeMaximumProfileTable;
 begin
-  MaxProfile := TPascalTypeMaximumProfileTable(Storage.GetTableByTableName('maxp'));
+  MaxProfile := TPascalTypeMaximumProfileTable(FontFace.GetTableByTableName('maxp'));
   Assert(MaxProfile <> nil);
 
   // read instruction size
@@ -435,7 +435,7 @@ var
   GlyphDataTable: TTrueTypeFontGlyphDataTable;
   i: Integer;
 begin
-  GlyphDataTable := TTrueTypeFontGlyphDataTable(Storage.GetTableByTableName('glyf'));
+  GlyphDataTable := TTrueTypeFontGlyphDataTable(FontFace.GetTableByTableName('glyf'));
 
   Result := -1;
 
@@ -470,7 +470,7 @@ var
   MaxProfile: TPascalTypeMaximumProfileTable;
 begin
   // get maximum profile
-  MaxProfile := TPascalTypeMaximumProfileTable(Storage.GetTableByTableClass(TPascalTypeMaximumProfileTable));
+  MaxProfile := TPascalTypeMaximumProfileTable(FontFace.GetTableByTableClass(TPascalTypeMaximumProfileTable));
 
   if Stream.Position + SizeOf(SmallInt) > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
@@ -762,7 +762,7 @@ begin
     Exit;
 
   // Get maximum profile
-  MaxProfile := TPascalTypeMaximumProfileTable(Storage.GetTableByTableClass(TPascalTypeMaximumProfileTable));
+  MaxProfile := TPascalTypeMaximumProfileTable(FontFace.GetTableByTableClass(TPascalTypeMaximumProfileTable));
 
   // set end points of contours array size
   SetLength(EndPointIndexOfContour, FNumberOfContours);
@@ -1205,7 +1205,7 @@ begin
   Result := 0;
 
 
-  GlyphDataTable := TTrueTypeFontGlyphDataTable(Storage.GetTableByTableName('glyf'));
+  GlyphDataTable := TTrueTypeFontGlyphDataTable(FontFace.GetTableByTableName('glyf'));
   if (GlyphDataTable = nil) then
     exit;
 
@@ -1347,7 +1347,7 @@ var
   Value16  : SmallInt;
 begin
   // get location table
-  Locations := TTrueTypeFontLocationTable(Storage.GetTableByTableName('loca'));
+  Locations := TTrueTypeFontLocationTable(FontFace.GetTableByTableName('loca'));
   if (Locations = nil) then
     raise EPascalTypeError.Create(RCStrNoIndexToLocationTable);
 

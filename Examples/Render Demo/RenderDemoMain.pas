@@ -4,10 +4,14 @@ interface
 
 uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  StdCtrls, ExtCtrls, PT_Types, PT_Classes, PT_Tables, PT_Storage,
-  PT_StorageSFNT,
-  PT_FontEngineGDI,
-  PT_FontEngineGR32,
+  StdCtrls, ExtCtrls,
+  PT_Types,
+  PT_Classes,
+  PT_Tables,
+  PascalType.FontFace,
+  PascalType.FontFace.SFNT,
+  PascalType.Rasterizer.GDI,
+  PascalType.Rasterizer.Graphics32,
   PT_Windows,
   RenderDemoFontNameScanner;
 
@@ -44,16 +48,15 @@ type
     procedure RadioButtonWindowsClick(Sender: TObject);
     procedure RadioButtonGraphics32Click(Sender: TObject);
   private
-    FFontEngine  : TPascalTypeFontEngineGDI;
-    FFontEngine32: TPascalTypeFontEngineGR32;
+    FRasterizerGDI  : TPascalTypeFontRasterizerGDI;
+    FRasterizerGraphics32: TPascalTypeRasterizerGraphics32;
     FFontScanner : TFontNameStorageScan;
     FFontArray   : array of TFontNameFile;
     FBitmap      : TBitmap;
     FText        : string;
     FFontSize    : Integer;
     FFontName    : string;
-    procedure FontScannedHandler(Sender: TObject; FontFileName: TFilename;
-      Font: TCustomPascalTypeStorage);
+    procedure FontScannedHandler(Sender: TObject; FontFileName: TFilename; Font: TCustomPascalTypeFontFacePersistent);
     procedure SetText(const Value: string);
     procedure SetFontSize(const Value: Integer);
     procedure SetFontName(const Value: string);
@@ -91,13 +94,13 @@ begin
  FBitmap := TBitmap.Create;
 
  // create FontEngine
- FFontEngine := TPascalTypeFontEngineGDI.Create;
- FFontEngine32 := TPascalTypeFontEngineGR32.Create;
+ FRasterizerGDI := TPascalTypeFontRasterizerGDI.Create;
+ FRasterizerGraphics32 := TPascalTypeRasterizerGraphics32.Create;
 
  // set initial properties
  FBitmap.Canvas.Font.Size := StrToInt(ComboBoxFontSize.Text);
- FFontEngine.FontSize := StrToInt(ComboBoxFontSize.Text);
- FFontEngine32.FontSize := StrToInt(ComboBoxFontSize.Text);
+ FRasterizerGDI.FontSize := StrToInt(ComboBoxFontSize.Text);
+ FRasterizerGraphics32.FontSize := StrToInt(ComboBoxFontSize.Text);
 
  FFontScanner := TFontNameStorageScan.Create(True);
  with FFontScanner do
@@ -110,8 +113,8 @@ end;
 procedure TFmRenderDemo.FormDestroy(Sender: TObject);
 begin
  // free FontEngine
- FreeAndNil(FFontEngine);
- FreeAndNil(FFontEngine32);
+ FreeAndNil(FRasterizerGDI);
+ FreeAndNil(FRasterizerGraphics32);
 
  FBitmap.Free;
 
@@ -158,8 +161,8 @@ begin
  for FontIndex := 0 to High(FFontArray) do
   if FFontArray[FontIndex].FullFontName = FFontName then
    begin
-    FFontEngine.LoadFromFile(FFontArray[FontIndex].FileName);
-    FFontEngine32.LoadFromFile(FFontArray[FontIndex].FileName);
+    FRasterizerGDI.LoadFromFile(FFontArray[FontIndex].FileName);
+    FRasterizerGraphics32.LoadFromFile(FFontArray[FontIndex].FileName);
     Break;
    end;
 
@@ -169,8 +172,8 @@ end;
 procedure TFmRenderDemo.FontSizeChanged;
 begin
  FBitmap.Canvas.Font.Size := FFontSize;
- FFontEngine.FontSize := FFontSize;
- FFontEngine32.FontSize := FFontSize;
+ FRasterizerGDI.FontSize := FFontSize;
+ FRasterizerGraphics32.FontSize := FFontSize;
  RenderText;
 end;
 
@@ -210,7 +213,7 @@ begin
     end;
 
    if RadioButtonPascalType.Checked then
-     FFontEngine.RenderText(FText, Canvas, 0, 0)
+     FRasterizerGDI.RenderText(FText, Canvas, 0, 0)
    else
    if RadioButtonGraphics32.Checked then
    begin
@@ -230,8 +233,10 @@ begin
          var BrushStroke := Canvas32.Brushes.Add(TStrokeBrush) as TStrokeBrush;
          BrushStroke.FillColor := clTrRed32;
          BrushStroke.StrokeWidth := 1;
+         BrushStroke.JoinStyle := jsMiter;
+         BrushStroke.EndStyle := esButt;
 //*)
-         FFontEngine32.RenderText(FText, Canvas32);
+         FRasterizerGraphics32.RenderText(FText, Canvas32);
        finally
          Canvas32.Free;
        end;
@@ -290,12 +295,12 @@ begin
 end;
 
 procedure TFmRenderDemo.FontScannedHandler(Sender: TObject; FontFileName: TFilename;
-  Font: TCustomPascalTypeStorage);
+  Font: TCustomPascalTypeFontFacePersistent);
 var
   CurrentFontName : string;
 begin
  // add font name to font combo box
- CurrentFontName := TCustomPascalTypeStorageSFNT(Font).FontName;
+ CurrentFontName := TCustomPascalTypeFontFace(Font).FontName;
  ComboBoxFont.Items.Add(CurrentFontName);
 
  SetLength(FFontArray, Length(FFontArray) + 1);

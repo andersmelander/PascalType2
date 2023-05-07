@@ -1,4 +1,4 @@
-unit PT_StorageSFNT;
+unit PascalType.FontFace.SFNT;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -43,7 +43,7 @@ uses
   Classes, SysUtils, Types,
   PT_Types,
   PT_Classes,
-  PT_Storage,
+  PascalType.FontFace,
   PT_Tables,
   PT_TableDirectory,
   PascalType.Tables.TrueType.hmtx,
@@ -59,7 +59,7 @@ type
   end;
 
 type
-  TCustomPascalTypeStorageSFNT = class(TCustomPascalTypeStorage, IPascalTypeStorageTable)
+  TCustomPascalTypeFontFace = class abstract(TCustomPascalTypeFontFacePersistent, IPascalTypeFontFace)
   strict private
     FRootTable: TCustomPascalTypeTable;
     // required tables
@@ -95,6 +95,10 @@ type
 
     procedure LoadFromStream(Stream: TStream); override;
 
+    function GetGlyphByCharacter(Character: Word): Integer; overload; virtual; abstract;
+    function GetGlyphByCharacter(Character: WideChar): Integer; overload;
+    function GetGlyphByCharacter(Character: AnsiChar): Integer; overload;
+
     // required tables
     property HeaderTable: TPascalTypeHeaderTable read FHeaderTable;
     property HorizontalHeader: TPascalTypeHorizontalHeaderTable read FHorizontalHeader;
@@ -111,14 +115,14 @@ type
     property UniqueIdentifier: WideString read GetUniqueIdentifier;
   end;
 
-  TPascalTypeStorageScan = class(TCustomPascalTypeStorageSFNT)
+  TPascalTypeStorageScan = class(TCustomPascalTypeFontFace)
   protected
     procedure LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry); override;
   public
     procedure SaveToStream(Stream: TStream); override;
   end;
 
-  TPascalTypeStorage = class(TCustomPascalTypeStorageSFNT)
+  TPascalTypeFontFace = class(TCustomPascalTypeFontFace)
   strict private
     // required tables
     FHorizontalMetrics: TPascalTypeHorizontalMetricsTable;
@@ -152,6 +156,8 @@ type
     function GetGlyphMetric(GlyphIndex: Word): TTrueTypeGlyphMetric;
     function GetAdvanceWidth(GlyphIndex: Word): Word; deprecated 'Use GetGlyphMetric';
     function GetKerning(Last, Next: Word): Word;
+
+    function GetGlyphByCharacter(Character: Word): Integer; override;
 
     function GetGlyphPath(GlyphIndex: Word): TPascalTypePath; // TODO : Use TFloatPoint
 
@@ -298,30 +304,30 @@ begin
 end;
 
 
-{ TCustomPascalTypeStorageSFNT }
+{ TCustomPascalTypeFontFace }
 
 type
   TPascalTypeTableRoot = class(TCustomPascalTypeTable)
   private
-    FStorage: IPascalTypeStorageTable;
+    FStorage: IPascalTypeFontFace;
   protected
-    function GetStorage: IPascalTypeStorageTable; override;
+    function GetFontFace: IPascalTypeFontFace; override;
   public
-    constructor Create(const AStorage: IPascalTypeStorageTable); reintroduce;
+    constructor Create(const AStorage: IPascalTypeFontFace); reintroduce;
   end;
 
-constructor TPascalTypeTableRoot.Create(const AStorage: IPascalTypeStorageTable);
+constructor TPascalTypeTableRoot.Create(const AStorage: IPascalTypeFontFace);
 begin
   inherited Create;
   FStorage := AStorage;
 end;
 
-function TPascalTypeTableRoot.GetStorage: IPascalTypeStorageTable;
+function TPascalTypeTableRoot.GetFontFace: IPascalTypeFontFace;
 begin
   Result := FStorage;
 end;
 
-constructor TCustomPascalTypeStorageSFNT.Create;
+constructor TCustomPascalTypeFontFace.Create;
 begin
   inherited;
   FRootTable := TPascalTypeTableRoot.Create(Self);
@@ -334,7 +340,7 @@ begin
   FPostScriptTable := TPascalTypePostscriptTable.Create(FRootTable);
 end;
 
-destructor TCustomPascalTypeStorageSFNT.Destroy;
+destructor TCustomPascalTypeFontFace.Destroy;
 begin
   FreeAndNil(FHeaderTable);
   FreeAndNil(FHorizontalHeader);
@@ -344,13 +350,13 @@ begin
   inherited;
 end;
 
-procedure TCustomPascalTypeStorageSFNT.DirectoryTableLoaded(DirectoryTable: TPascalTypeDirectoryTable);
+procedure TCustomPascalTypeFontFace.DirectoryTableLoaded(DirectoryTable: TPascalTypeDirectoryTable);
 begin
   // optimize table read order
   DirectoryTable.TableList.Sort;
 end;
 
-function TCustomPascalTypeStorageSFNT.GetFontFamilyName: WideString;
+function TCustomPascalTypeFontFace.GetFontFamilyName: WideString;
 var
   NameSubTableIndex: Integer;
 begin
@@ -369,7 +375,7 @@ begin
           end;
 end;
 
-function TCustomPascalTypeStorageSFNT.GetFontSubFamilyName: WideString;
+function TCustomPascalTypeFontFace.GetFontSubFamilyName: WideString;
 var
   NameSubTableIndex: Integer;
 begin
@@ -393,7 +399,7 @@ begin
           end;
 end;
 
-function TCustomPascalTypeStorageSFNT.GetFontVersion: WideString;
+function TCustomPascalTypeFontFace.GetFontVersion: WideString;
 var
   NameSubTableIndex: Integer;
 begin
@@ -417,7 +423,7 @@ begin
           end;
 end;
 
-function TCustomPascalTypeStorageSFNT.GetUniqueIdentifier: WideString;
+function TCustomPascalTypeFontFace.GetUniqueIdentifier: WideString;
 var
   NameSubTableIndex: Integer;
 begin
@@ -441,7 +447,7 @@ begin
           end;
 end;
 
-function TCustomPascalTypeStorageSFNT.GetFontName: WideString;
+function TCustomPascalTypeFontFace.GetFontName: WideString;
 var
   NameSubTableIndex: Integer;
 begin
@@ -465,7 +471,7 @@ begin
           end;
 end;
 
-function TCustomPascalTypeStorageSFNT.GetFontStyle: TFontStyles;
+function TCustomPascalTypeFontFace.GetFontStyle: TFontStyles;
 begin
   if msItalic in FHeaderTable.MacStyle then
     Result := [fsItalic]
@@ -477,7 +483,7 @@ begin
     Result := Result + [fsUnderline];
 end;
 
-function TCustomPascalTypeStorageSFNT.GetTableByTableClass(ATableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable;
+function TCustomPascalTypeFontFace.GetTableByTableClass(ATableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable;
 begin
   // return nil if the table hasn't been found
 
@@ -499,7 +505,7 @@ begin
     Result := nil;
 end;
 
-function TCustomPascalTypeStorageSFNT.GetTableByTableName(const ATableName: TTableName): TCustomPascalTypeNamedTable;
+function TCustomPascalTypeFontFace.GetTableByTableName(const ATableName: TTableName): TCustomPascalTypeNamedTable;
 begin
   // return nil if the table hasn't been found
 
@@ -521,7 +527,7 @@ begin
     Result := nil;
 end;
 
-function TCustomPascalTypeStorageSFNT.GetTableByTableType(ATableType: TTableType): TCustomPascalTypeNamedTable;
+function TCustomPascalTypeFontFace.GetTableByTableType(ATableType: TTableType): TCustomPascalTypeNamedTable;
 begin
   // return nil if the table hasn't been found
   if ATableType.AsCardinal = HeaderTable.TableType.AsCardinal then
@@ -542,7 +548,7 @@ begin
     Result := nil;
 end;
 
-procedure TCustomPascalTypeStorageSFNT.LoadFromStream(Stream: TStream);
+procedure TCustomPascalTypeFontFace.LoadFromStream(Stream: TStream);
 var
   DirectoryTable: TPascalTypeDirectoryTable;
   TableIndex    : Integer;
@@ -621,7 +627,7 @@ end;
 
 {$IFDEF ChecksumTest}
 
-procedure TCustomPascalTypeStorageSFNT.ValidateChecksum(Stream: TStream;
+procedure TCustomPascalTypeFontFace.ValidateChecksum(Stream: TStream;
   TableEntry: TPascalTypeDirectoryTableEntry);
 var
   Checksum: Cardinal;
@@ -652,6 +658,16 @@ begin
       [string(TableEntry.TableType)]);
 end;
 {$ENDIF}
+
+function TCustomPascalTypeFontFace.GetGlyphByCharacter(Character: WideChar): Integer;
+begin
+  Result := GetGlyphByCharacter(Word(Character));
+end;
+
+function TCustomPascalTypeFontFace.GetGlyphByCharacter(Character: AnsiChar): Integer;
+begin
+  Result := GetGlyphByCharacter(Word(Character));
+end;
 
 
 { TPascalTypeStorageScan }
@@ -695,9 +711,9 @@ begin
 end;
 
 
-{ TPascalTypeStorage }
+{ TPascalTypeFontFace }
 
-constructor TPascalTypeStorage.Create;
+constructor TPascalTypeFontFace.Create;
 begin
   inherited;
 
@@ -709,7 +725,7 @@ begin
   FOptionalTables := TObjectList<TCustomPascalTypeNamedTable>.Create;
 end;
 
-destructor TPascalTypeStorage.Destroy;
+destructor TPascalTypeFontFace.Destroy;
 begin
   FreeAndNil(FHorizontalMetrics);
   FreeAndNil(FCharacterMap);
@@ -718,7 +734,7 @@ begin
   inherited;
 end;
 
-procedure TPascalTypeStorage.DirectoryTableLoaded(DirectoryTable: TPascalTypeDirectoryTable);
+procedure TPascalTypeFontFace.DirectoryTableLoaded(DirectoryTable: TPascalTypeDirectoryTable);
 begin
   inherited;
 
@@ -729,7 +745,7 @@ begin
   FreeAndNil(FOS2Table);
 end;
 
-function TPascalTypeStorage.GetAdvanceWidth(GlyphIndex: Word): Word;
+function TPascalTypeFontFace.GetAdvanceWidth(GlyphIndex: Word): Word;
 begin
   if (GlyphIndex < FHorizontalMetrics.HorizontalMetricCount) then
     Result := FHorizontalMetrics.HorizontalMetric[GlyphIndex].AdvanceWidth
@@ -737,7 +753,7 @@ begin
     Result := FHorizontalMetrics.HorizontalMetric[0].AdvanceWidth;
 end;
 
-function TPascalTypeStorage.GetBoundingBox: TRect;
+function TPascalTypeFontFace.GetBoundingBox: TRect;
 begin
   Result.Left := HeaderTable.XMin;
   Result.Top := HeaderTable.YMax;
@@ -745,12 +761,12 @@ begin
   Result.Bottom := HeaderTable.YMin;
 end;
 
-function TPascalTypeStorage.GetGlyphCount: Word;
+function TPascalTypeFontFace.GetGlyphCount: Word;
 begin
   Result := MaximumProfile.NumGlyphs;
 end;
 
-function TPascalTypeStorage.GetGlyphData(Index: Integer): TCustomPascalTypeGlyphDataTable;
+function TPascalTypeFontFace.GetGlyphData(Index: Integer): TCustomPascalTypeGlyphDataTable;
 var
   GlyphDataTable: TTrueTypeFontGlyphDataTable;
 begin
@@ -762,7 +778,72 @@ begin
       Result := GlyphDataTable.GlyphData[Index];
 end;
 
-function TPascalTypeStorage.GetGlyphMetric(GlyphIndex: Word): TTrueTypeGlyphMetric;
+function TPascalTypeFontFace.GetGlyphByCharacter(Character: Word): Integer;
+var
+  CharMapIndex: Integer;
+{$IFDEF MSWINDOWS}
+  CharacterMapDirectory: TPascalTypeCharacterMapMicrosoftDirectory;
+{$ENDIF}
+{$IFDEF OSX}
+  CharacterMapDirectory: TPascalTypeCharacterMapMacintoshDirectory;
+{$ENDIF}
+begin
+  // direct translate character to glyph (will most probably fail!!!
+  Result := Integer(Character);
+
+  for CharMapIndex := 0 to CharacterMap.CharacterMapSubtableCount - 1 do
+{$IFDEF MSWINDOWS}
+    if CharacterMap.CharacterMapSubtable[CharMapIndex] is TPascalTypeCharacterMapMicrosoftDirectory then
+    begin
+      CharacterMapDirectory := TPascalTypeCharacterMapMicrosoftDirectory(CharacterMap.CharacterMapSubtable[CharMapIndex]);
+      case CharacterMapDirectory.PlatformSpecificID of
+        meUnicodeBMP:
+          begin
+            Result := CharacterMapDirectory.CharacterToGlyph(Integer(Character));
+            // TODO : Only break if result<>0?
+            break;
+          end;
+
+        // meSymbol included. How else are we going to use symbol fonts?
+        // Seen with: "Symbol"
+        meSymbol:
+          begin
+            // https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#windows-platform-platform-id--3
+            //
+            // The symbol encoding was created to support fonts with arbitrary ornaments or symbols
+            // not supported in Unicode or other standard encodings. A format 4 subtable would be used,
+            // typically with up to 224 graphic characters assigned at code positions beginning with 0xF020.
+            // This corresponds to a sub-range within the Unicode Private-Use Area (PUA), though this is not
+            // a Unicode encoding. In legacy usage, some applications would represent the symbol characters
+            // in text using a single-byte encoding, and then map 0x20 to the OS/2.usFirstCharIndex value in
+            // the font.
+            //
+            // This works with "Symbol" but not with "Marlett", small letter "a"
+            if (OS2Table <> nil) then
+              Character := Word(Integer(Character) - Ord(' ') + OS2Table.UnicodeFirstCharacterIndex)
+            else
+              Character := Word(Integer(Character) - Ord(' ') + $F020);
+            Result := CharacterMapDirectory.CharacterToGlyph(Character);
+            // TODO : Only break if result<>0?
+            break;
+          end;
+      end;
+    end;
+{$ENDIF}
+{$IFDEF OSX}
+  if CharacterMap.CharacterMapSubtable[CharMapIndex] is TPascalTypeCharacterMapMacintoshDirectory then
+  begin
+    CharacterMapDirectory := TPascalTypeCharacterMapMacintoshDirectory(CharacterMap.CharacterMapSubtable[CharMapIndex]);
+    if CharacterMapDirectory.PlatformSpecificID = 1 then
+    begin
+      Result := CharacterMapDirectory.CharacterToGlyph(Integer(Character));
+      break;
+    end;
+  end;
+{$ENDIF}
+end;
+
+function TPascalTypeFontFace.GetGlyphMetric(GlyphIndex: Word): TTrueTypeGlyphMetric;
 var
   GlyphDataTable: TTrueTypeFontGlyphDataTable;
 
@@ -823,7 +904,7 @@ begin
     Result.VerticalMetric := VerticalMetricsTable.VerticalMetric[MetricIndex];
 end;
 
-function TPascalTypeStorage.GetGlyphPath(GlyphIndex: Word): TPascalTypePath;
+function TPascalTypeFontFace.GetGlyphPath(GlyphIndex: Word): TPascalTypePath;
 
   procedure AppendPath(var Path: TPascalTypePath; const Append: TPascalTypePath);
   var
@@ -963,7 +1044,7 @@ begin
     Result := GetCompositeGlyphPath(TTrueTypeFontCompositeGlyphData(Glyph));
 end;
 
-function TPascalTypeStorage.GetKerning(Last, Next: Word): Word;
+function TPascalTypeFontFace.GetKerning(Last, Next: Word): Word;
 // var
 // KernTable : TPascalType
 begin
@@ -971,19 +1052,19 @@ begin
   // GetTableByTableType()
 end;
 
-function TPascalTypeStorage.GetOptionalTable(Index: Integer): TCustomPascalTypeNamedTable;
+function TPascalTypeFontFace.GetOptionalTable(Index: Integer): TCustomPascalTypeNamedTable;
 begin
   if (Index < 0) or (Index >= FOptionalTables.Count) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
   Result := FOptionalTables[Index];
 end;
 
-function TPascalTypeStorage.GetOptionalTableCount: Integer;
+function TPascalTypeFontFace.GetOptionalTableCount: Integer;
 begin
   Result := FOptionalTables.Count;
 end;
 
-function TPascalTypeStorage.GetPanose: TCustomPascalTypePanoseTable;
+function TPascalTypeFontFace.GetPanose: TCustomPascalTypePanoseTable;
 begin
   // default result
   Result := nil;
@@ -992,7 +1073,7 @@ begin
     Result := FOS2Table.Panose
 end;
 
-function TPascalTypeStorage.GetTableByTableType(ATableType: TTableType): TCustomPascalTypeNamedTable;
+function TPascalTypeFontFace.GetTableByTableType(ATableType: TTableType): TCustomPascalTypeNamedTable;
 var
   TableIndex: Integer;
 begin
@@ -1012,7 +1093,7 @@ begin
   end;
 end;
 
-function TPascalTypeStorage.GetTableByTableClass(TableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable;
+function TPascalTypeFontFace.GetTableByTableClass(TableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable;
 var
   TableIndex: Integer;
 begin
@@ -1032,7 +1113,7 @@ begin
   end;
 end;
 
-function TPascalTypeStorage.GetTableByTableName(const TableName: TTableName): TCustomPascalTypeNamedTable;
+function TPascalTypeFontFace.GetTableByTableName(const TableName: TTableName): TCustomPascalTypeNamedTable;
 var
   TableIndex: Integer;
 begin
@@ -1052,17 +1133,17 @@ begin
   end;
 end;
 
-function TPascalTypeStorage.ContainsTable(TableType: TTableType): Boolean;
+function TPascalTypeFontFace.ContainsTable(TableType: TTableType): Boolean;
 begin
   Result := GetTableByTableType(TableType) <> nil;
 end;
 
-function TPascalTypeStorage.GetTableCount: Integer;
+function TPascalTypeFontFace.GetTableCount: Integer;
 begin
   Result := 7 + FOptionalTables.Count;
 end;
 
-procedure TPascalTypeStorage.LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry);
+procedure TPascalTypeFontFace.LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry);
 var
   MemoryStream: TMemoryStream;
   TableClass  : TCustomPascalTypeNamedTableClass;
@@ -1160,7 +1241,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeStorage.SaveToStream(Stream: TStream);
+procedure TPascalTypeFontFace.SaveToStream(Stream: TStream);
 var
   DirectoryTable: TPascalTypeDirectoryTable;
   TableIndex    : Integer;

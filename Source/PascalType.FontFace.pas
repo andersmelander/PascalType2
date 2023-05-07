@@ -1,4 +1,4 @@
-unit PT_Storage;
+unit PascalType.FontFace;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -42,7 +42,9 @@ uses
   PT_Tables;
 
 type
-  TCustomPascalTypeStorage = class(TInterfacedPersistent, IStreamPersist, IPascalTypeStorageChange)
+  // TODO : This class can most likely be rolled into the derived class
+  // TCustomPascalTypeFontFace since we will probably only ever have that one derived class.
+  TCustomPascalTypeFontFacePersistent = class abstract(TInterfacedPersistent, IStreamPersist, IPascalTypeFontFaceChange)
   private
     FOnChanged: TNotifyEvent;
   protected
@@ -63,15 +65,15 @@ type
 
 implementation
 
-{ TCustomPascalTypeStorage }
+{ TCustomPascalTypeFontFace }
 
-procedure TCustomPascalTypeStorage.Changed;
+procedure TCustomPascalTypeFontFacePersistent.Changed;
 begin
   if Assigned(FOnChanged) then
     FOnChanged(Self);
 end;
 
-procedure TCustomPascalTypeStorage.LoadFromFile(FileName: TFileName);
+procedure TCustomPascalTypeFontFacePersistent.LoadFromFile(FileName: TFileName);
 var
   FileStream: TFileStream;
 begin
@@ -83,7 +85,7 @@ begin
   end;
 end;
 
-procedure TCustomPascalTypeStorage.SaveToFile(FileName: TFileName);
+procedure TCustomPascalTypeFontFacePersistent.SaveToFile(FileName: TFileName);
 var
   FileStream: TFileStream;
 begin
