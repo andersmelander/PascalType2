@@ -59,8 +59,8 @@ type
   TCustomOpenTypeScriptTable = class(TCustomOpenTypeNamedTable)
   private
     FDefaultLangSys      : TCustomOpenTypeLanguageSystemTable;
-    FLanguageSystemTables: TPascalTypeTableInterfaceList<TCustomOpenTypeNamedTable>;
-    function GetLanguageSystemTable(Index: Integer): TCustomOpenTypeNamedTable;
+    FLanguageSystemTables: TPascalTypeTableInterfaceList<TCustomOpenTypeLanguageSystemTable>;
+    function GetLanguageSystemTable(Index: Integer): TCustomOpenTypeLanguageSystemTable;
     function GetLanguageSystemTableCount: Integer;
     procedure SetDefaultLangSys(const Value: TCustomOpenTypeLanguageSystemTable);
   public
@@ -72,9 +72,11 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
+    function FindLanguageSystem(const ATableType: TTableType): TCustomOpenTypeLanguageSystemTable;
+
     property DefaultLangSys: TCustomOpenTypeLanguageSystemTable read FDefaultLangSys write SetDefaultLangSys;
     property LanguageSystemTableCount: Integer read GetLanguageSystemTableCount;
-    property LanguageSystemTable[Index: Integer]: TCustomOpenTypeNamedTable read GetLanguageSystemTable;
+    property LanguageSystemTable[Index: Integer]: TCustomOpenTypeLanguageSystemTable read GetLanguageSystemTable;
   end;
 
   TOpenTypeScriptTableClass = class of TCustomOpenTypeScriptTable;
@@ -116,8 +118,10 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
+    function FindScript(const ATableType: TTableType): TCustomOpenTypeScriptTable;
+
     property LanguageSystemCount: Integer read GetLanguageSystemCount;
-    property LanguageSystem[Index: Integer]: TCustomOpenTypeScriptTable read GetLanguageSystem;
+    property LanguageSystems[Index: Integer]: TCustomOpenTypeScriptTable read GetLanguageSystem;
   end;
 
 
@@ -203,7 +207,7 @@ end;
 constructor TCustomOpenTypeScriptTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
-  FLanguageSystemTables := TPascalTypeTableInterfaceList<TCustomOpenTypeNamedTable>.Create(Self);
+  FLanguageSystemTables := TPascalTypeTableInterfaceList<TCustomOpenTypeLanguageSystemTable>.Create(Self);
 end;
 
 destructor TCustomOpenTypeScriptTable.Destroy;
@@ -214,7 +218,15 @@ begin
   inherited;
 end;
 
-function TCustomOpenTypeScriptTable.GetLanguageSystemTable(Index: Integer): TCustomOpenTypeNamedTable;
+function TCustomOpenTypeScriptTable.FindLanguageSystem(const ATableType: TTableType): TCustomOpenTypeLanguageSystemTable;
+begin
+  for Result in FLanguageSystemTables do
+    if (Result.TableType = ATableType) then
+      exit;
+  Result := nil;
+end;
+
+function TCustomOpenTypeScriptTable.GetLanguageSystemTable(Index: Integer): TCustomOpenTypeLanguageSystemTable;
 begin
   if (Index < 0) or (Index >= FLanguageSystemTables.Count) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
@@ -257,13 +269,13 @@ var
   StartPos      : Int64;
   LangSysIndex  : Integer;
   LangSysRecords: array of TTagOffsetRecord;
-  LangTable     : TCustomOpenTypeNamedTable;//TCustomOpenTypeJustificationLanguageSystemTable;
-  LangTableClass: TOpenTypeJustificationLanguageSystemTableClass;
+  LangTable     : TCustomOpenTypeLanguageSystemTable;
+  LangTableClass: TOpenTypeLanguageSystemTableClass;
   DefaultLangSys: Word;
 begin
-  inherited;
-
   StartPos := Stream.Position;
+
+  inherited;
 
   // check (minimum) table size
   if Stream.Position + 4 > Stream.Size then
@@ -301,15 +313,16 @@ begin
 
   for LangSysIndex := 0 to High(LangSysRecords) do
   begin
-    LangTableClass := FindJustificationLanguageSystemByType(LangSysRecords[LangSysIndex].Tag);
+    LangTableClass := FindLanguageSystemByType(LangSysRecords[LangSysIndex].Tag);
 
     if (LangTableClass <> nil) then
     begin
       // create language table entry
       // add to language system tables
-      // TODO : Something was wrong here. We are adding TCustomOpenTypeJustificationLanguageSystemTable but the list contains
+      // DONE : Something was wrong here. We are adding TCustomOpenTypeJustificationLanguageSystemTable but the list contains
       // TCustomOpenTypeLanguageSystemTable (per the list getter).
-      // I have changed the list and getter to use their common base class: TCustomOpenTypeJustificationLanguageSystemTable
+      // - I have changed the list and getter to use their common base class: TCustomOpenTypeJustificationLanguageSystemTable
+      // - I have now changed it to use FindLanguageSystemByType and TCustomOpenTypeLanguageSystemTable
       LangTable := FLanguageSystemTables.Add(LangTableClass);
 
       // set position
@@ -317,7 +330,6 @@ begin
 
       // read language system table entry from stream
       LangTable.LoadFromStream(Stream);
-
     end;
   end;
 end;
@@ -428,6 +440,14 @@ destructor TOpenTypeScriptListTable.Destroy;
 begin
   FreeAndNil(FLangSysList);
   inherited;
+end;
+
+function TOpenTypeScriptListTable.FindScript(const ATableType: TTableType): TCustomOpenTypeScriptTable;
+begin
+  for Result in FLangSysList do
+    if (Result.TableType = ATableType) then
+      exit;
+  Result := nil;
 end;
 
 function TOpenTypeScriptListTable.GetLanguageSystem(Index: Integer): TCustomOpenTypeScriptTable;

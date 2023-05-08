@@ -102,6 +102,8 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
+    function FindFeature(const ATableType: TTableType): TCustomOpenTypeFeatureTable;
+
     property FeatureCount: Integer read GetFeatureCount;
     property Feature[Index: Integer]: TCustomOpenTypeFeatureTable read GetFeature;
   end;
@@ -115,9 +117,6 @@ type
 procedure RegisterFeature(FeatureClass: TOpenTypeFeatureTableClass);
 procedure RegisterFeatures(FeaturesClasses: array of TOpenTypeFeatureTableClass);
 function FindFeatureByType(TableType: TTableType): TOpenTypeFeatureTableClass;
-
-var
-  GFeatureClasses        : array of TOpenTypeFeatureTableClass;
 
 
 //------------------------------------------------------------------------------
@@ -135,6 +134,9 @@ uses
 //      Features
 //
 //------------------------------------------------------------------------------
+var
+  GFeatureClasses        : array of TOpenTypeFeatureTableClass;
+
 function IsFeatureClassRegistered(FeatureClass: TOpenTypeFeatureTableClass): Boolean;
 var
   TableClassIndex: Integer;
@@ -214,6 +216,7 @@ end;
 procedure TCustomOpenTypeFeatureTable.Assign(Source: TPersistent);
 begin
   inherited;
+
   if Source is TCustomOpenTypeFeatureTable then
   begin
     FFeatureParams := TCustomOpenTypeFeatureTable(Source).FFeatureParams;
@@ -223,10 +226,9 @@ end;
 
 function TCustomOpenTypeFeatureTable.GetLookupList(Index: Integer): Word;
 begin
-  if (Index >= 0) and (Index < Length(FLookupListIndex)) then
-    Result := FLookupListIndex[Index]
-  else
+  if (Index < 0) or (Index > High(FLookupListIndex)) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FLookupListIndex[Index];
 end;
 
 function TCustomOpenTypeFeatureTable.GetLookupListCount: Integer;
@@ -240,22 +242,19 @@ var
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 4 > Size then
-      raise EPascalTypeError.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 4 > Stream.Size then
+    raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-    // read feature parameter offset
-    FFeatureParams := ReadSwappedWord(Stream);
+  // read feature parameter offset
+  FFeatureParams := ReadSwappedWord(Stream);
 
-    // read lookup count
-    SetLength(FLookupListIndex, ReadSwappedWord(Stream));
+  // read lookup count
+  SetLength(FLookupListIndex, ReadSwappedWord(Stream));
 
-    // read lookup list index offsets
-    for LookupIndex := 0 to High(FLookupListIndex) do
-      FLookupListIndex[LookupIndex] := ReadSwappedWord(Stream);
-  end;
+  // read lookup list index offsets
+  for LookupIndex := 0 to High(FLookupListIndex) do
+    FLookupListIndex[LookupIndex] := ReadSwappedWord(Stream);
 end;
 
 procedure TCustomOpenTypeFeatureTable.SaveToStream(Stream: TStream);
@@ -264,18 +263,15 @@ var
 begin
   inherited;
 
-  with Stream do
-  begin
-    // read feature parameter offset
-    FFeatureParams := ReadSwappedWord(Stream);
+  // read feature parameter offset
+  FFeatureParams := ReadSwappedWord(Stream);
 
-    // read lookup count
-    SetLength(FLookupListIndex, ReadSwappedWord(Stream));
+  // read lookup count
+  SetLength(FLookupListIndex, ReadSwappedWord(Stream));
 
-    // read lookup list index offsets
-    for LookupIndex := 0 to High(FLookupListIndex) do
-      FLookupListIndex[LookupIndex] := ReadSwappedWord(Stream);
-  end;
+  // read lookup list index offsets
+  for LookupIndex := 0 to High(FLookupListIndex) do
+    FLookupListIndex[LookupIndex] := ReadSwappedWord(Stream);
 end;
 
 procedure TCustomOpenTypeFeatureTable.SetFeatureParams(const Value: Word);
@@ -310,6 +306,16 @@ begin
   inherited;
 end;
 
+function TOpenTypeFeatureListTable.FindFeature(const ATableType: TTableType): TCustomOpenTypeFeatureTable;
+var
+  i: integer;
+begin
+  for Result in FFeatureList do
+    if (Result.TableType = ATableType) then
+      exit;
+  Result := nil;
+end;
+
 procedure TOpenTypeFeatureListTable.Assign(Source: TPersistent);
 begin
   inherited;
@@ -337,9 +343,9 @@ var
   FeatureTable: TCustomOpenTypeFeatureTable;
   FeatureClass: TOpenTypeFeatureTableClass;
 begin
-  inherited;
-
   StartPos := Stream.Position;
+
+  inherited;
 
   // check (minimum) table size
   if Stream.Position + 2 > Stream.Size then
@@ -376,52 +382,56 @@ begin
 
       // load from stream
       FeatureTable.LoadFromStream(Stream);
-    end
-    else; // raise EPascalTypeError.Create('Unknown Feature: ' + FeatureList[FeatureIndex].Tag);
+    end else
+      ; // raise EPascalTypeError.Create('Unknown Feature: ' + FeatureList[FeatureIndex].Tag);
   end;
 end;
 
 procedure TOpenTypeFeatureListTable.SaveToStream(Stream: TStream);
 var
   StartPos    : Int64;
+  IndexPos    : Int64;
+  SavePos    : Int64;
   FeatureIndex: Integer;
   FeatureList : array of TTagOffsetRecord;
 begin
-  inherited;
-
   StartPos := Stream.Position;
+
+  inherited;
 
   // write feature list count
   WriteSwappedWord(Stream, FFeatureList.Count);
 
   // leave space for feature directory
-  Stream.Seek(FFeatureList.Count * 6, soCurrent);
+  IndexPos := Stream.Position;
+  Stream.Seek(FFeatureList.Count * SizeOf(TTagOffsetRecord), soCurrent);
 
   // build directory (to be written later) and write data
   SetLength(FeatureList, FFeatureList.Count);
   for FeatureIndex := 0 to FFeatureList.Count - 1 do
-    with FFeatureList[FeatureIndex] do
-    begin
-      // get table type
-      FeatureList[FeatureIndex].Tag := TableType;
-      FeatureList[FeatureIndex].Offset := Stream.Position;
+  begin
+    // get table type
+    FeatureList[FeatureIndex].Tag := FFeatureList[FeatureIndex].TableType;
+    FeatureList[FeatureIndex].Offset := Stream.Position - StartPos;
 
-      // write feature to stream
-      SaveToStream(Stream);
-    end;
+    // write feature to stream
+    FFeatureList[FeatureIndex].SaveToStream(Stream);
+  end;
 
   // write directory
-  Stream.Position := StartPos + 2;
+  SavePos := Stream.Position;
+  Stream.Position := IndexPos;
 
   for FeatureIndex := 0 to High(FeatureList) do
-    with FeatureList[FeatureIndex] do
-    begin
-      // write tag
-      Stream.Write(Tag, SizeOf(TTableType));
+  begin
+    // write tag
+    Stream.Write(FeatureList[FeatureIndex].Tag, SizeOf(TTableType));
 
-      // write offset
-      WriteSwappedWord(Stream, Offset);
-    end;
+    // write offset
+    WriteSwappedWord(Stream, FeatureList[FeatureIndex].Offset);
+  end;
+
+  Stream.Position := SavePos;
 end;
 
 
