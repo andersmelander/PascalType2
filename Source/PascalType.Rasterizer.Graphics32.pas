@@ -882,7 +882,7 @@ var
   Pos: TFloatPoint;
   GlyphMetric: TGlyphMetric;
   Shaper: TPascalTypeShaper;
-  NormalizedText: string;
+  ShapedText: TGlyphString;
 begin
   Canvas.BeginUpdate;
   try
@@ -891,28 +891,19 @@ begin
 
     Shaper := TPascalTypeShaper.Create(FontFace);
     try
-      NormalizedText := Shaper.NormalizeText(Text);
+      ShapedText := Shaper.Shape(Text);
 
-      for CharIndex := 1 to Length(NormalizedText) do
+      for CharIndex := 0 to High(ShapedText) do
       begin
-        if NormalizedText[CharIndex] <= #31 then
-        begin
-          case NormalizedText[CharIndex] of
-            #10: ;// handle CR
-            #13: ;// handle LF
-          end;
-        end else
-        begin
-          // get glyph index
-          GlyphIndex := FontFace.GetGlyphByCharacter(NormalizedText[CharIndex]);
+        // get glyph index
+        GlyphIndex := ShapedText[CharIndex];
 
-          // rasterize character
-          RasterizeGlyph(GlyphIndex, Canvas, Round(Pos.X), Round(Pos.Y));
+        // rasterize character
+        RasterizeGlyph(GlyphIndex, Canvas, Round(Pos.X), Round(Pos.Y));
 
-          // advance cursor
-          GlyphMetric := GetGlyphMetric(GlyphIndex);
-          Pos.X := Pos.X + GlyphMetric.HorizontalMetric.AdvanceWidth;
-        end;
+        // advance cursor
+        GlyphMetric := GetGlyphMetric(GlyphIndex);
+        Pos.X := Pos.X + GlyphMetric.HorizontalMetric.AdvanceWidth;
       end;
 
     finally

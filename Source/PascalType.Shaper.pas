@@ -37,7 +37,10 @@ unit PascalType.Shaper;
 interface
 
 uses
-  PascalType.FontFace.SFNT;
+  Generics.Collections,
+  PT_Types,
+  PascalType.FontFace.SFNT,
+  PascalType.Tables.OpenType.Feature;
 
 
 //------------------------------------------------------------------------------
@@ -46,26 +49,46 @@ uses
 //
 //------------------------------------------------------------------------------
 type
+  TGlyphString = array of Word;
+
   TPascalTypeShaper = class
   private
+    FScript: TTableType;
+    FLanguage: TTableType;
     FFont: TCustomPascalTypeFontFace;
+    FFeatures: TDictionary<TTableType, TCustomOpenTypeFeatureTable>;
+    procedure SetLanguage(const Value: TTableType);
+    procedure SetScript(const Value: TTableType);
   protected
+    procedure Reset; virtual;
     function DecompositionFilter(CodePoint: Cardinal): boolean; virtual;
     procedure ProcessCodePoint(var CodePoint: Cardinal); virtual;
     function CompositionFilter(CodePoint: Cardinal): boolean; virtual;
+    function FindFeature(const ATableType: TTableType): TCustomOpenTypeFeatureTable;
   public
     constructor Create(AFont: TCustomPascalTypeFontFace);
+    destructor Destroy; override;
 
-    function NormalizeText(const AText: string): string; virtual;
+    function Shape(const AText: string): TGlyphString; virtual;
+
+    property Language: TTableType read FLanguage write SetLanguage;
+    property Script: TTableType read FScript write SetScript;
+    property Font: TCustomPascalTypeFontFace read FFont;
   end;
 
 implementation
 
 uses
   Windows,
+  Character,
   SysUtils,
 
-  PUCU;
+  PUCU,
+
+  PT_Classes,
+  PascalType.Tables.OpenType.GSUB,
+  PascalType.Tables.OpenType.Script,
+  PascalType.Tables.OpenType.LanguageSystem;
 
 {$ifdef WIN32_NORMALIZESTRING}
 type
@@ -344,13 +367,15 @@ function TPascalTypeShaper.CompositionFilter(CodePoint: Cardinal): boolean;
 begin
   // Lookup codepoint in font.
   // Reject if font doesn't contain a glyph for the codepoint
-  Result := (FFont.GetGlyphByCharacter(CodePoint) <> 0);
+  Result := (Font.GetGlyphByCharacter(CodePoint) <> 0);
 end;
 
 constructor TPascalTypeShaper.Create(AFont: TCustomPascalTypeFontFace);
 begin
   inherited Create;
   FFont := AFont;
+  FScript := 'DFLT'; // TOpenTypeDefaultLanguageSystemTables.GetTableType
+  FLanguage := 'dflt'; // TODO : Check if this is correct. TOpenTypeDefaultLanguageSystemTable.GetTableType says 'DFLT'.
 end;
 
 function TPascalTypeShaper.DecompositionFilter(CodePoint: Cardinal): boolean;
@@ -366,33 +391,139 @@ begin
   end;
 end;
 
+destructor TPascalTypeShaper.Destroy;
+begin
+  FFeatures.Free;
+
+  inherited;
+end;
+
+function TPascalTypeShaper.FindFeature(const ATableType: TTableType): TCustomOpenTypeFeatureTable;
+var
+  i: integer;
+  SubstitutionTable: TOpenTypeGlyphSubstitutionTable;
+  ScriptTable: TCustomOpenTypeScriptTable;
+  LanguageSystem: TCustomOpenTypeLanguageSystemTable;
+  FeatureTable: TCustomOpenTypeFeatureTable;
+begin
+  if (FFeatures = nil) then
+  begin
+    FFeatures := TDictionary<TTableType, TCustomOpenTypeFeatureTable>.Create;
+
+    SubstitutionTable := TOpenTypeGlyphSubstitutionTable(IPascalTypeFontFace(Font).GetTableByTableType(TOpenTypeGlyphSubstitutionTable.GetTableType));
+    if (SubstitutionTable <> nil) then
+    begin
+      // Look for:
+      //   1. GSUB.script.language
+      //   2. GSUB.script.<default script language>
+      //   3. GSUB.'dflt'
+      //   3. GSUB.'latn'
+      ScriptTable := SubstitutionTable.ScriptListTable.FindScript(Script);
+      // Fall back to default script
+      if (ScriptTable = nil) then
+        ScriptTable := SubstitutionTable.ScriptListTable.FindScript('DFLT');
+      // HARFBUZZ: try with 'dflt'; MS site has had typos and many fonts use it now :(.
+      // including many versions of DejaVu Sans Mono!
+      if (ScriptTable = nil) then
+        ScriptTable := SubstitutionTable.ScriptListTable.FindScript('dflt');
+      // Fall back to Latin script
+      if (ScriptTable = nil) then
+        ScriptTable := SubstitutionTable.ScriptListTable.FindScript('latn');
+
+      if (ScriptTable <> nil) then
+      begin
+        LanguageSystem := ScriptTable.FindLanguageSystem(Language);
+        if (LanguageSystem = nil) then
+          LanguageSystem := ScriptTable.DefaultLangSys;
+
+        if (LanguageSystem <> nil) then
+        begin
+          for i := 0 to LanguageSystem.FeatureIndexCount-1 do
+          begin
+            FeatureTable := SubstitutionTable.FeatureListTable.Feature[LanguageSystem.FeatureIndex[i]];
+            FFeatures.Add(FeatureTable.TableType, FeatureTable);
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  if (not FFeatures.TryGetValue(ATableType, Result)) then
+    Result := nil;
+end;
+
 procedure TPascalTypeShaper.ProcessCodePoint(var CodePoint: Cardinal);
 begin
   case CodePoint of
     $2011: // non-breaking hyphen
-      // According to:
-      //   https://github.com/n8willis/opentype-shaping-documents/blob/master/opentype-shaping-normalization.md
-      // the "non-breaking hyphen" character should be replaced with "hyphen". However that
-      // just end up displaying the character as "a box".
-      // Replacing it with a regular simple hyphen ("hyphen minus") will work though.
+      // According to https://github.com/n8willis/opentype-shaping-documents/blob/master/opentype-shaping-normalization.md
+      //
+      //   The "non-breaking hyphen" character should be replaced with "hyphen"
+      //
+      // HARFBUZZ states:
+      //
+      //   U+2011 is the only sensible character that is a no-break version of another character
+      //   and not a space.  The space ones are handled already.  Handle this lone one.
+      //
+      // ...and replaces it with U+2010
+      //
+      // However my tests show that currently U+2010 is just displayed as "a box" (i.e. missing glyph).
+      // This may well be because my implementation is currently incomplete.
+      // For now we replac with a regular simple hyphen ("hyphen minus") instead.
+      //
       // TODO : Revisit once full substitution has been implemented.
       // CodePoint := $2010; // hyphen
       CodePoint := $002D; // hyphen-minus
+  else
+    if (TCharacter.IsWhiteSpace(CodePoint)) then
+    begin
+      if (not Font.GetGlyphByCharacter(CodePoint) = 0) then
+        // TODO : We need to handle the difference in width
+        CodePoint := $0020; // Regular space
+    end;
   end;
 end;
 
-function TPascalTypeShaper.NormalizeText(const AText: string): string;
+procedure TPascalTypeShaper.Reset;
+begin
+  FreeAndNil(FFeatures);
+end;
+
+procedure TPascalTypeShaper.SetLanguage(const Value: TTableType);
+begin
+  Reset;
+  FLanguage := Value;
+end;
+
+procedure TPascalTypeShaper.SetScript(const Value: TTableType);
+begin
+  Reset;
+  FScript := Value;
+end;
+
+function TPascalTypeShaper.Shape(const AText: string): TGlyphString;
 var
   UTF32: TPUCUUTF32String;
   CodePoint: Cardinal;
   i: integer;
+  FeatureTable: TCustomOpenTypeFeatureTable;
+  Feature: TTableName;
+  Table: TCustomPascalTypeNamedTable;
+const
+  Features: array of TTableName =
+    ['ccmp', 'locl'];
 begin
   UTF32 := PUCUUTF16ToUTF32(AText);
 
-  // Decompose and normalize
+  (*
+  ** Unicode decompose and normalization
+  *)
   UTF32 := PUCUNormalize32(UTF32, False, DecompositionFilter);
 
-  // Process individual codepoints
+
+  (*
+  ** Process individual codepoints
+  *)
   for i := 0 to High(UTF32) do
   begin
     CodePoint := UTF32[i];
@@ -400,10 +531,32 @@ begin
     UTF32[i] := CodePoint;
   end;
 
-  // Compose
+
+  (*
+  ** Unicode composition
+  *)
   UTF32 := PUCUNormalize32(UTF32, True, CompositionFilter);
 
-  Result := PUCUUTF32ToUTF16(UTF32);
+
+  (*
+  ** From here on we are done with Unicode codepoints and are working with glyph IDs.
+  *)
+  SetLength(Result, Length(UTF32));
+  for i := 0 to High(UTF32) do
+    Result[i] := Font.GetGlyphByCharacter(UTF32[i]);
+
+
+  (*
+  ** Post-processing: Normalization-related GSUB features and other font-specific considerations
+  *)
+  for Feature in Features do
+  begin
+    FeatureTable := FindFeature(Feature);
+    if (FeatureTable <> nil) then
+    begin
+      Table := IPascalTypeFontFace(Font).GetTableByTableType(FeatureTable.TableType);
+    end;
+  end;
 end;
 
 //------------------------------------------------------------------------------
