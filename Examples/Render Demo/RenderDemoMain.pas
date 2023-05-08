@@ -198,6 +198,11 @@ begin
 end;
 
 procedure TFmRenderDemo.RenderText;
+var
+  Bitmap32: TBitmap32;
+  Canvas32: TCanvas32;
+  BrushFill: TSolidBrush;
+  BrushStroke: TStrokeBrush;
 begin
  with FBitmap, Canvas do
   begin
@@ -223,19 +228,19 @@ begin
    if RadioButtonGraphics32.Checked then
    begin
 //     CBezierTolerance := 0.01;
-     var Bitmap32 := TBitmap32.Create;
+     Bitmap32 := TBitmap32.Create;
      try
        Bitmap32.SetSize(FBitmap.Width, FBitmap.Height);
        Bitmap32.Clear(clWhite32);
-       var Canvas32 := TCanvas32.Create(Bitmap32);
+       Canvas32 := TCanvas32.Create(Bitmap32);
        try
 //(*
-         var BrushFill := Canvas32.Brushes.Add(TSolidBrush) as TSolidBrush;
+         BrushFill := Canvas32.Brushes.Add(TSolidBrush) as TSolidBrush;
          BrushFill.FillColor := clBlack32;
          BrushFill.FillMode := pfNonZero;
 //*)
 //(*
-         var BrushStroke := Canvas32.Brushes.Add(TStrokeBrush) as TStrokeBrush;
+         BrushStroke := Canvas32.Brushes.Add(TStrokeBrush) as TStrokeBrush;
          BrushStroke.FillColor := clTrRed32;
          BrushStroke.StrokeWidth := 1;
          BrushStroke.JoinStyle := jsMiter;
