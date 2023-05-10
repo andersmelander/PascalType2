@@ -732,7 +732,7 @@ begin
     for DirIndex := 0 to FScripts.Count - 1 do
     begin
       Directory[DirIndex].Offset := Position - StartPos;
-      Directory[DirIndex].Tag := FScripts[DirIndex].GetTableType;
+      Directory[DirIndex].Tag := FScripts[DirIndex].TableType;
       SaveToStream(Stream);
     end;
 

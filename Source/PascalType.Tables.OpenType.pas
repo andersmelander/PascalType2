@@ -53,7 +53,7 @@ type
   protected
     class function GetDisplayName: string; virtual; abstract;
   public
-    property DisplayName: string read GetDisplayName;
+    property DisplayName: string read GetDisplayName; // TODO : Should be a class property
   end;
 
   TCustomOpenTypeVersionedNamedTable = class(TCustomPascalTypeNamedTable)

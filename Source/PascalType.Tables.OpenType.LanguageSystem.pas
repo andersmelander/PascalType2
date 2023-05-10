@@ -55,7 +55,7 @@ uses
 // https://learn.microsoft.com/en-us/typography/opentype/spec/chapter2#language-system-table
 //------------------------------------------------------------------------------
 type
-  TCustomOpenTypeLanguageSystemTable = class(TCustomOpenTypeNamedTable)
+  TCustomOpenTypeLanguageSystemTable = class abstract(TCustomOpenTypeNamedTable)
   private
     FLookupOrder     : Word;          // = NULL (reserved for an offset to a reordering table)
     FReqFeatureIndex : Word;          // Index of a feature required for this language system- if no required features = 0xFFFF
@@ -101,6 +101,14 @@ type
 //              Language system
 //
 //------------------------------------------------------------------------------
+const
+  // https://learn.microsoft.com/en-us/typography/opentype/spec/languagetags
+  // Note: The tags 'dflt' and 'DFLT', as language system tags, are permanently
+  // reserved and are not used in OpenType fonts.
+  // An OpenType font should never include language system records with the
+  // 'dflt' or 'DFLT' tag.
+  OpenTypeDefaultLanguageSystem: TTableType = (AsAnsiChar: 'dflt');
+
 procedure RegisterLanguageSystem(LanguageSystemClass: TOpenTypeLanguageSystemTableClass);
 procedure RegisterLanguageSystems(LanguageSystemClasses: array of TOpenTypeLanguageSystemTableClass);
 function FindLanguageSystemByType(TableType: TTableType): TOpenTypeLanguageSystemTableClass;
@@ -280,7 +288,7 @@ end;
 
 class function TOpenTypeDefaultLanguageSystemTable.GetTableType: TTableType;
 begin
-  Result := 'DFLT';
+  Result := OpenTypeDefaultLanguageSystem; // Was: 'DFLT'
 end;
 
 //------------------------------------------------------------------------------

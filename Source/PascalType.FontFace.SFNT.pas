@@ -98,6 +98,7 @@ type
     function GetGlyphByCharacter(Character: Word): Integer; overload; virtual; abstract;
     function GetGlyphByCharacter(Character: WideChar): Integer; overload;
     function GetGlyphByCharacter(Character: AnsiChar): Integer; overload;
+    function HasGlyphByCharacter(Character: Word): boolean;
 
     // required tables
     property HeaderTable: TPascalTypeHeaderTable read FHeaderTable;
@@ -667,6 +668,11 @@ end;
 function TCustomPascalTypeFontFace.GetGlyphByCharacter(Character: AnsiChar): Integer;
 begin
   Result := GetGlyphByCharacter(Word(Character));
+end;
+
+function TCustomPascalTypeFontFace.HasGlyphByCharacter(Character: Word): boolean;
+begin
+  Result := (GetGlyphByCharacter(Character) <> 0);
 end;
 
 

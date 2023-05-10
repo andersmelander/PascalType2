@@ -84,7 +84,7 @@ type
   private
   protected
   public
-    function SubstituteGlyph(AGlyphID: Word): Word; virtual; abstract;
+    function Substitute(var GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; virtual; abstract;
   end;
 
   TOpenTypeSubstitutionSubTableClass = class of TCustomOpenTypeSubstitutionSubTable;

@@ -882,7 +882,7 @@ var
   Pos: TFloatPoint;
   GlyphMetric: TGlyphMetric;
   Shaper: TPascalTypeShaper;
-  ShapedText: TGlyphString;
+  ShapedText: TPascalTypeGlyphString;
 begin
   Canvas.BeginUpdate;
   try
@@ -896,7 +896,7 @@ begin
       for CharIndex := 0 to High(ShapedText) do
       begin
         // get glyph index
-        GlyphIndex := ShapedText[CharIndex];
+        GlyphIndex := ShapedText[CharIndex].GlyphID;
 
         // rasterize character
         RasterizeGlyph(GlyphIndex, Canvas, Round(Pos.X), Round(Pos.Y));

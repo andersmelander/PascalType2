@@ -56,7 +56,7 @@ uses
 // https://learn.microsoft.com/en-us/typography/opentype/spec/chapter2#script-table-and-language-system-record
 //------------------------------------------------------------------------------
 type
-  TCustomOpenTypeScriptTable = class(TCustomOpenTypeNamedTable)
+  TCustomOpenTypeScriptTable = class abstract(TCustomOpenTypeNamedTable)
   private
     FDefaultLangSys      : TCustomOpenTypeLanguageSystemTable;
     FLanguageSystemTables: TPascalTypeTableInterfaceList<TCustomOpenTypeLanguageSystemTable>;
@@ -72,7 +72,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function FindLanguageSystem(const ATableType: TTableType): TCustomOpenTypeLanguageSystemTable;
+    function FindLanguageSystem(const ATableType: TTableType; FallbackToDefault: boolean = False): TCustomOpenTypeLanguageSystemTable;
 
     property DefaultLangSys: TCustomOpenTypeLanguageSystemTable read FDefaultLangSys write SetDefaultLangSys;
     property LanguageSystemTableCount: Integer read GetLanguageSystemTableCount;
@@ -84,11 +84,11 @@ type
 
 //------------------------------------------------------------------------------
 //
-//              TOpenTypeDefaultLanguageSystemTables
+//              TOpenTypeDefaultScriptTable
 //
 //------------------------------------------------------------------------------
 type
-  TOpenTypeDefaultLanguageSystemTables = class(TCustomOpenTypeScriptTable)
+  TOpenTypeDefaultScriptTable = class(TCustomOpenTypeScriptTable)
   protected
     class function GetDisplayName: string; override;
   public
@@ -106,9 +106,9 @@ type
 type
   TOpenTypeScriptListTable = class(TCustomPascalTypeTable)
   private
-    FLangSysList: TPascalTypeTableInterfaceList<TCustomOpenTypeScriptTable>;
-    function GetLanguageSystemCount: Integer;
-    function GetLanguageSystem(Index: Integer): TCustomOpenTypeScriptTable;
+    FScriptList: TPascalTypeTableInterfaceList<TCustomOpenTypeScriptTable>;
+    function GetScriptCount: Integer;
+    function GetScript(Index: Integer): TCustomOpenTypeScriptTable;
   public
     constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
@@ -118,10 +118,10 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function FindScript(const ATableType: TTableType): TCustomOpenTypeScriptTable;
+    function FindScript(const ATableType: TTableType; FallbackToDefault: boolean = False): TCustomOpenTypeScriptTable;
 
-    property LanguageSystemCount: Integer read GetLanguageSystemCount;
-    property LanguageSystems[Index: Integer]: TCustomOpenTypeScriptTable read GetLanguageSystem;
+    property ScriptCount: Integer read GetScriptCount;
+    property Scripts[Index: Integer]: TCustomOpenTypeScriptTable read GetScript;
   end;
 
 
@@ -131,12 +131,21 @@ type
 //      scripts
 //
 //------------------------------------------------------------------------------
+const
+  // https://learn.microsoft.com/en-us/typography/opentype/spec/scripttags
+  OpenTypeDefaultScript: TTableType = (AsAnsiChar: 'DFLT');
+
+  OpenTypeDefaultScriptFallbacks: array[0..1] of TTableType = (
+    (AsAnsiChar: 'dflt'),       // HARFBUZZ: MS site has had typos and many fonts use 'dflt' now :(. including many versions of DejaVu Sans Mono!
+    (AsAnsiChar: 'latn')        // Latin
+    );
+
 procedure RegisterScript(ScriptClass: TOpenTypeScriptTableClass);
 procedure RegisterScripts(ScriptClasses: array of TOpenTypeScriptTableClass);
 function FindScriptByType(TableType: TTableType): TOpenTypeScriptTableClass;
 
 var
-  GScriptClasses         : array of TOpenTypeScriptTableClass;
+  GScriptClasses: array of TOpenTypeScriptTableClass;
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -146,8 +155,7 @@ implementation
 
 uses
   SysUtils,
-  PT_ResourceStrings,
-  PascalType.Tables.OpenType.JSTF;
+  PT_ResourceStrings;
 
 //------------------------------------------------------------------------------
 //
@@ -218,12 +226,16 @@ begin
   inherited;
 end;
 
-function TCustomOpenTypeScriptTable.FindLanguageSystem(const ATableType: TTableType): TCustomOpenTypeLanguageSystemTable;
+function TCustomOpenTypeScriptTable.FindLanguageSystem(const ATableType: TTableType; FallbackToDefault: boolean): TCustomOpenTypeLanguageSystemTable;
 begin
   for Result in FLanguageSystemTables do
     if (Result.TableType = ATableType) then
       exit;
-  Result := nil;
+
+  if (FDefaultLangSys <> nil) and (FallbackToDefault or (FDefaultLangSys.TableType = ATableType)) then
+    Result := FDefaultLangSys
+  else
+    Result := nil;
 end;
 
 function TCustomOpenTypeScriptTable.GetLanguageSystemTable(Index: Integer): TCustomOpenTypeLanguageSystemTable;
@@ -271,7 +283,7 @@ var
   LangSysRecords: array of TTagOffsetRecord;
   LangTable     : TCustomOpenTypeLanguageSystemTable;
   LangTableClass: TOpenTypeLanguageSystemTableClass;
-  DefaultLangSys: Word;
+  DefaultLangSysOffset: Word;
 begin
   StartPos := Stream.Position;
 
@@ -282,7 +294,7 @@ begin
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // read default language system offset
-  DefaultLangSys := ReadSwappedWord(Stream);
+  DefaultLangSysOffset := ReadSwappedWord(Stream);
 
   // read language system record count
   SetLength(LangSysRecords, ReadSwappedWord(Stream));
@@ -297,9 +309,9 @@ begin
   end;
 
   // load default language system
-  if DefaultLangSys <> 0 then
+  if DefaultLangSysOffset <> 0 then
   begin
-    Stream.Position := StartPos + DefaultLangSys;
+    Stream.Position := StartPos + DefaultLangSysOffset;
 
     if (FDefaultLangSys = nil) then
       FDefaultLangSys := TOpenTypeDefaultLanguageSystemTable.Create(Self);
@@ -403,20 +415,20 @@ end;
 
 //------------------------------------------------------------------------------
 //
-//              TOpenTypeDefaultLanguageSystemTables
+//              TOpenTypeDefaultScriptTable
 //
 //------------------------------------------------------------------------------
-class function TOpenTypeDefaultLanguageSystemTables.GetDisplayName: string;
+class function TOpenTypeDefaultScriptTable.GetDisplayName: string;
 begin
   Result := 'Default';
 end;
 
-class function TOpenTypeDefaultLanguageSystemTables.GetTableType: TTableType;
+class function TOpenTypeDefaultScriptTable.GetTableType: TTableType;
 begin
   Result := 'DFLT';
 end;
 
-procedure TOpenTypeDefaultLanguageSystemTables.LoadFromStream(Stream: TStream);
+procedure TOpenTypeDefaultScriptTable.LoadFromStream(Stream: TStream);
 begin
   inherited;
 
@@ -433,40 +445,62 @@ end;
 constructor TOpenTypeScriptListTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
-  FLangSysList := TPascalTypeTableInterfaceList<TCustomOpenTypeScriptTable>.Create(Self);
+  FScriptList := TPascalTypeTableInterfaceList<TCustomOpenTypeScriptTable>.Create(Self);
 end;
 
 destructor TOpenTypeScriptListTable.Destroy;
 begin
-  FreeAndNil(FLangSysList);
+  FreeAndNil(FScriptList);
   inherited;
 end;
 
-function TOpenTypeScriptListTable.FindScript(const ATableType: TTableType): TCustomOpenTypeScriptTable;
+function TOpenTypeScriptListTable.FindScript(const ATableType: TTableType; FallbackToDefault: boolean): TCustomOpenTypeScriptTable;
+var
+  i: integer;
 begin
-  for Result in FLangSysList do
+  for Result in FScriptList do
     if (Result.TableType = ATableType) then
       exit;
+
   Result := nil;
+
+  if (FallbackToDefault) then
+  begin
+
+    // Recurse to look for default script
+    if (ATableType <> OpenTypeDefaultScript) then
+      Result := FindScript(OpenTypeDefaultScript, False);
+
+    // Try workaround fallbacks
+    if (Result = nil) then
+      for i := Low(OpenTypeDefaultScriptFallbacks) to High(OpenTypeDefaultScriptFallbacks) do
+      begin
+        // Recurse to look for fallback
+        Result := FindScript(OpenTypeDefaultScriptFallbacks[i], False);
+        if (Result <> nil) then
+          exit;
+      end;
+
+  end;
 end;
 
-function TOpenTypeScriptListTable.GetLanguageSystem(Index: Integer): TCustomOpenTypeScriptTable;
+function TOpenTypeScriptListTable.GetScript(Index: Integer): TCustomOpenTypeScriptTable;
 begin
-  if (Index < 0) or (Index >= FLangSysList.Count) then
+  if (Index < 0) or (Index >= FScriptList.Count) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
-  Result := FLangSysList[Index];
+  Result := FScriptList[Index];
 end;
 
-function TOpenTypeScriptListTable.GetLanguageSystemCount: Integer;
+function TOpenTypeScriptListTable.GetScriptCount: Integer;
 begin
-  Result := FLangSysList.Count;
+  Result := FScriptList.Count;
 end;
 
 procedure TOpenTypeScriptListTable.Assign(Source: TPersistent);
 begin
   inherited;
   if Source is TOpenTypeScriptListTable then
-    FLangSysList.Assign(TOpenTypeScriptListTable(Source).FLangSysList);
+    FScriptList.Assign(TOpenTypeScriptListTable(Source).FScriptList);
 end;
 
 procedure TOpenTypeScriptListTable.LoadFromStream(Stream: TStream);
@@ -497,19 +531,19 @@ begin
     ScriptTableTagOffsets[ScriptIndex].Offset := ReadSwappedWord(Stream);
   end;
 
-  // clear language system list
-  FLangSysList.Clear;
+  // clear script list
+  FScriptList.Clear;
 
   for ScriptIndex := 0 to High(ScriptTableTagOffsets) do
   begin
-    // find language class
+    // find script class
     ScriptTableClass := FindScriptByType(ScriptTableTagOffsets[ScriptIndex].Tag);
 
     if (ScriptTableClass <> nil) then
     begin
-      // create language system entry
-      // add to language system list
-      ScriptTable := FLangSysList.Add(ScriptTableClass);
+      // create script entry
+      // add to script list
+      ScriptTable := FScriptList.Add(ScriptTableClass);
 
       // set position to actual script list entry
       Stream.Position := StartPos + ScriptTableTagOffsets[ScriptIndex].Offset;
@@ -531,6 +565,6 @@ end;
 
 initialization
 
-  RegisterScript(TOpenTypeDefaultLanguageSystemTables);
+  RegisterScript(TOpenTypeDefaultScriptTable);
 
 end.

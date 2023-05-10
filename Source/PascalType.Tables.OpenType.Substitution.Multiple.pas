@@ -88,6 +88,8 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
+    function Substitute(var AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+
     property SubstituteSequenceList: TGlyphSequences read FSequenceList;
   end;
 
@@ -204,6 +206,36 @@ begin
     WriteSwappedWord(Stream, SequenceOffsets[i]);
 
   Stream.Position := SavePos;
+end;
+
+function TOpenTypeSubstitutionSubTableMultipleList.Substitute(var AGlyphString: TPascalTypeGlyphString;
+  var AIndex: integer): boolean;
+var
+  SubstitutionIndex: integer;
+  Sequence: TGlyphSequence;
+  SequenceString: TPascalTypeGlyphString;
+  i: integer;
+begin
+  // The coverage table just tells us if the substitution applies.
+  SubstitutionIndex := CoverageTable.IndexOfGlyph(AGlyphString[AIndex].GlyphID);
+
+  if (SubstitutionIndex = -1) then
+    Exit(False);
+
+  // Get the replacement sequence
+  Sequence := FSequenceList[SubstitutionIndex];
+
+  // Create a replacement string
+  SetLength(SequenceString, Length(Sequence)-1);
+  for i := 1 to High(Sequence) do
+    SequenceString[i-1].GlyphID := Sequence[i];
+  // First entry in source string is reused
+  AGlyphString[AIndex].GlyphID := Sequence[0];
+  // Inser replacement sequence
+  Insert(SequenceString, AGlyphString, AIndex+1);
+
+  Inc(AIndex, Length(Sequence));
+  Result := True;
 end;
 
 //------------------------------------------------------------------------------

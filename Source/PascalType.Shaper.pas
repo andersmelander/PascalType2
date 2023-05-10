@@ -39,7 +39,9 @@ interface
 uses
   Generics.Collections,
   PT_Types,
+  PT_Classes,
   PascalType.FontFace.SFNT,
+  PascalType.Tables.OpenType.GSUB,
   PascalType.Tables.OpenType.Feature;
 
 
@@ -49,14 +51,13 @@ uses
 //
 //------------------------------------------------------------------------------
 type
-  TGlyphString = array of Word;
-
   TPascalTypeShaper = class
   private
     FScript: TTableType;
     FLanguage: TTableType;
     FFont: TCustomPascalTypeFontFace;
     FFeatures: TDictionary<TTableType, TCustomOpenTypeFeatureTable>;
+    FSubstitutionTable: TOpenTypeGlyphSubstitutionTable;
     procedure SetLanguage(const Value: TTableType);
     procedure SetScript(const Value: TTableType);
   protected
@@ -69,7 +70,7 @@ type
     constructor Create(AFont: TCustomPascalTypeFontFace);
     destructor Destroy; override;
 
-    function Shape(const AText: string): TGlyphString; virtual;
+    function Shape(const AText: string): TPascalTypeGlyphString; virtual;
 
     property Language: TTableType read FLanguage write SetLanguage;
     property Script: TTableType read FScript write SetScript;
@@ -85,10 +86,10 @@ uses
 
   PUCU,
 
-  PT_Classes,
-  PascalType.Tables.OpenType.GSUB,
   PascalType.Tables.OpenType.Script,
-  PascalType.Tables.OpenType.LanguageSystem;
+  PascalType.Tables.OpenType.LanguageSystem,
+  PascalType.Tables.OpenType.Lookup,
+  PascalType.Tables.OpenType.Substitution;
 
 {$ifdef WIN32_NORMALIZESTRING}
 type
@@ -318,7 +319,7 @@ begin
         end else
         begin
           // Do not recompose the codepoints. Add them decomposed instead.
-          // TODO
+          // TODO : Verify that this is correct
           Inc(StartIndex);
           Inc(TargetIndex);
           StartCodePoint := CodePoint;
@@ -367,15 +368,17 @@ function TPascalTypeShaper.CompositionFilter(CodePoint: Cardinal): boolean;
 begin
   // Lookup codepoint in font.
   // Reject if font doesn't contain a glyph for the codepoint
-  Result := (Font.GetGlyphByCharacter(CodePoint) <> 0);
+  Result := Font.HasGlyphByCharacter(CodePoint);
 end;
 
 constructor TPascalTypeShaper.Create(AFont: TCustomPascalTypeFontFace);
 begin
   inherited Create;
   FFont := AFont;
-  FScript := 'DFLT'; // TOpenTypeDefaultLanguageSystemTables.GetTableType
-  FLanguage := 'dflt'; // TODO : Check if this is correct. TOpenTypeDefaultLanguageSystemTable.GetTableType says 'DFLT'.
+  FScript := OpenTypeDefaultScript;
+  FLanguage := OpenTypeDefaultLanguageSystem;
+  // Cache GSUB. We'll use it a lot
+  FSubstitutionTable := TOpenTypeGlyphSubstitutionTable(IPascalTypeFontFace(FFont).GetTableByTableType(TOpenTypeGlyphSubstitutionTable.GetTableType));
 end;
 
 function TPascalTypeShaper.DecompositionFilter(CodePoint: Cardinal): boolean;
@@ -401,7 +404,6 @@ end;
 function TPascalTypeShaper.FindFeature(const ATableType: TTableType): TCustomOpenTypeFeatureTable;
 var
   i: integer;
-  SubstitutionTable: TOpenTypeGlyphSubstitutionTable;
   ScriptTable: TCustomOpenTypeScriptTable;
   LanguageSystem: TCustomOpenTypeLanguageSystemTable;
   FeatureTable: TCustomOpenTypeFeatureTable;
@@ -410,37 +412,22 @@ begin
   begin
     FFeatures := TDictionary<TTableType, TCustomOpenTypeFeatureTable>.Create;
 
-    SubstitutionTable := TOpenTypeGlyphSubstitutionTable(IPascalTypeFontFace(Font).GetTableByTableType(TOpenTypeGlyphSubstitutionTable.GetTableType));
-    if (SubstitutionTable <> nil) then
+    if (FSubstitutionTable <> nil) then
     begin
-      // Look for:
-      //   1. GSUB.script.language
-      //   2. GSUB.script.<default script language>
-      //   3. GSUB.'dflt'
-      //   3. GSUB.'latn'
-      ScriptTable := SubstitutionTable.ScriptListTable.FindScript(Script);
-      // Fall back to default script
-      if (ScriptTable = nil) then
-        ScriptTable := SubstitutionTable.ScriptListTable.FindScript('DFLT');
-      // HARFBUZZ: try with 'dflt'; MS site has had typos and many fonts use it now :(.
-      // including many versions of DejaVu Sans Mono!
-      if (ScriptTable = nil) then
-        ScriptTable := SubstitutionTable.ScriptListTable.FindScript('dflt');
-      // Fall back to Latin script
-      if (ScriptTable = nil) then
-        ScriptTable := SubstitutionTable.ScriptListTable.FindScript('latn');
+      // Get script, fallback to default
+      ScriptTable := FSubstitutionTable.ScriptListTable.FindScript(Script, True);
 
       if (ScriptTable <> nil) then
       begin
-        LanguageSystem := ScriptTable.FindLanguageSystem(Language);
-        if (LanguageSystem = nil) then
-          LanguageSystem := ScriptTable.DefaultLangSys;
+        // Get language system, fallback to default
+        LanguageSystem := ScriptTable.FindLanguageSystem(Language, True);
 
         if (LanguageSystem <> nil) then
         begin
           for i := 0 to LanguageSystem.FeatureIndexCount-1 do
           begin
-            FeatureTable := SubstitutionTable.FeatureListTable.Feature[LanguageSystem.FeatureIndex[i]];
+            // LanguageSystem feature list contains index numbers into the FeatureListTable
+            FeatureTable := FSubstitutionTable.FeatureListTable.Feature[LanguageSystem.FeatureIndex[i]];
             FFeatures.Add(FeatureTable.TableType, FeatureTable);
           end;
         end;
@@ -469,15 +456,23 @@ begin
       //
       // However my tests show that currently U+2010 is just displayed as "a box" (i.e. missing glyph).
       // This may well be because my implementation is currently incomplete.
-      // For now we replac with a regular simple hyphen ("hyphen minus") instead.
-      //
       // TODO : Revisit once full substitution has been implemented.
-      // CodePoint := $2010; // hyphen
-      CodePoint := $002D; // hyphen-minus
+      // For now we replace with a regular simple hyphen ("hyphen minus") instead.
+      //
+      if (Font.HasGlyphByCharacter($2010)) then
+        CodePoint := $2010 // hyphen
+      else
+      if (Font.HasGlyphByCharacter($002D)) then
+        CodePoint := $002D; // hyphen-minus
   else
+    // TODO : Find out when TCharacter was deprecated
+{$if defined(TCHARACTER_DEPRECATED)}
+    if (Char(CodePoint).IsWhiteSpace(CodePoint)) then
+{$else TCHARACTER_DEPRECATED}
     if (TCharacter.IsWhiteSpace(CodePoint)) then
+{$ifend TCHARACTER_DEPRECATED}
     begin
-      if (not Font.GetGlyphByCharacter(CodePoint) = 0) then
+      if (not Font.HasGlyphByCharacter(CodePoint)) then
         // TODO : We need to handle the difference in width
         CodePoint := $0020; // Regular space
     end;
@@ -501,14 +496,17 @@ begin
   FScript := Value;
 end;
 
-function TPascalTypeShaper.Shape(const AText: string): TGlyphString;
+function TPascalTypeShaper.Shape(const AText: string): TPascalTypeGlyphString;
 var
   UTF32: TPUCUUTF32String;
   CodePoint: Cardinal;
-  i: integer;
+  i, j: integer;
   FeatureTable: TCustomOpenTypeFeatureTable;
   Feature: TTableName;
   Table: TCustomPascalTypeNamedTable;
+  LookupTable: TCustomOpenTypeLookupTable;
+  GlyphIndex, NextGlyphIndex: integer;
+  GlyphHandled: boolean;
 const
   Features: array of TTableName =
     ['ccmp', 'locl'];
@@ -543,18 +541,67 @@ begin
   *)
   SetLength(Result, Length(UTF32));
   for i := 0 to High(UTF32) do
-    Result[i] := Font.GetGlyphByCharacter(UTF32[i]);
+  begin
+    Result[i].CodePoint := UTF32[i];
+    Result[i].GlyphID := Font.GetGlyphByCharacter(Result[i].CodePoint);
+
+    // TODO : TPascalTypeGlyph and TPascalTypeGlyphString should be objects created by the shaper.
+    // The individual shaper may have need to store information in the string and glyph that can not be generalized.
+    // function TCustomPascalTypeShaper.CreateGlyphString: TCustomPascalTypeGlyphString;
+    // function TCustomPascalTypeGlyphString.CreateGlyph: TCustomPascalTypeGlyph;
+  end;
 
 
   (*
   ** Post-processing: Normalization-related GSUB features and other font-specific considerations
   *)
+  if (FSubstitutionTable <> nil) then
   for Feature in Features do
   begin
     FeatureTable := FindFeature(Feature);
+
     if (FeatureTable <> nil) then
     begin
-      Table := IPascalTypeFontFace(Font).GetTableByTableType(FeatureTable.TableType);
+
+      GlyphIndex := 0;
+      while (GlyphIndex <= High(Result)) do
+      begin
+        GlyphHandled := False;
+        NextGlyphIndex := GlyphIndex;
+
+        // A series of substitution operations on the same glyph or string requires multiple
+        // lookups, one for each separate action. Each lookup has a different array index
+        // in the LookupList table and is applied in the LookupList order.
+        for i := 0 to FeatureTable.LookupListCount-1 do
+        begin
+          // During text processing, a client applies a lookup to each glyph in the string
+          // before moving to the next lookup. A lookup is finished for a glyph after the
+          // client locates the target glyph or glyph context and performs a substitution,
+          // if specified. To move to the “next” glyph, the client will typically skip all
+          // the glyphs that participated in the lookup operation: glyphs that were
+          // substituted as well as any other glyphs that formed a context for the operation.
+          LookupTable := FSubstitutionTable.LookupListTable.LookupTables[FeatureTable.LookupList[i]];
+
+          for j := 0 to LookupTable.SubTableCount-1 do
+            if (LookupTable.SubTables[j] is TCustomOpenTypeSubstitutionSubTable) then
+            begin
+              if (TCustomOpenTypeSubstitutionSubTable(LookupTable.SubTables[j]).Substitute(Result, NextGlyphIndex)) then
+              begin
+                GlyphHandled := True;
+                break;
+              end;
+            end;
+
+          if (GlyphHandled) then
+            break;
+        end;
+
+        if (GlyphHandled) and (NextGlyphIndex > GlyphIndex) then
+          GlyphIndex := NextGlyphIndex
+        else
+          // This also handles advancement if the substitution forget to do it
+          Inc(GlyphIndex);
+      end;
     end;
   end;
 end;

@@ -40,6 +40,17 @@ uses
   PT_Types;
 
 type
+  TPascalTypeCodePoint = Word;
+  TPascalTypeGlyphID = Word;
+
+  TPascalTypeGlyph = record
+    CodePoint: TPascalTypeCodePoint;
+    GlyphID: TPascalTypeGlyphID;
+  end;
+
+  TPascalTypeGlyphString = array of TPascalTypeGlyph;
+
+type
   TContourPoint = record
     XPos: Single;
     YPos: Single;
@@ -67,7 +78,7 @@ type
   end;
 
 
-  TCustomPascalTypeTable = class(TInterfacedPersistent, IStreamPersist)
+  TCustomPascalTypeTable = class abstract(TInterfacedPersistent, IStreamPersist)
   private
     FParent: TCustomPascalTypeTable;
   protected
@@ -362,7 +373,7 @@ var
   TableName: TTableType;
 begin
   // store chunk name to memory stream
-  TableName := GetTableType;
+  TableName := TableType;
   Stream.Write(TableName, 4);
 end;
 
