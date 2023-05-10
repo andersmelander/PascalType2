@@ -50,6 +50,7 @@ type
   EPascalTypeChecksumError = class(EPascalTypeError);
   {$ENDIF}
 
+type
   TTableName = array [0..3] of AnsiChar;
 
   TTableType = record

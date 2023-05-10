@@ -53,7 +53,7 @@ uses
 //
 //------------------------------------------------------------------------------
 type
-  TCustomOpenTypeFeatureTable = class(TCustomOpenTypeNamedTable)
+  TCustomOpenTypeFeatureTable = class abstract(TCustomOpenTypeNamedTable)
   private
     FFeatureParams   : Word;          // = NULL (reserved for offset to FeatureParams)
     FLookupListIndex : array of Word; // Array of LookupList indices for this feature -zero-based (first lookup is LookupListIndex = 0)
@@ -73,12 +73,33 @@ type
 
     property DisplayName: string read GetDisplayName;
     property FeatureParams: Word read FFeatureParams write SetFeatureParams;
+    // https://learn.microsoft.com/en-us/typography/opentype/spec/images/gsub_fig3g.png
     property LookupListCount: Integer read GetLookupListCount;
     property LookupList[Index: Integer]: Word read GetLookupList;
   end;
 
   TOpenTypeFeatureTableClass = class of TCustomOpenTypeFeatureTable;
 
+
+//------------------------------------------------------------------------------
+//
+//              TOpenTypeFeatureTableGeneric
+//
+//------------------------------------------------------------------------------
+// Generic placeholder for those features that have no concrete implementation.
+//------------------------------------------------------------------------------
+type
+  TOpenTypeFeatureTableGeneric = class(TCustomOpenTypeFeatureTable)
+  private
+    FTableType: TTableType;
+  protected
+    function GetInternalTableType: TTableType; override;
+    class function GetDisplayName: string; override;
+  public
+    class function GetTableType: TTableType; override;
+
+    property TableType: TTableType read GetInternalTableType write FTableType;
+  end;
 
 //------------------------------------------------------------------------------
 //
@@ -113,6 +134,8 @@ type
 //
 //      Features
 //
+//------------------------------------------------------------------------------
+// https://learn.microsoft.com/en-us/typography/opentype/spec/featuretags
 //------------------------------------------------------------------------------
 procedure RegisterFeature(FeatureClass: TOpenTypeFeatureTableClass);
 procedure RegisterFeatures(FeaturesClasses: array of TOpenTypeFeatureTableClass);
@@ -307,8 +330,6 @@ begin
 end;
 
 function TOpenTypeFeatureListTable.FindFeature(const ATableType: TTableType): TCustomOpenTypeFeatureTable;
-var
-  i: integer;
 begin
   for Result in FFeatureList do
     if (Result.TableType = ATableType) then
@@ -371,19 +392,25 @@ begin
     // find feature class
     FeatureClass := FindFeatureByType(FeatureList[FeatureIndex].Tag);
 
-    if (FeatureClass <> nil) then
-    begin
-      // create language system entry
-      // add to language system list
-      FeatureTable := FFeatureList.Add(FeatureClass);
+    if (FeatureClass = nil) then
+      // We *must* load the table even if we have no implementation for it.
+      // Otherwise the index numbers in the feature index list (see
+      // TCustomOpenTypeLanguageSystemTable) will not match.
+      FeatureClass := TOpenTypeFeatureTableGeneric;
 
-      // set position to actual script list entry
-      Stream.Position := StartPos + FeatureList[FeatureIndex].Offset;
+    // create language system entry
+    // add to language system list
+    FeatureTable := FFeatureList.Add(FeatureClass);
 
-      // load from stream
-      FeatureTable.LoadFromStream(Stream);
-    end else
-      ; // raise EPascalTypeError.Create('Unknown Feature: ' + FeatureList[FeatureIndex].Tag);
+    // Set the table type in case we used the generic implementation
+    if (FeatureTable is TOpenTypeFeatureTableGeneric) then
+      TOpenTypeFeatureTableGeneric(FeatureTable).TableType := FeatureList[FeatureIndex].Tag;
+
+    // set position to actual script list entry
+    Stream.Position := StartPos + FeatureList[FeatureIndex].Offset;
+
+    // load from stream
+    FeatureTable.LoadFromStream(Stream);
   end;
 end;
 
@@ -436,4 +463,25 @@ end;
 
 
 //------------------------------------------------------------------------------
+//
+//              TOpenTypeFeatureTableGeneric
+//
+//------------------------------------------------------------------------------
+class function TOpenTypeFeatureTableGeneric.GetDisplayName: string;
+begin
+  Result := '(unknown)';
+end;
+
+function TOpenTypeFeatureTableGeneric.GetInternalTableType: TTableType;
+begin
+  Result := FTableType;
+end;
+
+class function TOpenTypeFeatureTableGeneric.GetTableType: TTableType;
+begin
+  Result := 0;
+end;
+
+//------------------------------------------------------------------------------
+
 end.

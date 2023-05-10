@@ -155,6 +155,22 @@ type
 
 //------------------------------------------------------------------------------
 //
+//              TOpenTypeLookupTableGeneric
+//
+//------------------------------------------------------------------------------
+// Generic placeholder for those lookup types that have no concrete implementation.
+//------------------------------------------------------------------------------
+type
+  TOpenTypeLookupTableGeneric = class(TCustomOpenTypeLookupTable)
+  private type
+    TOpenTypeLookupSubTableGeneric = class(TCustomOpenTypeLookupSubTable);
+  protected
+    function GetSubTableClass(ASubFormat: Word): TOpenTypeLookupSubTableClass; override;
+  end;
+
+
+//------------------------------------------------------------------------------
+//
 //              TOpenTypeLookupListTable
 //
 //------------------------------------------------------------------------------
@@ -348,6 +364,18 @@ begin
   Changed;
 end;
 
+
+//------------------------------------------------------------------------------
+//
+//              TOpenTypeLookupTableGeneric
+//
+//------------------------------------------------------------------------------
+function TOpenTypeLookupTableGeneric.GetSubTableClass(ASubFormat: Word): TOpenTypeLookupSubTableClass;
+begin
+  Result := TOpenTypeLookupSubTableGeneric;
+end;
+
+
 //------------------------------------------------------------------------------
 //
 //              TOpenTypeLookupListTable
@@ -421,7 +449,10 @@ begin
     // The mapping from LookupType to lookup table class differs between GSUB and GPOS.
     LookupTableClass := TCustomOpenTypeCommonTable(Parent).GetLookupTableClass(LookupType);
     if (LookupTableClass = nil) then
-      continue;
+      // We *must* load the table even if we have no implementation for it.
+      // Otherwise the index numbers in the feature lookup list (see
+      // TCustomOpenTypeFeatureTable) will not match.
+      LookupTableClass := TOpenTypeLookupTableGeneric;
 
     Stream.Seek(-SizeOf(Word), soFromCurrent);
 
