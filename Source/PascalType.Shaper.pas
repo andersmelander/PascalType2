@@ -40,6 +40,7 @@ uses
   Generics.Collections,
   PT_Types,
   PT_Classes,
+  PascalType.GlyphString,
   PascalType.FontFace.SFNT,
   PascalType.Tables.OpenType.GSUB,
   PascalType.Tables.OpenType.Feature;
@@ -66,6 +67,9 @@ type
     procedure ProcessCodePoint(var CodePoint: Cardinal); virtual;
     function CompositionFilter(CodePoint: Cardinal): boolean; virtual;
     function FindFeature(const ATableType: TTableType): TCustomOpenTypeFeatureTable;
+
+    function CreateGlyphString: TPascalTypeGlyphString; virtual;
+    function GetGlyphStringClass: TPascalTypeGlyphStringClass; virtual;
   public
     constructor Create(AFont: TCustomPascalTypeFontFace);
     destructor Destroy; override;
@@ -364,13 +368,6 @@ end;
 //              TPascalTypeShaper
 //
 //------------------------------------------------------------------------------
-function TPascalTypeShaper.CompositionFilter(CodePoint: Cardinal): boolean;
-begin
-  // Lookup codepoint in font.
-  // Reject if font doesn't contain a glyph for the codepoint
-  Result := Font.HasGlyphByCharacter(CodePoint);
-end;
-
 constructor TPascalTypeShaper.Create(AFont: TCustomPascalTypeFontFace);
 begin
   inherited Create;
@@ -379,6 +376,30 @@ begin
   FLanguage := OpenTypeDefaultLanguageSystem;
   // Cache GSUB. We'll use it a lot
   FSubstitutionTable := TOpenTypeGlyphSubstitutionTable(IPascalTypeFontFace(FFont).GetTableByTableType(TOpenTypeGlyphSubstitutionTable.GetTableType));
+end;
+
+destructor TPascalTypeShaper.Destroy;
+begin
+  FFeatures.Free;
+
+  inherited;
+end;
+
+function TPascalTypeShaper.CreateGlyphString: TPascalTypeGlyphString;
+begin
+  Result := GetGlyphStringClass.Create;
+end;
+
+function TPascalTypeShaper.GetGlyphStringClass: TPascalTypeGlyphStringClass;
+begin
+  Result := TPascalTypeGlyphString;
+end;
+
+function TPascalTypeShaper.CompositionFilter(CodePoint: Cardinal): boolean;
+begin
+  // Lookup codepoint in font.
+  // Reject if font doesn't contain a glyph for the codepoint
+  Result := Font.HasGlyphByCharacter(CodePoint);
 end;
 
 function TPascalTypeShaper.DecompositionFilter(CodePoint: Cardinal): boolean;
@@ -392,13 +413,6 @@ begin
   else
     Result := True;
   end;
-end;
-
-destructor TPascalTypeShaper.Destroy;
-begin
-  FFeatures.Free;
-
-  inherited;
 end;
 
 function TPascalTypeShaper.FindFeature(const ATableType: TTableType): TCustomOpenTypeFeatureTable;
@@ -507,6 +521,7 @@ var
   LookupTable: TCustomOpenTypeLookupTable;
   GlyphIndex, NextGlyphIndex: integer;
   GlyphHandled: boolean;
+  Glyph: TPascalTypeGlyph;
 const
   Features: array of TTableName =
     ['ccmp', 'locl'];
@@ -539,70 +554,79 @@ begin
   (*
   ** From here on we are done with Unicode codepoints and are working with glyph IDs.
   *)
-  SetLength(Result, Length(UTF32));
-  for i := 0 to High(UTF32) do
-  begin
-    Result[i].CodePoint := UTF32[i];
-    Result[i].GlyphID := Font.GetGlyphByCharacter(Result[i].CodePoint);
+  Result := CreateGlyphString;
+  try
+    Result.SetLength(Length(UTF32));
 
-    // TODO : TPascalTypeGlyph and TPascalTypeGlyphString should be objects created by the shaper.
-    // The individual shaper may have need to store information in the string and glyph that can not be generalized.
-    // function TCustomPascalTypeShaper.CreateGlyphString: TCustomPascalTypeGlyphString;
-    // function TCustomPascalTypeGlyphString.CreateGlyph: TCustomPascalTypeGlyph;
-  end;
-
-
-  (*
-  ** Post-processing: Normalization-related GSUB features and other font-specific considerations
-  *)
-  if (FSubstitutionTable <> nil) then
-  for Feature in Features do
-  begin
-    FeatureTable := FindFeature(Feature);
-
-    if (FeatureTable <> nil) then
+    for i := 0 to High(UTF32) do
     begin
+      Glyph := Result[i];
+      Glyph.CodePoint := UTF32[i];
+      Glyph.GlyphID := Font.GetGlyphByCharacter(Result[i].CodePoint);
 
-      GlyphIndex := 0;
-      while (GlyphIndex <= High(Result)) do
+      // DONE : TPascalTypeGlyph and TPascalTypeGlyphString should be objects created by the shaper.
+      // The individual shaper may have need to store information in the string and glyph that can not be generalized.
+      // function TCustomPascalTypeShaper.CreateGlyphString: TCustomPascalTypeGlyphString;
+      // function TCustomPascalTypeGlyphString.CreateGlyph: TCustomPascalTypeGlyph;
+    end;
+
+
+    (*
+    ** Post-processing: Normalization-related GSUB features and other font-specific considerations
+    *)
+    if (FSubstitutionTable <> nil) then
+    for Feature in Features do
+    begin
+      FeatureTable := FindFeature(Feature);
+
+      if (FeatureTable <> nil) then
       begin
-        GlyphHandled := False;
-        NextGlyphIndex := GlyphIndex;
 
-        // A series of substitution operations on the same glyph or string requires multiple
-        // lookups, one for each separate action. Each lookup has a different array index
-        // in the LookupList table and is applied in the LookupList order.
-        for i := 0 to FeatureTable.LookupListCount-1 do
+        GlyphIndex := 0;
+        while (GlyphIndex < Result.Count) do
         begin
-          // During text processing, a client applies a lookup to each glyph in the string
-          // before moving to the next lookup. A lookup is finished for a glyph after the
-          // client locates the target glyph or glyph context and performs a substitution,
-          // if specified. To move to the “next” glyph, the client will typically skip all
-          // the glyphs that participated in the lookup operation: glyphs that were
-          // substituted as well as any other glyphs that formed a context for the operation.
-          LookupTable := FSubstitutionTable.LookupListTable.LookupTables[FeatureTable.LookupList[i]];
+          GlyphHandled := False;
+          NextGlyphIndex := GlyphIndex;
 
-          for j := 0 to LookupTable.SubTableCount-1 do
-            if (LookupTable.SubTables[j] is TCustomOpenTypeSubstitutionSubTable) then
-            begin
-              if (TCustomOpenTypeSubstitutionSubTable(LookupTable.SubTables[j]).Substitute(Result, NextGlyphIndex)) then
+          // A series of substitution operations on the same glyph or string requires multiple
+          // lookups, one for each separate action. Each lookup has a different array index
+          // in the LookupList table and is applied in the LookupList order.
+          for i := 0 to FeatureTable.LookupListCount-1 do
+          begin
+            // During text processing, a client applies a lookup to each glyph in the string
+            // before moving to the next lookup. A lookup is finished for a glyph after the
+            // client locates the target glyph or glyph context and performs a substitution,
+            // if specified. To move to the “next” glyph, the client will typically skip all
+            // the glyphs that participated in the lookup operation: glyphs that were
+            // substituted as well as any other glyphs that formed a context for the operation.
+            LookupTable := FSubstitutionTable.LookupListTable.LookupTables[FeatureTable.LookupList[i]];
+
+            for j := 0 to LookupTable.SubTableCount-1 do
+              if (LookupTable.SubTables[j] is TCustomOpenTypeSubstitutionSubTable) then
               begin
-                GlyphHandled := True;
-                break;
+                if (TCustomOpenTypeSubstitutionSubTable(LookupTable.SubTables[j]).Substitute(Result, NextGlyphIndex)) then
+                begin
+                  GlyphHandled := True;
+                  break;
+                end;
               end;
-            end;
 
-          if (GlyphHandled) then
-            break;
+            if (GlyphHandled) then
+              break;
+          end;
+
+          if (GlyphHandled) and (NextGlyphIndex > GlyphIndex) then
+            GlyphIndex := NextGlyphIndex
+          else
+            // This also handles advancement if the substitution forget to do it
+            Inc(GlyphIndex);
         end;
-
-        if (GlyphHandled) and (NextGlyphIndex > GlyphIndex) then
-          GlyphIndex := NextGlyphIndex
-        else
-          // This also handles advancement if the substitution forget to do it
-          Inc(GlyphIndex);
       end;
     end;
+
+  except
+    Result.Free;
+    raise;
   end;
 end;
 

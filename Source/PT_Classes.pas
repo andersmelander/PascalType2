@@ -40,15 +40,11 @@ uses
   PT_Types;
 
 type
+  // A Unicode code point
   TPascalTypeCodePoint = Word;
+
+  // A GlyphID
   TPascalTypeGlyphID = Word;
-
-  TPascalTypeGlyph = record
-    CodePoint: TPascalTypeCodePoint;
-    GlyphID: TPascalTypeGlyphID;
-  end;
-
-  TPascalTypeGlyphString = array of TPascalTypeGlyph;
 
 type
   TContourPoint = record

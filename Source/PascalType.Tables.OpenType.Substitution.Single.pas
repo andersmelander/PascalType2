@@ -38,9 +38,7 @@ uses
   Generics.Collections,
   Generics.Defaults,
   Classes,
-  PT_Types,
-  PT_Classes,
-  PT_Tables,
+  PascalType.GlyphString,
   PascalType.Tables.OpenType.Lookup,
   PascalType.Tables.OpenType.Substitution;
 
@@ -86,7 +84,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Substitute(var AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+    function Substitute(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
 
     property DeltaGlyphID: SmallInt read FDeltaGlyphID write FDeltaGlyphID;
   end;
@@ -113,7 +111,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Substitute(var GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+    function Substitute(GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
 
     property SubstituteGlyphIDs: TGlyphIDs read FSubstituteGlyphIDs;
   end;
@@ -127,6 +125,8 @@ implementation
 
 uses
   SysUtils,
+  PT_Types,
+  PT_Classes,
   PT_ResourceStrings;
 
 //------------------------------------------------------------------------------
@@ -180,7 +180,7 @@ begin
   WriteSwappedSmallInt(Stream, FDeltaGlyphID);
 end;
 
-function TOpenTypeSubstitutionSubTableSingleOffset.Substitute(var AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
+function TOpenTypeSubstitutionSubTableSingleOffset.Substitute(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
 var
   SubstitutionIndex: integer;
 begin
@@ -233,7 +233,7 @@ begin
     WriteSwappedWord(Stream, FSubstituteGlyphIDs[i]);
 end;
 
-function TOpenTypeSubstitutionSubTableSingleList.Substitute(var GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
+function TOpenTypeSubstitutionSubTableSingleList.Substitute(GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
 var
   SubstitutionIndex: integer;
 begin

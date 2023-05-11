@@ -38,9 +38,7 @@ uses
   Generics.Collections,
   Generics.Defaults,
   Classes,
-  PT_Types,
-  PT_Classes,
-  PT_Tables,
+  PascalType.GlyphString,
   PascalType.Tables.OpenType.Lookup,
   PascalType.Tables.OpenType.Substitution;
 
@@ -88,7 +86,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Substitute(var AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+    function Substitute(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
 
     property SubstituteSequenceList: TGlyphSequences read FSequenceList;
   end;
@@ -102,6 +100,8 @@ implementation
 
 uses
   SysUtils,
+  PT_Types,
+  PT_Classes,
   PT_ResourceStrings;
 
 //------------------------------------------------------------------------------
@@ -208,12 +208,12 @@ begin
   Stream.Position := SavePos;
 end;
 
-function TOpenTypeSubstitutionSubTableMultipleList.Substitute(var AGlyphString: TPascalTypeGlyphString;
+function TOpenTypeSubstitutionSubTableMultipleList.Substitute(AGlyphString: TPascalTypeGlyphString;
   var AIndex: integer): boolean;
 var
   SubstitutionIndex: integer;
   Sequence: TGlyphSequence;
-  SequenceString: TPascalTypeGlyphString;
+  Glyph: TPascalTypeGlyph;
   i: integer;
 begin
   // The coverage table just tells us if the substitution applies.
@@ -225,14 +225,16 @@ begin
   // Get the replacement sequence
   Sequence := FSequenceList[SubstitutionIndex];
 
-  // Create a replacement string
-  SetLength(SequenceString, Length(Sequence)-1);
-  for i := 1 to High(Sequence) do
-    SequenceString[i-1].GlyphID := Sequence[i];
-  // First entry in source string is reused
+  // First entry in glyph string is reused
   AGlyphString[AIndex].GlyphID := Sequence[0];
-  // Inser replacement sequence
-  Insert(SequenceString, AGlyphString, AIndex+1);
+
+  // Remaining are inserted
+  for i := 1 to High(Sequence) do
+  begin
+    Glyph := AGlyphString.CreateGlyph;
+    Glyph.GlyphID := Sequence[i];
+    AGlyphString.Insert(AIndex+i, Glyph);
+  end;
 
   Inc(AIndex, Length(Sequence));
   Result := True;

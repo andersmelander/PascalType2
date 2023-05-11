@@ -46,7 +46,6 @@ uses
   PT_Classes,
   PascalType.FontFace,
   PascalType.Rasterizer,
-  PT_Tables,
   PT_TablesTrueType;
 
 type
@@ -83,7 +82,9 @@ implementation
 uses
   Math,
   GR32,
+  PT_Tables,
   PascalType.Shaper,
+  PascalType.GlyphString,
   PascalType.FontFace.SFNT,
   PascalType.Tables.TrueType.glyf,
   PascalType.Tables.TrueType.hhea;
@@ -883,6 +884,7 @@ var
   GlyphMetric: TGlyphMetric;
   Shaper: TPascalTypeShaper;
   ShapedText: TPascalTypeGlyphString;
+  Glyph: TPascalTypeGlyph;
 begin
   Canvas.BeginUpdate;
   try
@@ -892,18 +894,23 @@ begin
     Shaper := TPascalTypeShaper.Create(FontFace);
     try
       ShapedText := Shaper.Shape(Text);
+      try
 
-      for CharIndex := 0 to High(ShapedText) do
-      begin
-        // get glyph index
-        GlyphIndex := ShapedText[CharIndex].GlyphID;
+        for Glyph in ShapedText do
+        begin
+          // get glyph index
+          GlyphIndex := Glyph.GlyphID;
 
-        // rasterize character
-        RasterizeGlyph(GlyphIndex, Canvas, Round(Pos.X), Round(Pos.Y));
+          // rasterize character
+          RasterizeGlyph(GlyphIndex, Canvas, Round(Pos.X), Round(Pos.Y));
 
-        // advance cursor
-        GlyphMetric := GetGlyphMetric(GlyphIndex);
-        Pos.X := Pos.X + GlyphMetric.HorizontalMetric.AdvanceWidth;
+          // advance cursor
+          GlyphMetric := GetGlyphMetric(GlyphIndex);
+          Pos.X := Pos.X + GlyphMetric.HorizontalMetric.AdvanceWidth;
+        end;
+
+      finally
+        ShapedText.Free;
       end;
 
     finally

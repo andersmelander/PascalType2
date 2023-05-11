@@ -164,6 +164,7 @@
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.Panose.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Shaper.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Rasterizer.Graphics32.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.GlyphString.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

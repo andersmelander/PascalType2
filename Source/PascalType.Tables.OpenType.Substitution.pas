@@ -39,8 +39,8 @@ uses
   Generics.Defaults,
   Classes,
   PT_Types,
-  PT_Classes,
   PT_Tables,
+  PascalType.GlyphString,
   PascalType.Tables.OpenType.Coverage,
   PascalType.Tables.OpenType.Lookup;
 
@@ -84,7 +84,7 @@ type
   private
   protected
   public
-    function Substitute(var GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; virtual; abstract;
+    function Substitute(GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; virtual; abstract;
   end;
 
   TOpenTypeSubstitutionSubTableClass = class of TCustomOpenTypeSubstitutionSubTable;
