@@ -299,9 +299,15 @@ begin
 end;
 
 function TOpenTypeCoverageRangeTable.GlyphByIndex(AIndex: Word): integer;
+var
+  i: integer;
 begin
-  // Not really applicable to this coverage table type...
-  Result := FRangeArray[AIndex].StartGlyph;
+  // TODO : A binary search is possible here
+  for i := 0 to High(FRangeArray) do
+    if (AIndex >= FRangeArray[i].StartCoverageIndex) and (AIndex <= FRangeArray[i].StartCoverageIndex + FRangeArray[i].EndGlyph - FRangeArray[i].StartGlyph) then
+      Exit(FRangeArray[i].StartGlyph + AIndex - FRangeArray[i].StartCoverageIndex);
+
+  Result := -1;
 end;
 
 function TOpenTypeCoverageRangeTable.IndexOfGlyph(AGlyphID: Word): integer;
@@ -309,7 +315,6 @@ var
   i: integer;
 begin
   // TODO : A binary search is possible here
-  Result := -1;
   i := 0;
   while (i <= High(FRangeArray)) and (AGlyphID >= FRangeArray[i].StartGlyph) do
   begin
@@ -317,6 +322,7 @@ begin
       Exit(FRangeArray[i].StartCoverageIndex + AGlyphID - FRangeArray[i].StartGlyph);
     Inc(i);
   end;
+  Result := -1;
 end;
 
 procedure TOpenTypeCoverageRangeTable.LoadFromStream(Stream: TStream);

@@ -233,6 +233,7 @@ begin
   begin
     Glyph := AGlyphString.CreateGlyph;
     Glyph.GlyphID := Sequence[i];
+    Glyph.Group := AGlyphString[AIndex].Group;
     AGlyphString.Insert(AIndex+i, Glyph);
   end;
 

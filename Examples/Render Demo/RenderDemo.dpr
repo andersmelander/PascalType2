@@ -59,7 +59,8 @@ uses
   PascalType.Tables.TrueType.Panose in '..\..\Source\PascalType.Tables.TrueType.Panose.pas',
   PascalType.Shaper in '..\..\Source\PascalType.Shaper.pas',
   PascalType.Rasterizer.Graphics32 in '..\..\Source\PascalType.Rasterizer.Graphics32.pas',
-  PascalType.GlyphString in '..\..\Source\PascalType.GlyphString.pas';
+  PascalType.GlyphString in '..\..\Source\PascalType.GlyphString.pas',
+  PascalType.Tables.OpenType.Substitution.Ligature in '..\..\Source\PascalType.Tables.OpenType.Substitution.Ligature.pas';
 
 {$R *.res}
 

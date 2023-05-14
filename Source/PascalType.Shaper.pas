@@ -517,7 +517,6 @@ var
   i, j: integer;
   FeatureTable: TCustomOpenTypeFeatureTable;
   Feature: TTableName;
-  Table: TCustomPascalTypeNamedTable;
   LookupTable: TCustomOpenTypeLookupTable;
   GlyphIndex, NextGlyphIndex: integer;
   GlyphHandled: boolean;
@@ -561,8 +560,9 @@ begin
     for i := 0 to High(UTF32) do
     begin
       Glyph := Result[i];
-      Glyph.CodePoint := UTF32[i];
-      Glyph.GlyphID := Font.GetGlyphByCharacter(Result[i].CodePoint);
+      Glyph.CodePoints := [UTF32[i]];
+      Glyph.GlyphID := Font.GetGlyphByCharacter(Result[i].CodePoints[0]);
+      Glyph.Group := i;
 
       // DONE : TPascalTypeGlyph and TPascalTypeGlyphString should be objects created by the shaper.
       // The individual shaper may have need to store information in the string and glyph that can not be generalized.

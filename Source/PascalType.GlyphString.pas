@@ -45,20 +45,25 @@ uses
 //------------------------------------------------------------------------------
 type
   TPascalTypeGlyphString = class;
+  TPascalTypeCodePoints = array of TPascalTypeCodePoint;
 
   TPascalTypeGlyph = class
   private
     FOwner: TPascalTypeGlyphString;
-    FCodePoint: TPascalTypeCodePoint;
+    FCodePoints: TPascalTypeCodePoints;
     FGlyphID: TPascalTypeGlyphID;
+    FGroup: integer;
   protected
     procedure SetOwner(AOwner: TPascalTypeGlyphString);
   public
     constructor Create(AOwner: TPascalTypeGlyphString = nil); virtual;
 
+    procedure Assign(Source: TPascalTypeGlyph); virtual;
+
     property Owner: TPascalTypeGlyphString read FOwner;
-    property CodePoint: TPascalTypeCodePoint read FCodePoint write FCodePoint;
+    property CodePoints: TPascalTypeCodePoints read FCodePoints write FCodePoints;
     property GlyphID: TPascalTypeGlyphID read FGlyphID write FGlyphID;
+    property Group: integer read FGroup write FGroup;
   end;
 
   TPascalTypeGlyphClass = class of TPascalTypeGlyph;
@@ -121,6 +126,13 @@ end;
 procedure TPascalTypeGlyph.SetOwner(AOwner: TPascalTypeGlyphString);
 begin
   FOwner := AOwner;
+end;
+
+procedure TPascalTypeGlyph.Assign(Source: TPascalTypeGlyph);
+begin
+  FCodePoints := Source.FCodePoints;
+  FGlyphID := Source.FGlyphID;
+  FGroup := Source.Group;
 end;
 
 

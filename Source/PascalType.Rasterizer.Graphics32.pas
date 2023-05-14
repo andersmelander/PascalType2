@@ -878,7 +878,6 @@ end;
 
 procedure TPascalTypeRasterizerGraphics32.RenderShapedText(const Text: string; Canvas: TCustomPath; X, Y: Integer);
 var
-  CharIndex: Integer;
   GlyphIndex: Integer;
   Pos: TFloatPoint;
   GlyphMetric: TGlyphMetric;
