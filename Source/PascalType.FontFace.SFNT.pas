@@ -942,13 +942,13 @@ function TPascalTypeFontFace.DoGetGlyphPath(GlyphIndex: Word; Depth: integer): T
     end;
   end;
 
-  function AffineTransformation(const Path: TPascalTypePath; const AffineTransformationMatrix: TSmallScaleMatrix): TPascalTypePath;
+  function AffineTransformation(const Path: TPascalTypePath; const AffineTransformationMatrix: TSmallScaleMatrix; ScaleOffset: boolean): TPascalTypePath;
   const
     q: Single = 33.0 / 35536.0;
   var
     i, j: integer;
-    m0, n0: double;
-    m, n: double;
+    m0, n0: Single;
+    m, n: Single;
     TempX: Single;
     OffsetX, OffsetY: Single;
     Contour: TPascalTypeContour;
@@ -960,20 +960,26 @@ function TPascalTypeFontFace.DoGetGlyphPath(GlyphIndex: Word; Depth: integer): T
     m0 := Max(Abs(AffineTransformationMatrix[0,0]), Abs(AffineTransformationMatrix[0,1]));
     n0 := Max(Abs(AffineTransformationMatrix[1,0]), Abs(AffineTransformationMatrix[1,1]));
 
+    OffsetX := AffineTransformationMatrix[0,2];
+    OffsetY := AffineTransformationMatrix[1,2];
+
     if (m0 <> 0) and (n0 <> 0) then
     begin
-      if (Abs(AffineTransformationMatrix[0,0]) - Abs(AffineTransformationMatrix[1,0]) <= q) then
-        m := 2 * m0
-      else
-        m := m0;
+      if (ScaleOffset) then
+      begin
+        if (Abs(AffineTransformationMatrix[0,0]) - Abs(AffineTransformationMatrix[1,0]) <= q) then
+          m := 2 * m0
+        else
+          m := m0;
 
-      if (Abs(AffineTransformationMatrix[0,1]) - Abs(AffineTransformationMatrix[1,1]) <= q) then
-        n := 2 * n0
-      else
-        n := n0;
+        if (Abs(AffineTransformationMatrix[0,1]) - Abs(AffineTransformationMatrix[1,1]) <= q) then
+          n := 2 * n0
+        else
+          n := n0;
 
-      OffsetX := AffineTransformationMatrix[0,2] * m;
-      OffsetY := AffineTransformationMatrix[1,2] * n;
+        OffsetX := OffsetX * m;
+        OffsetY := OffsetY * n;
+      end;
 
       // Transform all points in path
       for i := 0 to High(Path) do
@@ -982,18 +988,25 @@ function TPascalTypeFontFace.DoGetGlyphPath(GlyphIndex: Word; Depth: integer): T
         Result[i] := Contour;
         for j := 0 to High(Contour) do
         begin
-          TempX :=        AffineTransformationMatrix[0,0] * Contour[j].XPos + AffineTransformationMatrix[1,0] * Contour[j].YPos + OffsetX;
-          Contour[j].YPos := AffineTransformationMatrix[0,1] * Contour[j].XPos + AffineTransformationMatrix[1,1] * Contour[j].YPos + OffsetY;
-          Contour[j].XPos := TempX;
+          if (ScaleOffset) then
+          begin
+            Contour[j].XPos := Contour[j].XPos + OffsetX;
+            Contour[j].YPos := Contour[j].YPos + OffsetY;
+            TempX :=           AffineTransformationMatrix[0,0] * Contour[j].XPos + AffineTransformationMatrix[1,0] * Contour[j].YPos;
+            Contour[j].YPos := AffineTransformationMatrix[0,1] * Contour[j].XPos + AffineTransformationMatrix[1,1] * Contour[j].YPos;
+            Contour[j].XPos := TempX;
+          end else
+          begin
+            TempX :=           AffineTransformationMatrix[0,0] * Contour[j].XPos + AffineTransformationMatrix[1,0] * Contour[j].YPos + OffsetX;
+            Contour[j].YPos := AffineTransformationMatrix[0,1] * Contour[j].XPos + AffineTransformationMatrix[1,1] * Contour[j].YPos + OffsetY;
+            Contour[j].XPos := TempX;
+          end;
         end;
       end;
 
     end else
-    if (AffineTransformationMatrix[0,2] <> 0) or (AffineTransformationMatrix[1,2] <> 0) then
+    if (OffsetX <> 0) or (OffsetY <> 0) then
     begin
-      OffsetX := AffineTransformationMatrix[0,2];
-      OffsetY := AffineTransformationMatrix[1,2];
-
       // Simple translation
       for i := 0 to High(Path) do
       begin
@@ -1032,6 +1045,7 @@ function TPascalTypeFontFace.DoGetGlyphPath(GlyphIndex: Word; Depth: integer): T
     i: integer;
     CompositeGlyph: TPascalTypeCompositeGlyph;
     GlyphPath: TPascalTypePath;
+    ScaleOffset: boolean;
   begin
     // TODO : Point-to-point translation (GLYF_ARGS_ARE_XY_VALUES not set)
     SetLength(Result, 0);
@@ -1044,8 +1058,25 @@ function TPascalTypeFontFace.DoGetGlyphPath(GlyphIndex: Word; Depth: integer): T
       GlyphPath := DoGetGlyphPath(CompositeGlyph.GlyphIndex, Depth + 1);
 
       if (CompositeGlyph.HasAffineTransformationMatrix) then
-        GlyphPath := AffineTransformation(GlyphPath, CompositeGlyph.AffineTransformationMatrix)
-      else
+      begin
+        // Apple uses GLYF_SCALED_COMPONENT_OFFSET: First translate, then scale
+        // Microsoft uses GLYF_UNSCALED_COMPONENT_OFFSET: First scale, then translate
+        if (CompositeGlyph.Flags and TPascalTypeCompositeGlyph.GLYF_SCALED_COMPONENT_OFFSET <> 0) then
+          ScaleOffset := True
+        else
+        if (CompositeGlyph.Flags and TPascalTypeCompositeGlyph.GLYF_UNSCALED_COMPONENT_OFFSET <> 0) then
+          ScaleOffset := False
+        else
+{$IF Defined(MSWINDOWS)}
+          ScaleOffset := False;
+{$ELSEIF Defined(OSX)}
+          ScaleOffset := True;
+{$ELSE}
+          ScaleOffset := False;
+{$IFEND}
+
+        GlyphPath := AffineTransformation(GlyphPath, CompositeGlyph.AffineTransformationMatrix, ScaleOffset);
+      end else
       if (CompositeGlyph.HasOffset) then
         GlyphPath := Translate(GlyphPath, CompositeGlyph.OffsetX, CompositeGlyph.OffsetY);
 
