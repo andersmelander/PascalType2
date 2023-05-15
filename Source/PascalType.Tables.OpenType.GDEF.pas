@@ -175,19 +175,19 @@ begin
       raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read glyph class definition offset
-    GlyphClassDefOffset := ReadSwappedWord(Stream);
+    GlyphClassDefOffset := BigEndianValueReader.ReadWord(Stream);
 
     // read attach list
-    FAttachList := ReadSwappedWord(Stream);
+    FAttachList := BigEndianValueReader.ReadWord(Stream);
 
     // read ligature caret list
-    FLigCaretList := ReadSwappedWord(Stream);
+    FLigCaretList := BigEndianValueReader.ReadWord(Stream);
 
     // read mark attach class definition offset
-    MarkAttClassDefOffs := ReadSwappedWord(Stream);
+    MarkAttClassDefOffs := BigEndianValueReader.ReadWord(Stream);
 
     // read mark glyph set offset
-    MarkGlyphSetsDefOff := ReadSwappedWord(Stream);
+    MarkGlyphSetsDefOff := BigEndianValueReader.ReadWord(Stream);
 
     // eventually free existing class definition
     FreeAndNil(FGlyphClassDef);

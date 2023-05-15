@@ -190,7 +190,7 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read version
-    FVersion.Fixed := ReadSwappedCardinal(Stream);
+    FVersion.Fixed := BigEndianValueReader.ReadCardinal(Stream);
 
     if FVersion.Value < 2 then
       raise EPascalTypeError.Create(RCStrUnknownVersion);
@@ -315,7 +315,7 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read number of BitmapSize tables
-    BitmapSizeCount := ReadSwappedCardinal(Stream);
+    BitmapSizeCount := BigEndianValueReader.ReadCardinal(Stream);
 
     // read bitmap size tables
     for BitmapSizeIndex := 0 to BitmapSizeCount - 1 do
@@ -543,7 +543,7 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read number of bitmap scale tables
-    BitmapScaleCount := ReadSwappedCardinal(Stream);
+    BitmapScaleCount := BigEndianValueReader.ReadCardinal(Stream);
 
     // read bitmap size tables
     for BitmapScaleIndex := 0 to BitmapScaleCount - 1 do

@@ -177,7 +177,7 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read version
-    FVersion := ReadSwappedWord(Stream);
+    FVersion := BigEndianValueReader.ReadWord(Stream);
   end;
 end;
 
@@ -249,16 +249,16 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read version
-    FVersion := ReadSwappedCardinal(Stream);
+    FVersion := BigEndianValueReader.ReadCardinal(Stream);
 
     // read time stamp
-    FTimeStamp := ReadSwappedInt64(Stream);
+    FTimeStamp := BigEndianValueReader.ReadInt64(Stream);
 
     // read creation date
-    FCreation := ReadSwappedInt64(Stream);
+    FCreation := BigEndianValueReader.ReadInt64(Stream);
 
     // read last modified date
-    FLastMod := ReadSwappedInt64(Stream);
+    FLastMod := BigEndianValueReader.ReadInt64(Stream);
   end;
 end;
 
@@ -374,7 +374,7 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read version
-    FVersion.Fixed := ReadSwappedCardinal(Stream);
+    FVersion.Fixed := BigEndianValueReader.ReadCardinal(Stream);
   end;
 end;
 
@@ -439,7 +439,7 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read version
-    FVersion.Fixed := ReadSwappedCardinal(Stream);
+    FVersion.Fixed := BigEndianValueReader.ReadCardinal(Stream);
   end;
 end;
 

@@ -141,18 +141,18 @@ begin
   StartPosition := Stream.Position;
 
   // read version
-  FVersion.Fixed := ReadSwappedCardinal(Stream);
+  FVersion.Fixed := BigEndianValueReader.ReadCardinal(Stream);
 
   if Version.Value <> 1 then
     raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
-  ScriptListPosition := StartPosition + ReadSwappedWord(Stream);
-  FeatureListPosition := StartPosition + ReadSwappedWord(Stream);
-  LookupListPosition := StartPosition + ReadSwappedWord(Stream);
+  ScriptListPosition := StartPosition + BigEndianValueReader.ReadWord(Stream);
+  FeatureListPosition := StartPosition + BigEndianValueReader.ReadWord(Stream);
+  LookupListPosition := StartPosition + BigEndianValueReader.ReadWord(Stream);
 
   // For version 1.1 there will be a 32-bit "featureVariationsOffset" here
   // if (FVersion.Fract >= 1) then
-  //   FeatureVariationsPosition := StartPosition + ReadSwappedCardinal(Stream);
+  //   FeatureVariationsPosition := StartPosition + BigEndianValueReader.ReadCardinal(Stream);
   // else
   //   FeatureVariationsPosition := 0;
 

@@ -646,7 +646,7 @@ begin
 {$DEFINE Q_PLUS}
 {$OVERFLOWCHECKS OFF}
 {$ENDIF}
-    Checksum := Checksum - ReadSwappedCardinal(Stream);
+    Checksum := Checksum - BigEndianValueReader.ReadCardinal(Stream);
 {$IFDEF Q_PLUS}
 {$OVERFLOWCHECKS ON}
 {$UNDEF Q_PLUS}

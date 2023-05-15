@@ -741,10 +741,10 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read range from stream
-    FUnicodeRange[0] := ReadSwappedCardinal(Stream);
-    FUnicodeRange[1] := ReadSwappedCardinal(Stream);
-    FUnicodeRange[2] := ReadSwappedCardinal(Stream);
-    FUnicodeRange[3] := ReadSwappedCardinal(Stream);
+    FUnicodeRange[0] := BigEndianValueReader.ReadCardinal(Stream);
+    FUnicodeRange[1] := BigEndianValueReader.ReadCardinal(Stream);
+    FUnicodeRange[2] := BigEndianValueReader.ReadCardinal(Stream);
+    FUnicodeRange[3] := BigEndianValueReader.ReadCardinal(Stream);
   end;
 end;
 
@@ -1824,10 +1824,10 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read first cardinal
-  FCodePageRange[0] := ReadSwappedCardinal(Stream);
+  FCodePageRange[0] := BigEndianValueReader.ReadCardinal(Stream);
 
   // read second cardinal
-  FCodePageRange[1] := ReadSwappedCardinal(Stream);
+  FCodePageRange[1] := BigEndianValueReader.ReadCardinal(Stream);
 end;
 
 procedure TPascalTypeOS2CodePageRangeTable.SaveToStream(Stream: TStream);
@@ -1870,19 +1870,19 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read x-Height
-  FXHeight := ReadSwappedSmallInt(Stream);
+  FXHeight := BigEndianValueReader.ReadSmallInt(Stream);
 
   // read capital height
-  FCapHeight := ReadSwappedSmallInt(Stream);
+  FCapHeight := BigEndianValueReader.ReadSmallInt(Stream);
 
   // read default character
-  FDefaultChar := ReadSwappedWord(Stream);
+  FDefaultChar := BigEndianValueReader.ReadWord(Stream);
 
   // read break character
-  FBreakChar := ReadSwappedWord(Stream);
+  FBreakChar := BigEndianValueReader.ReadWord(Stream);
 
   // read max. context
-  FMaxContext := ReadSwappedWord(Stream);
+  FMaxContext := BigEndianValueReader.ReadWord(Stream);
 end;
 
 procedure TPascalTypeOS2AddendumTable.SaveToStream(Stream: TStream);
@@ -2077,7 +2077,7 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read version
-  FVersion := ReadSwappedWord(Stream);
+  FVersion := BigEndianValueReader.ReadWord(Stream);
 
   // check version
 (*
@@ -2090,49 +2090,49 @@ can still read the parts we support. The format is forward compatible.
 *)
 
   // read average horizontal character width
-  FAverageCharacterWidth := ReadSwappedWord(Stream);
+  FAverageCharacterWidth := BigEndianValueReader.ReadWord(Stream);
 
   // read weight
-  FWeight := ReadSwappedWord(Stream);
+  FWeight := BigEndianValueReader.ReadWord(Stream);
 
   // read width type
-  FWidthType := ReadSwappedWord(Stream);
+  FWidthType := BigEndianValueReader.ReadWord(Stream);
 
   // read font embedding right flags
-  FFontEmbeddingFlags := ReadSwappedWord(Stream);
+  FFontEmbeddingFlags := BigEndianValueReader.ReadWord(Stream);
 
   // read SubscriptSizeX
-  FSubscriptSizeX := ReadSwappedWord(Stream);
+  FSubscriptSizeX := BigEndianValueReader.ReadWord(Stream);
 
   // read SubscriptSizeY
-  FSubscriptSizeY := ReadSwappedWord(Stream);
+  FSubscriptSizeY := BigEndianValueReader.ReadWord(Stream);
 
   // read SubScriptOffsetX
-  FSubScriptOffsetX := ReadSwappedWord(Stream);
+  FSubScriptOffsetX := BigEndianValueReader.ReadWord(Stream);
 
   // read SubscriptOffsetX
-  FSubscriptYOffsetY := ReadSwappedWord(Stream);
+  FSubscriptYOffsetY := BigEndianValueReader.ReadWord(Stream);
 
   // read SuperscriptSizeX
-  FSuperscriptSizeX := ReadSwappedWord(Stream);
+  FSuperscriptSizeX := BigEndianValueReader.ReadWord(Stream);
 
   // read SuperscriptSizeY
-  FSuperscriptSizeY := ReadSwappedWord(Stream);
+  FSuperscriptSizeY := BigEndianValueReader.ReadWord(Stream);
 
   // read SuperscriptOffsetX
-  FSuperscriptOffsetX := ReadSwappedWord(Stream);
+  FSuperscriptOffsetX := BigEndianValueReader.ReadWord(Stream);
 
   // read SuperscriptOffsetY
-  FSuperscriptOffsetY := ReadSwappedWord(Stream);
+  FSuperscriptOffsetY := BigEndianValueReader.ReadWord(Stream);
 
   // read StrikeoutSize
-  FStrikeoutSize := ReadSwappedWord(Stream);
+  FStrikeoutSize := BigEndianValueReader.ReadWord(Stream);
 
   // read StrikeoutPosition
-  FStrikeoutPosition := ReadSwappedWord(Stream);
+  FStrikeoutPosition := BigEndianValueReader.ReadWord(Stream);
 
   // read font family type
-  FFontFamilyType := ReadSwappedWord(Stream);
+  FFontFamilyType := BigEndianValueReader.ReadWord(Stream);
 
   // read panose
   Stream.Read(PanoseFamilyKind, 1);
@@ -2175,7 +2175,7 @@ can still read the parts we support. The format is forward compatible.
     Bits 10 to 15 are reserved and must be set to 0.
     Applications should ignore bits 10 to 15 in a font that has a version 4 or version 5 OS/2 table.
   *)
-  FFontSelection := ReadSwappedWord(Stream);
+  FFontSelection := BigEndianValueReader.ReadWord(Stream);
   case FVersion of
     0..3:
       FFontSelection := FFontSelection and $007F;
@@ -2189,25 +2189,25 @@ can still read the parts we support. The format is forward compatible.
 {$ENDIF};
 
   // read UnicodeFirstCharacterIndex
-  FUnicodeFirstCharIndex := ReadSwappedWord(Stream);
+  FUnicodeFirstCharIndex := BigEndianValueReader.ReadWord(Stream);
 
   // read UnicodeLastCharacterIndex
-  FUnicodeLastCharIndex := ReadSwappedWord(Stream);
+  FUnicodeLastCharIndex := BigEndianValueReader.ReadWord(Stream);
 
   // read TypographicAscent
-  FTypographicAscent := ReadSwappedWord(Stream);
+  FTypographicAscent := BigEndianValueReader.ReadWord(Stream);
 
   // read TypographicDescent
-  FTypographicDescent := ReadSwappedWord(Stream);
+  FTypographicDescent := BigEndianValueReader.ReadWord(Stream);
 
   // read TypographicLineGap
-  FTypographicLineGap := ReadSwappedWord(Stream);
+  FTypographicLineGap := BigEndianValueReader.ReadWord(Stream);
 
   // read WindowsAscent
-  FWindowsAscent := ReadSwappedWord(Stream);
+  FWindowsAscent := BigEndianValueReader.ReadWord(Stream);
 
   // read WindowsDescent
-  FWindowsDescent := ReadSwappedWord(Stream);
+  FWindowsDescent := BigEndianValueReader.ReadWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
   HorizontalHeader := TPascalTypeHorizontalHeaderTable(FontFace.GetTableByTableName('hhea'));

@@ -173,7 +173,7 @@ procedure TCustomOpenTypeClassDefinitionTable.LoadFromStream(Stream: TStream);
 begin
   inherited;
 
-  if (TClassDefinitionFormat(ReadSwappedWord(Stream)) <> FClassFormat) then
+  if (TClassDefinitionFormat(BigEndianValueReader.ReadWord(Stream)) <> FClassFormat) then
     raise EPascalTypeError.Create('Class definition format mismatch');
 end;
 
@@ -245,12 +245,12 @@ begin
   if Stream.Position + 4 > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  FStartGlyphID := ReadSwappedWord(Stream);
+  FStartGlyphID := BigEndianValueReader.ReadWord(Stream);
 
-  SetLength(FClassIDArray, ReadSwappedWord(Stream));
+  SetLength(FClassIDArray, BigEndianValueReader.ReadWord(Stream));
 
   for i := 0 to High(FClassIDArray) do
-    FClassIDArray[i] := ReadSwappedWord(Stream);
+    FClassIDArray[i] := BigEndianValueReader.ReadWord(Stream);
 end;
 
 procedure TOpenTypeClassDefinitionListTable.SaveToStream(Stream: TStream);
@@ -321,13 +321,13 @@ begin
   if Stream.Position + 2 > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  SetLength(FRangeArray, ReadSwappedWord(Stream));
+  SetLength(FRangeArray, BigEndianValueReader.ReadWord(Stream));
 
   for i := 0 to High(FRangeArray) do
   begin
-    FRangeArray[i].StartGlyphID := ReadSwappedWord(Stream);
-    FRangeArray[i].EndGlyphID := ReadSwappedWord(Stream);
-    FRangeArray[i].ClassID := ReadSwappedWord(Stream);
+    FRangeArray[i].StartGlyphID := BigEndianValueReader.ReadWord(Stream);
+    FRangeArray[i].EndGlyphID := BigEndianValueReader.ReadWord(Stream);
+    FRangeArray[i].ClassID := BigEndianValueReader.ReadWord(Stream);
   end;
 end;
 

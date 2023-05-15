@@ -382,7 +382,7 @@ begin
   Assert(MaxProfile <> nil);
 
   // read instruction size
-  Value16 := ReadSwappedWord(Stream);
+  Value16 := BigEndianValueReader.ReadWord(Stream);
 
   // check if instructions shall be ignored
   if Value16 = $FFFF then
@@ -476,7 +476,7 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read number of contours
-  FNumberOfContours := ReadSwappedSmallInt(Stream);
+  FNumberOfContours := BigEndianValueReader.ReadSmallInt(Stream);
 
   // check if maximum number of contours are exceeded
   if (FNumberOfContours > 0) and (Word(FNumberOfContours) > MaxProfile.MaxContours) then
@@ -490,16 +490,16 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read XMin
-  FXMin := ReadSwappedSmallInt(Stream);
+  FXMin := BigEndianValueReader.ReadSmallInt(Stream);
 
   // read YMin
-  FYMin := ReadSwappedSmallInt(Stream);
+  FYMin := BigEndianValueReader.ReadSmallInt(Stream);
 
   // read XMax
-  FXMax := ReadSwappedSmallInt(Stream);
+  FXMax := BigEndianValueReader.ReadSmallInt(Stream);
 
   // read YMax
-  FYMax := ReadSwappedSmallInt(Stream);
+  FYMax := BigEndianValueReader.ReadSmallInt(Stream);
 
   // Assert(FXMin <= FXMax);
   // Assert(FYMin <= FYMax);
@@ -772,7 +772,7 @@ begin
   for ContourIndex := 0 to FNumberOfContours - 1 do
   begin
     // read number of contours
-    PointCount := ReadSwappedWord(Stream);
+    PointCount := BigEndianValueReader.ReadWord(Stream);
     EndPointIndexOfContour[ContourIndex] := PointCount;
   end;
 
@@ -856,7 +856,7 @@ begin
           Dec(LastPoint, Value8);
       end else
       if (ContourPoint.Flags and GLYF_X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR = 0) then
-        Inc(LastPoint, ReadSwappedSmallInt(Stream));
+        Inc(LastPoint, BigEndianValueReader.ReadSmallInt(Stream));
       // else: No bytes read. See: https://github.com/MicrosoftDocs/typography-issues/issues/765
 
       ContourPoint.XPos := LastPoint;
@@ -884,7 +884,7 @@ begin
           Dec(LastPoint, Value8);
       end else
       if (ContourPoint.Flags and GLYF_Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR = 0) then
-        Inc(LastPoint, ReadSwappedSmallInt(Stream));
+        Inc(LastPoint, BigEndianValueReader.ReadSmallInt(Stream));
       // else: No bytes read. See: https://github.com/MicrosoftDocs/typography-issues/issues/765
       ContourPoint.YPos := LastPoint;
     end;
@@ -927,7 +927,7 @@ begin
   inherited;
 
   // read flags
-  FFlags := ReadSwappedWord(Stream);
+  FFlags := BigEndianValueReader.ReadWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
   // make sure the GLYF_RESERVED flag is set to 0
@@ -935,21 +935,21 @@ begin
   //   raise EPascalTypeError.Create(RCStrCompositeGlyphFlagError);
 {$ENDIF}
   // read glyph index
-  FGlyphIndex := ReadSwappedWord(Stream);
+  FGlyphIndex := BigEndianValueReader.ReadWord(Stream);
 
   // read argument 1
   if (FFlags and GLYF_ARG_1_AND_2_ARE_WORDS <> 0) then
   begin
     if (FFlags and GLYF_ARGS_ARE_XY_VALUES <> 0) then
     begin
-      FOffsetXY[0] := ReadSwappedSmallInt(Stream);
-      FOffsetXY[1] := ReadSwappedSmallInt(Stream);
+      FOffsetXY[0] := BigEndianValueReader.ReadSmallInt(Stream);
+      FOffsetXY[1] := BigEndianValueReader.ReadSmallInt(Stream);
       FPointIndex[0] := 0;
       FPointIndex[1] := 0;
     end else
     begin
-      FPointIndex[0] := ReadSwappedWord(Stream);
-      FPointIndex[1] := ReadSwappedWord(Stream);
+      FPointIndex[0] := BigEndianValueReader.ReadWord(Stream);
+      FPointIndex[1] := BigEndianValueReader.ReadWord(Stream);
       FOffsetXY[0] := 0;
       FOffsetXY[1] := 0;
     end;
@@ -978,9 +978,9 @@ begin
   begin
     // read scale
 {$IFDEF UseFloatingPoint}
-    FAffineTransformationMatrix[0, 0] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
+    FAffineTransformationMatrix[0, 0] := BigEndianValueReader.ReadSmallInt(Stream) * CFixedPoint2Dot14Scale;
 {$ELSE}
-    FAffineTransformationMatrix[0, 0] := ReadSwappedSmallInt(Stream);
+    FAffineTransformationMatrix[0, 0] := BigEndianValueReader.ReadSmallInt(Stream);
 {$ENDIF}
     // set other values implicitly
     FAffineTransformationMatrix[0, 1] := 0;
@@ -1000,16 +1000,16 @@ begin
   begin
     // read x-scale
 {$IFDEF UseFloatingPoint}
-    FAffineTransformationMatrix[0, 0] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
+    FAffineTransformationMatrix[0, 0] := BigEndianValueReader.ReadSmallInt(Stream) * CFixedPoint2Dot14Scale;
 {$ELSE}
-    FAffineTransformationMatrix[0, 0] := ReadSwappedSmallInt(Stream);
+    FAffineTransformationMatrix[0, 0] := BigEndianValueReader.ReadSmallInt(Stream);
 {$ENDIF}
 
     // read y-scale
 {$IFDEF UseFloatingPoint}
-    FAffineTransformationMatrix[1, 1] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
+    FAffineTransformationMatrix[1, 1] := BigEndianValueReader.ReadSmallInt(Stream) * CFixedPoint2Dot14Scale;
 {$ELSE}
-    FAffineTransformationMatrix[1, 1] := ReadSwappedSmallInt(Stream);
+    FAffineTransformationMatrix[1, 1] := BigEndianValueReader.ReadSmallInt(Stream);
 {$ENDIF}
     // set other values implicitly
     FAffineTransformationMatrix[0, 1] := 0;
@@ -1027,30 +1027,30 @@ begin
   begin
     // read x-scale
 {$IFDEF UseFloatingPoint}
-    FAffineTransformationMatrix[0, 0] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
+    FAffineTransformationMatrix[0, 0] := BigEndianValueReader.ReadSmallInt(Stream) * CFixedPoint2Dot14Scale;
 {$ELSE}
-    FAffineTransformationMatrix[0, 0] := ReadSwappedSmallInt(Stream);
+    FAffineTransformationMatrix[0, 0] := BigEndianValueReader.ReadSmallInt(Stream);
 {$ENDIF}
 
     // read scale01
 {$IFDEF UseFloatingPoint}
-    FAffineTransformationMatrix[0, 1] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
+    FAffineTransformationMatrix[0, 1] := BigEndianValueReader.ReadSmallInt(Stream) * CFixedPoint2Dot14Scale;
 {$ELSE}
-    FAffineTransformationMatrix[0, 1] := ReadSwappedSmallInt(Stream);
+    FAffineTransformationMatrix[0, 1] := BigEndianValueReader.ReadSmallInt(Stream);
 {$ENDIF}
 
     // read scale10
 {$IFDEF UseFloatingPoint}
-    FAffineTransformationMatrix[1, 0] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
+    FAffineTransformationMatrix[1, 0] := BigEndianValueReader.ReadSmallInt(Stream) * CFixedPoint2Dot14Scale;
 {$ELSE}
-    FAffineTransformationMatrix[1, 0] := ReadSwappedSmallInt(Stream);
+    FAffineTransformationMatrix[1, 0] := BigEndianValueReader.ReadSmallInt(Stream);
 {$ENDIF}
 
     // read y-scale
 {$IFDEF UseFloatingPoint}
-    FAffineTransformationMatrix[1, 1] := ReadSwappedSmallInt(Stream) * CFixedPoint2Dot14Scale;
+    FAffineTransformationMatrix[1, 1] := BigEndianValueReader.ReadSmallInt(Stream) * CFixedPoint2Dot14Scale;
 {$ELSE}
-    FAffineTransformationMatrix[1, 1] := ReadSwappedSmallInt(Stream);
+    FAffineTransformationMatrix[1, 1] := BigEndianValueReader.ReadSmallInt(Stream);
 {$ENDIF}
 {$IFDEF AmbigiousExceptions}
     // GLYF_WE_HAVE_A_TWO_BY_TWO and GLYF_WE_HAVE_A_SCALE are mutually exclusive
@@ -1374,7 +1374,7 @@ begin
 
     Stream.Position := StartPos + Locations[LocIndex];
 
-    Value16 := ReadSwappedSmallInt(Stream);
+    Value16 := BigEndianValueReader.ReadSmallInt(Stream);
 
     if (Value16 < -1) then
       raise EPascalTypeError.CreateFmt(RCStrUnknownGlyphDataType, [Value16]);

@@ -270,14 +270,14 @@ begin
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // read feature parameter offset
-  FFeatureParams := ReadSwappedWord(Stream);
+  FFeatureParams := BigEndianValueReader.ReadWord(Stream);
 
   // read lookup count
-  SetLength(FLookupListIndex, ReadSwappedWord(Stream));
+  SetLength(FLookupListIndex, BigEndianValueReader.ReadWord(Stream));
 
   // read lookup list index offsets
   for LookupIndex := 0 to High(FLookupListIndex) do
-    FLookupListIndex[LookupIndex] := ReadSwappedWord(Stream);
+    FLookupListIndex[LookupIndex] := BigEndianValueReader.ReadWord(Stream);
 end;
 
 procedure TCustomOpenTypeFeatureTable.SaveToStream(Stream: TStream);
@@ -287,14 +287,14 @@ begin
   inherited;
 
   // read feature parameter offset
-  FFeatureParams := ReadSwappedWord(Stream);
+  FFeatureParams := BigEndianValueReader.ReadWord(Stream);
 
   // read lookup count
-  SetLength(FLookupListIndex, ReadSwappedWord(Stream));
+  SetLength(FLookupListIndex, BigEndianValueReader.ReadWord(Stream));
 
   // read lookup list index offsets
   for LookupIndex := 0 to High(FLookupListIndex) do
-    FLookupListIndex[LookupIndex] := ReadSwappedWord(Stream);
+    FLookupListIndex[LookupIndex] := BigEndianValueReader.ReadWord(Stream);
 end;
 
 procedure TCustomOpenTypeFeatureTable.SetFeatureParams(const Value: Word);
@@ -373,7 +373,7 @@ begin
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // read feature list count
-  SetLength(FeatureList, ReadSwappedWord(Stream));
+  SetLength(FeatureList, BigEndianValueReader.ReadWord(Stream));
 
   for FeatureIndex := 0 to High(FeatureList) do
   begin
@@ -381,7 +381,7 @@ begin
     Stream.Read(FeatureList[FeatureIndex].Tag, SizeOf(TTableType));
 
     // read offset
-    FeatureList[FeatureIndex].Offset := ReadSwappedWord(Stream);
+    FeatureList[FeatureIndex].Offset := BigEndianValueReader.ReadWord(Stream);
   end;
 
   // clear language system list

@@ -142,16 +142,16 @@ begin
   for MtxIndex := 0 to VerticalHeader.NumOfLongVerMetrics - 1 do
   begin
     // read advance width
-    FVerticalMetrics[MtxIndex].AdvanceHeight := ReadSwappedSmallInt(Stream);
+    FVerticalMetrics[MtxIndex].AdvanceHeight := BigEndianValueReader.ReadSmallInt(Stream);
 
     // read left side bearing
-    FVerticalMetrics[MtxIndex].TopSideBearing := ReadSwappedSmallInt(Stream);
+    FVerticalMetrics[MtxIndex].TopSideBearing := BigEndianValueReader.ReadSmallInt(Stream);
   end;
 
   for MtxIndex := VerticalHeader.NumOfLongVerMetrics to High(FVerticalMetrics) do
   begin
     // read advance width / left side bearing at once
-    FVerticalMetrics[MtxIndex].AdvanceHeight := ReadSwappedSmallInt(Stream);
+    FVerticalMetrics[MtxIndex].AdvanceHeight := BigEndianValueReader.ReadSmallInt(Stream);
     FVerticalMetrics[MtxIndex].TopSideBearing := FVerticalMetrics[MtxIndex].AdvanceHeight;
   end;
 end;

@@ -145,10 +145,10 @@ begin
   for MtxIndex := 0 to HorHead.NumOfLongHorMetrics - 1 do
   begin
     // read advance width
-    FHorizontalMetrics[MtxIndex].AdvanceWidth := ReadSwappedWord(Stream);
+    FHorizontalMetrics[MtxIndex].AdvanceWidth := BigEndianValueReader.ReadWord(Stream);
 
     // read left side bearing
-    FHorizontalMetrics[MtxIndex].Bearing := ReadSwappedSmallInt(Stream);
+    FHorizontalMetrics[MtxIndex].Bearing := BigEndianValueReader.ReadSmallInt(Stream);
 
     // remember last width
     LastWidth := FHorizontalMetrics[MtxIndex].AdvanceWidth;
@@ -157,7 +157,7 @@ begin
   for MtxIndex := HorHead.NumOfLongHorMetrics to High(FHorizontalMetrics) do
   begin
     // read left side bearing
-    FHorizontalMetrics[MtxIndex].Bearing := ReadSwappedSmallInt(Stream);
+    FHorizontalMetrics[MtxIndex].Bearing := BigEndianValueReader.ReadSmallInt(Stream);
 
     // use advance width from last entry (useful for monospaced fonts)
     FHorizontalMetrics[MtxIndex].AdvanceWidth := LastWidth;

@@ -181,9 +181,9 @@ begin
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // Read list of offsets to list of offsets to ligatures
-  SetLength(OffsetListOffsets, ReadSwappedWord(Stream));
+  SetLength(OffsetListOffsets, BigEndianValueReader.ReadWord(Stream));
   for i := 0 to High(OffsetListOffsets) do
-    OffsetListOffsets[i] := ReadSwappedWord(Stream);
+    OffsetListOffsets[i] := BigEndianValueReader.ReadWord(Stream);
 
   SavePos := Stream.Position;
 
@@ -197,9 +197,9 @@ begin
 
     // Read list of offsets to ligatures,
     // Offsets are from beginning of ligatureSet table
-    SetLength(LigatureOffsets, ReadSwappedWord(Stream));
+    SetLength(LigatureOffsets, BigEndianValueReader.ReadWord(Stream));
     for j := 0 to High(LigatureOffsets) do
-      LigatureOffsets[j] := ReadSwappedWord(Stream);
+      LigatureOffsets[j] := BigEndianValueReader.ReadWord(Stream);
 
     // Read list of ligature definitions
     for j := 0 to High(LigatureOffsets) do
@@ -207,9 +207,9 @@ begin
       Stream.Position := StartPos + OffsetListOffsets[i] + LigatureOffsets[j];
 
       // Read ligature glyph
-      Ligature.Glyph := ReadSwappedWord(Stream);
+      Ligature.Glyph := BigEndianValueReader.ReadWord(Stream);
 
-      SetLength(Ligature.Components, ReadSwappedWord(Stream));
+      SetLength(Ligature.Components, BigEndianValueReader.ReadWord(Stream));
 
       if (Length(Ligature.Components) = 0) then
         // This shouldn't happen
@@ -220,7 +220,7 @@ begin
 
       // Read remaining from ligature component list
       for k := 1 to High(Ligature.Components) do
-        Ligature.Components[k] := ReadSwappedWord(Stream);
+        Ligature.Components[k] := BigEndianValueReader.ReadWord(Stream);
 
       FLigatures.Add(Ligature);
     end;

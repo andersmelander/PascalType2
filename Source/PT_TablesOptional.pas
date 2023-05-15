@@ -503,13 +503,13 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read reserved 1
-    FReserved[0] := ReadSwappedWord(Stream);
+    FReserved[0] := BigEndianValueReader.ReadWord(Stream);
 
     // read reserved 2
-    FReserved[1] := ReadSwappedWord(Stream);
+    FReserved[1] := BigEndianValueReader.ReadWord(Stream);
 
     // read signature length
-    SetLength(FSignature, ReadSwappedCardinal(Stream));
+    SetLength(FSignature, BigEndianValueReader.ReadCardinal(Stream));
 
     // check if table contains the entire signature
     if Position + Length(FSignature) > Size then
@@ -627,16 +627,16 @@ begin
     StartPos := Position;
 
     // read version
-    FVersion := ReadSwappedCardinal(Stream);
+    FVersion := BigEndianValueReader.ReadCardinal(Stream);
 
     if Version <> 1 then
       raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
     // read directory entry count
-    SetLength(Directory, ReadSwappedWord(Stream));
+    SetLength(Directory, BigEndianValueReader.ReadWord(Stream));
 
     // read flags
-    FFlags := WordToDigitalSignatureFlags(ReadSwappedWord(Stream));
+    FFlags := WordToDigitalSignatureFlags(BigEndianValueReader.ReadWord(Stream));
 
     if Position + Length(Directory) * SizeOf(TDigitalSignatureDirectory) > Size then
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
@@ -646,13 +646,13 @@ begin
       with Directory[DirIndex] do
       begin
         // read format
-        Format := ReadSwappedCardinal(Stream);
+        Format := BigEndianValueReader.ReadCardinal(Stream);
 
         // read length
-        Length := ReadSwappedCardinal(Stream);
+        Length := BigEndianValueReader.ReadCardinal(Stream);
 
         // read offset
-        Offset := ReadSwappedCardinal(Stream);
+        Offset := BigEndianValueReader.ReadCardinal(Stream);
       end;
 
     // clear existing signatures
@@ -800,14 +800,14 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read version
-    FVersion := ReadSwappedWord(Stream);
+    FVersion := BigEndianValueReader.ReadWord(Stream);
 
     // check version
     if not(Version in [0..1]) then
       raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
     // read version
-    SetLength(FGaspRanges, ReadSwappedWord(Stream));
+    SetLength(FGaspRanges, BigEndianValueReader.ReadWord(Stream));
 
     // check (minimum) table size
     if Position + 4 * Length(FGaspRanges) > Size then
@@ -816,10 +816,10 @@ begin
     for RangeIndex := 0 to High(FGaspRanges) do
     begin
       // read MaxPPEM
-      FGaspRanges[RangeIndex].MaxPPEM := Byte(ReadSwappedWord(Stream));
+      FGaspRanges[RangeIndex].MaxPPEM := Byte(BigEndianValueReader.ReadWord(Stream));
 
       // read GaspFlag
-      FGaspRanges[RangeIndex].GaspFlag := Byte(ReadSwappedWord(Stream));
+      FGaspRanges[RangeIndex].GaspFlag := Byte(BigEndianValueReader.ReadWord(Stream));
     end;
   end;
 end;
@@ -1025,16 +1025,16 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read format type
-    FVersion := ReadSwappedWord(Stream);
+    FVersion := BigEndianValueReader.ReadWord(Stream);
 
     if Version <> 0 then
       raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
     // read num records
-    NumRecords := ReadSwappedSmallInt(Stream);
+    NumRecords := BigEndianValueReader.ReadSmallInt(Stream);
 
     // read device record size
-    SizeDeviceRecord := ReadSwappedCardinal(Stream);
+    SizeDeviceRecord := BigEndianValueReader.ReadCardinal(Stream);
 
     // store offset position
     OffsetPosition := Position;
@@ -1138,13 +1138,13 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read number of pairs
-  SetLength(FPairs, ReadSwappedWord(Stream));
+  SetLength(FPairs, BigEndianValueReader.ReadWord(Stream));
 
 {$ifdef KERN_BSEARCH}
   // Note: Cambria Light Bold has zero in SearchRange
 
   // read search range
-  SearchRange := ReadSwappedWord(Stream);
+  SearchRange := BigEndianValueReader.ReadWord(Stream);
 
   // confirm search range has a valid value
   if (SearchRange <> 0) and (SearchRange > Round(6 * (1 shl FloorLog2(Length(FPairs))))) then
@@ -1152,7 +1152,7 @@ begin
       RCStrWrongSearchRange);
 
   // read entry selector
-  EntrySelector := ReadSwappedWord(Stream);
+  EntrySelector := BigEndianValueReader.ReadWord(Stream);
 
   // confirm entry selector has a valid value
   if (SearchRange <> 0) and (EntrySelector < Round(Log2(SearchRange / 6))) then
@@ -1160,7 +1160,7 @@ begin
       RCStrWrongEntrySelector);
 
   // read range shift
-  RangeShift := ReadSwappedWord(Stream);
+  RangeShift := BigEndianValueReader.ReadWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
   // confirm range shift has a valid value
@@ -1178,13 +1178,13 @@ begin
   for PairIndex := 0 to High(FPairs) do
   begin
     // read left
-    FPairs[PairIndex].Left := ReadSwappedWord(Stream);
+    FPairs[PairIndex].Left := BigEndianValueReader.ReadWord(Stream);
 
     // read right
-    FPairs[PairIndex].Right := ReadSwappedWord(Stream);
+    FPairs[PairIndex].Right := BigEndianValueReader.ReadWord(Stream);
 
     // read value
-    FPairs[PairIndex].Value := ReadSwappedSmallInt(Stream);
+    FPairs[PairIndex].Value := BigEndianValueReader.ReadSmallInt(Stream);
   end;
 end;
 
@@ -1281,16 +1281,16 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read version
-    FVersion := ReadSwappedWord(Stream);
+    FVersion := BigEndianValueReader.ReadWord(Stream);
 
     if FVersion <> 0 then
       raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
     // read length
-    FLength := ReadSwappedWord(Stream);
+    FLength := BigEndianValueReader.ReadWord(Stream);
 
     // read coverage
-    FCoverage := ReadSwappedWord(Stream);
+    FCoverage := BigEndianValueReader.ReadWord(Stream);
     AssignFormat;
 
     case Format of
@@ -1522,7 +1522,7 @@ begin
     FKerningSubtableList.Clear;
 
     // read version
-    FVersion := ReadSwappedWord(Stream);
+    FVersion := BigEndianValueReader.ReadWord(Stream);
 
     // For now we only support version 0 (same as Windows).
     // At time of writing, Apple has defined 3 additional versions.
@@ -1533,7 +1533,7 @@ begin
       // raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
     // read number of glyphs
-    SubTableCount := ReadSwappedWord(Stream);
+    SubTableCount := BigEndianValueReader.ReadWord(Stream);
 
     for SubTableIndex := 0 to SubTableCount - 1 do
     begin
@@ -1615,13 +1615,13 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read version
-    Version := ReadSwappedWord(Stream);
+    Version := BigEndianValueReader.ReadWord(Stream);
 
     if Version <> 0 then
       raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
     // read number of glyphs
-    SetLength(FVerticalPels, ReadSwappedWord(Stream));
+    SetLength(FVerticalPels, BigEndianValueReader.ReadWord(Stream));
 
     if Position + Length(FVerticalPels) > Size then
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
@@ -1722,7 +1722,7 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read version
-    FVersion.Fixed := ReadSwappedCardinal(Stream);
+    FVersion.Fixed := BigEndianValueReader.ReadCardinal(Stream);
 
     // A value of zero observed in the "Architecture" and "Technical" fonts
     if Version.Value <> 1 then
@@ -1733,22 +1733,22 @@ begin
     FFontNumber := TPcl5FontNumber(Value32);
 
     // read pitch
-    FPitch := ReadSwappedWord(Stream);
+    FPitch := BigEndianValueReader.ReadWord(Stream);
 
     // read x-height
-    FXHeight := ReadSwappedWord(Stream);
+    FXHeight := BigEndianValueReader.ReadWord(Stream);
 
     // read style
-    FStyle := ReadSwappedWord(Stream);
+    FStyle := BigEndianValueReader.ReadWord(Stream);
 
     // read type family
-    FTypeFamily := ReadSwappedWord(Stream);
+    FTypeFamily := BigEndianValueReader.ReadWord(Stream);
 
     // read capital height
-    FCapHeight := ReadSwappedWord(Stream);
+    FCapHeight := BigEndianValueReader.ReadWord(Stream);
 
     // read symbol set
-    FSymbolSet := ReadSwappedWord(Stream);
+    FSymbolSet := BigEndianValueReader.ReadWord(Stream);
 
     // read typeface
     Read(FTypeface, 16);
@@ -2037,7 +2037,7 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read number of height records
-    SetLength(FEntry, ReadSwappedWord(Stream));
+    SetLength(FEntry, BigEndianValueReader.ReadWord(Stream));
 
     // read starting yPelHeight
     Read(FStartsz, 1);
@@ -2049,13 +2049,13 @@ begin
       with FEntry[EntryIndex] do
       begin
         // read yPelHeight to which values apply.
-        yPelHeight := ReadSwappedWord(Stream);
+        yPelHeight := BigEndianValueReader.ReadWord(Stream);
 
         // read Maximum value (in pels) for this yPelHeight.
-        yMax := ReadSwappedSmallInt(Stream);
+        yMax := BigEndianValueReader.ReadSmallInt(Stream);
 
         // read Minimum value (in pels) for this yPelHeight.
-        yMin := ReadSwappedSmallInt(Stream);
+        yMin := BigEndianValueReader.ReadSmallInt(Stream);
       end;
   end;
 end;
@@ -2149,17 +2149,17 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read version
-    FVersion := ReadSwappedWord(Stream);
+    FVersion := BigEndianValueReader.ReadWord(Stream);
 
     // check version in 0..1
     if not(FVersion in [0..1]) then
       raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
     // read number of VDMX groups present
-    NumRecs := ReadSwappedWord(Stream);
+    NumRecs := BigEndianValueReader.ReadWord(Stream);
 
     // read number of aspect ratio groupings
-    SetLength(FRatios, ReadSwappedWord(Stream));
+    SetLength(FRatios, BigEndianValueReader.ReadWord(Stream));
     SetLength(Offsets, Length(FRatios));
 
     // check (minimum) table size
@@ -2178,7 +2178,7 @@ begin
 
     // read offsets
     for RatioIndex := 0 to High(FRatios) do
-      Offsets[RatioIndex] := ReadSwappedWord(Stream);
+      Offsets[RatioIndex] := BigEndianValueReader.ReadWord(Stream);
 
     // read groups
     for RatioIndex := 0 to NumRecs - 1 do

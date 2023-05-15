@@ -186,7 +186,7 @@ begin
       raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read version
-    FVersion.Fixed := ReadSwappedCardinal(Stream);
+    FVersion.Fixed := BigEndianValueReader.ReadCardinal(Stream);
   end;
 end;
 
@@ -259,14 +259,14 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read start glyph
-    FStartGlyph := ReadSwappedWord(Stream);
+    FStartGlyph := BigEndianValueReader.ReadWord(Stream);
 
     // read ClassValueArray length
-    SetLength(FClassValueArray, ReadSwappedWord(Stream));
+    SetLength(FClassValueArray, BigEndianValueReader.ReadWord(Stream));
 
     // read ClassValueArray
     for ArrayIndex := 0 to High(FClassValueArray) do
-      FClassValueArray[ArrayIndex] := ReadSwappedWord(Stream);
+      FClassValueArray[ArrayIndex] := BigEndianValueReader.ReadWord(Stream);
   end;
 end;
 
@@ -341,20 +341,20 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read ClassRangeRecords length
-    SetLength(FClassRangeRecords, ReadSwappedWord(Stream));
+    SetLength(FClassRangeRecords, BigEndianValueReader.ReadWord(Stream));
 
     // read ClassRangeRecords
     for ArrayIndex := 0 to High(FClassRangeRecords) do
       with FClassRangeRecords[ArrayIndex] do
       begin
         // read start glyph
-        StartGlyph := ReadSwappedWord(Stream);
+        StartGlyph := BigEndianValueReader.ReadWord(Stream);
 
         // read end glyph
-        EndGlyph := ReadSwappedWord(Stream);
+        EndGlyph := BigEndianValueReader.ReadWord(Stream);
 
         // read glyph class
-        GlyphClass := ReadSwappedWord(Stream);
+        GlyphClass := BigEndianValueReader.ReadWord(Stream);
       end;
   end;
 end;
@@ -409,13 +409,13 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read version
-  FTableFormat := ReadSwappedWord(Stream);
+  FTableFormat := BigEndianValueReader.ReadWord(Stream);
 
   if FTableFormat > 1 then
     raise EPascalTypeError.Create(RCStrUnknownVersion);
 
   // read coverage length
-  SetLength(FCoverage, ReadSwappedWord(Stream));
+  SetLength(FCoverage, BigEndianValueReader.ReadWord(Stream));
 
   // check (minimum) table size
   if Stream.Position + Length(FCoverage) * SizeOf(Cardinal) > Stream.Size then
@@ -424,7 +424,7 @@ begin
     begin
       // Comic Sans has an incorrect offset table. It uses Words instead of DWords.
       for CoverageIndex := 0 to High(FCoverage) do
-        FCoverage[CoverageIndex] := ReadSwappedWord(Stream);
+        FCoverage[CoverageIndex] := BigEndianValueReader.ReadWord(Stream);
       exit;
     end;
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
@@ -432,7 +432,7 @@ begin
 
   // read coverage data
   for CoverageIndex := 0 to High(FCoverage) do
-    FCoverage[CoverageIndex] := ReadSwappedCardinal(Stream);
+    FCoverage[CoverageIndex] := BigEndianValueReader.ReadCardinal(Stream);
 end;
 
 procedure TOpenTypeMarkGlyphSetTable.SaveToStream(Stream: TStream);

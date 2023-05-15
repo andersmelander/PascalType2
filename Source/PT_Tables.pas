@@ -752,7 +752,7 @@ begin
     raise EPascalTypeError.Create(RCStrNoMagic);
 
   // read flags
-  Value16 := ReadSwappedWord(Stream);
+  Value16 := BigEndianValueReader.ReadWord(Stream);
   FFlags := WordToFontHeaderTableFlags(Value16);
 
 {$IFDEF AmbigiousExceptions}
@@ -760,38 +760,38 @@ begin
     raise EPascalTypeError.Create(RCStrHeaderFlagError);
 {$ENDIF}
   // read UnitsPerEm
-  FUnitsPerEm := ReadSwappedWord(Stream);
+  FUnitsPerEm := BigEndianValueReader.ReadWord(Stream);
 
   // read CreatedDate
   Stream.Read(Value64, SizeOf(Int64));
   FCreatedDate := Swap64(Value64);
 
   // read ModifiedDate
-  FModifiedDate := ReadSwappedInt64(Stream);
+  FModifiedDate := BigEndianValueReader.ReadInt64(Stream);
 
   // read xMin
-  FxMin := ReadSwappedSmallInt(Stream);
+  FxMin := BigEndianValueReader.ReadSmallInt(Stream);
 
   // read yMin
-  FyMin := ReadSwappedSmallInt(Stream);
+  FyMin := BigEndianValueReader.ReadSmallInt(Stream);
 
   // read xMax
-  FxMax := ReadSwappedSmallInt(Stream);
+  FxMax := BigEndianValueReader.ReadSmallInt(Stream);
 
   // read xMax
-  FyMax := ReadSwappedSmallInt(Stream);
+  FyMax := BigEndianValueReader.ReadSmallInt(Stream);
 
   // read MacStyle
-  FMacStyle := WordToMacStyles(ReadSwappedWord(Stream));
+  FMacStyle := WordToMacStyles(BigEndianValueReader.ReadWord(Stream));
 
   // read LowestRecPPEM
-  FLowestRecPPEM := ReadSwappedWord(Stream);
+  FLowestRecPPEM := BigEndianValueReader.ReadWord(Stream);
 
   // read FontDirectionHint
-  FFontDirectionHint := TFontDirectionHint(ReadSwappedSmallInt(Stream));
+  FFontDirectionHint := TFontDirectionHint(BigEndianValueReader.ReadSmallInt(Stream));
 
   // read IndexToLocFormat
-  Value16 := ReadSwappedSmallInt(Stream);
+  Value16 := BigEndianValueReader.ReadSmallInt(Stream);
   case Value16 of
     0:
       FIndexToLocFormat := ilShort;
@@ -802,7 +802,7 @@ begin
   end;
 
   // read GlyphDataFormat
-  FGlyphDataFormat := ReadSwappedSmallInt(Stream);
+  FGlyphDataFormat := BigEndianValueReader.ReadSmallInt(Stream);
 end;
 
 procedure TPascalTypeHeaderTable.SaveToStream(Stream: TStream);
@@ -1162,7 +1162,7 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read format
-  MapFormat := ReadSwappedWord(Stream);
+  MapFormat := BigEndianValueReader.ReadWord(Stream);
   MapClass := FindPascalTypeCharacterMapByFormat(MapFormat);
 
   if (MapClass = nil) then
@@ -1339,7 +1339,7 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read Version
-  FVersion := ReadSwappedWord(Stream);
+  FVersion := BigEndianValueReader.ReadWord(Stream);
 
   // check version
   if (FVersion <> 0) then
@@ -1349,7 +1349,7 @@ begin
   FreeMapItems;
 
   // read subtable count
-  SetLength(FMaps, ReadSwappedWord(Stream));
+  SetLength(FMaps, BigEndianValueReader.ReadWord(Stream));
   SetLength(Offsets, Length(FMaps));
 
   // check (minimum) table size
@@ -1360,10 +1360,10 @@ begin
   for MapIndex := 0 to High(FMaps) do
   begin
     // read Platform ID
-    PlatformID := ReadSwappedWord(Stream);
+    PlatformID := BigEndianValueReader.ReadWord(Stream);
 
     // read encoding ID
-    EncodingID := ReadSwappedWord(Stream);
+    EncodingID := BigEndianValueReader.ReadWord(Stream);
 
     // create character map based on encoding
     case PlatformID of
@@ -1378,7 +1378,7 @@ begin
     end;
 
     // read and save offset
-    Offsets[MapIndex] := StartPos + ReadSwappedCardinal(Stream);
+    Offsets[MapIndex] := StartPos + BigEndianValueReader.ReadCardinal(Stream);
   end;
 
   // load character map entries from stream
@@ -1476,13 +1476,13 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read encoding ID
-    FEncodingID := ReadSwappedWord(Stream);
+    FEncodingID := BigEndianValueReader.ReadWord(Stream);
 
     // read language ID
-    FLanguageID := ReadSwappedWord(Stream);
+    FLanguageID := BigEndianValueReader.ReadWord(Stream);
 
     // read name ID
-    FNameID := TNameID(ReadSwappedWord(Stream));
+    FNameID := TNameID(BigEndianValueReader.ReadWord(Stream));
   end;
 end;
 
@@ -1532,7 +1532,7 @@ begin
 
     // actually read the string
     for StrOffset := 0 to Length div 2 - 1 do
-      FNameString := FNameString + WideChar(ReadSwappedWord(Stream));
+      FNameString := FNameString + WideChar(BigEndianValueReader.ReadWord(Stream));
   end;
 end;
 
@@ -1604,7 +1604,7 @@ begin
 
     // actually read the string
     for StrOffset := 0 to Length div 2 - 1 do
-      FNameString := FNameString + WideChar(ReadSwappedWord(Stream));
+      FNameString := FNameString + WideChar(BigEndianValueReader.ReadWord(Stream));
   end;
 end;
 
@@ -1652,7 +1652,7 @@ begin
 
           // actually read the string
           for StrOffset := 0 to Length div 2 - 1 do
-            FNameString := FNameString + WideChar(ReadSwappedWord(Stream));
+            FNameString := FNameString + WideChar(BigEndianValueReader.ReadWord(Stream));
         end;
     else
       raise EPascalTypeError.Create('Unsupported encoding');
@@ -1744,7 +1744,7 @@ begin
     StoragePos := Position;
 
     // read format
-    FFormat := ReadSwappedWord(Stream);
+    FFormat := BigEndianValueReader.ReadWord(Stream);
 
     if not(FFormat in [0..1]) then
       raise EPascalTypeError.Create(RCStrUnknownFormat);
@@ -1753,10 +1753,10 @@ begin
     FreeNameSubTables;
 
     // internally store number of records
-    SetLength(FNameSubTables, ReadSwappedWord(Stream));
+    SetLength(FNameSubTables, BigEndianValueReader.ReadWord(Stream));
 
     // read storage offset and add to preliminary storage position
-    StoragePos := StoragePos + ReadSwappedWord(Stream);
+    StoragePos := StoragePos + BigEndianValueReader.ReadWord(Stream);
 
     // check (minimum) table size
     if Position + Length(FNameSubTables) * 12 > Size then
@@ -1765,7 +1765,7 @@ begin
     for NameIndex := 0 to High(FNameSubTables) do
     begin
       // read platform ID
-      Value16 := ReadSwappedWord(Stream);
+      Value16 := BigEndianValueReader.ReadWord(Stream);
       case TPlatformID(Value16) of
         piUnicode:
           FNameSubTables[NameIndex] := TTrueTypeFontNamePlatformUnicode.Create;
@@ -1784,10 +1784,10 @@ begin
       FNameSubTables[NameIndex].LoadFromStream(Stream);
 
       // read length
-      StrLength := ReadSwappedWord(Stream);
+      StrLength := BigEndianValueReader.ReadWord(Stream);
 
       // read offset
-      StrOffset := ReadSwappedWord(Stream);
+      StrOffset := BigEndianValueReader.ReadWord(Stream);
 
       // store current position and jump to string definition
       OldPosition := Position;
@@ -1802,7 +1802,7 @@ begin
 
     // ignore format 1 addition
     if FFormat = 1 then
-      Position := Position + ReadSwappedWord(Stream);
+      Position := Position + BigEndianValueReader.ReadWord(Stream);
   end;
 end;
 
@@ -1869,7 +1869,7 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read version
-  FVersion.Fixed := ReadSwappedCardinal(Stream);
+  FVersion.Fixed := BigEndianValueReader.ReadCardinal(Stream);
 
 {$IFDEF AmbigiousExceptions}
 //  if Version.Value > 1 then
@@ -1879,7 +1879,7 @@ begin
     raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
   // read glyphs count
-  FNumGlyphs := ReadSwappedWord(Stream);
+  FNumGlyphs := BigEndianValueReader.ReadWord(Stream);
 
   // set postscript values to maximum
   if (Version.Fixed = $00005000) then
@@ -1905,43 +1905,43 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read max points
-  FMaxPoints := ReadSwappedWord(Stream);
+  FMaxPoints := BigEndianValueReader.ReadWord(Stream);
 
   // read max contours
-  FMaxContours := ReadSwappedWord(Stream);
+  FMaxContours := BigEndianValueReader.ReadWord(Stream);
 
   // read max composite points
-  FMaxCompositePoints := ReadSwappedWord(Stream);
+  FMaxCompositePoints := BigEndianValueReader.ReadWord(Stream);
 
   // read max composite contours
-  FMaxCompositeContours := ReadSwappedWord(Stream);
+  FMaxCompositeContours := BigEndianValueReader.ReadWord(Stream);
 
   // read max zones
-  FMaxZones := ReadSwappedWord(Stream);
+  FMaxZones := BigEndianValueReader.ReadWord(Stream);
 
   // read max twilight points
-  FMaxTwilightPoints := ReadSwappedWord(Stream);
+  FMaxTwilightPoints := BigEndianValueReader.ReadWord(Stream);
 
   // read max storage
-  FMaxStorage := ReadSwappedWord(Stream);
+  FMaxStorage := BigEndianValueReader.ReadWord(Stream);
 
   // read max function defs
-  FMaxFunctionDefs := ReadSwappedWord(Stream);
+  FMaxFunctionDefs := BigEndianValueReader.ReadWord(Stream);
 
   // read max instruction defs
-  FMaxInstructionDefs := ReadSwappedWord(Stream);
+  FMaxInstructionDefs := BigEndianValueReader.ReadWord(Stream);
 
   // read max stack elements
-  FMaxStackElements := ReadSwappedWord(Stream);
+  FMaxStackElements := BigEndianValueReader.ReadWord(Stream);
 
   // read max size of instructions
-  FMaxSizeOfInstructions := ReadSwappedWord(Stream);
+  FMaxSizeOfInstructions := BigEndianValueReader.ReadWord(Stream);
 
   // read max component elements
-  FMaxComponentElements := ReadSwappedWord(Stream);
+  FMaxComponentElements := BigEndianValueReader.ReadWord(Stream);
 
   // read max component depth
-  FMaxComponentDepth := ReadSwappedWord(Stream);
+  FMaxComponentDepth := BigEndianValueReader.ReadWord(Stream);
 end;
 
 procedure TPascalTypeMaximumProfileTable.SaveToStream(Stream: TStream);
@@ -2270,10 +2270,10 @@ begin
     FItalicAngle.Fixed := Swap32(Value32);
 
     // read underline position
-    FUnderlinePosition := ReadSwappedWord(Stream);
+    FUnderlinePosition := BigEndianValueReader.ReadWord(Stream);
 
     // read underline thickness
-    FUnderlineThickness := ReadSwappedWord(Stream);
+    FUnderlineThickness := BigEndianValueReader.ReadWord(Stream);
 
     // read is fixed pitch
     Read(Value32, SizeOf(Cardinal));
@@ -2515,18 +2515,18 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // load number of glyphs
-    SetLength(FGlyphNameIndex, ReadSwappedWord(Stream));
+    SetLength(FGlyphNameIndex, BigEndianValueReader.ReadWord(Stream));
 
     // read glyph name index array (with speed optimization)
     if Stream is TMemoryStream then
     begin
-      CopySwappedWord(PWord(Integer(TMemoryStream(Stream).Memory) + Position),
-        @FGlyphNameIndex[0], Length(FGlyphNameIndex));
-      Position := Position + 2 * Length(FGlyphNameIndex);
+      BigEndianValueReader.Copy(PWord(Integer(TMemoryStream(Stream).Memory) + Position)^, FGlyphNameIndex[0], Length(FGlyphNameIndex));
+      // CopySwappedWord(PWord(Integer(TMemoryStream(Stream).Memory) + Position), @FGlyphNameIndex[0], Length(FGlyphNameIndex));
+      Position := Position + Length(FGlyphNameIndex) * SizeOf(Word);
     end
     else
       for GlyphIndex := 0 to High(FGlyphNameIndex) do
-        FGlyphNameIndex[GlyphIndex] := ReadSwappedWord(Stream);
+        FGlyphNameIndex[GlyphIndex] := BigEndianValueReader.ReadWord(Stream);
 
     while Position < Size do
     begin
@@ -2680,7 +2680,7 @@ procedure TCustomPascalTypeCharacterMap.LoadFromStream(Stream: TStream);
 begin
   inherited;
 
-  if (ReadSwappedWord(Stream) <> Format) then
+  if (BigEndianValueReader.ReadWord(Stream) <> Format) then
     raise Exception.Create('CharacterMap format mismatch');
 end;
 

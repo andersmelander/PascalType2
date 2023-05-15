@@ -255,26 +255,26 @@ begin
   if Stream.Position + 6 > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  FLookupType := ReadSwappedWord(Stream);
-  FLookupFlag := ReadSwappedWord(Stream);
+  FLookupType := BigEndianValueReader.ReadWord(Stream);
+  FLookupFlag := BigEndianValueReader.ReadWord(Stream);
 
   // read subtable count
-  SetLength(SubTableOffsets, ReadSwappedWord(Stream));
+  SetLength(SubTableOffsets, BigEndianValueReader.ReadWord(Stream));
 
   // read lookup list index offsets
   for LookupIndex := 0 to High(SubTableOffsets) do
-    SubTableOffsets[LookupIndex] := ReadSwappedWord(Stream);
+    SubTableOffsets[LookupIndex] := BigEndianValueReader.ReadWord(Stream);
 
   // eventually read mark filtering set
   if (FLookupFlag and USE_MARK_FILTERING_SET <> 0) then
-    FMarkFilteringSet := ReadSwappedWord(Stream);
+    FMarkFilteringSet := BigEndianValueReader.ReadWord(Stream);
 
   for LookupIndex := 0 to High(SubTableOffsets) do
   begin
     Stream.Position := StartPos + SubTableOffsets[LookupIndex];
 
     // read lookup type
-    SubTableType := ReadSwappedWord(Stream);
+    SubTableType := BigEndianValueReader.ReadWord(Stream);
     SubTableClass := GetSubTableClass(SubTableType);
 
     if (SubTableClass = nil) then
@@ -430,11 +430,11 @@ begin
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // read lookup list count
-  SetLength(LookupTableOffsets, ReadSwappedWord(Stream));
+  SetLength(LookupTableOffsets, BigEndianValueReader.ReadWord(Stream));
 
   // read offsets
   for LookupIndex := 0 to High(LookupTableOffsets) do
-    LookupTableOffsets[LookupIndex] := ReadSwappedWord(Stream);
+    LookupTableOffsets[LookupIndex] := BigEndianValueReader.ReadWord(Stream);
 
   FLookupList.Clear;
 
@@ -443,7 +443,7 @@ begin
     // set position to start of lookup table
     Stream.Position := StartPos + LookupTableOffsets[LookupIndex];
 
-    LookupType := ReadSwappedWord(Stream);
+    LookupType := BigEndianValueReader.ReadWord(Stream);
 
     // Get the lookup table class from the parent.
     // The mapping from LookupType to lookup table class differs between GSUB and GPOS.
@@ -489,7 +489,7 @@ end;
 procedure TCustomOpenTypeLookupSubTable.LoadFromStream(Stream: TStream);
 begin
   inherited;
-  FSubFormat := ReadSwappedWord(Stream);
+  FSubFormat := BigEndianValueReader.ReadWord(Stream);
 end;
 
 procedure TCustomOpenTypeLookupSubTable.SaveToStream(Stream: TStream);
@@ -538,12 +538,12 @@ begin
   inherited;
 
   // Offset from start of sub-table to coverage table
-  CoveragePos := StartPos + ReadSwappedWord(Stream);
+  CoveragePos := StartPos + BigEndianValueReader.ReadWord(Stream);
   SavePos := Stream.Position;
 
   // Get the coverage type so we can create the correct object to read the coverage table
   Stream.Position := CoveragePos;
-  FCoverageFormat := TCoverageFormat(ReadSwappedWord(Stream));
+  FCoverageFormat := TCoverageFormat(BigEndianValueReader.ReadWord(Stream));
 
   FCoverageTable := TCustomOpenTypeCoverageTable.ClassByFormat(FCoverageFormat).Create;
 

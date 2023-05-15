@@ -331,11 +331,11 @@ begin
       raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // set length of glyphID array
-    SetLength(FGlyphID, ReadSwappedWord(Stream));
+    SetLength(FGlyphID, BigEndianValueReader.ReadWord(Stream));
 
     // read glyph IDs from stream
     for GlyphIdIndex := 0 to High(FGlyphID) do
-      FGlyphID[GlyphIdIndex] := ReadSwappedWord(Stream)
+      FGlyphID[GlyphIdIndex] := BigEndianValueReader.ReadWord(Stream)
   end;
 end;
 
@@ -449,13 +449,13 @@ begin
       raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read extender glyph offset
-    ExtenderGlyph := ReadSwappedWord(Stream);
+    ExtenderGlyph := BigEndianValueReader.ReadWord(Stream);
 
     // read default language system offset
-    DefaultLangSys := ReadSwappedWord(Stream);
+    DefaultLangSys := BigEndianValueReader.ReadWord(Stream);
 
     // read language system record count
-    SetLength(LangSysRecords, ReadSwappedWord(Stream));
+    SetLength(LangSysRecords, BigEndianValueReader.ReadWord(Stream));
 
     for LangSysIndex := 0 to High(LangSysRecords) do
     begin
@@ -463,7 +463,7 @@ begin
       Read(LangSysRecords[LangSysIndex].Tag, SizeOf(TTableType));
 
       // read offset
-      LangSysRecords[LangSysIndex].Offset := ReadSwappedWord(Stream);
+      LangSysRecords[LangSysIndex].Offset := BigEndianValueReader.ReadWord(Stream);
     end;
 
     // load default language system
@@ -661,13 +661,13 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read version
-    FVersion.Fixed := ReadSwappedCardinal(Stream);
+    FVersion.Fixed := BigEndianValueReader.ReadCardinal(Stream);
 
     if Version.Value <> 1 then
       raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
     // read Justification Script Count
-    SetLength(Directory, ReadSwappedWord(Stream));
+    SetLength(Directory, BigEndianValueReader.ReadWord(Stream));
 
     // check if table is complete
     if Position + Length(Directory) * SizeOf(TJustificationScriptDirectoryEntry) > Size then
@@ -681,7 +681,7 @@ begin
         Read(Tag, SizeOf(Cardinal));
 
         // read offset
-        Offset := ReadSwappedWord(Stream);
+        Offset := BigEndianValueReader.ReadWord(Stream);
       end;
 
     // clear existing scripts

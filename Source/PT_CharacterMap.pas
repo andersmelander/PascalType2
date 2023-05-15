@@ -232,10 +232,10 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read length
-  FLength := ReadSwappedWord(Stream);
+  FLength := BigEndianValueReader.ReadWord(Stream);
 
   // read language
-  FLanguage := ReadSwappedWord(Stream);
+  FLanguage := BigEndianValueReader.ReadWord(Stream);
 
   Stream.Read(FGlyphIdArray, SizeOf(FGlyphIdArray));
 end;
@@ -301,10 +301,10 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read length
-  FLength := ReadSwappedWord(Stream);
+  FLength := BigEndianValueReader.ReadWord(Stream);
 
   // read language
-  FLanguage := ReadSwappedWord(Stream);
+  FLanguage := BigEndianValueReader.ReadWord(Stream);
 end;
 
 procedure TPascalTypeFormat2CharacterMap.SaveToStream(Stream: TStream);
@@ -421,37 +421,37 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read length
-  FLength := ReadSwappedWord(Stream);
+  FLength := BigEndianValueReader.ReadWord(Stream);
 
   // check (minimum) table size
   if StartPos + FLength > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read language
-  FLanguage := ReadSwappedWord(Stream);
+  FLanguage := BigEndianValueReader.ReadWord(Stream);
 
 {$ifdef CMAP_BSEARCH}
 
   // read segCountX2
-  FSegCountX2 := ReadSwappedWord(Stream);
+  FSegCountX2 := BigEndianValueReader.ReadWord(Stream);
   Count := FSegCountX2 div 2;
 
   // read search range
-  FSearchRange := ReadSwappedWord(Stream);
+  FSearchRange := BigEndianValueReader.ReadWord(Stream);
 
   // confirm search range has a valid value
   if FSearchRange <> 2 * (1 shl FloorLog2(Count)) then
     raise EPascalTypeError.Create(RCStrCharMapError + ': ' + 'wrong search range!');
 
   // read entry selector
-  FEntrySelector := ReadSwappedWord(Stream);
+  FEntrySelector := BigEndianValueReader.ReadWord(Stream);
 
   // confirm entry selector has a valid value
   if 2 shl FEntrySelector <> FSearchRange then
     raise EPascalTypeError.Create(RCStrCharMapError + ': ' + 'wrong entry selector!');
 
   // read range shift
-  FRangeShift := ReadSwappedWord(Stream);
+  FRangeShift := BigEndianValueReader.ReadWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
   // confirm range shift has a valid value
@@ -460,7 +460,7 @@ begin
 {$ENDIF}
 
 {$else CMAP_BSEARCH}
-  Count := ReadSwappedWord(Stream) div 2;
+  Count := BigEndianValueReader.ReadWord(Stream) div 2;
   Stream.Seek(3*SizeOf(Word), soFromCurrent);
 {$endif CMAP_BSEARCH}
 
@@ -471,7 +471,7 @@ begin
 
   // read end count
   for SegIndex := 0 to High(FEndCode) do
-    FEndCode[SegIndex] := ReadSwappedWord(Stream);
+    FEndCode[SegIndex] := BigEndianValueReader.ReadWord(Stream);
 
   // confirm end code is valid (required for binary search)
   if FEndCode[High(FEndCode)] <> $FFFF then
@@ -479,7 +479,7 @@ begin
 
 {$IFDEF AmbigiousExceptions}
   // read reserved
-  Value16 := ReadSwappedWord(Stream);
+  Value16 := BigEndianValueReader.ReadWord(Stream);
 
   // confirm reserved value is valid
   if Value16 <> 0 then
@@ -492,7 +492,7 @@ begin
   // read start count
   for SegIndex := 0 to High(FStartCode) do
   begin
-    FStartCode[SegIndex] := ReadSwappedWord(Stream);
+    FStartCode[SegIndex] := BigEndianValueReader.ReadWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
     // confirm start count is valid
@@ -503,7 +503,7 @@ begin
 
   // read ID delta
   for SegIndex := 0 to High(FIdDelta) do
-    Word(FIdDelta[SegIndex]) := ReadSwappedWord(Stream);
+    Word(FIdDelta[SegIndex]) := BigEndianValueReader.ReadWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
 (*
@@ -517,13 +517,13 @@ A value of 0 has been observed in the Architecture font. Actually the whole FIdD
 
   // read ID range offset
   for SegIndex := 0 to High(FIdRangeOffset) do
-    FIdRangeOffset[SegIndex] := ReadSwappedWord(Stream);
+    FIdRangeOffset[SegIndex] := BigEndianValueReader.ReadWord(Stream);
 
   SetLength(FGlyphIdArray, (FLength - (Stream.Position - StartPos)) div SizeOf(Word));
 
   // read glyph ID array
   for SegIndex := 0 to High(FGlyphIdArray) do
-    FGlyphIdArray[SegIndex] := ReadSwappedWord(Stream);
+    FGlyphIdArray[SegIndex] := BigEndianValueReader.ReadWord(Stream);
 end;
 
 procedure TPascalTypeFormat4CharacterMap.SaveToStream(Stream: TStream);
@@ -577,20 +577,20 @@ begin
   inherited;
 
   // read table size
-  // TableLength := ReadSwappedWord(Stream);
+  // TableLength := BigEndianValueReader.ReadWord(Stream);
   Stream.Seek(SizeOf(Word), soFromCurrent);
 
   // read language
-  FLanguage := ReadSwappedWord(Stream);
+  FLanguage := BigEndianValueReader.ReadWord(Stream);
 
   // read first code
-  FFirstCode := ReadSwappedWord(Stream);
+  FFirstCode := BigEndianValueReader.ReadWord(Stream);
 
   // read number of character codes in subrange
-  SetLength(FGlyphIdArray, ReadSwappedWord(Stream));
+  SetLength(FGlyphIdArray, BigEndianValueReader.ReadWord(Stream));
 
   for EntryIndex := 0 to High(FGlyphIdArray) do
-    FGlyphIdArray[EntryIndex] := ReadSwappedWord(Stream);
+    FGlyphIdArray[EntryIndex] := BigEndianValueReader.ReadWord(Stream);
 end;
 
 procedure TPascalTypeFormat6CharacterMap.SaveToStream(Stream: TStream);
@@ -667,31 +667,31 @@ begin
   inherited;
 
 {$IFDEF AmbigiousExceptions}
-  if ReadSwappedWord(Stream) <> 0 then
+  if BigEndianValueReader.ReadWord(Stream) <> 0 then
     raise EPascalTypeError.Create(RCStrReservedValueError);
 {$ELSE}
   Stream.Seek(2, soFromCurrent);
 {$ENDIF}
   // read table length
-  TableLength := ReadSwappedCardinal(Stream);
+  TableLength := BigEndianValueReader.ReadCardinal(Stream);
 
   // read language
-  FLanguage := ReadSwappedCardinal(Stream);
+  FLanguage := BigEndianValueReader.ReadCardinal(Stream);
 
   // read group count
-  SetLength(FCoverageArray, ReadSwappedCardinal(Stream));
+  SetLength(FCoverageArray, BigEndianValueReader.ReadCardinal(Stream));
 
   for GroupIndex := 0 to High(FCoverageArray) do
     with FCoverageArray[GroupIndex] do
     begin
       // read start character code
-      StartCharCode := ReadSwappedCardinal(Stream);
+      StartCharCode := BigEndianValueReader.ReadCardinal(Stream);
 
       // read end character code
-      EndCharCode := ReadSwappedCardinal(Stream);
+      EndCharCode := BigEndianValueReader.ReadCardinal(Stream);
 
       // read start glyph ID
-      StartGlyphID := ReadSwappedCardinal(Stream);
+      StartGlyphID := BigEndianValueReader.ReadCardinal(Stream);
     end;
 
   // seek end of this table

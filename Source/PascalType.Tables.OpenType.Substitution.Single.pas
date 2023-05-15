@@ -170,7 +170,7 @@ begin
   if Stream.Position + 2 > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  FDeltaGlyphID := ReadSwappedSmallInt(Stream);
+  FDeltaGlyphID := BigEndianValueReader.ReadSmallInt(Stream);
 end;
 
 procedure TOpenTypeSubstitutionSubTableSingleOffset.SaveToStream(Stream: TStream);
@@ -217,9 +217,9 @@ begin
   if Stream.Position + 2 > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  SetLength(FSubstituteGlyphIDs, ReadSwappedWord(Stream));
+  SetLength(FSubstituteGlyphIDs, BigEndianValueReader.ReadWord(Stream));
   for i := 0 to High(FSubstituteGlyphIDs) do
-    FSubstituteGlyphIDs[i] := ReadSwappedWord(Stream);
+    FSubstituteGlyphIDs[i] := BigEndianValueReader.ReadWord(Stream);
 end;
 
 procedure TOpenTypeSubstitutionSubTableSingleList.SaveToStream(Stream: TStream);

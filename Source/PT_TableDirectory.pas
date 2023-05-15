@@ -371,33 +371,33 @@ begin
       raise EPascalTypeError.Create(RCStrWrongFilesize);
 
     // read version
-    FVersion := ReadSwappedCardinal(Stream);
+    FVersion := BigEndianValueReader.ReadCardinal(Stream);
 
     // check for known scaler types (OSX and Windows)
     case Version of
       $00010000:;
       $4F54544F:;
       $74727565:;
-      else
-        raise EPascalTypeError.CreateFmt(RCStrUnknownVersion, [Version]);
+    else
+      raise EPascalTypeError.CreateFmt(RCStrUnknownVersion, [Version]);
     end;
 
     // read number of tables
-    NumTables := ReadSwappedWord(Stream);
+    NumTables := BigEndianValueReader.ReadWord(Stream);
 
     {$IFDEF AmbigiousExceptions}
     // read search range
-    SearchRange := ReadSwappedWord(Stream);
+    SearchRange := BigEndianValueReader.ReadWord(Stream);
     if SearchRange > Round(16 * (1 shl FloorLog2(NumTables))) then
       raise EPascalTypeError.Create(RCStrWrongSearchRange);
 
     // read entry selector
-    EntrySelector := ReadSwappedWord(Stream);
+    EntrySelector := BigEndianValueReader.ReadWord(Stream);
     if EntrySelector < Round(Log2(SearchRange / 16)) then
       raise EPascalTypeError.Create(RCStrWrongEntrySelector);
 
     // read range shift
-    RangeShift := ReadSwappedWord(Stream);
+    RangeShift := BigEndianValueReader.ReadWord(Stream);
     if RangeShift <> (16 * NumTables - SearchRange) then
       raise EPascalTypeError.Create(RCStrWrongRangeShift);
     {$ELSE}

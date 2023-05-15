@@ -176,7 +176,7 @@ begin
   begin
     if (ValueFormat and $0001 <> 0) then
     begin
-      pValue^ := ReadSwappedWord(Stream);
+      pValue^ := BigEndianValueReader.ReadWord(Stream);
       Inc(Result, SizeOf(Word));
     end;
 

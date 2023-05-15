@@ -164,7 +164,7 @@ begin
       raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read baseline tag list array length
-    SetLength(FBaseLineTags, ReadSwappedWord(Stream));
+    SetLength(FBaseLineTags, BigEndianValueReader.ReadWord(Stream));
 
     // check if table is complete
     if Position + 4 * Length(FBaseLineTags) > Size then
@@ -219,7 +219,7 @@ begin
       raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read baseline stript list array length
-    SetLength(FBaseLineScript, ReadSwappedWord(Stream));
+    SetLength(FBaseLineScript, BigEndianValueReader.ReadWord(Stream));
 
     // check if table is complete
     if Position + 6 * Length(FBaseLineScript) > Size then
@@ -232,7 +232,7 @@ begin
       Read(FBaseLineScript[ScriptIndex].Tag, SizeOf(TTableType));
 
       // read script offset
-      FBaseLineScript[ScriptIndex].ScriptOffset := ReadSwappedWord(Stream);
+      FBaseLineScript[ScriptIndex].ScriptOffset := BigEndianValueReader.ReadWord(Stream);
     end;
   end;
 end;
@@ -288,7 +288,7 @@ begin
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // read baseline tag list table offset (maybe 0)
-  Offset := ReadSwappedWord(Stream);
+  Offset := BigEndianValueReader.ReadWord(Stream);
   if Offset <> 0 then
   begin
     // locate baseline tag list table
@@ -379,9 +379,9 @@ begin
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // read horizontal axis table offset (maybe 0)
-  HorzOffset := ReadSwappedWord(Stream);
+  HorzOffset := BigEndianValueReader.ReadWord(Stream);
   // read vertical axis table offset (maybe 0)
-  VertOffset := ReadSwappedWord(Stream);
+  VertOffset := BigEndianValueReader.ReadWord(Stream);
 
   if HorzOffset <> 0 then
   begin

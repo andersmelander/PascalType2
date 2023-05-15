@@ -239,13 +239,13 @@ begin
          BrushFill.FillColor := clBlack32;
          BrushFill.FillMode := pfNonZero;
 //*)
-//(*
+(*
          BrushStroke := Canvas32.Brushes.Add(TStrokeBrush) as TStrokeBrush;
          BrushStroke.FillColor := clTrRed32;
          BrushStroke.StrokeWidth := 1;
          BrushStroke.JoinStyle := jsMiter;
          BrushStroke.EndStyle := esButt;
-//*)
+*)
          FRasterizerGraphics32.RenderShapedText(FText, Canvas32);
        finally
          Canvas32.Free;

@@ -213,17 +213,17 @@ begin
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // read default language system
-  FLookupOrder := ReadSwappedWord(Stream);
+  FLookupOrder := BigEndianValueReader.ReadWord(Stream);
 
   // read index of a feature required for this language system
-  FReqFeatureIndex := ReadSwappedWord(Stream);
+  FReqFeatureIndex := BigEndianValueReader.ReadWord(Stream);
 
   // read default language system
-  SetLength(FFeatureIndices, ReadSwappedWord(Stream));
+  SetLength(FFeatureIndices, BigEndianValueReader.ReadWord(Stream));
 
   // read default language system
   for FeatureIndex := 0 to High(FFeatureIndices) do
-    FFeatureIndices[FeatureIndex] := ReadSwappedWord(Stream);
+    FFeatureIndices[FeatureIndex] := BigEndianValueReader.ReadWord(Stream);
 end;
 
 procedure TCustomOpenTypeLanguageSystemTable.SaveToStream(Stream: TStream);

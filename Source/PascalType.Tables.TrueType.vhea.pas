@@ -189,7 +189,7 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read version
-  FVersion.Fixed := ReadSwappedCardinal(Stream);
+  FVersion.Fixed := BigEndianValueReader.ReadCardinal(Stream);
 
   if Version.Value <> 1 then
     raise EPascalTypeError.Create(RCStrUnsupportedVersion);
@@ -198,48 +198,48 @@ begin
   // then raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
   // read ascent
-  FAscent := ReadSwappedSmallInt(Stream);
+  FAscent := BigEndianValueReader.ReadSmallInt(Stream);
 
   // read descent
-  FDescent := ReadSwappedSmallInt(Stream);
+  FDescent := BigEndianValueReader.ReadSmallInt(Stream);
 
   // read line gap
-  FLineGap := ReadSwappedSmallInt(Stream);
+  FLineGap := BigEndianValueReader.ReadSmallInt(Stream);
 
   // read advanced height max
-  FAdvanceHeightMax := ReadSwappedSmallInt(Stream);
+  FAdvanceHeightMax := BigEndianValueReader.ReadSmallInt(Stream);
 
   // read minimum side bearing
-  FMinTopSideBearing := ReadSwappedSmallInt(Stream);
+  FMinTopSideBearing := BigEndianValueReader.ReadSmallInt(Stream);
 
   // read minimum bottom bearing
-  FMinBottomSideBearing := ReadSwappedSmallInt(Stream);
+  FMinBottomSideBearing := BigEndianValueReader.ReadSmallInt(Stream);
 
   // read y-max extent
-  FYMaxExtent := ReadSwappedSmallInt(Stream);
+  FYMaxExtent := BigEndianValueReader.ReadSmallInt(Stream);
 
   // read caret slope rise
-  FCaretSlopeRise := ReadSwappedSmallInt(Stream);
+  FCaretSlopeRise := BigEndianValueReader.ReadSmallInt(Stream);
 
   // read caret slope run
-  FCaretSlopeRun := ReadSwappedSmallInt(Stream);
+  FCaretSlopeRun := BigEndianValueReader.ReadSmallInt(Stream);
 
   // read caret offset
-  FCaretOffset := ReadSwappedSmallInt(Stream);
+  FCaretOffset := BigEndianValueReader.ReadSmallInt(Stream);
 
 {$IFDEF AmbigiousExceptions}
   // read reserved
   for i := 0 to 3 do
-    if ReadSwappedSmallInt(Stream) <> 0 then
+    if BigEndianValueReader.ReadSmallInt(Stream) <> 0 then
       raise EPascalTypeError.Create(RCStrReservedValueError);
 {$ELSE}
   Stream.Seek(4*SizeOf(SmallInt), soCurrent);
 {$ENDIF}
   // read metric data format
-  FMetricDataFormat := ReadSwappedWord(Stream); // Unused - Set to 0
+  FMetricDataFormat := BigEndianValueReader.ReadWord(Stream); // Unused - Set to 0
 
   // read metric data format
-  FNumOfLongVerMetrics := ReadSwappedWord(Stream);
+  FNumOfLongVerMetrics := BigEndianValueReader.ReadWord(Stream);
 end;
 
 procedure TPascalTypeVerticalHeaderTable.SaveToStream(Stream: TStream);

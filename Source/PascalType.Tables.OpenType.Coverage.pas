@@ -174,7 +174,7 @@ procedure TCustomOpenTypeCoverageTable.LoadFromStream(Stream: TStream);
 begin
   inherited;
 
-  if (TCoverageFormat(ReadSwappedWord(Stream)) <> FCoverageFormat) then
+  if (TCoverageFormat(BigEndianValueReader.ReadWord(Stream)) <> FCoverageFormat) then
     raise EPascalTypeError.Create('Coverage format mismatch');
 end;
 
@@ -249,10 +249,10 @@ begin
   if Stream.Position + 2 > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  SetLength(FGlyphArray, ReadSwappedWord(Stream));
+  SetLength(FGlyphArray, BigEndianValueReader.ReadWord(Stream));
 
   for GlyphIndex := 0 to High(FGlyphArray) do
-    FGlyphArray[GlyphIndex] := ReadSwappedWord(Stream);
+    FGlyphArray[GlyphIndex] := BigEndianValueReader.ReadWord(Stream);
 end;
 
 procedure TOpenTypeCoverageListTable.SaveToStream(Stream: TStream);
@@ -334,13 +334,13 @@ begin
   if Stream.Position + 2 > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  SetLength(FRangeArray, ReadSwappedWord(Stream));
+  SetLength(FRangeArray, BigEndianValueReader.ReadWord(Stream));
 
   for GlyphIndex := 0 to High(FRangeArray) do
   begin
-    FRangeArray[GlyphIndex].StartGlyph := ReadSwappedWord(Stream);
-    FRangeArray[GlyphIndex].EndGlyph := ReadSwappedWord(Stream);
-    FRangeArray[GlyphIndex].StartCoverageIndex := ReadSwappedWord(Stream);
+    FRangeArray[GlyphIndex].StartGlyph := BigEndianValueReader.ReadWord(Stream);
+    FRangeArray[GlyphIndex].EndGlyph := BigEndianValueReader.ReadWord(Stream);
+    FRangeArray[GlyphIndex].StartCoverageIndex := BigEndianValueReader.ReadWord(Stream);
   end;
 end;
 

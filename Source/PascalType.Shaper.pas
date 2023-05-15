@@ -618,7 +618,7 @@ begin
           if (GlyphHandled) and (NextGlyphIndex > GlyphIndex) then
             GlyphIndex := NextGlyphIndex
           else
-            // This also handles advancement if the substitution forget to do it
+            // This also handles advancement if the substitution forgot to do it
             Inc(GlyphIndex);
         end;
       end;

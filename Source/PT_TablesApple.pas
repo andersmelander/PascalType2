@@ -821,19 +821,19 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read unit size
-    FUnitSize := ReadSwappedWord(Stream);
+    FUnitSize := BigEndianValueReader.ReadWord(Stream);
 
     // read unit count
-    FnUnits := ReadSwappedWord(Stream);
+    FnUnits := BigEndianValueReader.ReadWord(Stream);
 
     // read search range
-    FSearchRange := ReadSwappedWord(Stream);
+    FSearchRange := BigEndianValueReader.ReadWord(Stream);
 
     // read entry selector
-    FEntrySelector := ReadSwappedWord(Stream);
+    FEntrySelector := BigEndianValueReader.ReadWord(Stream);
 
     // read range shift
-    FRangeShift := ReadSwappedWord(Stream);
+    FRangeShift := BigEndianValueReader.ReadWord(Stream);
   end;
 end;
 
@@ -865,7 +865,7 @@ begin
     if Position + 2 > Size then
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    Value16 := ReadSwappedWord(Stream);
+    Value16 := BigEndianValueReader.ReadWord(Stream);
     FPrimaryGlyphIndex := (Value16 and $7FFF);
 
 {$IFDEF Ambigious Exceptions}
@@ -965,7 +965,7 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read extension offset
-    FExtensionOffset := ReadSwappedWord(Stream);
+    FExtensionOffset := BigEndianValueReader.ReadWord(Stream);
   end;
 end;
 
@@ -1027,13 +1027,13 @@ begin
       raise EPascalTypeError.Create(RCStrGlyphIndexOrderError);
 {$ENDIF}
     // read description offset
-    DescOffset := ReadSwappedCardinal(Stream);
+    DescOffset := BigEndianValueReader.ReadCardinal(Stream);
 
     // read extension offset
-    ExtOffset := ReadSwappedCardinal(Stream);
+    ExtOffset := BigEndianValueReader.ReadCardinal(Stream);
 
     // read secondary offset
-    SecOffset := ReadSwappedCardinal(Stream);
+    SecOffset := BigEndianValueReader.ReadCardinal(Stream);
 
     // locate description subtable position
     Position := StartPos + DescOffset;
@@ -1093,12 +1093,12 @@ begin
   inherited;
 
   // read pair count
-  SetLength(FCorrespondenceArray, ReadSwappedWord(Stream));
+  SetLength(FCorrespondenceArray, BigEndianValueReader.ReadWord(Stream));
 
   for PairIndex := 0 to High(FCorrespondenceArray) do
   begin
-    FCorrespondenceArray[PairIndex].fromCoord := ReadSwappedSmallInt(Stream);
-    FCorrespondenceArray[PairIndex].toCoord := ReadSwappedSmallInt(Stream);
+    FCorrespondenceArray[PairIndex].fromCoord := BigEndianValueReader.ReadSmallInt(Stream);
+    FCorrespondenceArray[PairIndex].toCoord := BigEndianValueReader.ReadSmallInt(Stream);
   end;
 end;
 
@@ -1218,7 +1218,7 @@ begin
     // read 32 delta values (a value of 0 means no delta ;-)
     for DeltaIndex := 0 to High(FDeltas) do
       FDeltas[DeltaIndex] :=
-        ReadSwappedWord(Stream);
+        BigEndianValueReader.ReadWord(Stream);
   end;
 end;
 
@@ -1724,19 +1724,19 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read feature
-    FFeature := ReadSwappedWord(Stream);
+    FFeature := BigEndianValueReader.ReadWord(Stream);
 
     // read settings count
-    FNumSettings := ReadSwappedWord(Stream);
+    FNumSettings := BigEndianValueReader.ReadWord(Stream);
 
     // read setting table offset
-    FSettingTable := ReadSwappedCardinal(Stream);
+    FSettingTable := BigEndianValueReader.ReadCardinal(Stream);
 
     // read feature flags
-    FFeatureFlags := ReadSwappedWord(Stream);
+    FFeatureFlags := BigEndianValueReader.ReadWord(Stream);
 
     // read name index
-    FNameIndex := ReadSwappedSmallInt(Stream);
+    FNameIndex := BigEndianValueReader.ReadSmallInt(Stream);
   end;
 end;
 
@@ -1792,7 +1792,7 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read feature name count
-    FeatureNameCount := ReadSwappedWord(Stream);
+    FeatureNameCount := BigEndianValueReader.ReadWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
     Read(Value16, SizeOf(Word));
@@ -1866,10 +1866,10 @@ begin
     StartPos := Position;
 
     // read offset to data
-    OffsetToData := ReadSwappedWord(Stream);
+    OffsetToData := BigEndianValueReader.ReadWord(Stream);
 
     // read size pair count
-    CountSizePairs := ReadSwappedWord(Stream);
+    CountSizePairs := BigEndianValueReader.ReadWord(Stream);
 
     // check size pair count
     if CountSizePairs < 2 then
@@ -1881,10 +1881,10 @@ begin
       (RCStrTooManySizePairs);
 {$ENDIF}
     // read axis count
-    SetLength(FVariationAxes, ReadSwappedWord(Stream));
+    SetLength(FVariationAxes, BigEndianValueReader.ReadWord(Stream));
 
     // read axis size
-    AxisSize := ReadSwappedWord(Stream);
+    AxisSize := BigEndianValueReader.ReadWord(Stream);
 
     // check axis size
     if AxisSize < 20 then
@@ -1895,10 +1895,10 @@ begin
     if AxisSize > 20 then raise EPascalTypeError.Create(RCStrUnknownAxisSize);
 {$ENDIF}
     // read instance count
-    SetLength(FInstances, ReadSwappedWord(Stream));
+    SetLength(FInstances, BigEndianValueReader.ReadWord(Stream));
 
     // read instance size
-    InstSize := ReadSwappedWord(Stream);
+    InstSize := BigEndianValueReader.ReadWord(Stream);
 
     // check instance size
     if InstSize < (4 + Length(FVariationAxes) * 4) then
@@ -1925,33 +1925,33 @@ begin
         Read(AxisTag, 4);
 
         // read minimum style coordinate for the axis
-        MinValue.Fixed := ReadSwappedCardinal(Stream);
+        MinValue.Fixed := BigEndianValueReader.ReadCardinal(Stream);
 
         // read default style coordinate for the axis
-        DefaultValue.Fixed := ReadSwappedCardinal(Stream);
+        DefaultValue.Fixed := BigEndianValueReader.ReadCardinal(Stream);
 
         // read maximum style coordinate for the axis
-        MaxValue.Fixed := ReadSwappedCardinal(Stream);
+        MaxValue.Fixed := BigEndianValueReader.ReadCardinal(Stream);
 
         // read flags (set to 0!)
-        Flags := ReadSwappedWord(Stream);
+        Flags := BigEndianValueReader.ReadWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
     // ambigious axis size check
     if Flags <> 0 then raise EPascalTypeError.Create(RCStrReservedValueError);
 {$ENDIF}
         // read name ID
-        NameID := ReadSwappedWord(Stream);
+        NameID := BigEndianValueReader.ReadWord(Stream);
       end;
 
     for InstIndex := 0 to High(FInstances) do
       with FInstances[InstIndex] do
       begin
         // read name ID
-        NameID := ReadSwappedWord(Stream);
+        NameID := BigEndianValueReader.ReadWord(Stream);
 
         // read flags (set to 0!)
-        Flags := ReadSwappedWord(Stream);
+        Flags := BigEndianValueReader.ReadWord(Stream);
 
         // set coordinate count
         SetLength(Coordinates, Length(FVariationAxes));
@@ -1959,7 +1959,7 @@ begin
         // read coordinates
         for AxisIndex := 0 to High(FVariationAxes) do
           Coordinates[AxisIndex]
-            .Fixed := ReadSwappedCardinal(Stream);
+            .Fixed := BigEndianValueReader.ReadCardinal(Stream);
       end;
   end;
 end;
@@ -2058,28 +2058,28 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read extra plain
-    FExtraPlain := ReadSwappedWord(Stream);
+    FExtraPlain := BigEndianValueReader.ReadWord(Stream);
 
     // read extra bold
-    FExtraBold := ReadSwappedWord(Stream);
+    FExtraBold := BigEndianValueReader.ReadWord(Stream);
 
     // read extra italic
-    FExtraItalic := ReadSwappedWord(Stream);
+    FExtraItalic := BigEndianValueReader.ReadWord(Stream);
 
     // read extra underline
-    FExtraUnderline := ReadSwappedWord(Stream);
+    FExtraUnderline := BigEndianValueReader.ReadWord(Stream);
 
     // read extra outline
-    FExtraOutline := ReadSwappedWord(Stream);
+    FExtraOutline := BigEndianValueReader.ReadWord(Stream);
 
     // read extra shadow
-    FExtraShadow := ReadSwappedWord(Stream);
+    FExtraShadow := BigEndianValueReader.ReadWord(Stream);
 
     // read extra condensed
-    FExtraCondensed := ReadSwappedWord(Stream);
+    FExtraCondensed := BigEndianValueReader.ReadWord(Stream);
 
     // read extra extended
-    FExtraExtended := ReadSwappedWord(Stream);
+    FExtraExtended := BigEndianValueReader.ReadWord(Stream);
   end;
 end;
 
@@ -2312,10 +2312,10 @@ begin
     StartPosition := Position;
 
     // read default flags
-    FDefaultFlags := ReadSwappedCardinal(Stream);
+    FDefaultFlags := BigEndianValueReader.ReadCardinal(Stream);
 
     // read chain length
-    ChainLength := ReadSwappedCardinal(Stream);
+    ChainLength := BigEndianValueReader.ReadCardinal(Stream);
 
 {$IFDEF AmbigiousExceptions}
     // check if chain length is a multiple of 4
@@ -2323,25 +2323,25 @@ begin
       (RCStrWrongChainLength);
 {$ENDIF}
     // read feature entry count
-    SetLength(FFeatureArray, ReadSwappedWord(Stream));
+    SetLength(FFeatureArray, BigEndianValueReader.ReadWord(Stream));
 
     // read subtable count
-    SubtableCount := ReadSwappedWord(Stream);
+    SubtableCount := BigEndianValueReader.ReadWord(Stream);
 
     for FeatureIndex := 0 to High(FFeatureArray) do
       with FFeatureArray[FeatureIndex] do
       begin
         // read feature type
-        FeatureType := ReadSwappedWord(Stream);
+        FeatureType := BigEndianValueReader.ReadWord(Stream);
 
         // read feature setting
-        FeatureSetting := ReadSwappedWord(Stream);
+        FeatureSetting := BigEndianValueReader.ReadWord(Stream);
 
         // read enable flags
-        EnableFlags := ReadSwappedCardinal(Stream);
+        EnableFlags := BigEndianValueReader.ReadCardinal(Stream);
 
         // read disable flags
-        DisableFlags := ReadSwappedCardinal(Stream);
+        DisableFlags := BigEndianValueReader.ReadCardinal(Stream);
       end;
 
     // jump to end of this table
@@ -2493,10 +2493,10 @@ begin
     StartPosition := Position;
 
     // read default flags
-    FDefaultFlags := ReadSwappedCardinal(Stream);
+    FDefaultFlags := BigEndianValueReader.ReadCardinal(Stream);
 
     // read chain length
-    ChainLength := ReadSwappedCardinal(Stream);
+    ChainLength := BigEndianValueReader.ReadCardinal(Stream);
 
 {$IFDEF AmbigiousExceptions}
     // check if chain length is a multiple of 4
@@ -2504,25 +2504,25 @@ begin
       (RCStrWrongChainLength);
 {$ENDIF}
     // read feature entry count
-    SetLength(FFeatureArray, ReadSwappedCardinal(Stream));
+    SetLength(FFeatureArray, BigEndianValueReader.ReadCardinal(Stream));
 
     // read subtable count
-    SubtableCount := ReadSwappedCardinal(Stream);
+    SubtableCount := BigEndianValueReader.ReadCardinal(Stream);
 
     for FeatureIndex := 0 to High(FFeatureArray) do
       with FFeatureArray[FeatureIndex] do
       begin
         // read feature type
-        FeatureType := ReadSwappedWord(Stream);
+        FeatureType := BigEndianValueReader.ReadWord(Stream);
 
         // read feature setting
-        FeatureSetting := ReadSwappedWord(Stream);
+        FeatureSetting := BigEndianValueReader.ReadWord(Stream);
 
         // read enable flags
-        EnableFlags := ReadSwappedCardinal(Stream);
+        EnableFlags := BigEndianValueReader.ReadCardinal(Stream);
 
         // read disable flags
-        DisableFlags := ReadSwappedCardinal(Stream);
+        DisableFlags := BigEndianValueReader.ReadCardinal(Stream);
       end;
 
     // jump to end of this table
@@ -2687,13 +2687,13 @@ begin
     StartPos := Position;
 
     // read length of track table
-    SetLength(FTrackTable, ReadSwappedWord(Stream));
+    SetLength(FTrackTable, BigEndianValueReader.ReadWord(Stream));
 
     // read length of track table
-    SetLength(FSizeTable, ReadSwappedWord(Stream));
+    SetLength(FSizeTable, BigEndianValueReader.ReadWord(Stream));
 
     // read size table offset
-    SizeTableOffset := ReadSwappedWord(Stream);
+    SizeTableOffset := BigEndianValueReader.ReadWord(Stream);
 
     // check (minimum) table size
     if Position + 8 * Length(FTrackTable) + 4 * Length(FSizeTable) > Size then
@@ -2703,17 +2703,17 @@ begin
       with FTrackTable[RecordIndex] do
       begin
         // read track
-        Track.Fixed := ReadSwappedCardinal(Stream);
+        Track.Fixed := BigEndianValueReader.ReadCardinal(Stream);
 
         // read name index
-        NameIndex := ReadSwappedWord(Stream);
+        NameIndex := BigEndianValueReader.ReadWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
     if NameIndex <= 256 then raise EPascalTypeError.Create
       ('NameIndex should be >= 256!');
 {$ENDIF}
         // read offset
-        Offset := ReadSwappedWord(Stream);
+        Offset := BigEndianValueReader.ReadWord(Stream);
       end;
 
     // locate size table position
@@ -2722,7 +2722,7 @@ begin
     for RecordIndex := 0 to High(FSizeTable) do
     begin
       // read value
-      FSizeTable[RecordIndex].Fixed := ReadSwappedCardinal(Stream);
+      FSizeTable[RecordIndex].Fixed := BigEndianValueReader.ReadCardinal(Stream);
     end;
   end;
 end;
@@ -2784,17 +2784,17 @@ begin
     StartPos := Position;
 
     // read format
-    FFormat := ReadSwappedWord(Stream);
+    FFormat := BigEndianValueReader.ReadWord(Stream);
 
     // read horizontal offset
-    HorizOffset := ReadSwappedWord(Stream);
+    HorizOffset := BigEndianValueReader.ReadWord(Stream);
 
     // read vertical offset
-    VertOffset := ReadSwappedWord(Stream);
+    VertOffset := BigEndianValueReader.ReadWord(Stream);
 
 {$IFDEF AmbigiousException}
     // read reserved
-    if ReadSwappedWord(Stream) <> 0 then raise EPascalTypeError.Create
+    if BigEndianValueReader.ReadWord(Stream) <> 0 then raise EPascalTypeError.Create
       (RCStrReservedValueError);
 {$ELSE}
     // skip reserved
@@ -2896,13 +2896,13 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read group offset
-    GroupOffset := ReadSwappedCardinal(Stream);
+    GroupOffset := BigEndianValueReader.ReadCardinal(Stream);
 
     // read feature offset
-    FeatOffset := ReadSwappedCardinal(Stream);
+    FeatOffset := BigEndianValueReader.ReadCardinal(Stream);
 
     // read number of 16bit unicode values
-    SetLength(FUnicodeCodePoints, ReadSwappedWord(Stream));
+    SetLength(FUnicodeCodePoints, BigEndianValueReader.ReadWord(Stream));
 
     // check (minimum) table size
     if Position + 2 * Length(FUnicodeCodePoints) > Size then
@@ -2910,10 +2910,10 @@ begin
 
     // read unicode code points
     for UnicodeIndex := 0 to High(FUnicodeCodePoints) do
-      FUnicodeCodePoints[UnicodeIndex] := ReadSwappedWord(Stream);
+      FUnicodeCodePoints[UnicodeIndex] := BigEndianValueReader.ReadWord(Stream);
 
     // read kind name count
-    KindNameCount := ReadSwappedWord(Stream);
+    KindNameCount := BigEndianValueReader.ReadWord(Stream);
 
     // set length kind names
     SetLength(FKindNames, KindNameCount);
@@ -3148,7 +3148,7 @@ begin
     StartPos := Position;
 
     // read extra info offset
-    ExtraInfo := ReadSwappedCardinal(Stream);
+    ExtraInfo := BigEndianValueReader.ReadCardinal(Stream);
 
     // get maximum profile table
     MaxProfile := TPascalTypeMaximumProfileTable(FontFace.GetTableByTableType('maxp'));
@@ -3160,7 +3160,7 @@ begin
     // read glyph info offsets
     for GlyphIndex := 0 to High(Offsets) do
       Offsets[GlyphIndex] :=
-        ReadSwappedCardinal(Stream);
+        BigEndianValueReader.ReadCardinal(Stream);
 
     // set glyph info array length
     SetLength(FGlyphInfos, Length(Offsets));

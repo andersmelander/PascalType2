@@ -473,16 +473,16 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read index subtable array offset
-    FIndexSubTableArrayOffset := ReadSwappedCardinal(Stream);
+    FIndexSubTableArrayOffset := BigEndianValueReader.ReadCardinal(Stream);
 
     // read index tables size
-    FIndexTablesSize := ReadSwappedCardinal(Stream);
+    FIndexTablesSize := BigEndianValueReader.ReadCardinal(Stream);
 
     // read number of index subtables
-    FNumberOfIndexSubTables := ReadSwappedCardinal(Stream);
+    FNumberOfIndexSubTables := BigEndianValueReader.ReadCardinal(Stream);
 
     // read color reference
-    FColorRef := ReadSwappedCardinal(Stream);
+    FColorRef := BigEndianValueReader.ReadCardinal(Stream);
 
     // load horizontal metrics from stream
     FHorizontalMetrics.LoadFromStream(Stream);
@@ -491,10 +491,10 @@ begin
     FVerticalMetrics.LoadFromStream(Stream);
 
     // read start glyph index
-    FStartGlyphIndex := ReadSwappedWord(Stream);
+    FStartGlyphIndex := BigEndianValueReader.ReadWord(Stream);
 
     // read end glyph index
-    FEndGlyphIndex := ReadSwappedWord(Stream);
+    FEndGlyphIndex := BigEndianValueReader.ReadWord(Stream);
 
     // read horizontal pixels per Em
     Read(FPpemX, 1);

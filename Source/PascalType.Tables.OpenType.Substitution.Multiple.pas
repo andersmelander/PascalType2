@@ -148,19 +148,19 @@ begin
   if Stream.Position + 2 > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  SetLength(SequenceOffsets, ReadSwappedWord(Stream));
+  SetLength(SequenceOffsets, BigEndianValueReader.ReadWord(Stream));
   for i := 0 to High(SequenceOffsets) do
-    SequenceOffsets[i] := ReadSwappedWord(Stream);
+    SequenceOffsets[i] := BigEndianValueReader.ReadWord(Stream);
 
   SetLength(FSequenceList, Length(SequenceOffsets));
   for i := 0 to High(FSequenceList) do
   begin
     Stream.Position := StartPos + SequenceOffsets[i];
 
-    SetLength(FSequenceList[i], ReadSwappedWord(Stream));
+    SetLength(FSequenceList[i], BigEndianValueReader.ReadWord(Stream));
 
     for j := 0 to High(FSequenceList[i]) do
-      FSequenceList[i][j] := ReadSwappedWord(Stream);
+      FSequenceList[i][j] := BigEndianValueReader.ReadWord(Stream);
   end;
 end;
 

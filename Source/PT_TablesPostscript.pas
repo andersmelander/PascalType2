@@ -1424,7 +1424,7 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read count
-  Value16 := ReadSwappedWord(Stream);
+  Value16 := BigEndianValueReader.ReadWord(Stream);
 
   // check if index file is empty
   if Value16 = 0 then
@@ -1909,25 +1909,25 @@ begin
   with Stream do
   begin
     // read major version
-    FMajorVersion := ReadSwappedWord(Stream);
+    FMajorVersion := BigEndianValueReader.ReadWord(Stream);
 
     // read minor version
-    FMinorVersion := ReadSwappedWord(Stream);
+    FMinorVersion := BigEndianValueReader.ReadWord(Stream);
 
     // read default vertical origin
-    FDefaultVertOriginY := ReadSwappedWord(Stream);
+    FDefaultVertOriginY := BigEndianValueReader.ReadWord(Stream);
 
     // read vertical origin y-metrics
-    SetLength(FVertOriginYMetrics, ReadSwappedWord(Stream));
+    SetLength(FVertOriginYMetrics, BigEndianValueReader.ReadWord(Stream));
 
     for Index := 0 to High(FVertOriginYMetrics) do
       with FVertOriginYMetrics[Index] do
       begin
         // read glyph index
-        GlyphIndex := ReadSwappedWord(Stream);
+        GlyphIndex := BigEndianValueReader.ReadWord(Stream);
 
         // read vertical y origin
-        VertOriginY := ReadSwappedWord(Stream);
+        VertOriginY := BigEndianValueReader.ReadWord(Stream);
       end;
   end;
 end;

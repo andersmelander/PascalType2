@@ -200,13 +200,13 @@ begin
   if Stream.Position + 6 > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  ValueFormat1 := ReadSwappedWord(Stream);
-  ValueFormat2 := ReadSwappedWord(Stream);
+  ValueFormat1 := BigEndianValueReader.ReadWord(Stream);
+  ValueFormat2 := BigEndianValueReader.ReadWord(Stream);
 
-  SetLength(PairSetOffsets, ReadSwappedWord(Stream));
+  SetLength(PairSetOffsets, BigEndianValueReader.ReadWord(Stream));
 
   for i := 0 to High(PairSetOffsets) do
-    PairSetOffsets[i] := ReadSwappedWord(Stream);
+    PairSetOffsets[i] := BigEndianValueReader.ReadWord(Stream);
 
   SetLength(FPairValues, Length(PairSetOffsets));
 
@@ -214,11 +214,11 @@ begin
   begin
     Stream.Position := StartPos + PairSetOffsets[i];
 
-    SetLength(FPairValues[i], ReadSwappedWord(Stream));
+    SetLength(FPairValues[i], BigEndianValueReader.ReadWord(Stream));
 
     for j := 0 to High(FPairValues[i]) do
     begin
-      FPairValues[i, j].SecondGlyphID := ReadSwappedWord(Stream);
+      FPairValues[i, j].SecondGlyphID := BigEndianValueReader.ReadWord(Stream);
       LoadValueRecordFromStream(Stream, FPairValues[i, j].FirstValueRecord, ValueFormat1);
       LoadValueRecordFromStream(Stream, FPairValues[i, j].SecondValueRecord, ValueFormat2);
     end;
@@ -341,14 +341,14 @@ begin
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // TODO : Possibly surface these as properties
-  ValueFormat1 := ReadSwappedWord(Stream);
-  ValueFormat2 := ReadSwappedWord(Stream);
+  ValueFormat1 := BigEndianValueReader.ReadWord(Stream);
+  ValueFormat2 := BigEndianValueReader.ReadWord(Stream);
 
-  FirstClassDefOffset := StartPos + ReadSwappedWord(Stream);
-  SecondClassDefOffset := StartPos + ReadSwappedWord(Stream);
+  FirstClassDefOffset := StartPos + BigEndianValueReader.ReadWord(Stream);
+  SecondClassDefOffset := StartPos + BigEndianValueReader.ReadWord(Stream);
 
-  Class1Count := ReadSwappedWord(Stream);
-  Class2Count := ReadSwappedWord(Stream);
+  Class1Count := BigEndianValueReader.ReadWord(Stream);
+  Class2Count := BigEndianValueReader.ReadWord(Stream);
 
   SetLength(FClassValueRecords, Class1Count);
   for i := 0 to High(FClassValueRecords) do
@@ -365,7 +365,7 @@ begin
   if (Class1Count > 0) then
   begin
     Stream.Position := FirstClassDefOffset;
-    ClassDefinitionFormat := TClassDefinitionFormat(ReadSwappedWord(Stream));
+    ClassDefinitionFormat := TClassDefinitionFormat(BigEndianValueReader.ReadWord(Stream));
 
     ClassDefinitionTableClass := TCustomOpenTypeClassDefinitionTable.ClassByFormat(ClassDefinitionFormat);
     if (ClassDefinitionTableClass <> nil) then
@@ -380,7 +380,7 @@ begin
   if (Class2Count > 0) then
   begin
     Stream.Position := SecondClassDefOffset;
-    ClassDefinitionFormat := TClassDefinitionFormat(ReadSwappedWord(Stream));
+    ClassDefinitionFormat := TClassDefinitionFormat(BigEndianValueReader.ReadWord(Stream));
 
     ClassDefinitionTableClass := TCustomOpenTypeClassDefinitionTable.ClassByFormat(ClassDefinitionFormat);
     if (ClassDefinitionTableClass <> nil) then
