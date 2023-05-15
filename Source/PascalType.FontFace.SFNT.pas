@@ -124,6 +124,8 @@ type
   end;
 
   TPascalTypeFontFace = class(TCustomPascalTypeFontFace)
+  public
+    const MaxCompositeGlyphDepth = 8; // Max recursion depth when resolving composite glyphs
   strict private
     // required tables
     FHorizontalMetrics: TPascalTypeHorizontalMetricsTable;
@@ -139,6 +141,8 @@ type
     function GetPanose: TCustomPascalTypePanoseTable;
     function GetBoundingBox: TRect;
     function GetGlyphCount: Word;
+  protected
+    function DoGetGlyphPath(GlyphIndex: Word; Depth: integer): TPascalTypePath;
   protected
     // IPascalTypeFontFaceTable
     function GetTableByTableName(const TableName: TTableName): TCustomPascalTypeNamedTable; override;
@@ -853,13 +857,20 @@ function TPascalTypeFontFace.GetGlyphMetric(GlyphIndex: Word): TTrueTypeGlyphMet
 var
   GlyphDataTable: TTrueTypeFontGlyphDataTable;
 
-  procedure DoGetGlyphMetric(GlyphIndex: Word; var MetricIndex: Word);
+  procedure DoGetGlyphMetric(GlyphIndex: Word; var MetricIndex: Word; Depth: integer);
   var
     Glyph: TCustomTrueTypeFontGlyphData;
     i: integer;
     CompositeGlyphData: TTrueTypeFontCompositeGlyphData;
     ComponentGlyphMetric: TTrueTypeGlyphMetric;
   begin
+    if (Depth > MaxCompositeGlyphDepth) then
+{$ifdef FailOnCompositeGlyphTooDeep}
+      raise EPascalTypeError.Create('Composite glyph exceeded recursion depth');
+{$else FailOnCompositeGlyphTooDeep}
+      exit;
+{$endif FailOnCompositeGlyphTooDeep}
+
     Glyph := GlyphDataTable.GlyphData[GlyphIndex];
 
     // If glyph is a simple glyph then we will just use its index as the metric index.
@@ -881,7 +892,7 @@ var
           // We will use the index of the component. Set MetricIndex and recurse.
           MetricIndex := CompositeGlyphData.Glyph[i].GlyphIndex;
 
-          DoGetGlyphMetric(CompositeGlyphData.Glyph[i].GlyphIndex, MetricIndex);
+          DoGetGlyphMetric(CompositeGlyphData.Glyph[i].GlyphIndex, MetricIndex, Depth + 1);
 
           // In theory multiple components could set USE_MY_METRICS but we
           // ignore that as it doesn't make sense.
@@ -900,7 +911,7 @@ begin
     exit;
 
   MetricIndex := GlyphIndex;
-  DoGetGlyphMetric(GlyphIndex, MetricIndex);
+  DoGetGlyphMetric(GlyphIndex, MetricIndex, 0);
 
   Result.HorizontalMetric := FHorizontalMetrics.HorizontalMetric[MetricIndex];
 
@@ -910,15 +921,20 @@ begin
     Result.VerticalMetric := VerticalMetricsTable.VerticalMetric[MetricIndex];
 end;
 
-function TPascalTypeFontFace.GetGlyphPath(GlyphIndex: Word): TPascalTypePath;
+function TPascalTypeFontFace.DoGetGlyphPath(GlyphIndex: Word; Depth: integer): TPascalTypePath;
 
   procedure AppendPath(var Path: TPascalTypePath; const Append: TPascalTypePath);
   var
     NewIndex: integer;
     Contour: TPascalTypeContour;
   begin
+    if (Length(Append) = 0) then
+      exit;
+
     NewIndex := Length(Path);
-    SetLength(Path, Length(Path)+Length(Append));
+
+    SetLength(Path, Length(Path) + Length(Append));
+
     for Contour in Append do
     begin
       Path[NewIndex] := Contour;
@@ -1025,7 +1041,7 @@ function TPascalTypeFontFace.GetGlyphPath(GlyphIndex: Word): TPascalTypePath;
       CompositeGlyph := ParentGlyph.Glyph[i];
 
       // Recurse
-      GlyphPath := GetGlyphPath(CompositeGlyph.GlyphIndex);
+      GlyphPath := DoGetGlyphPath(CompositeGlyph.GlyphIndex, Depth + 1);
 
       if (CompositeGlyph.HasAffineTransformationMatrix) then
         GlyphPath := AffineTransformation(GlyphPath, CompositeGlyph.AffineTransformationMatrix)
@@ -1040,6 +1056,13 @@ function TPascalTypeFontFace.GetGlyphPath(GlyphIndex: Word): TPascalTypePath;
 var
   Glyph: TCustomTrueTypeFontGlyphData;
 begin
+  if (Depth > MaxCompositeGlyphDepth) then
+{$ifdef FailOnCompositeGlyphTooDeep}
+    raise EPascalTypeError.Create('Composite glyph exceeded recursion depth');
+{$else FailOnCompositeGlyphTooDeep}
+    Exit(nil);
+{$endif FailOnCompositeGlyphTooDeep}
+
   Glyph := TCustomTrueTypeFontGlyphData(GlyphData[GlyphIndex]);
 
   if (Glyph is TTrueTypeFontSimpleGlyphData) then
@@ -1048,6 +1071,11 @@ begin
   if Glyph is TTrueTypeFontCompositeGlyphData then
     // Recursively fetch glyph contours
     Result := GetCompositeGlyphPath(TTrueTypeFontCompositeGlyphData(Glyph));
+end;
+
+function TPascalTypeFontFace.GetGlyphPath(GlyphIndex: Word): TPascalTypePath;
+begin
+  Result := DoGetGlyphPath(GlyphIndex, 0);
 end;
 
 function TPascalTypeFontFace.GetKerning(Last, Next: Word): Word;

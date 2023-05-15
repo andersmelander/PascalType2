@@ -47,5 +47,12 @@
   * Default: Disabled }
 {$DEFINE IgnoreIncompleteOptionalTables}
 
+{ Enable FailOnCompositeGlyphTooDeep if composite glyph definition that exceed
+  a defined max depth (8 by default) should raise an exception.
+  Otherwise lower levels will just be ignored.
+  See: TPascalTypeFontFace.MaxCompositeGlyphDepth.
+  * Default: Enabled }
+{$define FailOnCompositeGlyphTooDeep}
+
 {$DEFINE PUREPASCAL}
 
