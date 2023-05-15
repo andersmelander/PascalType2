@@ -1074,6 +1074,9 @@ begin
     FAffineTransformationMatrix[1, 2] := FOffsetXY[1];
   end else
   begin
+    // TODO: Implement point-to-point positioning. See issue #27, #31
+    // I have not found a single font that actually uses this feature
+    // so punting it for now.
     FAffineTransformationMatrix[0, 2] := 0;
     FAffineTransformationMatrix[1, 2] := 0;
   end;
