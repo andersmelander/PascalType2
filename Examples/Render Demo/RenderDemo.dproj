@@ -166,6 +166,7 @@
         <DCCReference Include="..\..\Source\PascalType.Rasterizer.Graphics32.pas"/>
         <DCCReference Include="..\..\Source\PascalType.GlyphString.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Substitution.Ligature.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Unicode.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

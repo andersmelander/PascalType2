@@ -60,7 +60,8 @@ uses
   PascalType.Shaper in '..\..\Source\PascalType.Shaper.pas',
   PascalType.Rasterizer.Graphics32 in '..\..\Source\PascalType.Rasterizer.Graphics32.pas',
   PascalType.GlyphString in '..\..\Source\PascalType.GlyphString.pas',
-  PascalType.Tables.OpenType.Substitution.Ligature in '..\..\Source\PascalType.Tables.OpenType.Substitution.Ligature.pas';
+  PascalType.Tables.OpenType.Substitution.Ligature in '..\..\Source\PascalType.Tables.OpenType.Substitution.Ligature.pas',
+  PascalType.Unicode in '..\..\Source\PascalType.Unicode.pas';
 
 {$R *.res}
 

@@ -109,6 +109,7 @@ implementation
 uses
   SysUtils,
   PT_Types,
+  PascalType.Unicode,
   PT_ResourceStrings;
 
 //------------------------------------------------------------------------------

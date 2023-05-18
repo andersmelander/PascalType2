@@ -40,9 +40,6 @@ uses
   PT_Types;
 
 type
-  // A Unicode code point
-  TPascalTypeCodePoint = Word;
-
   // A GlyphID
   TPascalTypeGlyphID = Word;
 

@@ -36,7 +36,8 @@ interface
 
 uses
   Generics.Collections,
-  PT_Classes;
+  PT_Classes,
+  PascalType.Unicode;
 
 //------------------------------------------------------------------------------
 //
@@ -45,7 +46,6 @@ uses
 //------------------------------------------------------------------------------
 type
   TPascalTypeGlyphString = class;
-  TPascalTypeCodePoints = array of TPascalTypeCodePoint;
 
   TPascalTypeGlyph = class
   private
