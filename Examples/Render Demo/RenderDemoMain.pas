@@ -15,7 +15,10 @@ uses
   PT_Windows,
   RenderDemoFontNameScanner;
 
-{$I ..\..\Source\PT_Compiler.inc}  
+{$I ..\..\Source\PT_Compiler.inc}
+
+{-$define IMAGE32} // Define to include Image32
+{-$define RASTERIZER_GDI} // Define to include GDI rasterizer
 
 type
   TFontNameFile = packed record
@@ -29,34 +32,32 @@ type
     EditText: TEdit;
     LabelFont: TLabel;
     LabelFontSize: TLabel;
-    LabelFontEngine: TLabel;
     LabelText: TLabel;
-    PaintBox: TPaintBox;
-    PanelText: TPanel;
-    RadioButtonPascalType: TRadioButton;
-    RadioButtonWindows: TRadioButton;
-    RadioButtonGraphics32: TRadioButton;
+    GridPanel1: TGridPanel;
+    PaintBoxWindows: TPaintBox;
+    PaintBoxGDI: TPaintBox;
+    PaintBoxGraphics32: TPaintBox;
+    PaintBoxImage32: TPaintBox;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure ComboBoxFontChange(Sender: TObject);
     procedure ComboBoxFontSizeChange(Sender: TObject);
     procedure EditTextChange(Sender: TObject);
-    procedure PaintBoxPaint(Sender: TObject);
-    procedure PanelTextResize(Sender: TObject);
-    procedure RadioButtonPascalTypeClick(Sender: TObject);
-    procedure RadioButtonWindowsClick(Sender: TObject);
-    procedure RadioButtonGraphics32Click(Sender: TObject);
+    procedure PaintBoxWindowsPaint(Sender: TObject);
+    procedure PaintBoxGDIPaint(Sender: TObject);
+    procedure PaintBoxGraphics32Paint(Sender: TObject);
+    procedure PaintBoxImage32Paint(Sender: TObject);
   private
     FFontFace: TPascalTypeFontFace;
     FRasterizerGDI  : TPascalTypeFontRasterizerGDI;
     FRasterizerGraphics32: TPascalTypeRasterizerGraphics32;
     FFontScanner : TFontNameScanner;
     FFontArray   : array of TFontNameFile;
-    FBitmap      : TBitmap;
     FText        : string;
     FFontSize    : Integer;
     FFontName    : string;
+    FFontFilename: string;
     procedure FontScannedHandler(Sender: TObject; FontFileName: TFilename; Font: TCustomPascalTypeFontFacePersistent);
     procedure SetText(const Value: string);
     procedure SetFontSize(const Value: Integer);
@@ -64,7 +65,6 @@ type
   protected
     procedure FontNameChanged; virtual;
     procedure FontSizeChanged; virtual;
-    procedure RenderText; virtual;
     procedure TextChanged; virtual;
   public
     property Text: string read FText write SetText;
@@ -82,6 +82,10 @@ implementation
 uses
   Math,
   Types,
+{$ifdef IMAGE32}
+  Img32,
+  Img32.Text,
+{$endif IMAGE32}
   GR32,
   GR32_Polygons,
   GR32_Brushes,
@@ -89,10 +93,18 @@ uses
 
 procedure TFmRenderDemo.FormCreate(Sender: TObject);
 begin
-  SetCurrentDir(GetFontDirectory);
+{$ifndef IMAGE32}
+  PaintBoxImage32.Free;
+  GridPanel1.RowCollection.Items[3].Free;
+  GridPanel1.RowCollection.EquallySplitPercentuals;
+{$endif IMAGE32}
+{$ifndef RASTERIZER_GDI}
+  PaintBoxGDI.Free;
+  GridPanel1.RowCollection.Items[1].Free;
+  GridPanel1.RowCollection.EquallySplitPercentuals;
+{$endif RASTERIZER_GDI}
 
-  // create bitmap buffer
-  FBitmap := TBitmap.Create;
+  SetCurrentDir(GetFontDirectory);
 
   FFontFace := TPascalTypeFontFace.Create;
 
@@ -104,9 +116,7 @@ begin
   FRasterizerGraphics32.FontFace := FFontFace;
 
   // set initial properties
-  FBitmap.Canvas.Font.Size := StrToInt(ComboBoxFontSize.Text);
-  FRasterizerGDI.FontSize := StrToInt(ComboBoxFontSize.Text);
-  FRasterizerGraphics32.FontSize := StrToInt(ComboBoxFontSize.Text);
+  FFontSize := StrToIntDef(ComboBoxFontSize.Text, 20);
 
   FFontScanner := TFontNameScanner.Create(True);
   with FFontScanner do
@@ -122,8 +132,6 @@ begin
   FreeAndNil(FRasterizerGraphics32);
   FreeAndNil(FFontFace);
 
-  FBitmap.Free;
-
   with FFontScanner do
   begin
     Terminate;
@@ -137,136 +145,148 @@ begin
  Text := EditText.Text;
 end;
 
-procedure TFmRenderDemo.PaintBoxPaint(Sender: TObject);
+procedure TFmRenderDemo.PaintBoxGDIPaint(Sender: TObject);
+var
+  Canvas: TCanvas;
 begin
- if Assigned(FBitmap)
-  then PaintBox.Canvas.Draw(0, 0, FBitmap);
+  Canvas := TPaintBox(Sender).Canvas;
+
+  Canvas.Brush.Color := clWhite;
+  Canvas.FillRect(Canvas.ClipRect);
+
+  FRasterizerGDI.FontSize := FFontSize;
+  FRasterizerGDI.RenderText(FText, Canvas, 0, 0)
 end;
 
-procedure TFmRenderDemo.PanelTextResize(Sender: TObject);
+procedure TFmRenderDemo.PaintBoxGraphics32Paint(Sender: TObject);
+var
+  Canvas: TCanvas;
+  Canvas32: TCanvas32;
+  Bitmap32: TBitmap32;
+  BrushFill: TSolidBrush;
+  BrushStroke: TStrokeBrush;
 begin
- if Assigned(FBitmap) then
-  with FBitmap do
-   begin
-    Width := PaintBox.Width;
-    Height := PaintBox.Height;
-   end;
- RenderText;
+  Canvas := TPaintBox(Sender).Canvas;
+
+  Canvas.Brush.Color := clWhite;
+  Canvas.FillRect(Canvas.ClipRect);
+
+  // CBezierTolerance := 0.01;
+  Bitmap32 := TBitmap32.Create;
+  try
+    Bitmap32.SetSize(TPaintBox(Sender).Width, TPaintBox(Sender).Height);
+    Bitmap32.Clear(clWhite32);
+    Canvas32 := TCanvas32.Create(Bitmap32);
+    try
+      // (*
+      BrushFill := Canvas32.Brushes.Add(TSolidBrush) as TSolidBrush;
+      BrushFill.FillColor := clBlack32;
+      BrushFill.FillMode := pfNonZero;
+      // *)
+      (*
+        BrushStroke := Canvas32.Brushes.Add(TStrokeBrush) as TStrokeBrush;
+        BrushStroke.FillColor := clTrRed32;
+        BrushStroke.StrokeWidth := 1;
+        BrushStroke.JoinStyle := jsMiter;
+        BrushStroke.EndStyle := esButt;
+      *)
+      FRasterizerGraphics32.FontSize := FFontSize;
+      FRasterizerGraphics32.RenderShapedText(FText, Canvas32);
+    finally
+      Canvas32.Free;
+    end;
+    Bitmap32.DrawTo(Canvas.Handle, 0, 0);
+
+  finally
+    Bitmap32.Free;
+  end;
+end;
+
+procedure TFmRenderDemo.PaintBoxImage32Paint(Sender: TObject);
+{$ifdef IMAGE32}
+var
+  Canvas: TCanvas;
+  Image: TImage32;
+  FontReader: TFontReader;
+  Font: TFontCache;
+{$endif IMAGE32}
+begin
+{$ifdef IMAGE32}
+  Canvas := TPaintBox(Sender).Canvas;
+
+  Image := TImage32.Create(nil);
+  try
+    FontReader := FontManager.LoadFromFile(FFontFilename);
+    try
+      Font := TFontCache.Create(FontReader, FFontSize);
+      try
+        Font.InvertY := True;
+
+        Image.SetSize(TPaintBox(Sender).Width, TPaintBox(Sender).Height, clWhite32);
+
+        Img32.Text.DrawText(Image, 0, Ceil(Font.LineHeight), FText, Font);
+
+        Image.CopyToDc(Canvas.Handle, 0, 0, False);
+
+      finally
+        Font.Free;
+      end;
+    finally
+      FontReader.Free;
+    end;
+  finally
+    Image.Free;
+  end;
+{$endif IMAGE32}
+end;
+
+procedure TFmRenderDemo.PaintBoxWindowsPaint(Sender: TObject);
+var
+  Canvas: TCanvas;
+begin
+  Canvas := TPaintBox(Sender).Canvas;
+
+  Canvas.Brush.Color := clWhite;
+  Canvas.FillRect(Canvas.ClipRect);
+
+  Canvas.Font.Color := clBlack;
+  Canvas.Font.Name := FFontName;
+  Canvas.Font.Size := FFontSize;
+
+  Canvas.TextOut(0, 0, FText);
 end;
 
 procedure TFmRenderDemo.TextChanged;
 begin
- RenderText;
+  Invalidate;
 end;
 
 procedure TFmRenderDemo.FontNameChanged;
 var
   FontIndex : Integer;
 begin
-  FBitmap.Canvas.Font.Name := FFontName;
   for FontIndex := 0 to High(FFontArray) do
     if FFontArray[FontIndex].FullFontName = FFontName then
     begin
-      FFontFace.LoadFromFile(FFontArray[FontIndex].FileName);
+      FFontFilename := FFontArray[FontIndex].FileName;
+      FFontFace.LoadFromFile(FFontFilename);
       Break;
     end;
 
-  RenderText;
+  Invalidate;
 end;
 
 procedure TFmRenderDemo.FontSizeChanged;
 begin
- FBitmap.Canvas.Font.Size := FFontSize;
- FRasterizerGDI.FontSize := FFontSize;
- FRasterizerGraphics32.FontSize := FFontSize;
- RenderText;
-end;
-
-procedure TFmRenderDemo.RadioButtonGraphics32Click(Sender: TObject);
-begin
- RenderText;
-end;
-
-procedure TFmRenderDemo.RadioButtonPascalTypeClick(Sender: TObject);
-begin
- RenderText;
-end;
-
-procedure TFmRenderDemo.RadioButtonWindowsClick(Sender: TObject);
-begin
- RenderText;
-end;
-
-procedure TFmRenderDemo.RenderText;
-var
-  Bitmap32: TBitmap32;
-  Canvas32: TCanvas32;
-  BrushFill: TSolidBrush;
-  BrushStroke: TStrokeBrush;
-begin
- with FBitmap, Canvas do
-  begin
-   // clear bitmap
-   Brush.Color := clWhite;
-   FillRect(ClipRect);
-
-   if RadioButtonWindows.Checked then
-    begin
-     with Font do
-      begin
-       Color := clBlack;
-       Name := ComboBoxFont.Text;
-       Font.Size := FFontSize;
-      end;
-
-     TextOut(0, 0, FText);
-    end;
-
-   if RadioButtonPascalType.Checked then
-     FRasterizerGDI.RenderText(FText, Canvas, 0, 0)
-   else
-   if RadioButtonGraphics32.Checked then
-   begin
-//     CBezierTolerance := 0.01;
-     Bitmap32 := TBitmap32.Create;
-     try
-       Bitmap32.SetSize(FBitmap.Width, FBitmap.Height);
-       Bitmap32.Clear(clWhite32);
-       Canvas32 := TCanvas32.Create(Bitmap32);
-       try
-//(*
-         BrushFill := Canvas32.Brushes.Add(TSolidBrush) as TSolidBrush;
-         BrushFill.FillColor := clBlack32;
-         BrushFill.FillMode := pfNonZero;
-//*)
-(*
-         BrushStroke := Canvas32.Brushes.Add(TStrokeBrush) as TStrokeBrush;
-         BrushStroke.FillColor := clTrRed32;
-         BrushStroke.StrokeWidth := 1;
-         BrushStroke.JoinStyle := jsMiter;
-         BrushStroke.EndStyle := esButt;
-*)
-         FRasterizerGraphics32.RenderShapedText(FText, Canvas32);
-       finally
-         Canvas32.Free;
-       end;
-       FBitmap.Assign(Bitmap32);
-
-     finally
-       Bitmap32.Free;
-     end;
-
-   end;
-  end;
- PaintBox.Invalidate;
+  Invalidate;
 end;
 
 procedure TFmRenderDemo.SetFontName(const Value: string);
 begin
  if FFontName <> Value then
   begin
-   FFontName := Value;
-   FontNameChanged;
+    FFontName := Value;
+    FontNameChanged;
   end;
 end;
 

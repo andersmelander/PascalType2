@@ -44,14 +44,6 @@ object FmRenderDemo: TFmRenderDemo
     Caption = 'Size:'
     ExplicitLeft = 391
   end
-  object LabelFontEngine: TLabel
-    Left = 8
-    Top = 417
-    Width = 53
-    Height = 13
-    Anchors = [akLeft, akBottom]
-    Caption = 'Rasterizer:'
-  end
   object EditText: TEdit
     Left = 40
     Top = 8
@@ -109,58 +101,102 @@ object FmRenderDemo: TFmRenderDemo
       '128'
       '256')
   end
-  object PanelText: TPanel
+  object GridPanel1: TGridPanel
     Left = 8
     Top = 35
     Width = 660
-    Height = 376
+    Height = 393
     Anchors = [akLeft, akTop, akRight, akBottom]
-    BevelOuter = bvNone
-    BorderStyle = bsSingle
-    Color = clWhite
+    Caption = 'GridPanel1'
+    ColumnCollection = <
+      item
+        Value = 100.000000000000000000
+      end>
+    ControlCollection = <
+      item
+        Column = 0
+        Control = PaintBoxWindows
+        Row = 0
+      end
+      item
+        Column = 0
+        Control = PaintBoxGDI
+        Row = 1
+      end
+      item
+        Column = 0
+        Control = PaintBoxGraphics32
+        Row = 2
+      end
+      item
+        Column = 0
+        Control = PaintBoxImage32
+        Row = 3
+      end>
+    RowCollection = <
+      item
+        Value = 25.000000000000000000
+      end
+      item
+        Value = 25.000000000000000000
+      end
+      item
+        Value = 25.000000000000000000
+      end
+      item
+        Value = 25.000000000000000000
+      end
+      item
+        SizeStyle = ssAuto
+      end>
+    ShowCaption = False
     TabOrder = 3
-    OnResize = PanelTextResize
-    object PaintBox: TPaintBox
-      Left = 0
-      Top = 0
-      Width = 656
-      Height = 372
+    object PaintBoxWindows: TPaintBox
+      Left = 1
+      Top = 1
+      Width = 658
+      Height = 98
       Align = alClient
-      OnPaint = PaintBoxPaint
+      OnPaint = PaintBoxWindowsPaint
+      ExplicitLeft = 277
       ExplicitWidth = 451
       ExplicitHeight = 119
     end
-  end
-  object RadioButtonWindows: TRadioButton
-    Left = 76
-    Top = 416
-    Width = 62
-    Height = 17
-    Anchors = [akLeft, akBottom]
-    Caption = 'Windows'
-    Checked = True
-    TabOrder = 4
-    TabStop = True
-    OnClick = RadioButtonWindowsClick
-  end
-  object RadioButtonPascalType: TRadioButton
-    Left = 144
-    Top = 416
-    Width = 74
-    Height = 17
-    Anchors = [akLeft, akBottom]
-    Caption = 'GDI'
-    TabOrder = 5
-    OnClick = RadioButtonPascalTypeClick
-  end
-  object RadioButtonGraphics32: TRadioButton
-    Left = 231
-    Top = 416
-    Width = 74
-    Height = 17
-    Anchors = [akLeft, akBottom]
-    Caption = 'Graphics32'
-    TabOrder = 6
-    OnClick = RadioButtonGraphics32Click
+    object PaintBoxGDI: TPaintBox
+      Left = 1
+      Top = 99
+      Width = 658
+      Height = 98
+      Align = alClient
+      OnPaint = PaintBoxGDIPaint
+      ExplicitLeft = 277
+      ExplicitTop = 94
+      ExplicitWidth = 451
+      ExplicitHeight = 119
+    end
+    object PaintBoxGraphics32: TPaintBox
+      Left = 1
+      Top = 197
+      Width = 658
+      Height = 97
+      Align = alClient
+      OnPaint = PaintBoxGraphics32Paint
+      ExplicitLeft = 277
+      ExplicitTop = 188
+      ExplicitWidth = 451
+      ExplicitHeight = 119
+    end
+    object PaintBoxImage32: TPaintBox
+      Left = 1
+      Top = 294
+      Width = 658
+      Height = 98
+      Align = alClient
+      OnPaint = PaintBoxImage32Paint
+      ExplicitLeft = 277
+      ExplicitTop = 188
+      ExplicitWidth = 451
+      ExplicitHeight = 119
+    end
   end
 end
