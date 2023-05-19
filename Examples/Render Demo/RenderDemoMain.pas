@@ -17,7 +17,7 @@ uses
 
 {$I ..\..\Source\PT_Compiler.inc}
 
-{-$define IMAGE32} // Define to include Image32
+{-$define IMAGE32} // Define to include Image32 text output
 {-$define RASTERIZER_GDI} // Define to include GDI rasterizer
 
 type

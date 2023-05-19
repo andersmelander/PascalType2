@@ -259,7 +259,7 @@ var
   GlyphIndex: Integer;
 begin
   for GlyphIndex := 0 to High(FScaledGlyphs) do
-    FreeAndNil(FScaledGlyphs[GlyphIndex]);
+    FScaledGlyphs[GlyphIndex].Free;
   SetLength(FScaledGlyphs, 0);
 end;
 
@@ -277,8 +277,8 @@ begin
       // get horizontal metrics
       with HorizontalMetrics, FScaledGlyphs[GlyphIndex] do
       begin
-        FAdvanceWidth := RoundedScaleX(HorizontalMetric[GlyphIndex].AdvanceWidth);
-        FLeftSideBearing := RoundedScaleY(HorizontalMetric[GlyphIndex].AdvanceWidth);
+        FAdvanceWidth := ScalerX * HorizontalMetric[GlyphIndex].AdvanceWidth;
+        FLeftSideBearing := ScalerY * HorizontalMetric[GlyphIndex].AdvanceWidth;
       end;
 
       if not(htfIntegerScaling in HeaderTable.Flags) then
@@ -336,7 +336,7 @@ end;
 
 function TCustomPascalTypeRasterizer.GetAdvanceWidth(GlyphIndex: Integer): TScaleType;
 begin
-  Result := RoundedScaleX(FontFace.GetAdvanceWidth(GlyphIndex));
+  Result := ScalerX * FontFace.GetAdvanceWidth(GlyphIndex);
 end;
 
 function TCustomPascalTypeRasterizer.GetFontSize: Integer;
@@ -350,15 +350,15 @@ var
 begin
   TrueTypeGlyphMetric := FontFace.GetGlyphMetric(GlyphIndex);
 
-  Result.HorizontalMetric.AdvanceWidth := RoundedScaleX(TrueTypeGlyphMetric.HorizontalMetric.AdvanceWidth);
-  Result.HorizontalMetric.Bearing := RoundedScaleX(TrueTypeGlyphMetric.HorizontalMetric.AdvanceWidth);
-  Result.VerticalMetric.AdvanceHeight := RoundedScaleY(TrueTypeGlyphMetric.VerticalMetric.AdvanceHeight);
-  Result.VerticalMetric.TopSideBearing := RoundedScaleY(TrueTypeGlyphMetric.VerticalMetric.TopSideBearing);
+  Result.HorizontalMetric.AdvanceWidth := ScalerX * TrueTypeGlyphMetric.HorizontalMetric.AdvanceWidth;
+  Result.HorizontalMetric.Bearing := ScalerX * TrueTypeGlyphMetric.HorizontalMetric.AdvanceWidth;
+  Result.VerticalMetric.AdvanceHeight := ScalerY * TrueTypeGlyphMetric.VerticalMetric.AdvanceHeight;
+  Result.VerticalMetric.TopSideBearing := ScalerY * TrueTypeGlyphMetric.VerticalMetric.TopSideBearing;
 end;
 
 function TCustomPascalTypeRasterizer.GetKerning(Last, Next: Integer): TScaleType;
 begin
-  Result := RoundedScaleX(FontFace.GetKerning(Last, Next));
+  Result := ScalerX * FontFace.GetKerning(Last, Next);
 end;
 
 procedure TCustomPascalTypeRasterizer.SetFontSize(const Value: Integer);

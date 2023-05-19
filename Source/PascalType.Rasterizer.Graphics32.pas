@@ -51,7 +51,7 @@ uses
 type
   TPascalTypeRasterizerGraphics32 = class(TCustomPascalTypeRasterizer)
   protected
-    procedure RasterizeGlyph(GlyphIndex: Integer; Canvas: TCustomPath; X, Y: Integer);
+    procedure RasterizeGlyph(GlyphIndex: Integer; Canvas: TCustomPath; X, Y: Single);
     procedure RasterizeGlyphPath(const GlyphPath: TPascalTypePath; Canvas: TCustomPath; X, Y: Single);
   public
     procedure RenderText(const Text: string; Canvas: TCustomPath); overload; virtual;
@@ -685,7 +685,7 @@ begin
 end;
 
 ////////////////////////////////////////////////////////////////////////////////
-procedure TPascalTypeRasterizerGraphics32.RasterizeGlyph(GlyphIndex: Integer; Canvas: TCustomPath; X, Y: Integer);
+procedure TPascalTypeRasterizerGraphics32.RasterizeGlyph(GlyphIndex: Integer; Canvas: TCustomPath; X, Y: Single);
 var
   GlyphPath: TPascalTypePath;
 begin
@@ -785,7 +785,7 @@ begin
     end;
 
     // Move to the first curve-point (the one we just found above)
-    Canvas.MoveTo(CurrentPoint.X, CurrentPoint.Y);
+    Canvas.MoveTo(CurrentPoint);
 {$ifdef DEBUG_CURVE}
     DebugPath.Circle(CurrentPoint, 3);
 {$endif DEBUG_CURVE}
@@ -795,8 +795,8 @@ begin
     for i := 0 to High(Contour) do
     begin
       // Get the next point
-      CurrentPoint.X := Origin.X + Round(Contour[PointIndex].XPos * ScalerX);
-      CurrentPoint.Y := Origin.Y - Round(Contour[PointIndex].YPos * ScalerY);
+      CurrentPoint.X := Origin.X + Contour[PointIndex].XPos * ScalerX;
+      CurrentPoint.Y := Origin.Y - Contour[PointIndex].YPos * ScalerY;
 
       // Is it a curve-point?
       IsOnCurve := (Contour[PointIndex].Flags and TTrueTypeFontSimpleGlyphData.GLYF_ON_CURVE <> 0);
@@ -819,7 +819,7 @@ begin
 
         emitLine:
           begin
-            Canvas.LineTo(CurrentPoint.X, CurrentPoint.Y);
+            Canvas.LineTo(CurrentPoint);
 {$ifdef DEBUG_CURVE}
             DebugPath.Circle(CurrentPoint, 3);
 {$endif DEBUG_CURVE}
@@ -901,7 +901,7 @@ begin
           GlyphIndex := Glyph.GlyphID;
 
           // rasterize character
-          RasterizeGlyph(GlyphIndex, Canvas, Round(Pos.X), Round(Pos.Y));
+          RasterizeGlyph(GlyphIndex, Canvas, Pos.X, Pos.Y);
 
           // advance cursor
           GlyphMetric := GetGlyphMetric(GlyphIndex);
