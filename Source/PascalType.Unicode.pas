@@ -68,25 +68,40 @@ type
   TCodePointFilter = reference to function(CodePoint: TPascalTypeCodePoint): boolean;
 
 
-//------------------------------------------------------------------------------
-//
-//              Normalization
-//
-//------------------------------------------------------------------------------
-// UnicodeDecompose: Decomposes and normalizes.
-// UnicodeCompose: Composes. It is assumed that the input has already been normalized.
-//------------------------------------------------------------------------------
-function UnicodeDecompose(const AString: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints;
-function UnicodeCompose(const AString: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints;
+type
+  PascalTypeUnicode = record
+
+    //------------------------------------------------------------------------------
+    //
+    //              Normalization
+    //
+    //------------------------------------------------------------------------------
+    // UnicodeDecompose: Decomposes and normalizes.
+    // UnicodeCompose: Composes. It is assumed that the input has already been normalized.
+    //------------------------------------------------------------------------------
+    class function Decompose(const AString: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints; static;
+    class function Compose(const AString: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints; static;
 
 
-//------------------------------------------------------------------------------
-//
-//              String conversion
-//
-//------------------------------------------------------------------------------
-function UTF16ToUTF32(const AText: string): TPascalTypeCodePoints;
-function UTF32ToUTF16(const AText: TPascalTypeCodePoints): string;
+    //------------------------------------------------------------------------------
+    //
+    //              String conversion
+    //
+    //------------------------------------------------------------------------------
+    // Convert between 16-bit Unicode (native char/string) and 32-bit Unicode
+    //------------------------------------------------------------------------------
+    class function UTF16ToUTF32(const AText: string): TPascalTypeCodePoints; static;
+    class function UTF32ToUTF16(const AText: TPascalTypeCodePoints): string; static;
+
+
+    //------------------------------------------------------------------------------
+    //
+    //              Categorization
+    //
+    //------------------------------------------------------------------------------
+    class function IsWhiteSpace(const AChar: TPascalTypeCodePoint): boolean; static;
+
+  end;
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -96,17 +111,6 @@ implementation
 
 uses
   PUCU;
-
-(*
-function PUCUNormalize(const AText: string; const ACompose: boolean): string;
-var
-  UTF32: TPUCUUTF32String;
-begin
-  UTF32 := PUCUUTF16ToUTF32(AText);
-  UTF32 := PUCUNormalize32(UTF32, ACompose, DecompositionFilter);
-  Result := PUCUUTF32ToUTF16(UTF32);
-end;
-*)
 
 {$ifdef WIN32_NORMALIZESTRING}
 type
@@ -159,9 +163,9 @@ end;
 //------------------------------------------------------------------------------
 // Redirect incorrect PUCU types
 type
-  TPUCUUTF32Char = TPascalTypeCodePoint;        // PUCU declares it as LongInt. we need it to be Cardinal.
+  TPUCUUTF32Char = TPascalTypeCodePoint;        // PUCU declares it as LongInt. We need it to be Cardinal.
   TPUCUUTF32String = TPascalTypeCodePoints;     //
-  TPUCUInt32 = integer;                         // PUCU declares it as LongInt. we need it to be Integer.
+  TPUCUInt32 = integer;                         // PUCU declares it as LongInt. We need it to be Integer.
 
 function PUCUNormalize32(const AString: TPUCUUTF32String; const ACompose: boolean; Filter: TCodePointFilter = nil): TPUCUUTF32String;
 
@@ -373,21 +377,20 @@ end;
 
 //------------------------------------------------------------------------------
 //
-//              UnicodeDecompose
+//              Decompose
 //
 //------------------------------------------------------------------------------
-function UnicodeDecompose(const AString: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints;
+class function PascalTypeUnicode.Decompose(const AString: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints;
 begin
   Result := PUCUNormalize32(AString, False, Filter);
 end;
 
-
 //------------------------------------------------------------------------------
 //
-//              UnicodeCompose
+//              Compose
 //
 //------------------------------------------------------------------------------
-function UnicodeCompose(const AString: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints;
+class function PascalTypeUnicode.Compose(const AString: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints;
 begin
   Result := PUCUNormalize32(AString, True, Filter);
 end;
@@ -398,7 +401,7 @@ end;
 //              String conversion
 //
 //------------------------------------------------------------------------------
-function UTF16ToUTF32(const AText: string): TPascalTypeCodePoints;
+class function PascalTypeUnicode.UTF16ToUTF32(const AText: string): TPascalTypeCodePoints;
 var
   UTF32: PUCU.TPUCUUTF32String absolute Result; // Dirty hack but we know they are the same
 begin
@@ -406,12 +409,23 @@ begin
   UTF32 := PUCUUTF16ToUTF32(AText);
 end;
 
-function UTF32ToUTF16(const AText: TPascalTypeCodePoints): string;
+class function PascalTypeUnicode.UTF32ToUTF16(const AText: TPascalTypeCodePoints): string;
 var
   UTF32: PUCU.TPUCUUTF32String absolute AText; // Dirty hack but we know they are the same
 begin
   Assert(SizeOf(UTF32[0]) = SizeOf(AText[0]));
   Result := PUCUUTF32ToUTF16(UTF32);
+end;
+
+
+//------------------------------------------------------------------------------
+//
+//              Categorization
+//
+//------------------------------------------------------------------------------
+class function PascalTypeUnicode.IsWhiteSpace(const AChar: TPascalTypeCodePoint): boolean;
+begin
+  Result := PUCUUnicodeIsWhiteSpace(AChar);
 end;
 
 end.

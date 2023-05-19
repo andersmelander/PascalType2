@@ -63,6 +63,7 @@ type
     property Owner: TPascalTypeGlyphString read FOwner;
     property CodePoints: TPascalTypeCodePoints read FCodePoints write FCodePoints;
     property GlyphID: TPascalTypeGlyphID read FGlyphID write FGlyphID;
+    // TODO : Rename to Cluster for alignment with Harfbuzz and Uniscribe
     property Group: integer read FGroup write FGroup;
   end;
 

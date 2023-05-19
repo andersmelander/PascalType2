@@ -85,7 +85,6 @@ type
 implementation
 
 uses
-  Character,
   SysUtils,
 
   PascalType.Tables.OpenType.Script,
@@ -209,12 +208,7 @@ begin
       if (Font.HasGlyphByCharacter($002D)) then
         CodePoint := $002D; // hyphen-minus
   else
-    // TODO : Find out when TCharacter was deprecated
-{$if defined(TCHARACTER_DEPRECATED)}
-    if (Char(CodePoint).IsWhiteSpace(CodePoint)) then
-{$else TCHARACTER_DEPRECATED}
-    if (TCharacter.IsWhiteSpace(CodePoint)) then
-{$ifend TCHARACTER_DEPRECATED}
+    if (PascalTypeUnicode.IsWhiteSpace(CodePoint)) then
     begin
       if (not Font.HasGlyphByCharacter(CodePoint)) then
         // TODO : We need to handle the difference in width
@@ -243,7 +237,6 @@ end;
 function TPascalTypeShaper.Shape(const AText: string): TPascalTypeGlyphString;
 var
   UTF32: TPascalTypeCodePoints;
-  CodePoint: Cardinal;
   i, j: integer;
   FeatureTable: TCustomOpenTypeFeatureTable;
   Feature: TTableName;
@@ -255,12 +248,12 @@ const
   Features: array of TTableName =
     ['ccmp', 'locl'];
 begin
-  UTF32 := UTF16ToUTF32(AText);
+  UTF32 := PascalTypeUnicode.UTF16ToUTF32(AText);
 
   (*
   ** Unicode decompose and normalization
   *)
-  UTF32 := UnicodeDecompose(UTF32, DecompositionFilter);
+  UTF32 := PascalTypeUnicode.Decompose(UTF32, DecompositionFilter);
 
 
   (*
@@ -273,7 +266,7 @@ begin
   (*
   ** Unicode composition
   *)
-  UTF32 := UnicodeCompose(UTF32, CompositionFilter);
+  UTF32 := PascalTypeUnicode.Compose(UTF32, CompositionFilter);
 
 
   Result := CreateGlyphString;
