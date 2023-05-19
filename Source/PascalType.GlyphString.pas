@@ -202,9 +202,8 @@ end;
 
 function TPascalTypeGlyphString.Extract(Index: integer): TPascalTypeGlyph;
 begin
-  Result := FGlyphs.ExtractAt(Index);
-  if (Result <> nil) then
-    Result.SetOwner(nil);
+  Result := FGlyphs[Index];
+  Extract(Result);
 end;
 
 function TPascalTypeGlyphString.GetEnumerator: TEnumerator<TPascalTypeGlyph>;
