@@ -110,7 +110,7 @@
         </DCCReference>
         <DCCReference Include="..\..\Source\PT_ByteCodeInterpreter.pas"/>
         <DCCReference Include="..\..\Source\PT_Classes.pas"/>
-        <DCCReference Include="..\..\Source\PT_CharacterMap.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.CharacterMaps.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Rasterizer.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Rasterizer.GDI.pas"/>
         <DCCReference Include="..\..\Source\PT_Math.pas"/>
@@ -167,6 +167,7 @@
         <DCCReference Include="..\..\Source\PascalType.GlyphString.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Substitution.Ligature.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Unicode.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.cmap.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

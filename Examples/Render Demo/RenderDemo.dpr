@@ -5,7 +5,7 @@ uses
   RenderDemoMain in 'RenderDemoMain.pas' {FmRenderDemo},
   PT_ByteCodeInterpreter in '..\..\Source\PT_ByteCodeInterpreter.pas',
   PT_Classes in '..\..\Source\PT_Classes.pas',
-  PT_CharacterMap in '..\..\Source\PT_CharacterMap.pas',
+  PascalType.Tables.TrueType.CharacterMaps in '..\..\Source\PascalType.Tables.TrueType.CharacterMaps.pas',
   PascalType.Rasterizer in '..\..\Source\PascalType.Rasterizer.pas',
   PascalType.Rasterizer.GDI in '..\..\Source\PascalType.Rasterizer.GDI.pas',
   PT_Math in '..\..\Source\PT_Math.pas',
@@ -61,7 +61,8 @@ uses
   PascalType.Rasterizer.Graphics32 in '..\..\Source\PascalType.Rasterizer.Graphics32.pas',
   PascalType.GlyphString in '..\..\Source\PascalType.GlyphString.pas',
   PascalType.Tables.OpenType.Substitution.Ligature in '..\..\Source\PascalType.Tables.OpenType.Substitution.Ligature.pas',
-  PascalType.Unicode in '..\..\Source\PascalType.Unicode.pas';
+  PascalType.Unicode in '..\..\Source\PascalType.Unicode.pas',
+  PascalType.Tables.TrueType.cmap in '..\..\Source\PascalType.Tables.TrueType.cmap.pas';
 
 {$R *.res}
 

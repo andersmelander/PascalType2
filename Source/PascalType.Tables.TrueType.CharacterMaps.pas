@@ -1,4 +1,4 @@
-unit PT_CharacterMap;
+unit PascalType.Tables.TrueType.CharacterMaps;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -38,7 +38,8 @@ uses
   Classes, SysUtils,
   PT_Types,
   PT_Classes,
-  PT_Tables;
+  PT_Tables,
+  PascalType.Tables.TrueType.cmap;
 
 
 //------------------------------------------------------------------------------
@@ -165,7 +166,7 @@ type
 
 //------------------------------------------------------------------------------
 //
-//              TPascalTypeFormat6CharacterMap
+//              TPascalTypeFormat12CharacterMap
 //
 //------------------------------------------------------------------------------
 // Format 12: Segmented coverage
@@ -206,8 +207,11 @@ uses
   PT_ResourceStrings;
 
 
-{ TPascalTypeFormat0CharacterMap }
-
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeFormat0CharacterMap
+//
+//------------------------------------------------------------------------------
 constructor TPascalTypeFormat0CharacterMap.Create(AParent: TCustomPascalTypeTable);
 var
   GlyphIdIndex: Byte;
@@ -270,8 +274,11 @@ begin
 end;
 
 
-{ TPascalTypeFormat2CharacterMap }
-
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeFormat2CharacterMap
+//
+//------------------------------------------------------------------------------
 class function TPascalTypeFormat2CharacterMap.GetFormat: Word;
 begin
   Result := 2;
@@ -317,8 +324,11 @@ begin
 end;
 
 
-{ TPascalTypeFormat4CharacterMap }
-
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeFormat4CharacterMap
+//
+//------------------------------------------------------------------------------
 class function TPascalTypeFormat4CharacterMap.GetFormat: Word;
 begin
   Result := 4;
@@ -538,8 +548,11 @@ begin
 end;
 
 
-{ TPascalTypeFormat6CharacterMap }
-
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeFormat6CharacterMap
+//
+//------------------------------------------------------------------------------
 procedure TPascalTypeFormat6CharacterMap.Assign(Source: TPersistent);
 begin
   inherited;
@@ -617,8 +630,11 @@ begin
 end;
 
 
-{ TPascalTypeFormat12CharacterMap }
-
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeFormat12CharacterMap
+//
+//------------------------------------------------------------------------------
 procedure TPascalTypeFormat12CharacterMap.Assign(Source: TPersistent);
 begin
   inherited;

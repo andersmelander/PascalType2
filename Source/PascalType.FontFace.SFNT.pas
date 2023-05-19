@@ -46,6 +46,7 @@ uses
   PascalType.FontFace,
   PT_Tables,
   PT_TableDirectory,
+  PascalType.Tables.TrueType.cmap,
   PascalType.Tables.TrueType.hmtx,
   PascalType.Tables.TrueType.hhea,
   PascalType.Tables.TrueType.vmtx,

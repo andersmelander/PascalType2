@@ -41,7 +41,7 @@ uses
   PascalType.FontFace,
   PascalType.FontFace.SFNT,
   PT_Tables,
-  PT_CharacterMap,
+  PascalType.Tables.TrueType.CharacterMaps,
   PT_TablesOptional;
 
 type
