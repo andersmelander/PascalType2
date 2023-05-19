@@ -19,6 +19,7 @@ uses
 
 {-$define IMAGE32} // Define to include Image32 text output
 {-$define RASTERIZER_GDI} // Define to include GDI rasterizer
+{$define WIN_ANTIALIAS} // Define to have Windows TextOut anti-aliased
 
 type
   TFontNameFile = packed record
@@ -163,8 +164,14 @@ var
   Canvas: TCanvas;
   Canvas32: TCanvas32;
   Bitmap32: TBitmap32;
+{$define FILL_PATH}
+{-$define STROKE_PATH}
+{$ifdef FILL_PATH}
   BrushFill: TSolidBrush;
+{$endif FILL_PATH}
+{$ifdef STROKE_PATH}
   BrushStroke: TStrokeBrush;
+{$endif STROKE_PATH}
 begin
   Canvas := TPaintBox(Sender).Canvas;
 
@@ -178,18 +185,18 @@ begin
     Bitmap32.Clear(clWhite32);
     Canvas32 := TCanvas32.Create(Bitmap32);
     try
-      // (*
+{$ifdef FILL_PATH}
       BrushFill := Canvas32.Brushes.Add(TSolidBrush) as TSolidBrush;
       BrushFill.FillColor := clBlack32;
       BrushFill.FillMode := pfNonZero;
-      // *)
-      (*
-        BrushStroke := Canvas32.Brushes.Add(TStrokeBrush) as TStrokeBrush;
-        BrushStroke.FillColor := clTrRed32;
-        BrushStroke.StrokeWidth := 1;
-        BrushStroke.JoinStyle := jsMiter;
-        BrushStroke.EndStyle := esButt;
-      *)
+{$endif FILL_PATH}
+{$ifdef STROKE_PATH}
+      BrushStroke := Canvas32.Brushes.Add(TStrokeBrush) as TStrokeBrush;
+      BrushStroke.FillColor := clTrRed32;
+      BrushStroke.StrokeWidth := 1;
+      BrushStroke.JoinStyle := jsMiter;
+      BrushStroke.EndStyle := esButt;
+{$endif STROKE_PATH}
       FRasterizerGraphics32.FontSize := 0; // TODO : We need to force a recalc of the scale. Changing the font doesn't notify the rasterizer.
       FRasterizerGraphics32.FontSize := FFontSize;
       FRasterizerGraphics32.RenderShapedText(FText, Canvas32);
@@ -246,6 +253,11 @@ end;
 procedure TFmRenderDemo.PaintBoxWindowsPaint(Sender: TObject);
 var
   Canvas: TCanvas;
+{$ifdef WIN_ANTIALIAS}
+var
+  lf : TLogFont;
+  FontHandle: HFONT;
+{$endif WIN_ANTIALIAS}
 begin
   Canvas := TPaintBox(Sender).Canvas;
 
@@ -253,8 +265,28 @@ begin
   Canvas.FillRect(Canvas.ClipRect);
 
   Canvas.Font.Color := clBlack;
+{$ifdef WIN_ANTIALIAS}
+  lf := Default(TLogFont);
+  lf.lfHeight := -MulDiv(FFontSize, Canvas.Font.PixelsPerInch, 72);
+  lf.lfWeight := FW_NORMAL;
+  lf.lfCharSet := Font.Charset;
+  StrPLCopy(lf.lfFaceName, FFontName, SizeOf(lf.lfFaceName));
+  lf.lfQuality := ANTIALIASED_QUALITY;
+//  lf.lfQuality := CLEARTYPE_QUALITY;
+//  lf.lfQuality := CLEARTYPE_NATURAL_QUALITY;
+  lf.lfOutPrecision := OUT_TT_ONLY_PRECIS;
+  lf.lfClipPrecision := CLIP_DEFAULT_PRECIS;
+  lf.lfPitchAndFamily := DEFAULT_PITCH;
+
+  FontHandle := CreateFontIndirect(lf);
+  if (FontHandle = 0) then
+    RaiseLastOSError;
+
+  Canvas.Font.Handle := FontHandle;
+{$else WIN_ANTIALIAS}
   Canvas.Font.Name := FFontName;
   Canvas.Font.Size := FFontSize;
+{$endif WIN_ANTIALIAS}
 
   Canvas.TextOut(0, 0, FText);
 end;
