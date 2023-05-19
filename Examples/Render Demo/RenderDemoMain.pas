@@ -190,6 +190,7 @@ begin
         BrushStroke.JoinStyle := jsMiter;
         BrushStroke.EndStyle := esButt;
       *)
+      FRasterizerGraphics32.FontSize := 0; // TODO : We need to force a recalc of the scale. Changing the font doesn't notify the rasterizer.
       FRasterizerGraphics32.FontSize := FFontSize;
       FRasterizerGraphics32.RenderShapedText(FText, Canvas32);
     finally
@@ -218,13 +219,15 @@ begin
   try
     FontReader := FontManager.LoadFromFile(FFontFilename);
     try
-      Font := TFontCache.Create(FontReader, FFontSize);
+      Font := TFontCache.Create(FontReader);
       try
+        Font.FontHeight :=  FFontSize * 96 {DPI} div 72;
+
         Font.InvertY := True;
 
         Image.SetSize(TPaintBox(Sender).Width, TPaintBox(Sender).Height, clWhite32);
 
-        Img32.Text.DrawText(Image, 0, Ceil(Font.LineHeight), FText, Font);
+        Img32.Text.DrawText(Image, 0, Ceil(Font.LineHeight), FText, Font, clBlack32, True);
 
         Image.CopyToDc(Canvas.Handle, 0, 0, False);
 
