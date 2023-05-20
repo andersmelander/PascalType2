@@ -39,6 +39,7 @@ uses
   PT_Types,
   PT_Classes,
   PT_Tables,
+  PascalType.Unicode,
   PascalType.Tables.TrueType.cmap;
 
 
@@ -67,7 +68,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function CharacterToGlyph(CharacterIndex: Word): Integer; override;
+    function CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer; override;
   end;
 
 
@@ -93,7 +94,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function CharacterToGlyph(CharacterIndex: Word): Integer; override;
+    function CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer; override;
   end;
 
 
@@ -130,7 +131,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function CharacterToGlyph(CharacterIndex: Word): Integer; override;
+    function CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer; override;
   end;
 
 
@@ -158,7 +159,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function CharacterToGlyph(CharacterIndex: Word): Integer; override;
+    function CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer; override;
 
     property EntryCount: Word read GetEntryCount;
   end;
@@ -175,8 +176,8 @@ type
 //------------------------------------------------------------------------------
 type
   TCharMapSegmentedCoverageRecord = packed record
-    StartCharCode: Cardinal; // First character code in this group
-    EndCharCode: Cardinal;   // Last character code in this group
+    StartCharCode: TPascalTypeCodePoint; // First character code in this group
+    EndCharCode: TPascalTypeCodePoint;   // Last character code in this group
     StartGlyphID: Cardinal;  // Glyph index corresponding to the starting character code
   end;
 
@@ -192,7 +193,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function CharacterToGlyph(CharacterIndex: Word): Integer; override;
+    function CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer; override;
   end;
 
 //------------------------------------------------------------------------------
@@ -266,11 +267,11 @@ begin
   end;
 end;
 
-function TPascalTypeFormat0CharacterMap.CharacterToGlyph(CharacterIndex: Word): Integer;
+function TPascalTypeFormat0CharacterMap.CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer;
 begin
-  if (CharacterIndex > High(Byte)) then
-    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [CharacterIndex]);
-  Result := FGlyphIdArray[CharacterIndex];
+  if (ACodePoint > High(Byte)) then
+    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [ACodePoint]);
+  Result := FGlyphIdArray[ACodePoint];
 end;
 
 
@@ -294,9 +295,9 @@ begin
   end;
 end;
 
-function TPascalTypeFormat2CharacterMap.CharacterToGlyph(CharacterIndex: Word): Integer;
+function TPascalTypeFormat2CharacterMap.CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer;
 begin
-  Result := CharacterIndex;
+  Result := ACodePoint;
 end;
 
 procedure TPascalTypeFormat2CharacterMap.LoadFromStream(Stream: TStream);
@@ -355,9 +356,9 @@ begin
   end;
 end;
 
-function TPascalTypeFormat4CharacterMap.CharacterToGlyph(CharacterIndex: Word): Integer;
+function TPascalTypeFormat4CharacterMap.CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer;
 var
-  SegmentIndex: Integer;
+  SegmentIndex: Word;
   GlyphIndex: integer;
   Left, Right: Word;
 begin
@@ -367,7 +368,7 @@ begin
   SegmentIndex := Right div 2;
   while (Left < Right) do
   begin
-    if (FEndCode[SegmentIndex] < CharacterIndex) then
+    if (FEndCode[SegmentIndex] < ACodePoint) then
       Left := SegmentIndex + 1
     else
       Right := SegmentIndex;
@@ -377,13 +378,13 @@ begin
   (* Sequential scan
   SegmentIndex := 0;
   while (SegmentIndex < Length(FEndCode)) do
-    if (CharacterIndex <= FEndCode[SegmentIndex]) then
+    if (ACodePoint <= FEndCode[SegmentIndex]) then
       Break
     else
       Inc(SegmentIndex);
   *)
 
-  if (SegmentIndex > High(FStartCode)) or (CharacterIndex < FStartCode[SegmentIndex]) then
+  if (SegmentIndex > High(FStartCode)) or (ACodePoint < FStartCode[SegmentIndex]) then
   begin
     // missing glyph
     Result := 0;
@@ -395,8 +396,10 @@ begin
   begin
     // Thank you Apple and Microsoft for the completely bonkers definition
     // of this value.
-    GlyphIndex := ((RangeOffset div 2 - Length(FIdRangeOffset)) + SegmentIndex +
-      CharacterIndex - FStartCode[SegmentIndex]) and $0000FFFF;
+    GlyphIndex := (
+        (RangeOffset div 2 - Length(FIdRangeOffset)) +
+        integer(SegmentIndex + ACodePoint - FStartCode[SegmentIndex])
+      ) and $0000FFFF;
 
     Result := FGlyphIdArray[GlyphIndex];
 
@@ -404,7 +407,7 @@ begin
     if (Result <> 0) then
       Result := (Result + FIdDelta[SegmentIndex]) and $0000FFFF;
   end else
-    Result := (CharacterIndex + FIdDelta[SegmentIndex]) and $0000FFFF;
+    Result := (integer(ACodePoint) + FIdDelta[SegmentIndex]) and $0000FFFF;
 end;
 
 procedure TPascalTypeFormat4CharacterMap.LoadFromStream(Stream: TStream);
@@ -564,12 +567,11 @@ begin
   end;
 end;
 
-function TPascalTypeFormat6CharacterMap.CharacterToGlyph(CharacterIndex: Word): Integer;
+function TPascalTypeFormat6CharacterMap.CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer;
 begin
   Result := 0;
-  if CharacterIndex >= FFirstCode then
-    if CharacterIndex < FFirstCode + Length(FGlyphIdArray) then
-      Result := FGlyphIdArray[CharacterIndex - FFirstCode];
+  if (ACodePoint >= FFirstCode) and (integer(ACodePoint - FFirstCode) <= High(FGlyphIdArray)) then
+    Result := FGlyphIdArray[ACodePoint - FFirstCode];
 end;
 
 function TPascalTypeFormat6CharacterMap.GetEntryCount: Word;
@@ -585,7 +587,6 @@ end;
 procedure TPascalTypeFormat6CharacterMap.LoadFromStream(Stream: TStream);
 var
   EntryIndex: Integer;
-  // TableLength: Word;
 begin
   inherited;
 
@@ -645,25 +646,19 @@ begin
   end;
 end;
 
-function TPascalTypeFormat12CharacterMap.CharacterToGlyph(CharacterIndex: Word): Integer;
+function TPascalTypeFormat12CharacterMap.CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer;
 var
   GroupIndex: Integer;
 begin
   Result := 0;
-  GroupIndex := 0;
 
-  while GroupIndex < Length(FCoverageArray) do
-    with FCoverageArray[GroupIndex] do
+  for GroupIndex := 0 to High(FCoverageArray) do
+    if (ACodePoint >= FCoverageArray[GroupIndex].StartCharCode) then
     begin
-      if CharacterIndex >= Integer(StartCharCode) then
-      begin
-        if CharacterIndex < Integer(EndCharCode) then
-          Result := Integer(StartGlyphID) +
-            (CharacterIndex - Integer(StartCharCode));
+      if (ACodePoint < FCoverageArray[GroupIndex].EndCharCode) then
+        Result := FCoverageArray[GroupIndex].StartGlyphID + (ACodePoint - FCoverageArray[GroupIndex].StartCharCode);
 
-        Exit;
-      end;
-      Inc(GroupIndex);
+      Exit;
     end;
 end;
 

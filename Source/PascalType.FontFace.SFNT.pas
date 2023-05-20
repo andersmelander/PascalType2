@@ -43,6 +43,7 @@ uses
   Classes, SysUtils, Types,
   PT_Types,
   PT_Classes,
+  PascalType.Unicode,
   PascalType.FontFace,
   PT_Tables,
   PT_TableDirectory,
@@ -96,10 +97,11 @@ type
 
     procedure LoadFromStream(Stream: TStream); override;
 
-    function GetGlyphByCharacter(Character: Word): Integer; overload; virtual; abstract;
-    function GetGlyphByCharacter(Character: WideChar): Integer; overload;
-    function GetGlyphByCharacter(Character: AnsiChar): Integer; overload;
-    function HasGlyphByCharacter(Character: Word): boolean;
+    function GetGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): Integer; overload; virtual; abstract;
+    function GetGlyphByCharacter(ACodePoint: Word): Integer; overload;
+    function GetGlyphByCharacter(ACharacter: WideChar): Integer; overload;
+    function GetGlyphByCharacter(ACharacter: AnsiChar): Integer; overload;
+    function HasGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): boolean;
 
     // required tables
     property HeaderTable: TPascalTypeHeaderTable read FHeaderTable;
@@ -163,7 +165,7 @@ type
     function GetAdvanceWidth(GlyphIndex: Word): Word; deprecated 'Use GetGlyphMetric';
     function GetKerning(Last, Next: Word): Word;
 
-    function GetGlyphByCharacter(Character: Word): Integer; override;
+    function GetGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): Integer; override;
 
     function GetGlyphPath(GlyphIndex: Word): TPascalTypePath; // TODO : Use TFloatPoint
 
@@ -665,19 +667,24 @@ begin
 end;
 {$ENDIF}
 
-function TCustomPascalTypeFontFace.GetGlyphByCharacter(Character: WideChar): Integer;
+function TCustomPascalTypeFontFace.GetGlyphByCharacter(ACodePoint: Word): Integer;
 begin
-  Result := GetGlyphByCharacter(Word(Character));
+  Result := GetGlyphByCharacter(TPascalTypeCodePoint(ACodePoint));
 end;
 
-function TCustomPascalTypeFontFace.GetGlyphByCharacter(Character: AnsiChar): Integer;
+function TCustomPascalTypeFontFace.GetGlyphByCharacter(ACharacter: WideChar): Integer;
 begin
-  Result := GetGlyphByCharacter(Word(Character));
+  Result := GetGlyphByCharacter(TPascalTypeCodePoint(ACharacter));
 end;
 
-function TCustomPascalTypeFontFace.HasGlyphByCharacter(Character: Word): boolean;
+function TCustomPascalTypeFontFace.GetGlyphByCharacter(ACharacter: AnsiChar): Integer;
 begin
-  Result := (GetGlyphByCharacter(Character) <> 0);
+  Result := GetGlyphByCharacter(TPascalTypeCodePoint(ACharacter));
+end;
+
+function TCustomPascalTypeFontFace.HasGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): boolean;
+begin
+  Result := (GetGlyphByCharacter(ACodePoint) <> 0);
 end;
 
 
@@ -789,9 +796,10 @@ begin
       Result := GlyphDataTable.GlyphData[Index];
 end;
 
-function TPascalTypeFontFace.GetGlyphByCharacter(Character: Word): Integer;
+function TPascalTypeFontFace.GetGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): Integer;
 var
   CharMapIndex: Integer;
+  UnicodeCharacterMapDirectory: TPascalTypeCharacterMapUnicodeDirectory;
 {$IFDEF MSWINDOWS}
   CharacterMapDirectory: TPascalTypeCharacterMapMicrosoftDirectory;
 {$ENDIF}
@@ -800,9 +808,27 @@ var
 {$ENDIF}
 begin
   // direct translate character to glyph (will most probably fail!!!
-  Result := Integer(Character);
+  Result := Integer(ACodePoint);
 
   for CharMapIndex := 0 to CharacterMap.CharacterMapSubtableCount - 1 do
+  begin
+    if CharacterMap.CharacterMapSubtable[CharMapIndex] is TPascalTypeCharacterMapUnicodeDirectory then
+    begin
+      UnicodeCharacterMapDirectory := TPascalTypeCharacterMapUnicodeDirectory(CharacterMap.CharacterMapSubtable[CharMapIndex]);
+      case UnicodeCharacterMapDirectory.PlatformSpecificID of
+        ueDefaultSemantics,
+        ueVersion1Semantics,
+        ueUnicode2BMP,
+        ueUnicode2Full,
+        ueUnicodeVarSeq:
+          begin
+            Result := UnicodeCharacterMapDirectory.CharacterToGlyph(ACodePoint);
+            // TODO : Only break if result<>0?
+            if (Result <> 0) then
+              break;
+          end;
+      end;
+    end else
 {$IFDEF MSWINDOWS}
     if CharacterMap.CharacterMapSubtable[CharMapIndex] is TPascalTypeCharacterMapMicrosoftDirectory then
     begin
@@ -810,9 +836,10 @@ begin
       case CharacterMapDirectory.PlatformSpecificID of
         meUnicodeBMP:
           begin
-            Result := CharacterMapDirectory.CharacterToGlyph(Integer(Character));
+            Result := CharacterMapDirectory.CharacterToGlyph(ACodePoint);
             // TODO : Only break if result<>0?
-            break;
+            if (Result <> 0) then
+              break;
           end;
 
         // meSymbol included. How else are we going to use symbol fonts?
@@ -831,10 +858,10 @@ begin
             //
             // This works with "Symbol" but not with "Marlett", small letter "a"
             if (OS2Table <> nil) then
-              Character := Word(Integer(Character) - Ord(' ') + OS2Table.UnicodeFirstCharacterIndex)
+              ACodePoint := Word(Integer(ACodePoint) - Ord(' ') + OS2Table.UnicodeFirstCharacterIndex)
             else
-              Character := Word(Integer(Character) - Ord(' ') + $F020);
-            Result := CharacterMapDirectory.CharacterToGlyph(Character);
+              ACodePoint := Word(Integer(ACodePoint) - Ord(' ') + $F020);
+            Result := CharacterMapDirectory.CharacterToGlyph(ACodePoint);
             // TODO : Only break if result<>0?
             break;
           end;
@@ -842,16 +869,18 @@ begin
     end;
 {$ENDIF}
 {$IFDEF OSX}
-  if CharacterMap.CharacterMapSubtable[CharMapIndex] is TPascalTypeCharacterMapMacintoshDirectory then
-  begin
-    CharacterMapDirectory := TPascalTypeCharacterMapMacintoshDirectory(CharacterMap.CharacterMapSubtable[CharMapIndex]);
-    if CharacterMapDirectory.PlatformSpecificID = 1 then
+    // TODO : Do we even need to support this mapping? I think Apple uses Unicode now and it's obsolete
+    if CharacterMap.CharacterMapSubtable[CharMapIndex] is TPascalTypeCharacterMapMacintoshDirectory then
     begin
-      Result := CharacterMapDirectory.CharacterToGlyph(Integer(Character));
-      break;
+      CharacterMapDirectory := TPascalTypeCharacterMapMacintoshDirectory(CharacterMap.CharacterMapSubtable[CharMapIndex]);
+      if (CharacterMapDirectory.PlatformSpecificID = 1) then // TODO : This doesn't compile
+      begin
+        Result := CharacterMapDirectory.CharacterToGlyph(ACodePoint);
+        break;
+      end;
     end;
-  end;
 {$ENDIF}
+  end;
 end;
 
 function TPascalTypeFontFace.GetGlyphMetric(GlyphIndex: Word): TTrueTypeGlyphMetric;
@@ -863,7 +892,6 @@ var
     Glyph: TCustomTrueTypeFontGlyphData;
     i: integer;
     CompositeGlyphData: TTrueTypeFontCompositeGlyphData;
-    ComponentGlyphMetric: TTrueTypeGlyphMetric;
   begin
     if (Depth > MaxCompositeGlyphDepth) then
 {$ifdef FailOnCompositeGlyphTooDeep}

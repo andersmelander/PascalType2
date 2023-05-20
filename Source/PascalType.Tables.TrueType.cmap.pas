@@ -39,9 +39,11 @@ interface
 {$I PT_Compiler.inc}
 
 uses
+  Generics.Collections,
   Classes,
   PT_Types,
-  PT_Classes;
+  PT_Classes,
+  PascalType.Unicode;
 
 //------------------------------------------------------------------------------
 //
@@ -61,7 +63,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function CharacterToGlyph(CharacterIndex: Word): Integer; virtual; abstract;
+    function CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer; virtual; abstract;
 
     property Format: Word read GetFormat;
   end;
@@ -98,7 +100,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function CharacterToGlyph(CharacterIndex: Integer): Integer; virtual;
+    function CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer; virtual;
 
     property PlatformID: TPlatformID read GetPlatformID;
     property EncodingID: Word read GetEncodingIDAsWord;
@@ -203,13 +205,12 @@ type
   TPascalTypeCharacterMapTable = class(TCustomPascalTypeNamedTable)
   private
     FVersion: Word; // Version number (Set to zero)
-    FMaps   : array of TCustomPascalTypeCharacterMapDirectory;
+    FMaps   : TList<TCustomPascalTypeCharacterMapDirectory>;
     function GetCharacterMapSubtableCount: Word;
     function GetCharacterMapSubtable(Index: Integer): TCustomPascalTypeCharacterMapDirectory;
     procedure SetVersion(const Value: Word);
   protected
     procedure CharacterMapDirectoryChanged; virtual;
-    procedure FreeMapItems; virtual;
   public
     destructor Destroy; override;
 
@@ -378,11 +379,11 @@ begin
   Result := FEncodingID;
 end;
 
-function TCustomPascalTypeCharacterMapDirectory.CharacterToGlyph(CharacterIndex: Integer): Integer;
+function TCustomPascalTypeCharacterMapDirectory.CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer;
 begin
   if (FCharacterMap = nil) then
     raise EPascalTypeError.Create(RCStrCharacterMapNotSet);
-  Result := FCharacterMap.CharacterToGlyph(CharacterIndex);
+  Result := FCharacterMap.CharacterToGlyph(ACodePoint);
 end;
 
 procedure TCustomPascalTypeCharacterMapDirectory.LoadFromStream(Stream: TStream);
@@ -514,49 +515,59 @@ end;
 //------------------------------------------------------------------------------
 destructor TPascalTypeCharacterMapTable.Destroy;
 begin
-  FreeMapItems;
+  FMaps.Free;
   inherited;
 end;
 
 procedure TPascalTypeCharacterMapTable.Assign(Source: TPersistent);
 var
-  MapIndex: Integer;
+  i: Integer;
   MapClass: TPascalTypeCharacterMapDirectoryClass;
+  SourceMap: TCustomPascalTypeCharacterMapDirectory;
+  Map: TCustomPascalTypeCharacterMapDirectory;
 begin
   inherited;
   if Source is TPascalTypeCharacterMapTable then
   begin
     FVersion := TPascalTypeCharacterMapTable(Source).FVersion;
 
-    FreeMapItems;
+    if (FMaps <> nil) then
+      FMaps.Clear;
 
     // set length of map array
-    SetLength(FMaps, Length(TPascalTypeCharacterMapTable(Source).FMaps));
-
-    // assign maps
-    for MapIndex := 0 to Length(TPascalTypeCharacterMapTable(Source).FMaps) - 1 do
+    if (TPascalTypeCharacterMapTable(Source).CharacterMapSubtableCount > 0) then
     begin
-      MapClass := TPascalTypeCharacterMapDirectoryClass(TPascalTypeCharacterMapTable(Source).FMaps[MapIndex].ClassType);
+      if (FMaps = nil) then
+        FMaps := TObjectList<TCustomPascalTypeCharacterMapDirectory>.Create;
+      FMaps.Capacity := TPascalTypeCharacterMapTable(Source).CharacterMapSubtableCount;
 
-      // eventually create the map
-      FMaps[MapIndex] := MapClass.Create(TPascalTypeCharacterMapTable(Source).FMaps[MapIndex].EncodingID);
+      for i := 0 to TPascalTypeCharacterMapTable(Source).CharacterMapSubtableCount - 1 do
+      begin
+        SourceMap := TPascalTypeCharacterMapTable(Source).CharacterMapSubtable[i];
+        MapClass := TPascalTypeCharacterMapDirectoryClass(SourceMap.ClassType);
 
-      // assign map
-      FMaps[MapIndex].Assign(TPascalTypeCharacterMapTable(Source).FMaps[MapIndex]);
+        Map := MapClass.Create(SourceMap.EncodingID);
+        FMaps.Add(Map);
+
+        Map.Assign(SourceMap);
+      end;
     end;
   end;
 end;
 
 function TPascalTypeCharacterMapTable.GetCharacterMapSubtable(Index: Integer): TCustomPascalTypeCharacterMapDirectory;
 begin
-  if (Index < 0) or (Index > High(FMaps)) then
+  if (FMaps = nil) or (Index < 0) or (Index > FMaps.Count) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
   Result := FMaps[Index];
 end;
 
 function TPascalTypeCharacterMapTable.GetCharacterMapSubtableCount: Word;
 begin
-  Result := Length(FMaps);
+  if (FMaps <> nil) then
+    Result := FMaps.Count
+  else
+    Result := 0;
 end;
 
 class function TPascalTypeCharacterMapTable.GetTableType: TTableType;
@@ -564,21 +575,14 @@ begin
   Result.AsAnsiChar := 'cmap';
 end;
 
-procedure TPascalTypeCharacterMapTable.FreeMapItems;
-var
-  MapIndex: Integer;
-begin
-  for MapIndex := 0 to High(FMaps) do
-    FreeAndNil(FMaps[MapIndex]);
-end;
-
 procedure TPascalTypeCharacterMapTable.LoadFromStream(Stream: TStream);
 var
   StartPos  : Int64;
-  MapIndex  : Integer;
+  i: Integer;
   PlatformID: Word;
   EncodingID: Word;
   Offsets: array of Cardinal;
+  Map: TCustomPascalTypeCharacterMapDirectory;
 begin
   // store stream start position
   StartPos := Stream.Position;
@@ -596,49 +600,57 @@ begin
   if (FVersion <> 0) then
     raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
-  // clear maps
-  FreeMapItems;
-
   // read subtable count
-  SetLength(FMaps, BigEndianValueReader.ReadWord(Stream));
-  SetLength(Offsets, Length(FMaps));
+  SetLength(Offsets, BigEndianValueReader.ReadWord(Stream));
 
   // check (minimum) table size
-  if Stream.Position + Length(FMaps) * (2 * SizeOf(Word) + SizeOf(Cardinal)) > Stream.Size then
+  if Stream.Position + Length(Offsets) * (2 * SizeOf(Word) + SizeOf(Cardinal)) > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-  // read directory entry
-  for MapIndex := 0 to High(FMaps) do
+  if (FMaps <> nil) then
+    FMaps.Clear;
+
+  if (Length(Offsets) > 0) then
   begin
-    // read Platform ID
-    PlatformID := BigEndianValueReader.ReadWord(Stream);
+    if (FMaps = nil) then
+      FMaps := TObjectList<TCustomPascalTypeCharacterMapDirectory>.Create;
 
-    // read encoding ID
-    EncodingID := BigEndianValueReader.ReadWord(Stream);
+    FMaps.Capacity := Length(Offsets);
 
-    // create character map based on encoding
-    case PlatformID of
-      0:
-        FMaps[MapIndex] := TPascalTypeCharacterMapUnicodeDirectory.Create(EncodingID);
-      1:
-        FMaps[MapIndex] := TPascalTypeCharacterMapMacintoshDirectory.Create(EncodingID);
-      3:
-        FMaps[MapIndex] := TPascalTypeCharacterMapMicrosoftDirectory.Create(EncodingID);
-    else
-      FMaps[MapIndex] := TPascalTypeCharacterMapDirectoryGenericEntry.Create(EncodingID);
-    end;
-
-    // read and save offset
-    Offsets[MapIndex] := StartPos + BigEndianValueReader.ReadCardinal(Stream);
-  end;
-
-  // load character map entries from stream
-  for MapIndex := 0 to High(FMaps) do
-    if (FMaps[MapIndex] <> nil) then
+    // read directory entry
+    for i := 0 to High(Offsets) do
     begin
-      Stream.Position := Offsets[MapIndex];
-      FMaps[MapIndex].LoadFromStream(Stream);
+      // read Platform ID
+      PlatformID := BigEndianValueReader.ReadWord(Stream);
+
+      // read encoding ID
+      EncodingID := BigEndianValueReader.ReadWord(Stream);
+
+      // create character map based on encoding
+      case PlatformID of
+        0:
+          Map := TPascalTypeCharacterMapUnicodeDirectory.Create(EncodingID);
+        1:
+          Map := TPascalTypeCharacterMapMacintoshDirectory.Create(EncodingID);
+        3:
+          Map := TPascalTypeCharacterMapMicrosoftDirectory.Create(EncodingID);
+      else
+        Map := TPascalTypeCharacterMapDirectoryGenericEntry.Create(EncodingID);
+      end;
+
+      FMaps.Add(Map);
+
+      // read and save offset
+      Offsets[i] := StartPos + BigEndianValueReader.ReadCardinal(Stream);
     end;
+
+    // load character map entries from stream
+    for i := 0 to High(Offsets) do
+    begin
+      Stream.Position := Offsets[i];
+      FMaps[i].LoadFromStream(Stream);
+    end;
+  end;
 end;
 
 procedure TPascalTypeCharacterMapTable.SaveToStream(Stream: TStream);
@@ -650,37 +662,42 @@ begin
   // store stream start position
   StartPos := Stream.Position;
 
+  inherited;
+
   // write format type
   WriteSwappedWord(Stream, FVersion);
 
   // write directory entry count
-  WriteSwappedWord(Stream, Length(FMaps));
+  WriteSwappedWord(Stream, CharacterMapSubtableCount);
 
-  // offset directory
-  Stream.Seek(soFromCurrent, (2*SizeOf(Word)+SizeOf(Cardinal)) * Length(FMaps));
-
-  // build directory (to be written later) and write data
-  SetLength(Directory, Length(FMaps));
-
-  for DirIndex := 0 to High(FMaps) do
+  if (CharacterMapSubtableCount > 0) then
   begin
-    Directory[DirIndex] := Cardinal(Stream.Position - StartPos);
-    FMaps[DirIndex].SaveToStream(Stream);
-  end;
+    // offset directory
+    Stream.Seek(soFromCurrent, (2*SizeOf(Word)+SizeOf(Cardinal)) * CharacterMapSubtableCount);
 
-  // locate directory
-  Stream.Position := StartPos + 4;
+    // build directory (to be written later) and write data
+    SetLength(Directory, FMaps.Count);
 
-  for DirIndex := 0 to High(FMaps) do
-  begin
-    // write format
-    WriteSwappedWord(Stream, Word(FMaps[DirIndex].PlatformID));
+    for DirIndex := 0 to FMaps.Count-1 do
+    begin
+      Directory[DirIndex] := Cardinal(Stream.Position - StartPos);
+      FMaps[DirIndex].SaveToStream(Stream);
+    end;
 
-    // write encoding ID
-    WriteSwappedWord(Stream, FMaps[DirIndex].EncodingID);
+    // locate directory
+    Stream.Position := StartPos + 4;
 
-    // write offset
-    WriteSwappedCardinal(Stream, Directory[DirIndex]);
+    for DirIndex := 0 to FMaps.Count-1 do
+    begin
+      // write format
+      WriteSwappedWord(Stream, Word(FMaps[DirIndex].PlatformID));
+
+      // write encoding ID
+      WriteSwappedWord(Stream, FMaps[DirIndex].EncodingID);
+
+      // write offset
+      WriteSwappedCardinal(Stream, Directory[DirIndex]);
+    end;
   end;
 end;
 
