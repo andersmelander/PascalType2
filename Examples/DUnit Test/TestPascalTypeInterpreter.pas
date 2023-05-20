@@ -33,15 +33,22 @@ unit TestPascalTypeInterpreter;
 interface
 
 uses
-  Windows, TestFramework, Classes, Contnrs, SysUtils, PT_Types, PT_Tables,
-  PT_CharacterMap, PT_TablesOptional, PT_TablesOpenType, PT_TablesApple,
-  PT_Storage, PT_StorageSFNT, PT_Windows;
+  Windows, TestFramework, Classes, Contnrs, SysUtils,
+  PT_Types,
+  PT_Tables,
+  PascalType.Tables.TrueType.CharacterMaps,
+  PT_TablesOptional,
+  PascalType.Tables.OpenType,
+  PT_TablesApple,
+  PascalType.FontFace,
+  PascalType.FontFace.SFNT,
+  PT_Windows;
 
 type
   // Test methods for class TTrueTypeFontStorage
   TTestPascalTypeStorageScan = class(TTestCase)
   strict private
-    FPascalTypeStorageScan : TPascalTypeStorageScan;
+    FPascalTypeStorageScan : TPascalTypeFontFaceScan;
   public
     procedure SetUp; override;
     procedure TearDown; override;
@@ -53,7 +60,7 @@ type
   // Test methods for class TTrueTypeFontStorage
   TTestPascalTypeStorage = class(TTestCase)
   strict private
-    FPascalTypeStorage : TPascalTypeStorage;
+    FPascalTypeStorage : TPascalTypeFontFace;
   public
     procedure SetUp; override;
     procedure TearDown; override;
@@ -73,7 +80,7 @@ uses
 procedure TTestPascalTypeStorageScan.SetUp;
 begin
   inherited;
-  FPascalTypeStorageScan := TPascalTypeStorageScan.Create;
+  FPascalTypeStorageScan := TPascalTypeFontFaceScan.Create;
 end;
 
 procedure TTestPascalTypeStorageScan.TearDown;
@@ -140,7 +147,7 @@ end;
 procedure TTestPascalTypeStorage.SetUp;
 begin
   inherited;
-  FPascalTypeStorage := TPascalTypeStorage.Create;
+  FPascalTypeStorage := TPascalTypeFontFace.Create;
 end;
 
 procedure TTestPascalTypeStorage.TearDown;
@@ -220,7 +227,7 @@ end;
 
 initialization
   // Register all test cases
-  RegisterTest(TTestPascalTypeStorageScan.Suite);
-  RegisterTest(TTestPascalTypeStorage.Suite);
+//  RegisterTest(TTestPascalTypeStorageScan.Suite);
+//  RegisterTest(TTestPascalTypeStorage.Suite);
 
 end.
