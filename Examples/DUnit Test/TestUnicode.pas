@@ -27,6 +27,7 @@ type
     procedure TearDown; override;
   published
     procedure TestDecompose;
+    procedure TestCompose;
   end;
 
 implementation
@@ -107,6 +108,72 @@ procedure TTestPascalTypeUnicode.TearDown;
 begin
   FTestCases.Free;
   inherited;
+end;
+
+procedure TTestPascalTypeUnicode.TestCompose;
+
+  function CodePointsToString(const CodePoints: TPascalTypeCodePoints): string;
+  begin
+    Result := '';
+    for var CodePoint in CodePoints do
+    begin
+      if (Result <> '') then
+        Result := Result + ' ';
+      Result := Result + IntToHex(CodePoint, 4);
+    end;
+  end;
+
+begin
+  var Succeeded := 0;
+  var Failed := 0;
+  var Skipped := 0;
+  for var UnicodeTestCase in FTestCases do
+  begin
+//    Status(Format('Testing row %d: %s...', [UnicodeTestCase.Row, UnicodeTestCase.Name]));
+
+    // For now, skip the tests that lock up the demoposition routine
+    Inc(Skipped);
+(*
+    case UnicodeTestCase.Row of
+      62: // LATIN CAPITAL LETTER E WITH MACRON AND GRAVE, COMBINING MACRON
+        continue;
+
+      65: // HEBREW POINT QAMATS, HEBREW POINT HOLAM, HEBREW POINT HATAF SEGOL, HEBREW ACCENT ETNAHTA, HEBREW PUNCTUATION SOF PASUQ, HEBREW POINT SHEVA, HEBREW ACCENT ILUY, HEBREW ACCENT QARNEY PARA
+        continue;
+
+      17103..18950: // Canonical Order Test - Too many to list each one individually
+        continue;
+    end;
+*)
+    Dec(Skipped);
+
+    var ThisFailed := False;
+
+    var ComposedCodePoints := PascalTypeUnicode.Compose(UnicodeTestCase.NFD);
+
+//    CheckEquals(Length(ComposedCodePoints), Length(UnicodeTestCase.NFC), Format('Incorrect Composed length in row %d', [UnicodeTestCase.Row]));
+    if (Length(UnicodeTestCase.NFC) <> Length(ComposedCodePoints)) then
+    begin
+      Status(Format('Incorrect Composed length in row %d. Expected: %d, Actual: %d', [UnicodeTestCase.Row, Length(UnicodeTestCase.NFC), Length(ComposedCodePoints)]));
+      ThisFailed := True;
+    end;
+
+    for var i := 0 to High(ComposedCodePoints) do
+      if (UnicodeTestCase.NFC[i] <> ComposedCodePoints[i]) then
+      begin
+        Status(Format('Incorrect composed component in row %d. Decomposed: %s, Expected:%s, Actual: %s',
+          [UnicodeTestCase.Row, CodePointsToString(UnicodeTestCase.NFD), CodePointsToString(UnicodeTestCase.NFC), CodePointsToString(ComposedCodePoints)]));
+        ThisFailed := True;
+        break;
+      end;
+
+    if (ThisFailed) then
+      Inc(Failed)
+    else
+      Inc(Succeeded);
+  end;
+  Status(Format('%.0n tests succeeded, %.0n tests failed, %.0n skipped', [Succeeded * 1.0, Failed * 1.0, Skipped * 1.0]));
+  Check(Failed = 0);
 end;
 
 procedure TTestPascalTypeUnicode.TestDecompose;
