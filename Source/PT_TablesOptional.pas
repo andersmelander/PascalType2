@@ -1724,9 +1724,12 @@ begin
     // read version
     FVersion.Fixed := BigEndianValueReader.ReadCardinal(Stream);
 
-    // A value of zero observed in the "Architecture" and "Technical" fonts
     if Version.Value <> 1 then
-      raise EPascalTypeError.Create(RCStrUnsupportedVersion);
+    begin
+      // A value of $00000100 observed in the "Architecture" and "Technical" fonts
+      if (FVersion.Fixed <> $00000100) then
+        raise EPascalTypeError.Create(RCStrUnsupportedVersion);
+    end;
 
     // read font number
     Read(Value32, SizeOf(Cardinal));
