@@ -397,10 +397,11 @@ type
     NameID      : Word; // The name of the defined instance coordinate. Similar to the nameID in the variation axis record, this identifies a name in the font's 'name' table.
     Flags       : Word; // Set to zero.
     Coordinates : array of TFixedPoint; // This is the coordinate of the defined instance.
+    psNameID    : Word; // (Optional) The PostScript name of the defined instance coordinate. Similar to the nameID above, this identifies a name in the font's 'name' table. The corresponding 'name' table entry should be a valid PostScript name.
   end;
 
   // not entirely implemented, for more details see
-  // http://developer.apple.com/fonts/TTRefMan/RM06/Chap6fvar.html
+  // https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6fvar.html
   TPascalTypeFontVariationTable = class(TCustomPascalTypeNamedVersionTable)
   private
     FVariationAxes: array of TVariationAxisRecord;
@@ -731,7 +732,7 @@ resourcestring
   RCStrTooManySizePairs = 'More than two size pairs are not supported';
   RCStrTooFewSizePairs = 'At least 2 size pairs are are mandatory!';
   RCStrUnknownAxisSize = 'Unknown axis size';
-  RCStrInstanceSizeTooSmall = 'Instance size too small';
+  RCStrUnknownInstanceSize = 'Unknown instance size';
 
 var
   GDescriptionTagClasses: array of TPascalTypeTaggedValueTableClass;
@@ -1854,113 +1855,113 @@ var
   InstSize:  Word;
   // The number of bytes in each gxFontInstance array. InstanceSize = axisCount * sizeof(gxShortFrac).
 begin
+  // remember start position
+  StartPos := Stream.Position;
+
   inherited;
 
-  with Stream do
+  // check (minimum) table size
+  if Stream.Position + 6*SizeOf(Word) > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  // read offset to data
+  OffsetToData := BigEndianValueReader.ReadWord(Stream);
+
+  // read size pair count
+  CountSizePairs := BigEndianValueReader.ReadWord(Stream);
+
+  // check size pair count
+  if CountSizePairs < 2 then
+    raise EPascalTypeError.Create(RCStrTooFewSizePairs);
+
+{$IFDEF AmbigiousExceptions}
+  // ambigious size pair count check
+  if CountSizePairs > 2 then
+    raise EPascalTypeError.Create(RCStrTooManySizePairs);
+{$ENDIF}
+  // read axis count
+  SetLength(FVariationAxes, BigEndianValueReader.ReadWord(Stream));
+
+  // read axis size
+  AxisSize := BigEndianValueReader.ReadWord(Stream);
+
+  // check axis size
+  if AxisSize < 20 then
+    raise EPascalTypeError.Create(RCStrUnknownAxisSize);
+
+{$IFDEF AmbigiousExceptions}
+  // ambigious axis size check
+  if AxisSize > 20 then
+    raise EPascalTypeError.Create(RCStrUnknownAxisSize);
+{$ENDIF}
+  // read instance count
+  SetLength(FInstances, BigEndianValueReader.ReadWord(Stream));
+
+  // read instance size
+  InstSize := BigEndianValueReader.ReadWord(Stream);
+
+  // check instance size
+  if InstSize < (2*SizeOf(Word) + Length(FVariationAxes) * SizeOf(TFixedPoint)) then
+    raise EPascalTypeError.Create(RCStrUnknownInstanceSize);
+
+{$IFDEF AmbigiousExceptions}
+  // The instanceSize will have one of two values: 2 × sizeof(uint16_t) + axisCount × sizeof(Fixed), or 3 × sizeof(uint16_t) + axisCount × sizeof(Fixed).
+  if InstSize > (3*SizeOf(Word) + Length(FVariationAxes) * SizeOf(TFixedPoint)) then
+    raise EPascalTypeError.Create(RCStrUnknownInstanceSize);
+{$ENDIF}
+  // locate data
+  Stream.Position := StartPos + OffsetToData;
+
+  // check (minimum) table size
+  if Stream.Position + Length(FVariationAxes) * AxisSize + Length(FInstances) * InstSize > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  // read data
+  for AxisIndex := 0 to High(FVariationAxes) do
   begin
-    // check (minimum) table size
-    if Position + 12 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+    // read axis tag
+    Stream.Read(FVariationAxes[AxisIndex].AxisTag, SizeOf(TTableType));
 
-    // remember start position
-    StartPos := Position;
+    // read minimum style coordinate for the axis
+    FVariationAxes[AxisIndex].MinValue.Fixed := BigEndianValueReader.ReadCardinal(Stream);
 
-    // read offset to data
-    OffsetToData := BigEndianValueReader.ReadWord(Stream);
+    // read default style coordinate for the axis
+    FVariationAxes[AxisIndex].DefaultValue.Fixed := BigEndianValueReader.ReadCardinal(Stream);
 
-    // read size pair count
-    CountSizePairs := BigEndianValueReader.ReadWord(Stream);
+    // read maximum style coordinate for the axis
+    FVariationAxes[AxisIndex].MaxValue.Fixed := BigEndianValueReader.ReadCardinal(Stream);
 
-    // check size pair count
-    if CountSizePairs < 2 then
-      raise EPascalTypeError.Create(RCStrTooFewSizePairs);
-
-{$IFDEF AmbigiousExceptions}
-    // ambigious size pair count check
-    if CountSizePairs > 2 then raise EPascalTypeError.Create
-      (RCStrTooManySizePairs);
-{$ENDIF}
-    // read axis count
-    SetLength(FVariationAxes, BigEndianValueReader.ReadWord(Stream));
-
-    // read axis size
-    AxisSize := BigEndianValueReader.ReadWord(Stream);
-
-    // check axis size
-    if AxisSize < 20 then
-      raise EPascalTypeError.Create(RCStrUnknownAxisSize);
+    // read flags (set to 0!)
+    FVariationAxes[AxisIndex].Flags := BigEndianValueReader.ReadWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
     // ambigious axis size check
-    if AxisSize > 20 then raise EPascalTypeError.Create(RCStrUnknownAxisSize);
+    if FVariationAxes[AxisIndex].Flags <> 0 then
+      raise EPascalTypeError.Create(RCStrReservedValueError);
 {$ENDIF}
-    // read instance count
-    SetLength(FInstances, BigEndianValueReader.ReadWord(Stream));
+    // read name ID
+    FVariationAxes[AxisIndex].NameID := BigEndianValueReader.ReadWord(Stream);
+  end;
 
-    // read instance size
-    InstSize := BigEndianValueReader.ReadWord(Stream);
+  for InstIndex := 0 to High(FInstances) do
+  begin
+    // read name ID
+    FInstances[InstIndex].NameID := BigEndianValueReader.ReadWord(Stream);
 
-    // check instance size
-    if InstSize < (4 + Length(FVariationAxes) * 4) then
-      raise EPascalTypeError.Create(RCStrInstanceSizeTooSmall);
+    // read flags (set to 0!)
+    FInstances[InstIndex].Flags := BigEndianValueReader.ReadWord(Stream);
 
-{$IFDEF AmbigiousExceptions}
-    // ambigious instance size check
-    if InstSize > (4 + Length(FVariationAxes) * 4) then
-      raise EPascalTypeError.Create(RCStrInstanceSizeTooSmall);
-{$ENDIF}
-    // locate data
-    Position := StartPos + OffsetToData;
+    // set coordinate count
+    SetLength(FInstances[InstIndex].Coordinates, Length(FVariationAxes));
 
-    // check (minimum) table size
-    if Position + Length(FVariationAxes) * AxisSize + Length(FInstances) *
-      InstSize > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-    // read data
+    // read coordinates
     for AxisIndex := 0 to High(FVariationAxes) do
-      with FVariationAxes[AxisIndex] do
-      begin
-        // read axis tag
-        Read(AxisTag, 4);
+      FInstances[InstIndex].Coordinates[AxisIndex].Fixed := BigEndianValueReader.ReadCardinal(Stream);
 
-        // read minimum style coordinate for the axis
-        MinValue.Fixed := BigEndianValueReader.ReadCardinal(Stream);
-
-        // read default style coordinate for the axis
-        DefaultValue.Fixed := BigEndianValueReader.ReadCardinal(Stream);
-
-        // read maximum style coordinate for the axis
-        MaxValue.Fixed := BigEndianValueReader.ReadCardinal(Stream);
-
-        // read flags (set to 0!)
-        Flags := BigEndianValueReader.ReadWord(Stream);
-
-{$IFDEF AmbigiousExceptions}
-    // ambigious axis size check
-    if Flags <> 0 then raise EPascalTypeError.Create(RCStrReservedValueError);
-{$ENDIF}
-        // read name ID
-        NameID := BigEndianValueReader.ReadWord(Stream);
-      end;
-
-    for InstIndex := 0 to High(FInstances) do
-      with FInstances[InstIndex] do
-      begin
-        // read name ID
-        NameID := BigEndianValueReader.ReadWord(Stream);
-
-        // read flags (set to 0!)
-        Flags := BigEndianValueReader.ReadWord(Stream);
-
-        // set coordinate count
-        SetLength(Coordinates, Length(FVariationAxes));
-
-        // read coordinates
-        for AxisIndex := 0 to High(FVariationAxes) do
-          Coordinates[AxisIndex]
-            .Fixed := BigEndianValueReader.ReadCardinal(Stream);
-      end;
+    if InstSize = (3*SizeOf(Word) + Length(FVariationAxes) * SizeOf(TFixedPoint)) then
+      FInstances[InstIndex].psNameID := BigEndianValueReader.ReadWord(Stream)
+    else
+      FInstances[InstIndex].psNameID := 0;
   end;
 end;
 
