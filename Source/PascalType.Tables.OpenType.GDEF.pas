@@ -57,8 +57,8 @@ type
   TOpenTypeGlyphDefinitionTable = class(TCustomOpenTypeVersionedNamedTable)
   private
     FGlyphClassDef      : TCustomOpenTypeClassDefinitionTable; // Class definition table for glyph type
-    FAttachList         : Word;                                // Offset to list of glyphs with attachment points-from beginning of GDEF header (may be NULL)
-    FLigCaretList       : Word;                                // Offset to list of positioning points for ligature carets-from beginning of GDEF header (may be NULL)
+    FAttachmentListOffset : Word;                                // Offset to list of glyphs with attachment points-from beginning of GDEF header (may be NULL)
+    FLigatureCaretListOffset : Word;                                // Offset to list of positioning points for ligature carets-from beginning of GDEF header (may be NULL)
     FMarkAttachClassDef : TCustomOpenTypeClassDefinitionTable; // Class definition table for mark attachment type (may be nil)
     FMarkGlyphSetsDef   : TOpenTypeMarkGlyphSetTable;          // Table of mark set definitions (may be nil)
   public
@@ -115,8 +115,8 @@ begin
   inherited;
   if Source is TOpenTypeGlyphDefinitionTable then
   begin
-    FAttachList := TOpenTypeGlyphDefinitionTable(Source).FAttachList;
-    FLigCaretList := TOpenTypeGlyphDefinitionTable(Source).FLigCaretList;
+    FAttachmentListOffset := TOpenTypeGlyphDefinitionTable(Source).FAttachmentListOffset;
+    FLigatureCaretListOffset := TOpenTypeGlyphDefinitionTable(Source).FLigatureCaretListOffset;
 
     if (TOpenTypeGlyphDefinitionTable(Source).FMarkGlyphSetsDef <> nil) then
     begin
@@ -155,100 +155,93 @@ procedure TOpenTypeGlyphDefinitionTable.LoadFromStream(Stream: TStream);
 var
   StartPos           : Int64;
   Value16            : Word;
-  GlyphClassDefOffset: Word;
-  MarkAttClassDefOffs: Word;
-  MarkGlyphSetsDefOff: Word;
+  GlyphClassDefinitionOffset: Word;
+  MarkAttachmentClassDefOffset: Word;
+  MarkGlyphSetsDefinitionsOffset: Word;
 begin
+  StartPos := Stream.Position;
+
   inherited;
 
-  with Stream do
+  // Check version already read
+  if Version.Value <> 1 then
+    raise EPascalTypeError.Create(RCStrUnsupportedVersion);
+
+  // Check if table is complete
+  if Stream.Position + 4*SizeOf(Word) > Stream.Size then
+    raise EPascalTypeError.Create(RCStrTableIncomplete);
+
+  // Glyph class definition offset
+  GlyphClassDefinitionOffset := BigEndianValueReader.ReadWord(Stream);
+
+  // Attachment list offset
+  FAttachmentListOffset := BigEndianValueReader.ReadWord(Stream);
+
+  // Ligature caret list offset
+  FLigatureCaretListOffset := BigEndianValueReader.ReadWord(Stream);
+
+  // Mark attachment class definition offset
+  MarkAttachmentClassDefOffset := BigEndianValueReader.ReadWord(Stream);
+
+  if (Version.Fract >= 2) then
   begin
-    // check version alread read
-    if Version.Value <> 1 then
-      raise EPascalTypeError.Create(RCStrUnsupportedVersion);
+    // Mark glyph set definitions offset
+    MarkGlyphSetsDefinitionsOffset := BigEndianValueReader.ReadWord(Stream);
 
-    // remember start position as position minus the version already read
-    StartPos := Position - 4;
+  end else
+    MarkGlyphSetsDefinitionsOffset := 0;
 
-    // check if table is complete
-    if Position + 10 > Size then
-      raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-    // read glyph class definition offset
-    GlyphClassDefOffset := BigEndianValueReader.ReadWord(Stream);
+  FreeAndNil(FGlyphClassDef);
+  if GlyphClassDefinitionOffset <> 0 then
+  begin
+    Stream.Position := StartPos + GlyphClassDefinitionOffset;
 
-    // read attach list
-    FAttachList := BigEndianValueReader.ReadWord(Stream);
-
-    // read ligature caret list
-    FLigCaretList := BigEndianValueReader.ReadWord(Stream);
-
-    // read mark attach class definition offset
-    MarkAttClassDefOffs := BigEndianValueReader.ReadWord(Stream);
-
-    // read mark glyph set offset
-    MarkGlyphSetsDefOff := BigEndianValueReader.ReadWord(Stream);
-
-    // eventually free existing class definition
-    FreeAndNil(FGlyphClassDef);
-
-    // eventually read glyph class
-    if GlyphClassDefOffset <> 0 then
-    begin
-      Position := StartPos + GlyphClassDefOffset;
-
-      // read class definition format
-      Read(Value16, SizeOf(Word));
-      case Swap16(Value16) of
-        1:
-          FGlyphClassDef := TOpenTypeClassDefinitionFormat1Table.Create;
-        2:
-          FGlyphClassDef := TOpenTypeClassDefinitionFormat2Table.Create;
-      else
-        raise EPascalTypeError.Create(RCStrUnknownClassDefinition);
-      end;
-
-      if (FGlyphClassDef <> nil) then
-        FGlyphClassDef.LoadFromStream(Stream);
+    Value16 := BigEndianValueReader.ReadWord(Stream);
+    case Value16 of
+      1:
+        FGlyphClassDef := TOpenTypeClassDefinitionFormat1Table.Create;
+      2:
+        FGlyphClassDef := TOpenTypeClassDefinitionFormat2Table.Create;
+    else
+      raise EPascalTypeError.Create(RCStrUnknownClassDefinition);
     end;
 
-    // eventually free existing class definition
-    FreeAndNil(FMarkAttachClassDef);
-
-    // eventually read mark attachment class definition
-    if MarkAttClassDefOffs <> 0 then
-    begin
-      Position := StartPos + MarkAttClassDefOffs;
-
-      // read class definition format
-      Read(Value16, SizeOf(Word));
-      case Swap16(Value16) of
-        1:
-          FMarkAttachClassDef := TOpenTypeClassDefinitionFormat1Table.Create;
-        2:
-          FMarkAttachClassDef := TOpenTypeClassDefinitionFormat2Table.Create;
-      else
-        raise EPascalTypeError.Create(RCStrUnknownClassDefinition);
-      end;
-
-      if (FMarkAttachClassDef <> nil) then
-        FMarkAttachClassDef.LoadFromStream(Stream);
-    end;
-
-    // eventually read mark glyph set (otherwise free existing glyph set)
-    if MarkGlyphSetsDefOff <> 0 then
-    begin
-      Position := StartPos + MarkGlyphSetsDefOff;
-
-      // eventually create new mark glyph set
-      if (FMarkGlyphSetsDef = nil) then
-        FMarkGlyphSetsDef := TOpenTypeMarkGlyphSetTable.Create(Self);
-
-      FMarkGlyphSetsDef.LoadFromStream(Stream);
-    end else
-      FreeAndNil(FMarkGlyphSetsDef);
-
+    if (FGlyphClassDef <> nil) then
+      FGlyphClassDef.LoadFromStream(Stream);
   end;
+
+
+  FreeAndNil(FMarkAttachClassDef);
+  if MarkAttachmentClassDefOffset <> 0 then
+  begin
+    Stream.Position := StartPos + MarkAttachmentClassDefOffset;
+
+    Value16 := BigEndianValueReader.ReadWord(Stream);
+    case Value16 of
+      1:
+        FMarkAttachClassDef := TOpenTypeClassDefinitionFormat1Table.Create;
+      2:
+        FMarkAttachClassDef := TOpenTypeClassDefinitionFormat2Table.Create;
+    else
+      raise EPascalTypeError.Create(RCStrUnknownClassDefinition);
+    end;
+
+    if (FMarkAttachClassDef <> nil) then
+      FMarkAttachClassDef.LoadFromStream(Stream);
+  end;
+
+
+  if MarkGlyphSetsDefinitionsOffset <> 0 then
+  begin
+    Stream.Position := StartPos + MarkGlyphSetsDefinitionsOffset;
+
+    if (FMarkGlyphSetsDef = nil) then
+      FMarkGlyphSetsDef := TOpenTypeMarkGlyphSetTable.Create(Self);
+
+    FMarkGlyphSetsDef.LoadFromStream(Stream);
+  end else
+    FreeAndNil(FMarkGlyphSetsDef);
 end;
 
 procedure TOpenTypeGlyphDefinitionTable.SaveToStream(Stream: TStream);
@@ -278,17 +271,17 @@ begin
 
     (*
       // write attachment list
-      if (FAttachList <> nil) then
+      if (FAttachmentListOffset <> nil) then
       begin
       Offsets[1] := Word(Position - StartPos);
-      FAttachList.SaveToStream(Stream);
+      FAttachmentListOffset.SaveToStream(Stream);
       end;
 
       // write ligature caret list
-      if (FLigCaretList <> nil) then
+      if (FLigatureCaretListOffset <> nil) then
       begin
       Offsets[2] := Word(Position - StartPos);
-      FLigCaretList.SaveToStream(Stream);
+      FLigatureCaretListOffset.SaveToStream(Stream);
       end;
     *)
 

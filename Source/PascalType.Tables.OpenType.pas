@@ -405,30 +405,21 @@ begin
   inherited;
 
   // check (minimum) table size
-  if Stream.Position + 4 > Stream.Size then
+  if Stream.Position + 2*SizeOf(Word) > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-  // read version
+  // read format
   FTableFormat := BigEndianValueReader.ReadWord(Stream);
 
   if FTableFormat > 1 then
-    raise EPascalTypeError.Create(RCStrUnknownVersion);
+    raise EPascalTypeError.Create(RCStrUnknownFormat);
 
   // read coverage length
   SetLength(FCoverage, BigEndianValueReader.ReadWord(Stream));
 
   // check (minimum) table size
   if Stream.Position + Length(FCoverage) * SizeOf(Cardinal) > Stream.Size then
-  begin
-    if Stream.Position + Length(FCoverage) * SizeOf(Word) = Stream.Size then
-    begin
-      // Comic Sans has an incorrect offset table. It uses Words instead of DWords.
-      for CoverageIndex := 0 to High(FCoverage) do
-        FCoverage[CoverageIndex] := BigEndianValueReader.ReadWord(Stream);
-      exit;
-    end;
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-  end;
 
   // read coverage data
   for CoverageIndex := 0 to High(FCoverage) do
