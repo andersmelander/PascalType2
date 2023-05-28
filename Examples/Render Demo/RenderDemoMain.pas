@@ -35,9 +35,17 @@ type
     LabelFontSize: TLabel;
     LabelText: TLabel;
     GridPanel1: TGridPanel;
+    PanelGDI: TPanel;
+    PaintBox1: TPaintBox;
     PaintBoxWindows: TPaintBox;
+    PanelPascalTypeGDI: TPanel;
+    PaintBox2: TPaintBox;
     PaintBoxGDI: TPaintBox;
+    PanelPascalTypeGraphics32: TPanel;
+    PaintBox3: TPaintBox;
     PaintBoxGraphics32: TPaintBox;
+    PanelImage32: TPanel;
+    PaintBox4: TPaintBox;
     PaintBoxImage32: TPaintBox;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -49,6 +57,7 @@ type
     procedure PaintBoxGDIPaint(Sender: TObject);
     procedure PaintBoxGraphics32Paint(Sender: TObject);
     procedure PaintBoxImage32Paint(Sender: TObject);
+    procedure PaintBox1Paint(Sender: TObject);
   private
     FFontFace: TPascalTypeFontFace;
     FRasterizerGDI  : TPascalTypeFontRasterizerGDI;
@@ -95,12 +104,12 @@ uses
 procedure TFmRenderDemo.FormCreate(Sender: TObject);
 begin
 {$ifndef IMAGE32}
-  PaintBoxImage32.Free;
+  PanelImage32.Free;
   GridPanel1.RowCollection.Items[3].Free;
   GridPanel1.RowCollection.EquallySplitPercentuals;
 {$endif IMAGE32}
 {$ifndef RASTERIZER_GDI}
-  PaintBoxGDI.Free;
+  PanelPascalTypeGDI.Free;
   GridPanel1.RowCollection.Items[1].Free;
   GridPanel1.RowCollection.EquallySplitPercentuals;
 {$endif RASTERIZER_GDI}
@@ -144,6 +153,22 @@ end;
 procedure TFmRenderDemo.FormShow(Sender: TObject);
 begin
  Text := EditText.Text;
+end;
+
+procedure TFmRenderDemo.PaintBox1Paint(Sender: TObject);
+var
+  lf: LOGFONT; // Windows native font structure
+begin
+  TPaintBox(Sender).Canvas.Brush.Style := bsClear;
+  lf := Default(LOGFONT);
+  lf.lfHeight := 12;
+  lf.lfEscapement := 10 * 90;
+  lf.lfOrientation := 10 * 90;
+  lf.lfCharSet := DEFAULT_CHARSET;
+  StrCopy(lf.lfFaceName, 'Arial');
+
+  TPaintBox(Sender).Canvas.Font.Handle := CreateFontIndirect(lf);
+  TPaintBox(Sender).Canvas.TextOut(0, TPaintBox(Sender).Height, TPanel(TPaintBox(Sender).Parent).Caption);
 end;
 
 procedure TFmRenderDemo.PaintBoxGDIPaint(Sender: TObject);
@@ -270,7 +295,7 @@ begin
   lf.lfHeight := -MulDiv(FFontSize, Canvas.Font.PixelsPerInch, 72);
   lf.lfWeight := FW_NORMAL;
   lf.lfCharSet := Font.Charset;
-  StrPLCopy(lf.lfFaceName, FFontName, SizeOf(lf.lfFaceName));
+  StrPLCopy(lf.lfFaceName, FFontName, LF_FACESIZE);
   lf.lfQuality := ANTIALIASED_QUALITY;
 //  lf.lfQuality := CLEARTYPE_QUALITY;
 //  lf.lfQuality := CLEARTYPE_NATURAL_QUALITY;
@@ -300,6 +325,8 @@ procedure TFmRenderDemo.FontNameChanged;
 var
   FontIndex : Integer;
 begin
+  Invalidate;
+
   for FontIndex := 0 to High(FFontArray) do
     if FFontArray[FontIndex].FullFontName = FFontName then
     begin
@@ -307,8 +334,6 @@ begin
       FFontFace.LoadFromFile(FFontFilename);
       Break;
     end;
-
-  Invalidate;
 end;
 
 procedure TFmRenderDemo.FontSizeChanged;

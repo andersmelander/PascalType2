@@ -107,6 +107,7 @@ object FmRenderDemo: TFmRenderDemo
     Width = 660
     Height = 393
     Anchors = [akLeft, akTop, akRight, akBottom]
+    BevelOuter = bvNone
     Caption = 'GridPanel1'
     ColumnCollection = <
       item
@@ -115,22 +116,22 @@ object FmRenderDemo: TFmRenderDemo
     ControlCollection = <
       item
         Column = 0
-        Control = PaintBoxWindows
+        Control = PanelGDI
         Row = 0
       end
       item
         Column = 0
-        Control = PaintBoxGDI
+        Control = PanelPascalTypeGDI
         Row = 1
       end
       item
         Column = 0
-        Control = PaintBoxGraphics32
+        Control = PanelPascalTypeGraphics32
         Row = 2
       end
       item
         Column = 0
-        Control = PaintBoxImage32
+        Control = PanelImage32
         Row = 3
       end>
     RowCollection = <
@@ -151,52 +152,162 @@ object FmRenderDemo: TFmRenderDemo
       end>
     ShowCaption = False
     TabOrder = 3
-    object PaintBoxWindows: TPaintBox
-      Left = 1
+    object PanelGDI: TPanel
+      AlignWithMargins = True
+      Left = 0
       Top = 1
       Width = 658
-      Height = 98
+      Height = 97
+      Margins.Left = 0
+      Margins.Top = 1
+      Margins.Right = 0
+      Margins.Bottom = 0
       Align = alClient
-      OnPaint = PaintBoxWindowsPaint
-      ExplicitLeft = 277
-      ExplicitWidth = 451
-      ExplicitHeight = 119
+      BevelOuter = bvNone
+      Caption = 'GDI TextOut'
+      ShowCaption = False
+      TabOrder = 0
+      ExplicitLeft = 1
+      ExplicitHeight = 98
+      object PaintBox1: TPaintBox
+        Left = 637
+        Top = 0
+        Width = 21
+        Height = 97
+        Align = alRight
+        OnPaint = PaintBox1Paint
+        ExplicitLeft = 484
+        ExplicitHeight = 133
+      end
+      object PaintBoxWindows: TPaintBox
+        Left = 0
+        Top = 0
+        Width = 637
+        Height = 97
+        Align = alClient
+        OnPaint = PaintBoxWindowsPaint
+        ExplicitLeft = 277
+        ExplicitTop = 1
+        ExplicitWidth = 451
+        ExplicitHeight = 119
+      end
     end
-    object PaintBoxGDI: TPaintBox
-      Left = 1
+    object PanelPascalTypeGDI: TPanel
+      AlignWithMargins = True
+      Left = 0
       Top = 99
       Width = 658
-      Height = 98
+      Height = 97
+      Margins.Left = 0
+      Margins.Top = 1
+      Margins.Right = 0
+      Margins.Bottom = 0
       Align = alClient
-      OnPaint = PaintBoxGDIPaint
-      ExplicitLeft = 277
-      ExplicitTop = 94
-      ExplicitWidth = 451
-      ExplicitHeight = 119
+      BevelOuter = bvNone
+      Caption = 'PascalType GDI'
+      ShowCaption = False
+      TabOrder = 1
+      ExplicitLeft = 1
+      ExplicitHeight = 98
+      object PaintBox2: TPaintBox
+        Left = 637
+        Top = 0
+        Width = 21
+        Height = 97
+        Align = alRight
+        OnPaint = PaintBox1Paint
+        ExplicitLeft = 484
+        ExplicitHeight = 133
+      end
+      object PaintBoxGDI: TPaintBox
+        Left = 0
+        Top = 0
+        Width = 637
+        Height = 97
+        Align = alClient
+        OnPaint = PaintBoxGDIPaint
+        ExplicitLeft = 4
+        ExplicitWidth = 484
+        ExplicitHeight = 133
+      end
     end
-    object PaintBoxGraphics32: TPaintBox
-      Left = 1
+    object PanelPascalTypeGraphics32: TPanel
+      AlignWithMargins = True
+      Left = 0
       Top = 197
       Width = 658
-      Height = 97
+      Height = 96
+      Margins.Left = 0
+      Margins.Top = 1
+      Margins.Right = 0
+      Margins.Bottom = 0
       Align = alClient
-      OnPaint = PaintBoxGraphics32Paint
-      ExplicitLeft = 277
-      ExplicitTop = 188
-      ExplicitWidth = 451
-      ExplicitHeight = 119
+      BevelOuter = bvNone
+      Caption = 'PascalType Graphics32'
+      ShowCaption = False
+      TabOrder = 2
+      ExplicitLeft = 1
+      ExplicitHeight = 97
+      object PaintBox3: TPaintBox
+        Left = 637
+        Top = 0
+        Width = 21
+        Height = 96
+        Align = alRight
+        OnPaint = PaintBox1Paint
+        ExplicitLeft = 484
+        ExplicitHeight = 133
+      end
+      object PaintBoxGraphics32: TPaintBox
+        Left = 0
+        Top = 0
+        Width = 637
+        Height = 96
+        Align = alClient
+        OnPaint = PaintBoxGraphics32Paint
+        ExplicitLeft = 4
+        ExplicitWidth = 484
+        ExplicitHeight = 133
+      end
     end
-    object PaintBoxImage32: TPaintBox
-      Left = 1
+    object PanelImage32: TPanel
+      AlignWithMargins = True
+      Left = 0
       Top = 294
       Width = 658
-      Height = 98
+      Height = 97
+      Margins.Left = 0
+      Margins.Top = 1
+      Margins.Right = 0
+      Margins.Bottom = 0
       Align = alClient
-      OnPaint = PaintBoxImage32Paint
-      ExplicitLeft = 277
-      ExplicitTop = 188
-      ExplicitWidth = 451
-      ExplicitHeight = 119
+      BevelOuter = bvNone
+      Caption = 'Image32'
+      ShowCaption = False
+      TabOrder = 3
+      ExplicitLeft = 1
+      ExplicitHeight = 98
+      object PaintBox4: TPaintBox
+        Left = 637
+        Top = 0
+        Width = 21
+        Height = 97
+        Align = alRight
+        OnPaint = PaintBox1Paint
+        ExplicitLeft = 484
+        ExplicitHeight = 133
+      end
+      object PaintBoxImage32: TPaintBox
+        Left = 0
+        Top = 0
+        Width = 637
+        Height = 97
+        Align = alClient
+        OnPaint = PaintBoxImage32Paint
+        ExplicitLeft = 4
+        ExplicitWidth = 484
+        ExplicitHeight = 133
+      end
     end
   end
 end
