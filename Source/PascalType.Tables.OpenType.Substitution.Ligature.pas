@@ -246,7 +246,10 @@ var
   LastSameStartCharIndex: integer;
   CodePoints: TPascalTypeCodePoints;
 begin
-  // Test with Segoe UI: ? ? ? = ???
+  // Test with :
+  // - Segoe Script: ffl
+  // - Arabic typesetting: ff
+  // - Palatino Linotype Italic: ff
 
   // The coverage table contains the index of the first character of the ligature component string.
   SubstitutionIndex := CoverageTable.IndexOfGlyph(AGlyphString[AIndex].GlyphID);
@@ -254,18 +257,29 @@ begin
   if (SubstitutionIndex = -1) then
     Exit(False);
 
+  // Ligature strings are grouped by starting character so all members of a group
+  // has the same start character. The FLigatureIndex[] array contains the index
+  // of the first entry in the group.
+
+  // We found the index of the first string in the group above via the coverage table.
+  // The index of the last ligature string is either...
   if (SubstitutionIndex < High(FLigatureIndex)) then
+    // ... the index right before the first in the next group or...
     LastSameStartCharIndex := FLigatureIndex[SubstitutionIndex+1]-1
   else
+    // ... the last possible index if there are no next group.
     LastSameStartCharIndex := FLigatures.Count-1;
 
+  // For each ligature string...
   for i := FLigatureIndex[SubstitutionIndex] to LastSameStartCharIndex do
   begin
-    if (AIndex + High(FLigatures[SubstitutionIndex].Components) >= AGlyphString.Count) then
+    // If the end of this ligature string is past our source string then there can be no match
+    if (AIndex + Length(FLigatures[i].Components) > AGlyphString.Count) then
       continue;
 
+    // Compare each character in the ligature string to the source string
     Match := True;
-    for j := 0 to High(FLigatures[SubstitutionIndex].Components) do
+    for j := 0 to High(FLigatures[i].Components) do
       if (AGlyphString[AIndex + j].GlyphID <> FLigatures[i].Components[j]) then
       begin
         Match := False;
@@ -274,19 +288,22 @@ begin
 
     if (Match) then
     begin
-      // First entry in glyph string is reused
-      AGlyphString[AIndex].GlyphID := FLigatures[i].Glyph;
+      // We have a match. Replace the source character with the ligature string
 
+      // Save a list of the codepoints we're replacing
       SetLength(CodePoints, Length(FLigatures[i].Components));
       for j := 0 to High(FLigatures[i].Components) do
         CodePoints[j] := FLigatures[i].Components[j];
-
       AGlyphString[AIndex].CodePoints := CodePoints;
 
-      // Remaining are deleted
+      // First entry in glyph string is reused...
+      AGlyphString[AIndex].GlyphID := FLigatures[i].Glyph;
+
+      // ...Remaining are deleted
       for j := 1 to High(FLigatures[i].Components) do
         AGlyphString.Delete(AIndex+1);
 
+      // Advance past the chacter we just processed
       Inc(AIndex);
 
       Exit(True);
