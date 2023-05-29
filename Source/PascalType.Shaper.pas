@@ -45,7 +45,58 @@ uses
   PascalType.GlyphString,
   PascalType.FontFace.SFNT,
   PascalType.Tables.OpenType.GSUB,
-  PascalType.Tables.OpenType.Feature;
+  PascalType.Tables.OpenType.Feature,
+  PascalType.Shaper.Plan;
+
+
+type
+  TPascalTypeDirection = (dirLeftToRight, dirRightToLeft);
+
+//------------------------------------------------------------------------------
+//
+//              Default feature plans
+//
+//------------------------------------------------------------------------------
+const
+  VariationFeatures: TPascalTypeTableNames = [
+    'rvrn'      // Required Variation Alternates
+  ];
+
+  CommonFeatures: TPascalTypeTableNames = [
+    'ccmp',     // Glyph Composition/Decomposition
+    'locl',     // Localized Forms
+    'rlig',     // Required Ligatures
+    'mark',     // Mark Positioning
+    'mkmk'      // Mark to Mark Positioning
+  ];
+
+  FractionalFeatures: TPascalTypeTableNames = [
+    'frac',     // Fractions, optional
+    'numr',     // Numerators, applied when 'frac' is used
+    'dnom'      // Denominators, applied when 'frac' is used
+  ];
+
+  HorizontalFeatures: TPascalTypeTableNames = [
+    'calt',     // Contextual Alternates
+    'clig',     // Contextual Ligatures
+    'liga',     // Standard Ligatures, optional
+    'rclt',     // Required Contextual Alternates
+    'curs',     // Cursive Positioning
+    'kern'      // Kerning, optional, enabled by default
+  ];
+
+  VerticalFeatures: TPascalTypeTableNames = [
+    'vert'      // Vertical Alternates
+  ];
+
+  DirectionalFeatures: array[TPascalTypeDirection] of TPascalTypeTableNames = (
+    [
+      'ltra',   // Left-to-right glyph alternates
+      'ltrm'    // Left-to-right mirrored forms
+    ], [
+      'rtla',   // Right-to-left alternates
+      'rtlm'    // Right-to-left mirrored forms
+    ]);
 
 
 //------------------------------------------------------------------------------
@@ -66,21 +117,25 @@ type
     public
       constructor Create(AShaper: TPascalTypeShaper);
       destructor Destroy; override;
+      function GetEnumerator: TEnumerator<TTableName>;
       function IsEnabled(const AKey: TTableName; ADefault: boolean): boolean;
-      property FeatureEnabled[const AKey: TTableName]: boolean read GetFeatureEnabled write SetFeatureEnabled; default;
+      property Enabled[const AKey: TTableName]: boolean read GetFeatureEnabled write SetFeatureEnabled; default;
       property EnableAll: boolean read FEnableAll write FEnableAll;
     end;
   private
     FScript: TTableType;
     FLanguage: TTableType;
+    FDirection: TPascalTypeDirection;
     FFont: TCustomPascalTypeFontFace;
-    FFeatures: TDictionary<TTableType, TCustomOpenTypeFeatureTable>;
-    FDefaultFeatures: TList<TCustomOpenTypeFeatureTable>;
-    FOptionalFeatures: TPascalTypeShaperFeatures;
+    FFeatureMap: TDictionary<TTableType, TCustomOpenTypeFeatureTable>;
+    FPlan: TPascalTypeShapingPlan;
+    FPlannedFeatures: TList<TCustomOpenTypeFeatureTable>;
+    FFeatures: TPascalTypeShaperFeatures;
     FSubstitutionTable: TOpenTypeGlyphSubstitutionTable;
   private
     procedure SetLanguage(const Value: TTableType);
     procedure SetScript(const Value: TTableType);
+    procedure SetDirection(const Value: TPascalTypeDirection);
   protected
     procedure Reset; virtual;
     function DecompositionFilter(CodePoint: TPascalTypeCodePoint): boolean; virtual;
@@ -90,6 +145,17 @@ type
 
     function CreateGlyphString: TPascalTypeGlyphString; virtual;
     function GetGlyphStringClass: TPascalTypeGlyphStringClass; virtual;
+
+    function GetShapingPlanClass: TPascalTypeShapingPlanClass; virtual;
+    function CreateShapingPlan: TPascalTypeShapingPlan; virtual;
+
+    procedure SetupPlan(APlan: TPascalTypeShapingPlan); virtual;
+    procedure PlanPreprocessing(AStage: TPascalTypeShapingPlanStage);
+    procedure PlanFeatures(AStage: TPascalTypeShapingPlanStage); virtual;
+    procedure PlanPostprocessing(AStage: TPascalTypeShapingPlanStage);
+    procedure PlanApplyOptions(APlan: TPascalTypeShapingPlan);
+
+    property Plan: TPascalTypeShapingPlan read FPlan;
   public
     constructor Create(AFont: TCustomPascalTypeFontFace);
     destructor Destroy; override;
@@ -98,9 +164,10 @@ type
 
     property Language: TTableType read FLanguage write SetLanguage;
     property Script: TTableType read FScript write SetScript;
+    property Direction: TPascalTypeDirection read FDirection write SetDirection;
     property Font: TCustomPascalTypeFontFace read FFont;
 
-    property OptionalFeatures: TPascalTypeShaperFeatures read FOptionalFeatures;
+    property Features: TPascalTypeShaperFeatures read FFeatures;
   end;
 
 implementation
@@ -124,20 +191,20 @@ begin
   FFont := AFont;
   FScript := OpenTypeDefaultScript;
   FLanguage := OpenTypeDefaultLanguageSystem;
-  FOptionalFeatures := TPascalTypeShaperFeatures.Create(Self);
+  FFeatures := TPascalTypeShaperFeatures.Create(Self);
   // Cache GSUB. We'll use it a lot
   FSubstitutionTable := TOpenTypeGlyphSubstitutionTable(IPascalTypeFontFace(FFont).GetTableByTableType(TOpenTypeGlyphSubstitutionTable.GetTableType));
 
-  // Set up mandatory features
-  OptionalFeatures['ccmp'] := True;
-  OptionalFeatures['locl'] := True;
+  // TODO : Test only. Set up test features
+  Features['liga'] := True;
 end;
 
 destructor TPascalTypeShaper.Destroy;
 begin
-  FOptionalFeatures.Free;
-  FDefaultFeatures.Free;
+  FPlan.Free;
   FFeatures.Free;
+  FPlannedFeatures.Free;
+  FFeatureMap.Free;
 
   inherited;
 end;
@@ -150,6 +217,16 @@ end;
 function TPascalTypeShaper.GetGlyphStringClass: TPascalTypeGlyphStringClass;
 begin
   Result := TPascalTypeGlyphString;
+end;
+
+function TPascalTypeShaper.CreateShapingPlan: TPascalTypeShapingPlan;
+begin
+  Result := GetShapingPlanClass.Create;
+end;
+
+function TPascalTypeShaper.GetShapingPlanClass: TPascalTypeShapingPlanClass;
+begin
+  Result := TPascalTypeShapingPlan;
 end;
 
 function TPascalTypeShaper.CompositionFilter(CodePoint: TPascalTypeCodePoint): boolean;
@@ -179,9 +256,9 @@ var
   LanguageSystem: TCustomOpenTypeLanguageSystemTable;
   FeatureTable: TCustomOpenTypeFeatureTable;
 begin
-  if (FFeatures = nil) then
+  if (FFeatureMap = nil) then
   begin
-    FFeatures := TDictionary<TTableType, TCustomOpenTypeFeatureTable>.Create;
+    FFeatureMap := TDictionary<TTableType, TCustomOpenTypeFeatureTable>.Create;
 
     if (FSubstitutionTable <> nil) then
     begin
@@ -199,14 +276,14 @@ begin
           begin
             // LanguageSystem feature list contains index numbers into the FeatureListTable
             FeatureTable := FSubstitutionTable.FeatureListTable.Feature[LanguageSystem.FeatureIndex[i]];
-            FFeatures.Add(FeatureTable.TableType, FeatureTable);
+            FFeatureMap.Add(FeatureTable.TableType, FeatureTable);
           end;
         end;
       end;
     end;
   end;
 
-  if (not FFeatures.TryGetValue(ATableType, Result)) then
+  if (not FFeatureMap.TryGetValue(ATableType, Result)) then
     Result := nil;
 end;
 
@@ -247,8 +324,15 @@ end;
 
 procedure TPascalTypeShaper.Reset;
 begin
-  FreeAndNil(FFeatures);
-  FreeAndNil(FDefaultFeatures);
+  FreeAndNil(FFeatureMap);
+  FreeAndNil(FPlannedFeatures);
+  FreeAndNil(FPlan);
+end;
+
+procedure TPascalTypeShaper.SetDirection(const Value: TPascalTypeDirection);
+begin
+  Reset;
+  FDirection := Value;
 end;
 
 procedure TPascalTypeShaper.SetLanguage(const Value: TTableType);
@@ -263,6 +347,54 @@ begin
   FScript := Value;
 end;
 
+procedure TPascalTypeShaper.PlanPreprocessing(AStage: TPascalTypeShapingPlanStage);
+begin
+  AStage.Add(VariationFeatures);
+  AStage.Add(DirectionalFeatures[FDirection]);
+  AStage.Add(FractionalFeatures);
+end;
+
+procedure TPascalTypeShaper.PlanFeatures(AStage: TPascalTypeShapingPlanStage);
+begin
+  // Do nothing by default
+end;
+
+procedure TPascalTypeShaper.PlanPostprocessing(AStage: TPascalTypeShapingPlanStage);
+begin
+  AStage.Add(CommonFeatures);
+  AStage.Add(HorizontalFeatures);
+end;
+
+procedure TPascalTypeShaper.PlanApplyOptions(APlan: TPascalTypeShapingPlan);
+var
+  Key: TTableName;
+begin
+  // Apply options; Some features are optional, other are mandatory. E.g. 'liga' is optional.
+  // We allow the user to disable any feature. Even mandatory ones.
+  for Key in Features do
+    if (Features[Key]) then
+      APlan.AddFeature(Key)
+    else
+      APlan.RemoveFeature(Key);
+end;
+
+procedure TPascalTypeShaper.SetupPlan(APlan: TPascalTypeShapingPlan);
+var
+  StagePreprocessing: TPascalTypeShapingPlanStage;
+  StageFeatures: TPascalTypeShapingPlanStage;
+  StagePostprocessing: TPascalTypeShapingPlanStage;
+begin
+  StagePreprocessing := FPlan.Stages.AddStage;
+  StageFeatures := FPlan.Stages.AddStage;
+  StagePostprocessing := FPlan.Stages.AddStage;
+
+  PlanPreprocessing(StagePreprocessing);
+  PlanFeatures(StageFeatures);
+  PlanPostprocessing(StagePostprocessing);
+
+  PlanApplyOptions(APlan);
+end;
+
 function TPascalTypeShaper.Shape(const AText: string): TPascalTypeGlyphString;
 var
   UTF32: TPascalTypeCodePoints;
@@ -273,13 +405,14 @@ var
   GlyphIndex, NextGlyphIndex: integer;
   GlyphHandled: boolean;
   Glyph: TPascalTypeGlyph;
+  Stage: TPascalTypeShapingPlanStage;
 const
-  DefaultFeatures: array of TTableName = [
-    'ccmp',     // Glyph Composition/Decomposition
-    'clig',     // Contextual Ligatures
-    'liga',     // Standard Ligatures
-    'locl',     // Localized Forms
-    'calt'      // Contextual Alternates
+  DefaultFeatures: TPascalTypeTableNames = [
+    'ccmp',
+    'clig',
+    'liga',
+    'locl',
+    'calt'
   ];
 begin
   UTF32 := PascalTypeUnicode.UTF16ToUTF32(AText);
@@ -332,25 +465,33 @@ begin
     *)
     if (FSubstitutionTable <> nil) then
     begin
+      if (FPlan = nil) then
+      begin
+        FPlan := CreateShapingPlan;
+        SetupPlan(FPlan);
+      end;
+
       // Build ordered list of features supported by the font.
       // This is only done once per "session". No need to do it once per character.
-      if (FDefaultFeatures = nil) then
+      if (FPlannedFeatures = nil) then
       begin
-        FDefaultFeatures := TList<TCustomOpenTypeFeatureTable>.Create;
-        for Feature in DefaultFeatures do
-        begin
-          FeatureTable := FindFeature(Feature);
+        FPlannedFeatures := TList<TCustomOpenTypeFeatureTable>.Create;
+        // For each plan stage...
+        for Stage in FPlan.Stages do
+          for Feature in Stage do
+          begin
+            FeatureTable := FindFeature(Feature);
 
-          // Apply options; Some features are optional, other are mandatory. E.g. 'liga' is optional.
-          if (FeatureTable <> nil) and (OptionalFeatures[Feature]) then
-            FDefaultFeatures.Add(FeatureTable);
-        end;
+            // Apply options; Some features are optional, other are mandatory. E.g. 'liga' is optional.
+            if (FeatureTable <> nil) then
+              FPlannedFeatures.Add(FeatureTable);
+          end;
       end;
 
       // Iterate over each feature and apply it to the individual glyphs.
       // Each glyph is only processed once by a feature, but it can be
       // processed multiple times by different features.
-      for FeatureTable in FDefaultFeatures do
+      for FeatureTable in FPlannedFeatures do
       begin
 
         GlyphIndex := 0;
@@ -415,6 +556,11 @@ destructor TPascalTypeShaper.TPascalTypeShaperFeatures.Destroy;
 begin
   FFeatures.Free;
   inherited;
+end;
+
+function TPascalTypeShaper.TPascalTypeShaperFeatures.GetEnumerator: TEnumerator<TTableName>;
+begin
+  Result := FFeatures.Keys.GetEnumerator;
 end;
 
 function TPascalTypeShaper.TPascalTypeShaperFeatures.GetFeatureEnabled(const AKey: TTableName): boolean;
