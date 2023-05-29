@@ -245,6 +245,9 @@ var
 {$endif IMAGE32}
 begin
 {$ifdef IMAGE32}
+  if (FFontFilename = '') then
+    exit;
+
   Canvas := TPaintBox(Sender).Canvas;
 
   Image := TImage32.Create(nil);

@@ -892,6 +892,9 @@ begin
 
     Shaper := TPascalTypeShaper.Create(FontFace);
     try
+      // Enable all optional features for test purpose
+      Shaper.OptionalFeatures.EnableAll := True;
+
       ShapedText := Shaper.Shape(Text);
       try
 

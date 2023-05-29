@@ -37,6 +37,7 @@ unit PascalType.Shaper;
 interface
 
 uses
+  System.Classes,
   Generics.Collections,
   PT_Types,
   PT_Classes,
@@ -54,12 +55,30 @@ uses
 //------------------------------------------------------------------------------
 type
   TPascalTypeShaper = class
+  private type
+    TPascalTypeShaperFeatures = class
+    private
+      FShaper: TPascalTypeShaper;
+      FFeatures: TDictionary<TTableName, boolean>;
+      FEnableAll: boolean;
+      function GetFeatureEnabled(const AKey: TTableName): boolean;
+      procedure SetFeatureEnabled(const AKey: TTableName; const Value: boolean);
+    public
+      constructor Create(AShaper: TPascalTypeShaper);
+      destructor Destroy; override;
+      function IsEnabled(const AKey: TTableName; ADefault: boolean): boolean;
+      property FeatureEnabled[const AKey: TTableName]: boolean read GetFeatureEnabled write SetFeatureEnabled; default;
+      property EnableAll: boolean read FEnableAll write FEnableAll;
+    end;
   private
     FScript: TTableType;
     FLanguage: TTableType;
     FFont: TCustomPascalTypeFontFace;
     FFeatures: TDictionary<TTableType, TCustomOpenTypeFeatureTable>;
+    FDefaultFeatures: TList<TCustomOpenTypeFeatureTable>;
+    FOptionalFeatures: TPascalTypeShaperFeatures;
     FSubstitutionTable: TOpenTypeGlyphSubstitutionTable;
+  private
     procedure SetLanguage(const Value: TTableType);
     procedure SetScript(const Value: TTableType);
   protected
@@ -80,6 +99,8 @@ type
     property Language: TTableType read FLanguage write SetLanguage;
     property Script: TTableType read FScript write SetScript;
     property Font: TCustomPascalTypeFontFace read FFont;
+
+    property OptionalFeatures: TPascalTypeShaperFeatures read FOptionalFeatures;
   end;
 
 implementation
@@ -103,12 +124,19 @@ begin
   FFont := AFont;
   FScript := OpenTypeDefaultScript;
   FLanguage := OpenTypeDefaultLanguageSystem;
+  FOptionalFeatures := TPascalTypeShaperFeatures.Create(Self);
   // Cache GSUB. We'll use it a lot
   FSubstitutionTable := TOpenTypeGlyphSubstitutionTable(IPascalTypeFontFace(FFont).GetTableByTableType(TOpenTypeGlyphSubstitutionTable.GetTableType));
+
+  // Set up mandatory features
+  OptionalFeatures['ccmp'] := True;
+  OptionalFeatures['locl'] := True;
 end;
 
 destructor TPascalTypeShaper.Destroy;
 begin
+  FOptionalFeatures.Free;
+  FDefaultFeatures.Free;
   FFeatures.Free;
 
   inherited;
@@ -220,6 +248,7 @@ end;
 procedure TPascalTypeShaper.Reset;
 begin
   FreeAndNil(FFeatures);
+  FreeAndNil(FDefaultFeatures);
 end;
 
 procedure TPascalTypeShaper.SetLanguage(const Value: TTableType);
@@ -244,7 +273,6 @@ var
   GlyphIndex, NextGlyphIndex: integer;
   GlyphHandled: boolean;
   Glyph: TPascalTypeGlyph;
-  Features: TList<TCustomOpenTypeFeatureTable>;
 const
   DefaultFeatures: array of TTableName = [
     'ccmp',     // Glyph Composition/Decomposition
@@ -304,69 +332,66 @@ begin
     *)
     if (FSubstitutionTable <> nil) then
     begin
-      Features := TList<TCustomOpenTypeFeatureTable>.Create;
-      try
-
-        // Build ordered list of features supported by the font
-        // TODO : This should only be done once per "session". No need to do it once per character.
-        // TODO : Apply options. Some features are optional. Other are mandatory. E.g. 'liga' is optional.
+      // Build ordered list of features supported by the font.
+      // This is only done once per "session". No need to do it once per character.
+      if (FDefaultFeatures = nil) then
+      begin
+        FDefaultFeatures := TList<TCustomOpenTypeFeatureTable>.Create;
         for Feature in DefaultFeatures do
         begin
           FeatureTable := FindFeature(Feature);
 
-          if (FeatureTable <> nil) then
-            Features.Add(FeatureTable);
+          // Apply options; Some features are optional, other are mandatory. E.g. 'liga' is optional.
+          if (FeatureTable <> nil) and (OptionalFeatures[Feature]) then
+            FDefaultFeatures.Add(FeatureTable);
         end;
+      end;
 
-        // Iterate over each feature and apply it to the individual glyphs.
-        // Each glyph is only processed once by a feature, but it can be
-        // processed multiple times by different features.
-        for FeatureTable in Features do
+      // Iterate over each feature and apply it to the individual glyphs.
+      // Each glyph is only processed once by a feature, but it can be
+      // processed multiple times by different features.
+      for FeatureTable in FDefaultFeatures do
+      begin
+
+        GlyphIndex := 0;
+        while (GlyphIndex < Result.Count) do
         begin
+          GlyphHandled := False;
+          NextGlyphIndex := GlyphIndex;
 
-          GlyphIndex := 0;
-          while (GlyphIndex < Result.Count) do
+          // A series of substitution operations on the same glyph or string requires multiple
+          // lookups, one for each separate action. Each lookup has a different array index
+          // in the LookupList table and is applied in the LookupList order.
+          for i := 0 to FeatureTable.LookupListCount-1 do
           begin
-            GlyphHandled := False;
-            NextGlyphIndex := GlyphIndex;
+            // During text processing, a client applies a lookup to each glyph in the string
+            // before moving to the next lookup. A lookup is finished for a glyph after the
+            // client locates the target glyph or glyph context and performs a substitution,
+            // if specified. To move to the “next” glyph, the client will typically skip all
+            // the glyphs that participated in the lookup operation: glyphs that were
+            // substituted as well as any other glyphs that formed a context for the operation.
+            LookupTable := FSubstitutionTable.LookupListTable.LookupTables[FeatureTable.LookupList[i]];
 
-            // A series of substitution operations on the same glyph or string requires multiple
-            // lookups, one for each separate action. Each lookup has a different array index
-            // in the LookupList table and is applied in the LookupList order.
-            for i := 0 to FeatureTable.LookupListCount-1 do
-            begin
-              // During text processing, a client applies a lookup to each glyph in the string
-              // before moving to the next lookup. A lookup is finished for a glyph after the
-              // client locates the target glyph or glyph context and performs a substitution,
-              // if specified. To move to the “next” glyph, the client will typically skip all
-              // the glyphs that participated in the lookup operation: glyphs that were
-              // substituted as well as any other glyphs that formed a context for the operation.
-              LookupTable := FSubstitutionTable.LookupListTable.LookupTables[FeatureTable.LookupList[i]];
-
-              for j := 0 to LookupTable.SubTableCount-1 do
-                if (LookupTable.SubTables[j] is TCustomOpenTypeSubstitutionSubTable) then
+            for j := 0 to LookupTable.SubTableCount-1 do
+              if (LookupTable.SubTables[j] is TCustomOpenTypeSubstitutionSubTable) then
+              begin
+                if (TCustomOpenTypeSubstitutionSubTable(LookupTable.SubTables[j]).Substitute(Result, NextGlyphIndex)) then
                 begin
-                  if (TCustomOpenTypeSubstitutionSubTable(LookupTable.SubTables[j]).Substitute(Result, NextGlyphIndex)) then
-                  begin
-                    GlyphHandled := True;
-                    break;
-                  end;
+                  GlyphHandled := True;
+                  break;
                 end;
+              end;
 
-              if (GlyphHandled) then
-                break;
-            end;
-
-            if (GlyphHandled) and (NextGlyphIndex > GlyphIndex) then
-              GlyphIndex := NextGlyphIndex
-            else
-              // This also handles advancement if the substitution forgot to do it
-              Inc(GlyphIndex);
+            if (GlyphHandled) then
+              break;
           end;
-        end;
 
-      finally
-        Features.Free;
+          if (GlyphHandled) and (NextGlyphIndex > GlyphIndex) then
+            GlyphIndex := NextGlyphIndex
+          else
+            // This also handles advancement if the substitution forgot to do it
+            Inc(GlyphIndex);
+        end;
       end;
     end;
 
@@ -374,6 +399,39 @@ begin
     Result.Free;
     raise;
   end;
+end;
+
+//------------------------------------------------------------------------------
+//              TPascalTypeShaper.TPascalTypeShaperFeatures
+//------------------------------------------------------------------------------
+constructor TPascalTypeShaper.TPascalTypeShaperFeatures.Create(AShaper: TPascalTypeShaper);
+begin
+  inherited Create;
+  FShaper := AShaper;
+  FFeatures := TDictionary<TTableName, boolean>.Create;
+end;
+
+destructor TPascalTypeShaper.TPascalTypeShaperFeatures.Destroy;
+begin
+  FFeatures.Free;
+  inherited;
+end;
+
+function TPascalTypeShaper.TPascalTypeShaperFeatures.GetFeatureEnabled(const AKey: TTableName): boolean;
+begin
+  Result := IsEnabled(AKey, FEnableAll);
+end;
+
+function TPascalTypeShaper.TPascalTypeShaperFeatures.IsEnabled(const AKey: TTableName; ADefault: boolean): boolean;
+begin
+  if (not FFeatures.TryGetValue(AKey, Result)) then
+    Result := ADefault;
+end;
+
+procedure TPascalTypeShaper.TPascalTypeShaperFeatures.SetFeatureEnabled(const AKey: TTableName; const Value: boolean);
+begin
+  FFeatures.AddOrSetValue(AKey, Value);
+  FShaper.Reset;
 end;
 
 //------------------------------------------------------------------------------
