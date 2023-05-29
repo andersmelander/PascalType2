@@ -244,9 +244,15 @@ var
   GlyphIndex, NextGlyphIndex: integer;
   GlyphHandled: boolean;
   Glyph: TPascalTypeGlyph;
+  Features: TList<TCustomOpenTypeFeatureTable>;
 const
-  Features: array of TTableName =
-    ['ccmp', 'locl'];
+  DefaultFeatures: array of TTableName = [
+    'ccmp',     // Glyph Composition/Decomposition
+    'clig',     // Contextual Ligatures
+    'liga',     // Standard Ligatures
+    'locl',     // Localized Forms
+    'calt'      // Contextual Alternates
+  ];
 begin
   UTF32 := PascalTypeUnicode.UTF16ToUTF32(AText);
 
@@ -292,56 +298,75 @@ begin
 
     SetLength(UTF32, 0);
 
+
     (*
     ** Post-processing: Normalization-related GSUB features and other font-specific considerations
     *)
     if (FSubstitutionTable <> nil) then
-    for Feature in Features do
     begin
-      FeatureTable := FindFeature(Feature);
+      Features := TList<TCustomOpenTypeFeatureTable>.Create;
+      try
 
-      if (FeatureTable <> nil) then
-      begin
-
-        GlyphIndex := 0;
-        while (GlyphIndex < Result.Count) do
+        // Build ordered list of features supported by the font
+        // TODO : This should only be done once per "session". No need to do it once per character.
+        // TODO : Apply options. Some features are optional. Other are mandatory. E.g. 'liga' is optional.
+        for Feature in DefaultFeatures do
         begin
-          GlyphHandled := False;
-          NextGlyphIndex := GlyphIndex;
+          FeatureTable := FindFeature(Feature);
 
-          // A series of substitution operations on the same glyph or string requires multiple
-          // lookups, one for each separate action. Each lookup has a different array index
-          // in the LookupList table and is applied in the LookupList order.
-          for i := 0 to FeatureTable.LookupListCount-1 do
-          begin
-            // During text processing, a client applies a lookup to each glyph in the string
-            // before moving to the next lookup. A lookup is finished for a glyph after the
-            // client locates the target glyph or glyph context and performs a substitution,
-            // if specified. To move to the “next” glyph, the client will typically skip all
-            // the glyphs that participated in the lookup operation: glyphs that were
-            // substituted as well as any other glyphs that formed a context for the operation.
-            LookupTable := FSubstitutionTable.LookupListTable.LookupTables[FeatureTable.LookupList[i]];
-
-            for j := 0 to LookupTable.SubTableCount-1 do
-              if (LookupTable.SubTables[j] is TCustomOpenTypeSubstitutionSubTable) then
-              begin
-                if (TCustomOpenTypeSubstitutionSubTable(LookupTable.SubTables[j]).Substitute(Result, NextGlyphIndex)) then
-                begin
-                  GlyphHandled := True;
-                  break;
-                end;
-              end;
-
-            if (GlyphHandled) then
-              break;
-          end;
-
-          if (GlyphHandled) and (NextGlyphIndex > GlyphIndex) then
-            GlyphIndex := NextGlyphIndex
-          else
-            // This also handles advancement if the substitution forgot to do it
-            Inc(GlyphIndex);
+          if (FeatureTable <> nil) then
+            Features.Add(FeatureTable);
         end;
+
+        // Iterate over each feature and apply it to the individual glyphs.
+        // Each glyph is only processed once by a feature, but it can be
+        // processed multiple times by different features.
+        for FeatureTable in Features do
+        begin
+
+          GlyphIndex := 0;
+          while (GlyphIndex < Result.Count) do
+          begin
+            GlyphHandled := False;
+            NextGlyphIndex := GlyphIndex;
+
+            // A series of substitution operations on the same glyph or string requires multiple
+            // lookups, one for each separate action. Each lookup has a different array index
+            // in the LookupList table and is applied in the LookupList order.
+            for i := 0 to FeatureTable.LookupListCount-1 do
+            begin
+              // During text processing, a client applies a lookup to each glyph in the string
+              // before moving to the next lookup. A lookup is finished for a glyph after the
+              // client locates the target glyph or glyph context and performs a substitution,
+              // if specified. To move to the “next” glyph, the client will typically skip all
+              // the glyphs that participated in the lookup operation: glyphs that were
+              // substituted as well as any other glyphs that formed a context for the operation.
+              LookupTable := FSubstitutionTable.LookupListTable.LookupTables[FeatureTable.LookupList[i]];
+
+              for j := 0 to LookupTable.SubTableCount-1 do
+                if (LookupTable.SubTables[j] is TCustomOpenTypeSubstitutionSubTable) then
+                begin
+                  if (TCustomOpenTypeSubstitutionSubTable(LookupTable.SubTables[j]).Substitute(Result, NextGlyphIndex)) then
+                  begin
+                    GlyphHandled := True;
+                    break;
+                  end;
+                end;
+
+              if (GlyphHandled) then
+                break;
+            end;
+
+            if (GlyphHandled) and (NextGlyphIndex > GlyphIndex) then
+              GlyphIndex := NextGlyphIndex
+            else
+              // This also handles advancement if the substitution forgot to do it
+              Inc(GlyphIndex);
+          end;
+        end;
+
+      finally
+        Features.Free;
       end;
     end;
 
