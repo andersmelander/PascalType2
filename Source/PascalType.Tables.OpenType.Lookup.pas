@@ -117,6 +117,8 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
+    function GetEnumerator: TEnumerator<TCustomOpenTypeLookupSubTable>;
+
     // The meaning of LookupType depends on the parent type (GSUB/GPOS)
     property LookupType: Word read FLookupType;
     property LookupFlag: Word read FLookupFlag write SetLookupFlag;
@@ -165,7 +167,10 @@ type
 type
   TOpenTypeLookupTableGeneric = class(TCustomOpenTypeLookupTable)
   private type
-    TOpenTypeLookupSubTableGeneric = class(TCustomOpenTypeLookupSubTable);
+    TOpenTypeLookupSubTableGeneric = class(TCustomOpenTypeLookupSubTable)
+    public
+      function Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+    end;
   protected
     function GetSubTableClass(ASubFormat: Word): TOpenTypeLookupSubTableClass; override;
   end;
@@ -326,6 +331,11 @@ begin
   Stream.Position := StartPos;
 end;
 
+function TCustomOpenTypeLookupTable.GetEnumerator: TEnumerator<TCustomOpenTypeLookupSubTable>;
+begin
+  Result := FSubTableList.GetEnumerator;
+end;
+
 function TCustomOpenTypeLookupTable.GetSubTable(Index: Integer): TCustomOpenTypeLookupSubTable;
 begin
   if (Index < 0) or (Index >= FSubTableList.Count) then
@@ -375,6 +385,11 @@ end;
 function TOpenTypeLookupTableGeneric.GetSubTableClass(ASubFormat: Word): TOpenTypeLookupSubTableClass;
 begin
   Result := TOpenTypeLookupSubTableGeneric;
+end;
+
+function TOpenTypeLookupTableGeneric.TOpenTypeLookupSubTableGeneric.Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
+begin
+  Result := False;
 end;
 
 

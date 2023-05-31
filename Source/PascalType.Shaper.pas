@@ -44,7 +44,9 @@ uses
   PascalType.Unicode,
   PascalType.GlyphString,
   PascalType.FontFace.SFNT,
+  PascalType.Tables.OpenType.Common,
   PascalType.Tables.OpenType.GSUB,
+  PascalType.Tables.OpenType.GPOS,
   PascalType.Tables.OpenType.Feature,
   PascalType.Shaper.Plan;
 
@@ -119,27 +121,33 @@ type
       property Enabled[const AKey: TTableName]: boolean read GetFeatureEnabled write SetFeatureEnabled; default;
       property EnableAll: boolean read FEnableAll write FEnableAll;
     end;
+
+    TPlannedFeatures = TList<TCustomOpenTypeFeatureTable>;
   private
     FScript: TTableType;
     FLanguage: TTableType;
     FDirection: TPascalTypeDirection;
     FFont: TCustomPascalTypeFontFace;
-    FFeatureMap: TDictionary<TTableType, TCustomOpenTypeFeatureTable>;
-    FPlan: TPascalTypeShapingPlan;
-    FPlannedFeatures: TList<TCustomOpenTypeFeatureTable>;
-    FFeatures: TPascalTypeShaperFeatures;
     FSubstitutionTable: TOpenTypeGlyphSubstitutionTable;
+    FPositionTable: TOpenTypeGlyphPositionTable;
+    FFeatures: TPascalTypeShaperFeatures;
+    FPlan: TPascalTypeShapingPlan;
+    FPlannedSubstitutionFeatures: TPlannedFeatures;
+    FPlannedPositioningFeatures: TPlannedFeatures;
   private
     procedure SetLanguage(const Value: TTableType);
     procedure SetScript(const Value: TTableType);
     procedure SetDirection(const Value: TPascalTypeDirection);
   protected
+    function CreatePlannedFeatureList(GlobalTable: TCustomOpenTypeCommonTable): TPlannedFeatures;
+
     procedure Reset; virtual;
     function DecompositionFilter(CodePoint: TPascalTypeCodePoint): boolean; virtual;
     function CompositionFilter(CodePoint: TPascalTypeCodePoint): boolean; virtual;
     procedure ProcessCodePoints(var CodePoints: TPascalTypeCodePoints); virtual;
     function ProcessUnicode(const AText: string): TPascalTypeCodePoints; virtual;
-    function FindFeature(const ATableType: TTableType): TCustomOpenTypeFeatureTable;
+    procedure ApplySubstitution(AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString); virtual;
+    procedure ApplyPositioning(AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString); virtual;
 
     function CreateGlyphString(const ACodePoints: TPascalTypeCodePoints): TPascalTypeGlyphString; virtual;
     function GetGlyphStringClass: TPascalTypeGlyphStringClass; virtual;
@@ -154,6 +162,8 @@ type
     procedure PlanApplyOptions(APlan: TPascalTypeShapingPlan);
 
     property Plan: TPascalTypeShapingPlan read FPlan;
+    property SubstitutionTable: TOpenTypeGlyphSubstitutionTable read FSubstitutionTable;
+    property PositionTable: TOpenTypeGlyphPositionTable read FPositionTable;
   public
     constructor Create(AFont: TCustomPascalTypeFontFace);
     destructor Destroy; override;
@@ -165,6 +175,7 @@ type
     property Direction: TPascalTypeDirection read FDirection write SetDirection;
     property Font: TCustomPascalTypeFontFace read FFont;
 
+    // User feature overrides
     property Features: TPascalTypeShaperFeatures read FFeatures;
   end;
 
@@ -190,8 +201,9 @@ begin
   FScript := OpenTypeDefaultScript;
   FLanguage := OpenTypeDefaultLanguageSystem;
   FFeatures := TPascalTypeShaperFeatures.Create(Self);
-  // Cache GSUB. We'll use it a lot
+  // Cache GSUB & GPOS. We'll use it a lot
   FSubstitutionTable := TOpenTypeGlyphSubstitutionTable(IPascalTypeFontFace(FFont).GetTableByTableType(TOpenTypeGlyphSubstitutionTable.GetTableType));
+  FPositionTable := TOpenTypeGlyphPositionTable(IPascalTypeFontFace(FFont).GetTableByTableType(TOpenTypeGlyphPositionTable.GetTableType));
 
   // TODO : Test only. Set up test features
   Features['liga'] := True;
@@ -201,15 +213,28 @@ destructor TPascalTypeShaper.Destroy;
 begin
   FPlan.Free;
   FFeatures.Free;
-  FPlannedFeatures.Free;
-  FFeatureMap.Free;
+  FPlannedSubstitutionFeatures.Free;
+  FPlannedPositioningFeatures.Free;
 
   inherited;
 end;
 
+procedure TPascalTypeShaper.Reset;
+begin
+  FreeAndNil(FPlannedSubstitutionFeatures);
+  FreeAndNil(FPlannedPositioningFeatures);
+  FreeAndNil(FPlan);
+end;
+
 function TPascalTypeShaper.CreateGlyphString(const ACodePoints: TPascalTypeCodePoints): TPascalTypeGlyphString;
+var
+  Glyph: TPascalTypeGlyph;
 begin
   Result := GetGlyphStringClass.Create(ACodePoints);
+
+  // Map Unicode CodePoints to Glyph IDs
+  for Glyph in Result do
+    Glyph.GlyphID := Font.GetGlyphByCharacter(Glyph.CodePoints[0]);
 end;
 
 function TPascalTypeShaper.GetGlyphStringClass: TPascalTypeGlyphStringClass;
@@ -220,6 +245,7 @@ end;
 function TPascalTypeShaper.CreateShapingPlan: TPascalTypeShapingPlan;
 begin
   Result := GetShapingPlanClass.Create;
+  SetupPlan(Result);
 end;
 
 function TPascalTypeShaper.GetShapingPlanClass: TPascalTypeShapingPlanClass;
@@ -303,12 +329,10 @@ begin
   *)
   Result := PascalTypeUnicode.Decompose(Result, DecompositionFilter);
 
-
   (*
   ** Process individual codepoints
   *)
   ProcessCodePoints(Result);
-
 
   (*
   ** Unicode composition
@@ -316,21 +340,27 @@ begin
   Result := PascalTypeUnicode.Compose(Result, CompositionFilter);
 end;
 
-function TPascalTypeShaper.FindFeature(const ATableType: TTableType): TCustomOpenTypeFeatureTable;
+function TPascalTypeShaper.CreatePlannedFeatureList(GlobalTable: TCustomOpenTypeCommonTable): TPlannedFeatures;
 var
-  i: integer;
+  FeatureMap: TDictionary<TTableType, TCustomOpenTypeFeatureTable>;
   ScriptTable: TCustomOpenTypeScriptTable;
   LanguageSystem: TCustomOpenTypeLanguageSystemTable;
+  i: integer;
   FeatureTable: TCustomOpenTypeFeatureTable;
+  Stage: TPascalTypeShapingPlanStage;
+  Feature: TTableName;
 begin
-  if (FFeatureMap = nil) then
-  begin
-    FFeatureMap := TDictionary<TTableType, TCustomOpenTypeFeatureTable>.Create;
+  Assert(GlobalTable <> nil);
 
-    if (FSubstitutionTable <> nil) then
-    begin
+  Result := TPlannedFeatures.Create;
+  try
+
+    // Create a feature map (tag->table) for the current script and language
+    FeatureMap := TDictionary<TTableType, TCustomOpenTypeFeatureTable>.Create;
+    try
+
       // Get script, fallback to default
-      ScriptTable := FSubstitutionTable.ScriptListTable.FindScript(Script, True);
+      ScriptTable := GlobalTable.ScriptListTable.FindScript(Script, True);
 
       if (ScriptTable <> nil) then
       begin
@@ -342,23 +372,32 @@ begin
           for i := 0 to LanguageSystem.FeatureIndexCount-1 do
           begin
             // LanguageSystem feature list contains index numbers into the FeatureListTable
-            FeatureTable := FSubstitutionTable.FeatureListTable.Feature[LanguageSystem.FeatureIndex[i]];
-            FFeatureMap.Add(FeatureTable.TableType, FeatureTable);
+            FeatureTable := GlobalTable.FeatureListTable.Feature[LanguageSystem.FeatureIndex[i]];
+
+            // Ignore features that does not occur in the plan
+            if (FPlan.Stages.HasFeature(FeatureTable.TableType.AsAnsiChar)) then
+              FeatureMap.Add(FeatureTable.TableType, FeatureTable);
           end;
         end;
       end;
+
+      // Convert the stage feature tags into a sequential list of feature tables.
+      // The list will contain the intersection between the features supported by
+      // the fonts script/language and the featuirs in the shaping plan.
+      for Stage in FPlan.Stages do
+        for Feature in Stage do
+          if (FeatureMap.TryGetValue(Feature, FeatureTable)) then
+            Result.Add(FeatureTable);
+
+    finally
+      FeatureMap.Free;
     end;
+
+  except
+    Result.Free;
+    raise;
   end;
 
-  if (not FFeatureMap.TryGetValue(ATableType, Result)) then
-    Result := nil;
-end;
-
-procedure TPascalTypeShaper.Reset;
-begin
-  FreeAndNil(FFeatureMap);
-  FreeAndNil(FPlannedFeatures);
-  FreeAndNil(FPlan);
 end;
 
 procedure TPascalTypeShaper.SetDirection(const Value: TPascalTypeDirection);
@@ -416,9 +455,9 @@ var
   StageFeatures: TPascalTypeShapingPlanStage;
   StagePostprocessing: TPascalTypeShapingPlanStage;
 begin
-  StagePreprocessing := FPlan.Stages.AddStage;
-  StageFeatures := FPlan.Stages.AddStage;
-  StagePostprocessing := FPlan.Stages.AddStage;
+  StagePreprocessing := APlan.Stages.AddStage;
+  StageFeatures := APlan.Stages.AddStage;
+  StagePostprocessing := APlan.Stages.AddStage;
 
   PlanPreprocessing(StagePreprocessing);
   PlanFeatures(StageFeatures);
@@ -427,25 +466,70 @@ begin
   PlanApplyOptions(APlan);
 end;
 
+procedure TPascalTypeShaper.ApplySubstitution(AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString);
+var
+  FeatureTable: TCustomOpenTypeFeatureTable;
+  i: integer;
+  LookupTable: TCustomOpenTypeLookupTable;
+  SubTable: TCustomOpenTypeLookupSubTable;
+  GlyphIndex, NextGlyphIndex: integer;
+  GlyphHandled: boolean;
+begin
+  Assert(FSubstitutionTable <> nil);
+
+  // Iterate over each feature and apply it to the individual glyphs.
+  // Each glyph is only processed once by a feature, but it can be
+  // processed multiple times by different features.
+  for FeatureTable in AFeatures do
+  begin
+
+    GlyphIndex := 0;
+    while (GlyphIndex < AGlyphs.Count) do
+    begin
+      GlyphHandled := False;
+      NextGlyphIndex := GlyphIndex;
+
+      // A series of substitution operations on the same glyph or string requires multiple
+      // lookups, one for each separate action. Each lookup has a different array index
+      // in the LookupList table and is applied in the LookupList order.
+      for i := 0 to FeatureTable.LookupListCount-1 do
+      begin
+        // During text processing, a client applies a lookup to each glyph in the string
+        // before moving to the next lookup. A lookup is finished for a glyph after the
+        // client locates the target glyph or glyph context and performs a substitution,
+        // if specified. To move to the “next” glyph, the client will typically skip all
+        // the glyphs that participated in the lookup operation: glyphs that were
+        // substituted as well as any other glyphs that formed a context for the operation.
+        LookupTable := FSubstitutionTable.LookupListTable.LookupTables[FeatureTable.LookupList[i]];
+
+        for SubTable in LookupTable do
+          if (SubTable.Apply(AGlyphs, NextGlyphIndex)) then
+          begin
+            GlyphHandled := True;
+            break;
+          end;
+
+        if (GlyphHandled) then
+          break;
+      end;
+
+      if (GlyphHandled) and (NextGlyphIndex > GlyphIndex) then
+        GlyphIndex := NextGlyphIndex
+      else
+        // This also handles advancement if the substitution forgot to do it
+        Inc(GlyphIndex);
+    end;
+  end;
+end;
+
+procedure TPascalTypeShaper.ApplyPositioning(AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString);
+begin
+  Assert(FPositionTable <> nil);
+end;
+
 function TPascalTypeShaper.Shape(const AText: string): TPascalTypeGlyphString;
 var
   UTF32: TPascalTypeCodePoints;
-  i, j: integer;
-  FeatureTable: TCustomOpenTypeFeatureTable;
-  Feature: TTableName;
-  LookupTable: TCustomOpenTypeLookupTable;
-  GlyphIndex, NextGlyphIndex: integer;
-  GlyphHandled: boolean;
-  Glyph: TPascalTypeGlyph;
-  Stage: TPascalTypeShapingPlanStage;
-const
-  DefaultFeatures: TTableNames = [
-    'ccmp',
-    'clig',
-    'liga',
-    'locl',
-    'calt'
-  ];
 begin
   (*
   ** Process UTF16 unicode string and return a normalized UCS-4/UTF32 string
@@ -461,87 +545,51 @@ begin
   try
     SetLength(UTF32, 0);
 
-    (*
-    ** Map Unicode CodePoints to Glyph IDs
-    *)
-    for Glyph in Result do
-      Glyph.GlyphID := Font.GetGlyphByCharacter(Glyph.CodePoints[0]);
-
-
 
     (*
-    ** Post-processing: Normalization-related GSUB features and other font-specific considerations
+    ** Apply first GSUB features and then GPOS features
     *)
-    if (FSubstitutionTable <> nil) then
+    if (FSubstitutionTable <> nil) or (FPositionTable <> nil) then
     begin
+
+      (*
+      ** Create a shaping plan.
+      ** The plan contains a collection of plan stages and each plan stage contains
+      ** a list of features that belong to that stage.
+      *)
       if (FPlan = nil) then
-      begin
         FPlan := CreateShapingPlan;
-        SetupPlan(FPlan);
-      end;
 
-      // Build ordered list of features supported by the font.
-      // This is only done once per "session". No need to do it once per character.
-      if (FPlannedFeatures = nil) then
+
+      (*
+      ** Execute substitution plan.
+      ** The substitution plan is the intersection between the features in the plan
+      ** and the features supported by the font (via the GSUB table).
+      *)
+      if (FSubstitutionTable <> nil) then
       begin
-        FPlannedFeatures := TList<TCustomOpenTypeFeatureTable>.Create;
-        // For each plan stage...
-        for Stage in FPlan.Stages do
-          for Feature in Stage do
-          begin
-            FeatureTable := FindFeature(Feature);
+        // Build ordered list of features supported by the font.
+        // This is only done once per "session". No need to do it once per character.
+        if (FPlannedSubstitutionFeatures = nil) then
+          FPlannedSubstitutionFeatures := CreatePlannedFeatureList(FSubstitutionTable);
 
-            if (FeatureTable <> nil) then
-              FPlannedFeatures.Add(FeatureTable);
-          end;
+        ApplySubstitution(FPlannedSubstitutionFeatures, Result);
       end;
 
-      // Iterate over each feature and apply it to the individual glyphs.
-      // Each glyph is only processed once by a feature, but it can be
-      // processed multiple times by different features.
-      for FeatureTable in FPlannedFeatures do
+
+      (*
+      ** Execute positioning plan.
+      ** The positioning plan is the intersection between the features in the plan
+      ** and the features supported by the font (via the GPOS table).
+      *)
+      if (FPositionTable <> nil) then
       begin
+        if (FPlannedPositioningFeatures = nil) then
+          FPlannedPositioningFeatures := CreatePlannedFeatureList(FPositionTable);
 
-        GlyphIndex := 0;
-        while (GlyphIndex < Result.Count) do
-        begin
-          GlyphHandled := False;
-          NextGlyphIndex := GlyphIndex;
-
-          // A series of substitution operations on the same glyph or string requires multiple
-          // lookups, one for each separate action. Each lookup has a different array index
-          // in the LookupList table and is applied in the LookupList order.
-          for i := 0 to FeatureTable.LookupListCount-1 do
-          begin
-            // During text processing, a client applies a lookup to each glyph in the string
-            // before moving to the next lookup. A lookup is finished for a glyph after the
-            // client locates the target glyph or glyph context and performs a substitution,
-            // if specified. To move to the “next” glyph, the client will typically skip all
-            // the glyphs that participated in the lookup operation: glyphs that were
-            // substituted as well as any other glyphs that formed a context for the operation.
-            LookupTable := FSubstitutionTable.LookupListTable.LookupTables[FeatureTable.LookupList[i]];
-
-            for j := 0 to LookupTable.SubTableCount-1 do
-              if (LookupTable.SubTables[j] is TCustomOpenTypeSubstitutionSubTable) then
-              begin
-                if (TCustomOpenTypeSubstitutionSubTable(LookupTable.SubTables[j]).Apply(Result, NextGlyphIndex)) then
-                begin
-                  GlyphHandled := True;
-                  break;
-                end;
-              end;
-
-            if (GlyphHandled) then
-              break;
-          end;
-
-          if (GlyphHandled) and (NextGlyphIndex > GlyphIndex) then
-            GlyphIndex := NextGlyphIndex
-          else
-            // This also handles advancement if the substitution forgot to do it
-            Inc(GlyphIndex);
-        end;
+        ApplyPositioning(FPlannedPositioningFeatures, Result);
       end;
+
     end;
 
   except
