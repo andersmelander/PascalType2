@@ -49,20 +49,17 @@ uses
   PascalType.Shaper.Plan;
 
 
-type
-  TPascalTypeDirection = (dirLeftToRight, dirRightToLeft);
-
 //------------------------------------------------------------------------------
 //
 //              Default feature plans
 //
 //------------------------------------------------------------------------------
 const
-  VariationFeatures: TPascalTypeTableNames = [
+  VariationFeatures: TTableNames = [
     'rvrn'      // Required Variation Alternates
   ];
 
-  CommonFeatures: TPascalTypeTableNames = [
+  CommonFeatures: TTableNames = [
     'ccmp',     // Glyph Composition/Decomposition
     'locl',     // Localized Forms
     'rlig',     // Required Ligatures
@@ -70,13 +67,13 @@ const
     'mkmk'      // Mark to Mark Positioning
   ];
 
-  FractionalFeatures: TPascalTypeTableNames = [
+  FractionalFeatures: TTableNames = [
     'frac',     // Fractions, optional
     'numr',     // Numerators, applied when 'frac' is used
     'dnom'      // Denominators, applied when 'frac' is used
   ];
 
-  HorizontalFeatures: TPascalTypeTableNames = [
+  HorizontalFeatures: TTableNames = [
     'calt',     // Contextual Alternates
     'clig',     // Contextual Ligatures
     'liga',     // Standard Ligatures, optional
@@ -85,11 +82,11 @@ const
     'kern'      // Kerning, optional, enabled by default
   ];
 
-  VerticalFeatures: TPascalTypeTableNames = [
+  VerticalFeatures: TTableNames = [
     'vert'      // Vertical Alternates
   ];
 
-  DirectionalFeatures: array[TPascalTypeDirection] of TPascalTypeTableNames = (
+  DirectionalFeatures: array[TPascalTypeDirection] of TTableNames = (
     [
       'ltra',   // Left-to-right glyph alternates
       'ltrm'    // Left-to-right mirrored forms
@@ -139,11 +136,12 @@ type
   protected
     procedure Reset; virtual;
     function DecompositionFilter(CodePoint: TPascalTypeCodePoint): boolean; virtual;
-    procedure ProcessCodePoint(var CodePoint: TPascalTypeCodePoint); virtual;
     function CompositionFilter(CodePoint: TPascalTypeCodePoint): boolean; virtual;
+    procedure ProcessCodePoints(var CodePoints: TPascalTypeCodePoints); virtual;
+    function ProcessUnicode(const AText: string): TPascalTypeCodePoints; virtual;
     function FindFeature(const ATableType: TTableType): TCustomOpenTypeFeatureTable;
 
-    function CreateGlyphString: TPascalTypeGlyphString; virtual;
+    function CreateGlyphString(const ACodePoints: TPascalTypeCodePoints): TPascalTypeGlyphString; virtual;
     function GetGlyphStringClass: TPascalTypeGlyphStringClass; virtual;
 
     function GetShapingPlanClass: TPascalTypeShapingPlanClass; virtual;
@@ -209,9 +207,9 @@ begin
   inherited;
 end;
 
-function TPascalTypeShaper.CreateGlyphString: TPascalTypeGlyphString;
+function TPascalTypeShaper.CreateGlyphString(const ACodePoints: TPascalTypeCodePoints): TPascalTypeGlyphString;
 begin
-  Result := GetGlyphStringClass.Create;
+  Result := GetGlyphStringClass.Create(ACodePoints);
 end;
 
 function TPascalTypeShaper.GetGlyphStringClass: TPascalTypeGlyphStringClass;
@@ -247,6 +245,75 @@ begin
   else
     Result := True;
   end;
+end;
+
+procedure TPascalTypeShaper.ProcessCodePoints(var CodePoints: TPascalTypeCodePoints);
+
+  procedure ProcessCodePoint(var CodePoint: TPascalTypeCodePoint);
+  begin
+    case CodePoint of
+      $2011: // non-breaking hyphen
+        // According to https://github.com/n8willis/opentype-shaping-documents/blob/master/opentype-shaping-normalization.md
+        //
+        //   The "non-breaking hyphen" character should be replaced with "hyphen"
+        //
+        // HARFBUZZ states:
+        //
+        //   U+2011 is the only sensible character that is a no-break version of another character
+        //   and not a space.  The space ones are handled already.  Handle this lone one.
+        //
+        // ...and replaces it with U+2010
+        //
+        // However my tests show that currently U+2010 is just displayed as "a box" (i.e. missing glyph).
+        // This may well be because my implementation is currently incomplete.
+        // TODO : Revisit once full substitution has been implemented.
+        // For now we replace with a regular simple hyphen ("hyphen minus") instead.
+        //
+        if (Font.HasGlyphByCharacter($2010)) then
+          CodePoint := $2010 // hyphen
+        else
+        if (Font.HasGlyphByCharacter($002D)) then
+          CodePoint := $002D; // hyphen-minus
+    else
+      if (PascalTypeUnicode.IsWhiteSpace(CodePoint)) then
+      begin
+        if (not Font.HasGlyphByCharacter(CodePoint)) then
+          // TODO : We need to handle the difference in width
+          CodePoint := $0020; // Regular space
+      end;
+    end;
+  end;
+
+var
+  i: integer;
+begin
+  for i := Low(CodePoints) to High(CodePoints) do
+    ProcessCodePoint(CodePoints[i]);
+end;
+
+function TPascalTypeShaper.ProcessUnicode(const AText: string): TPascalTypeCodePoints;
+begin
+  (*
+  ** Convert UTF16 to UTF32
+  *)
+  Result := PascalTypeUnicode.UTF16ToUTF32(AText);
+
+  (*
+  ** Unicode decompose and normalization
+  *)
+  Result := PascalTypeUnicode.Decompose(Result, DecompositionFilter);
+
+
+  (*
+  ** Process individual codepoints
+  *)
+  ProcessCodePoints(Result);
+
+
+  (*
+  ** Unicode composition
+  *)
+  Result := PascalTypeUnicode.Compose(Result, CompositionFilter);
 end;
 
 function TPascalTypeShaper.FindFeature(const ATableType: TTableType): TCustomOpenTypeFeatureTable;
@@ -285,41 +352,6 @@ begin
 
   if (not FFeatureMap.TryGetValue(ATableType, Result)) then
     Result := nil;
-end;
-
-procedure TPascalTypeShaper.ProcessCodePoint(var CodePoint: TPascalTypeCodePoint);
-begin
-  case CodePoint of
-    $2011: // non-breaking hyphen
-      // According to https://github.com/n8willis/opentype-shaping-documents/blob/master/opentype-shaping-normalization.md
-      //
-      //   The "non-breaking hyphen" character should be replaced with "hyphen"
-      //
-      // HARFBUZZ states:
-      //
-      //   U+2011 is the only sensible character that is a no-break version of another character
-      //   and not a space.  The space ones are handled already.  Handle this lone one.
-      //
-      // ...and replaces it with U+2010
-      //
-      // However my tests show that currently U+2010 is just displayed as "a box" (i.e. missing glyph).
-      // This may well be because my implementation is currently incomplete.
-      // TODO : Revisit once full substitution has been implemented.
-      // For now we replace with a regular simple hyphen ("hyphen minus") instead.
-      //
-      if (Font.HasGlyphByCharacter($2010)) then
-        CodePoint := $2010 // hyphen
-      else
-      if (Font.HasGlyphByCharacter($002D)) then
-        CodePoint := $002D; // hyphen-minus
-  else
-    if (PascalTypeUnicode.IsWhiteSpace(CodePoint)) then
-    begin
-      if (not Font.HasGlyphByCharacter(CodePoint)) then
-        // TODO : We need to handle the difference in width
-        CodePoint := $0020; // Regular space
-    end;
-  end;
 end;
 
 procedure TPascalTypeShaper.Reset;
@@ -407,7 +439,7 @@ var
   Glyph: TPascalTypeGlyph;
   Stage: TPascalTypeShapingPlanStage;
 const
-  DefaultFeatures: TPascalTypeTableNames = [
+  DefaultFeatures: TTableNames = [
     'ccmp',
     'clig',
     'liga',
@@ -415,49 +447,26 @@ const
     'calt'
   ];
 begin
-  UTF32 := PascalTypeUnicode.UTF16ToUTF32(AText);
-
   (*
-  ** Unicode decompose and normalization
+  ** Process UTF16 unicode string and return a normalized UCS-4/UTF32 string
   *)
-  UTF32 := PascalTypeUnicode.Decompose(UTF32, DecompositionFilter);
+  UTF32 := ProcessUnicode(AText);
 
 
   (*
-  ** Process individual codepoints
+  ** Convert from Unicode codepoints to glyph IDs.
+  ** From here on we are done with Unicode codepoints and are working with glyph IDs.
   *)
-  for i := 0 to High(UTF32) do
-    ProcessCodePoint(UTF32[i]);
-
-
-  (*
-  ** Unicode composition
-  *)
-  UTF32 := PascalTypeUnicode.Compose(UTF32, CompositionFilter);
-
-
-  Result := CreateGlyphString;
+  Result := CreateGlyphString(UTF32);
   try
-    Result.SetLength(Length(UTF32));
+    SetLength(UTF32, 0);
 
     (*
-    ** Convert from Unicode codepoints to glyph IDs.
-    ** From here on we are done with Unicode codepoints and are working with glyph IDs.
+    ** Map Unicode CodePoints to Glyph IDs
     *)
-    for i := 0 to High(UTF32) do
-    begin
-      Glyph := Result[i];
-      Glyph.CodePoints := [UTF32[i]];
-      Glyph.GlyphID := Font.GetGlyphByCharacter(Result[i].CodePoints[0]);
-      Glyph.Group := i;
+    for Glyph in Result do
+      Glyph.GlyphID := Font.GetGlyphByCharacter(Glyph.CodePoints[0]);
 
-      // DONE : TPascalTypeGlyph and TPascalTypeGlyphString should be objects created by the shaper.
-      // The individual shaper may have need to store information in the string and glyph that can not be generalized.
-      // function TCustomPascalTypeShaper.CreateGlyphString: TCustomPascalTypeGlyphString;
-      // function TCustomPascalTypeGlyphString.CreateGlyph: TCustomPascalTypeGlyph;
-    end;
-
-    SetLength(UTF32, 0);
 
 
     (*
@@ -482,7 +491,6 @@ begin
           begin
             FeatureTable := FindFeature(Feature);
 
-            // Apply options; Some features are optional, other are mandatory. E.g. 'liga' is optional.
             if (FeatureTable <> nil) then
               FPlannedFeatures.Add(FeatureTable);
           end;

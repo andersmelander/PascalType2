@@ -56,7 +56,7 @@ uses
 type
   TOpenTypeBaselineTagListTable = class(TCustomPascalTypeTable)
   private
-    FBaseLineTags: array of TTableType;
+    FBaseLineTags: TTableTypes;
   public
     procedure Assign(Source: TPersistent); override;
 

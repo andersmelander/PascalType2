@@ -45,9 +45,6 @@ uses
   PascalType.Tables.OpenType.Feature;
 
 
-type
-  TPascalTypeTableNames = array of TTableName;
-
 //------------------------------------------------------------------------------
 //
 //              TPascalTypeShapingPlanStage
@@ -70,7 +67,7 @@ type
     destructor Destroy; override;
 
     procedure Add(const AKey: TTableName); overload;
-    procedure Add(const AKeys: TPascalTypeTableNames); overload;
+    procedure Add(const AKeys: TTableNames); overload;
     procedure Remove(const AKey: TTableName);
 
     function GetEnumerator: TEnumerator<TTableName>;
@@ -104,7 +101,7 @@ type
     function AddStage: TPascalTypeShapingPlanStage;
 
     procedure AddFeature(const AKey: TTableName; AStage: TPascalTypeShapingPlanStage = nil);
-    procedure AddFeatures(const AKeys: TPascalTypeTableNames; AStage: TPascalTypeShapingPlanStage = nil);
+    procedure AddFeatures(const AKeys: TTableNames; AStage: TPascalTypeShapingPlanStage = nil);
     procedure RemoveFeature(const AKey: TTableName);
     function HasFeature(const AKey: TTableName): boolean;
 
@@ -168,20 +165,15 @@ begin
 end;
 
 procedure TPascalTypeShapingPlanStage.Add(const AKey: TTableName);
-var
-  Index: integer;
 begin
   if (FStages.HasFeature(AKey)) then
     exit;
 
-  if (not FFeatures.BinarySearch(AKey, Index)) then
-  begin
-    FFeatures.Insert(Index, AKey);
-    FStages.DoAddFeature(AKey, Self);
-  end;
+  FFeatures.Add(AKey);
+  FStages.DoAddFeature(AKey, Self);
 end;
 
-procedure TPascalTypeShapingPlanStage.Add(const AKeys: TPascalTypeTableNames);
+procedure TPascalTypeShapingPlanStage.Add(const AKeys: TTableNames);
 var
   Key: TTableName;
 begin
@@ -208,7 +200,8 @@ procedure TPascalTypeShapingPlanStage.Remove(const AKey: TTableName);
 var
   Index: integer;
 begin
-  if (FFeatures.BinarySearch(AKey, Index)) then
+  Index := FFeatures.IndexOf(AKey);
+  if (Index <> -1) then
   begin
     FFeatures.Delete(Index);
     FStages.DoRemoveFeature(AKey);
@@ -238,7 +231,10 @@ end;
 
 procedure TPascalTypeShapingPlanStages.AddFeature(const AKey: TTableName; AStage: TPascalTypeShapingPlanStage);
 begin
-  if (FAllFeatures.ContainsKey(AKey)) then
+  // Stage.Add also checks for this but since we would like to
+  // avoid adding a new empty space if the feature already exist
+  // we need to do it here too.
+  if (HasFeature(AKey)) then
     exit;
 
   if (AStage = nil) then
@@ -252,18 +248,10 @@ begin
   AStage.Add(AKey);
 end;
 
-procedure TPascalTypeShapingPlanStages.AddFeatures(const AKeys: TPascalTypeTableNames; AStage: TPascalTypeShapingPlanStage);
+procedure TPascalTypeShapingPlanStages.AddFeatures(const AKeys: TTableNames; AStage: TPascalTypeShapingPlanStage);
 var
   Key: TTableName;
 begin
-  if (AStage = nil) then
-  begin
-    if (FStages.Count > 0) then
-      AStage := FStages.Last
-    else
-      AStage := AddStage;
-  end;
-
   for Key in AKeys do
     AddFeature(Key, AStage);
 end;

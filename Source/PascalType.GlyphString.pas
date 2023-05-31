@@ -52,7 +52,7 @@ type
     FOwner: TPascalTypeGlyphString;
     FCodePoints: TPascalTypeCodePoints;
     FGlyphID: TPascalTypeGlyphID;
-    FGroup: integer;
+    FCluster: integer;
   protected
     procedure SetOwner(AOwner: TPascalTypeGlyphString);
   public
@@ -63,8 +63,7 @@ type
     property Owner: TPascalTypeGlyphString read FOwner;
     property CodePoints: TPascalTypeCodePoints read FCodePoints write FCodePoints;
     property GlyphID: TPascalTypeGlyphID read FGlyphID write FGlyphID;
-    // TODO : Rename to Cluster for alignment with Harfbuzz and Uniscribe
-    property Group: integer read FGroup write FGroup;
+    property Cluster: integer read FCluster write FCluster;
   end;
 
   TPascalTypeGlyphClass = class of TPascalTypeGlyph;
@@ -84,7 +83,7 @@ type
     class function GetGlyphClass: TPascalTypeGlyphClass; virtual;
     function CreateGlyph(AOwner: TPascalTypeGlyphString): TPascalTypeGlyph; overload; virtual;
   public
-    constructor Create; virtual;
+    constructor Create(const ACodePoints: TPascalTypeCodePoints); virtual;
     destructor Destroy; override;
 
     function CreateGlyph: TPascalTypeGlyph; overload;
@@ -133,7 +132,7 @@ procedure TPascalTypeGlyph.Assign(Source: TPascalTypeGlyph);
 begin
   FCodePoints := Source.FCodePoints;
   FGlyphID := Source.FGlyphID;
-  FGroup := Source.Group;
+  FCluster := Source.Cluster;
 end;
 
 
@@ -142,10 +141,25 @@ end;
 //              TPascalTypeGlyphString
 //
 //------------------------------------------------------------------------------
-constructor TPascalTypeGlyphString.Create;
+constructor TPascalTypeGlyphString.Create(const ACodePoints: TPascalTypeCodePoints);
+var
+  CodePoint: TPascalTypeCodePoint;
+  Glyph: TPascalTypeGlyph;
+  Cluster: integer;
 begin
   inherited Create;
   FGlyphs := TObjectList<TPascalTypeGlyph>.Create;
+
+  FGlyphs.Capacity := Length(ACodePoints);
+
+  Cluster := 0;
+  for CodePoint in ACodePoints do
+  begin
+    Glyph := Add;
+    Glyph.CodePoints := [CodePoint];
+    Glyph.Cluster := Cluster;
+    Inc(Cluster);
+  end;
 end;
 
 destructor TPascalTypeGlyphString.Destroy;

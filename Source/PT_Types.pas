@@ -53,6 +53,9 @@ type
 type
   TTableName = array [0..3] of AnsiChar;
 
+  TTableNames = array of TTableName;
+
+type
   TTableType = record
   {$IFDEF SUPPORTS_ENHANCED_RECORDS}
     constructor Create(const Value: Integer); overload;
@@ -74,6 +77,13 @@ type
     2: (AsAnsiChar : TTableName);
   end;
 
+  TTableTypes = array of TTableType;
+
+
+type
+  TPascalTypeDirection = (dirLeftToRight, dirRightToLeft);
+
+type
   TFixedPoint = packed record
   {$IFDEF SUPPORTS_ENHANCED_RECORDS}
   public
@@ -115,9 +125,13 @@ type
     1: (Fract: Word; Value: SmallInt);
   end;
 
+
+type
   TF26Dot6 = type Integer;
   TF2Dot14 = type SmallInt;
 
+
+type
   {$IFDEF UseFloatingPoint}
   TScaleType = type Double;
   {$ELSE}
@@ -142,6 +156,8 @@ type
     yy: TFixedPoint;
   end;
 
+
+type
   TGetGlyphOutlineFlag = (ggoGlyphIndex  = 7, ggoUnhinted = 8, ggoBezier = 9);
   TGetGlyphOutlineFlags = set of TGetGlyphOutlineFlag;
 
