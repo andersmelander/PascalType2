@@ -94,7 +94,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Substitute(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
 
     property Ligatures: TGlyphLigatures read FLigatures;
   end;
@@ -236,7 +236,7 @@ begin
   // TODO
 end;
 
-function TOpenTypeSubstitutionSubTableLigatureList.Substitute(AGlyphString: TPascalTypeGlyphString;
+function TOpenTypeSubstitutionSubTableLigatureList.Apply(AGlyphString: TPascalTypeGlyphString;
   var AIndex: integer): boolean;
 var
   SubstitutionIndex: integer;

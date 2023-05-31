@@ -86,7 +86,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Substitute(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
 
     property SubstituteSequenceList: TGlyphSequences read FSequenceList;
   end;
@@ -208,7 +208,7 @@ begin
   Stream.Position := SavePos;
 end;
 
-function TOpenTypeSubstitutionSubTableMultipleList.Substitute(AGlyphString: TPascalTypeGlyphString;
+function TOpenTypeSubstitutionSubTableMultipleList.Apply(AGlyphString: TPascalTypeGlyphString;
   var AIndex: integer): boolean;
 var
   SubstitutionIndex: integer;

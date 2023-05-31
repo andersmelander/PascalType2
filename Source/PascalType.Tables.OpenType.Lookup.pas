@@ -41,8 +41,8 @@ uses
   PT_Types,
   PT_Classes,
   PT_Tables,
+  PascalType.GlyphString,
   PascalType.Tables.OpenType.Coverage;
-
 
 type
 //------------------------------------------------------------------------------
@@ -66,6 +66,8 @@ type
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
+
+    function Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; virtual; abstract;
 
     property SubFormat: Word read FSubFormat;
     property LookupTable: TCustomOpenTypeLookupTable read GetLookupTable;

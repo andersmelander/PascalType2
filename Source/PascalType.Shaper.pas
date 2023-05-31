@@ -524,7 +524,7 @@ begin
             for j := 0 to LookupTable.SubTableCount-1 do
               if (LookupTable.SubTables[j] is TCustomOpenTypeSubstitutionSubTable) then
               begin
-                if (TCustomOpenTypeSubstitutionSubTable(LookupTable.SubTables[j]).Substitute(Result, NextGlyphIndex)) then
+                if (TCustomOpenTypeSubstitutionSubTable(LookupTable.SubTables[j]).Apply(Result, NextGlyphIndex)) then
                 begin
                   GlyphHandled := True;
                   break;

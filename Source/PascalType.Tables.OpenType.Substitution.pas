@@ -84,7 +84,6 @@ type
   private
   protected
   public
-    function Substitute(GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; virtual; abstract;
   end;
 
   TOpenTypeSubstitutionSubTableClass = class of TCustomOpenTypeSubstitutionSubTable;

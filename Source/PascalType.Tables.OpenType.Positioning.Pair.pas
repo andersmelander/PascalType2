@@ -317,7 +317,6 @@ end;
 procedure TOpenTypePositioningSubTablePairClass.LoadFromStream(Stream: TStream);
 var
   StartPos: Int64;
-  SavePos: Int64;
   ValueFormat1: Word;
   ValueFormat2: Word;
   FirstClassDefOffset: Word;
@@ -327,7 +326,6 @@ var
   i, j: integer;
   ClassDefinitionFormat: TClassDefinitionFormat;
   ClassDefinitionTableClass: TOpenTypeClassDefinitionTableClass;
-  ClassDefinitionTable: TCustomOpenTypeClassDefinitionTable;
 begin
   StartPos := Stream.Position;
 

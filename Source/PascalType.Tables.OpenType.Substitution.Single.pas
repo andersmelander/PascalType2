@@ -84,7 +84,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Substitute(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
 
     property DeltaGlyphID: SmallInt read FDeltaGlyphID write FDeltaGlyphID;
   end;
@@ -111,7 +111,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Substitute(GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+    function Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
 
     property SubstituteGlyphIDs: TGlyphIDs read FSubstituteGlyphIDs;
   end;
@@ -180,7 +180,7 @@ begin
   WriteSwappedSmallInt(Stream, FDeltaGlyphID);
 end;
 
-function TOpenTypeSubstitutionSubTableSingleOffset.Substitute(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
+function TOpenTypeSubstitutionSubTableSingleOffset.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
 var
   SubstitutionIndex: integer;
 begin
@@ -233,7 +233,7 @@ begin
     WriteSwappedWord(Stream, FSubstituteGlyphIDs[i]);
 end;
 
-function TOpenTypeSubstitutionSubTableSingleList.Substitute(GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
+function TOpenTypeSubstitutionSubTableSingleList.Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
 var
   SubstitutionIndex: integer;
 begin
