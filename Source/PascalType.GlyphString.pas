@@ -51,7 +51,7 @@ type
   private
     FOwner: TPascalTypeGlyphString;
     FCodePoints: TPascalTypeCodePoints;
-    FGlyphID: TPascalTypeGlyphID;
+    FGlyphID: TGlyphID;
     FCluster: integer;
   protected
     procedure SetOwner(AOwner: TPascalTypeGlyphString);
@@ -62,7 +62,7 @@ type
 
     property Owner: TPascalTypeGlyphString read FOwner;
     property CodePoints: TPascalTypeCodePoints read FCodePoints write FCodePoints;
-    property GlyphID: TPascalTypeGlyphID read FGlyphID write FGlyphID;
+    property GlyphID: TGlyphID read FGlyphID write FGlyphID;
     property Cluster: integer read FCluster write FCluster;
   end;
 

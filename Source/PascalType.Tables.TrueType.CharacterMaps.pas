@@ -122,7 +122,7 @@ type
     FStartCode: array of Word;        // Start character code for each segment.
     FIdDelta: array of SmallInt;      // Delta for all character codes in segment.
     FIdRangeOffset: array of Word;    // Offsets into glyphIdArray or 0
-    FGlyphIdArray: array of Word;     // Glyph index array (arbitrary length)
+    FGlyphIdArray: TGlyphString;     // Glyph index array (arbitrary length)
   protected
     class function GetFormat: Word; override;
   public
@@ -149,7 +149,7 @@ type
   private
     FLanguage: Word;              // Please see “Note on the language field in 'cmap' subtables“ in this document.
     FFirstCode: Word;             // First character code of subrange.
-    FGlyphIdArray: array of Word; // Array of glyph index values for character codes in the range.
+    FGlyphIdArray: TGlyphString;  // Array of glyph index values for character codes in the range.
     function GetEntryCount: Word;
   protected
     class function GetFormat: Word; override;

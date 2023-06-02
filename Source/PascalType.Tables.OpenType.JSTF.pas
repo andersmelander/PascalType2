@@ -93,7 +93,7 @@ type
 type
   TOpenTypeExtenderGlyphTable = class(TCustomPascalTypeTable)
   private
-    FGlyphID: array of Word; // GlyphIDs-in increasing numerical order
+    FGlyphID: TGlyphString; // GlyphIDs-in increasing numerical order
   protected
   public
     procedure Assign(Source: TPersistent); override;

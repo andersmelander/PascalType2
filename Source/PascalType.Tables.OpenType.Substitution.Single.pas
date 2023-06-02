@@ -38,6 +38,7 @@ uses
   Generics.Collections,
   Generics.Defaults,
   Classes,
+  PT_Classes,
   PascalType.GlyphString,
   PascalType.Tables.OpenType.Lookup,
   PascalType.Tables.OpenType.Substitution;
@@ -100,10 +101,8 @@ type
 //------------------------------------------------------------------------------
 type
   TOpenTypeSubstitutionSubTableSingleList = class(TCustomOpenTypeSubstitutionSubTable)
-  private type
-    TGlyphIDs = array of Word;
   private
-    FSubstituteGlyphIDs: TGlyphIDs;
+    FSubstituteGlyphIDs: TGlyphString;
   protected
   public
     procedure Assign(Source: TPersistent); override;
@@ -113,7 +112,7 @@ type
 
     function Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
 
-    property SubstituteGlyphIDs: TGlyphIDs read FSubstituteGlyphIDs;
+    property SubstituteGlyphIDs: TGlyphString read FSubstituteGlyphIDs;
   end;
 
 
@@ -126,7 +125,6 @@ implementation
 uses
   SysUtils,
   PT_Types,
-  PT_Classes,
   PT_ResourceStrings;
 
 //------------------------------------------------------------------------------

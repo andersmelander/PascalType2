@@ -41,7 +41,8 @@ uses
 
 type
   // A GlyphID
-  TPascalTypeGlyphID = Word;
+  TGlyphID = Word;
+  TGlyphString = TArray<TGlyphID>;
 
 type
   TContourPoint = record

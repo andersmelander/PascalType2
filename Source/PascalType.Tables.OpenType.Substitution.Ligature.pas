@@ -78,7 +78,7 @@ type
   private type
     TGlyphLigature = record
       Glyph: Word;
-      Components: array of Word;
+      Components: TGlyphString;
     end;
     TGlyphLigatures = TList<TGlyphLigature>;
   private

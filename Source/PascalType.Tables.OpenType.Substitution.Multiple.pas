@@ -38,6 +38,7 @@ uses
   Generics.Collections,
   Generics.Defaults,
   Classes,
+  PT_Classes,
   PascalType.GlyphString,
   PascalType.Tables.OpenType.Lookup,
   PascalType.Tables.OpenType.Substitution;
@@ -75,8 +76,7 @@ type
 type
   TOpenTypeSubstitutionSubTableMultipleList = class(TCustomOpenTypeSubstitutionSubTable)
   private type
-    TGlyphSequence = array of Word;
-    TGlyphSequences = array of TGlyphSequence;
+    TGlyphSequences = array of TGlyphString;
   private
     FSequenceList: TGlyphSequences;
   protected
@@ -101,7 +101,6 @@ implementation
 uses
   SysUtils,
   PT_Types,
-  PT_Classes,
   PT_ResourceStrings;
 
 //------------------------------------------------------------------------------
@@ -212,7 +211,7 @@ function TOpenTypeSubstitutionSubTableMultipleList.Apply(AGlyphString: TPascalTy
   var AIndex: integer): boolean;
 var
   SubstitutionIndex: integer;
-  Sequence: TGlyphSequence;
+  Sequence: TGlyphString;
   Glyph: TPascalTypeGlyph;
   i: integer;
 begin

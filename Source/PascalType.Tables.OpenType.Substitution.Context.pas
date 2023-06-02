@@ -82,7 +82,7 @@ type
       LookupListIndex: Word;
     end;
     TSequenceRule = record
-      InputSequence: TArray<Word>;
+      InputSequence: TGlyphString;
       SequenceLookupRecords: TArray<TSequenceLookupRecord>;
     end;
     TSequenceRuleSet = TArray<TSequenceRule>;
@@ -246,7 +246,7 @@ function TOpenTypeSubstitutionSubTableContextSimple.Apply(AGlyphString: TPascalT
 var
   SequenceRuleSetIndex: integer;
   SequenceRuleSet: TSequenceRuleSet;
-  InputSequence: TArray<Word>;
+  InputSequence: TGlyphString;
   SequenceLookupRecords: TArray<TSequenceLookupRecord>;
   i, j: integer;
   Match: boolean;

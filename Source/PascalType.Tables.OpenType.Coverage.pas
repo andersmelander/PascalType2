@@ -90,7 +90,7 @@ type
 type
   TOpenTypeCoverageListTable = class(TCustomOpenTypeCoverageTable)
   private
-    FGlyphArray: TArray<Word>; // Array of GlyphIDs-in numerical order
+    FGlyphArray: TGlyphString; // Array of GlyphIDs-in numerical order
     function GetGlyph(Index: Integer): Word;
     function GetGlyphCount: Integer;
   protected
