@@ -225,16 +225,26 @@ begin
   // Get the replacement sequence
   Sequence := FSequenceList[SubstitutionIndex];
 
-  // First entry in glyph string is reused
-  AGlyphString[AIndex].GlyphID := Sequence[0];
-
-  // Remaining are inserted
-  for i := 1 to High(Sequence) do
+  if (Length(Sequence) > 0) then
   begin
-    Glyph := AGlyphString.CreateGlyph;
-    Glyph.GlyphID := Sequence[i];
-    Glyph.Cluster := AGlyphString[AIndex].Cluster;
-    AGlyphString.Insert(AIndex+i, Glyph);
+
+    // First entry in glyph string is reused
+    AGlyphString[AIndex].GlyphID := Sequence[0];
+
+    // Remaining are inserted
+    for i := 1 to High(Sequence) do
+    begin
+      Glyph := AGlyphString.CreateGlyph;
+      Glyph.GlyphID := Sequence[i];
+      Glyph.Cluster := AGlyphString[AIndex].Cluster;
+      AGlyphString.Insert(AIndex+i, Glyph);
+    end;
+
+  end else
+  begin
+    // If the sequence length is zero, delete the glyph.
+    // The OpenType specs disallow this but it seems Harfbuzz and Uniscribe allow it.
+    AGlyphString.Delete(AIndex);
   end;
 
   Inc(AIndex, Length(Sequence));
