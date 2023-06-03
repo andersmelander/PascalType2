@@ -1,4 +1,4 @@
-unit PascalType.Tables.OpenType.Substitution.Context;
+unit PascalType.Tables.OpenType.Substitution.ChainedContext;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -47,21 +47,21 @@ uses
 
 //------------------------------------------------------------------------------
 //
-//              TOpenTypeSubstitutionLookupTableContext
+//              TOpenTypeSubstitutionLookupTableChainedContext
 //
 //------------------------------------------------------------------------------
-// LookupType 5: Contextual Substitution Subtable
+// LookupType 6: Chained Contexts Substitution Subtable
 //------------------------------------------------------------------------------
-// https://learn.microsoft.com/en-us/typography/opentype/spec/gsub#lookuptype-5-contextual-substitution-subtable
+// https://learn.microsoft.com/en-us/typography/opentype/spec/gsub#lookuptype-6-chained-contexts-substitution-subtable
 //------------------------------------------------------------------------------
 type
-  TOpenTypeSubstitutionLookupTableContext = class(TCustomOpenTypeSubstitutionLookupTable)
+  TOpenTypeSubstitutionLookupTableChainedContext = class(TCustomOpenTypeSubstitutionLookupTable)
   public type
     TGlyphContextSubstitution = (
-      gcsInvalid        = 0,
-      gcsSimple         = 1,
-      gcsClass          = 2,
-      gcsCoverage       = 3
+      gccsInvalid        = 0,
+      gccsSimple         = 1,
+      gccsClass          = 2,
+      gccsCoverage       = 3
     );
   protected
     function GetSubTableClass(ASubFormat: Word): TOpenTypeLookupSubTableClass; override;
@@ -69,27 +69,31 @@ type
   end;
 
 
+type
+  TContextPart = (cpBacktrack, cpInput, cpLookahead);
+
 //------------------------------------------------------------------------------
 //
-//              TOpenTypeSubstitutionSubTableContextList
+//              TOpenTypeSubstitutionSubTableChainedContextSimple
 //
 //------------------------------------------------------------------------------
-// Sequence Context Format 1: simple glyph contexts
+// Chained Contexts Substitution Format 1: Simple Glyph Contexts
 //------------------------------------------------------------------------------
-// https://learn.microsoft.com/en-us/typography/opentype/spec/gsub#51-context-substitution-format-1-simple-glyph-contexts
-// https://learn.microsoft.com/en-us/typography/opentype/spec/chapter2#sequence-context-format-1-simple-glyph-contexts
+// https://learn.microsoft.com/en-us/typography/opentype/spec/gsub#61-chained-contexts-substitution-format-1-simple-glyph-contexts
 //------------------------------------------------------------------------------
 type
-  TOpenTypeSubstitutionSubTableContextSimple = class(TCustomOpenTypeSubstitutionSubTable)
+  TOpenTypeSubstitutionSubTableChainedContextSimple = class(TCustomOpenTypeSubstitutionSubTable)
   public type
-    TSequenceRule = record
+    TChainedSequenceRule = record
+      BacktrackSequence: TGlyphString;
       InputSequence: TGlyphString;
+      LookaheadSequence: TGlyphString;
       SequenceLookupRecords: TSequenceLookupRecords;
     end;
-    TSequenceRuleSet = TArray<TSequenceRule>;
-    TSequenceRuleSets = TArray<TSequenceRuleSet>;
+    TChainedSequenceRuleSet = TArray<TChainedSequenceRule>;
+    TChainedSequenceRuleSets = TArray<TChainedSequenceRuleSet>;
   private
-    FSequenceRules: TSequenceRuleSets;
+    FSequenceRules: TChainedSequenceRuleSets;
   protected
   public
     constructor Create(AParent: TCustomPascalTypeTable); override;
@@ -102,33 +106,35 @@ type
 
     function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
 
-    property SequenceRules: TSequenceRuleSets read FSequenceRules write FSequenceRules;
+    property SequenceRules: TChainedSequenceRuleSets read FSequenceRules write FSequenceRules;
   end;
 
 
 //------------------------------------------------------------------------------
 //
-//              TOpenTypeSubstitutionSubTableContextClass
+//              TOpenTypeSubstitutionSubTableChainedContextClass
 //
 //------------------------------------------------------------------------------
-// Sequence Context Format 2: class-based glyph contexts
+// Chained Sequence Context Format 2: class-based glyph contexts
 //------------------------------------------------------------------------------
-// https://learn.microsoft.com/en-us/typography/opentype/spec/chapter2#seqctxt2
+// https://learn.microsoft.com/en-us/typography/opentype/spec/chapter2#chained-sequence-context-format-2-class-based-glyph-contexts
 //------------------------------------------------------------------------------
 type
-  TOpenTypeSubstitutionSubTableContextClass = class(TCustomOpenTypeSubstitutionSubTable)
+  TOpenTypeSubstitutionSubTableChainedContextClass = class(TCustomOpenTypeSubstitutionSubTable)
   public type
-    TSequenceRule = record
+    TChainedSequenceRule = record
       InputSequence: TGlyphString;
+      BacktrackSequence: TGlyphString;
+      LookaheadSequence: TGlyphString;
       SequenceLookupRecords: TSequenceLookupRecords;
     end;
-    TSequenceRuleSet = TArray<TSequenceRule>;
-    TSequenceRuleSets = TArray<TSequenceRuleSet>;
+    TChainedSequenceRuleSet = TArray<TChainedSequenceRule>;
+    TChainedSequenceRuleSets = TArray<TChainedSequenceRuleSet>;
   private
-    FSequenceRules: TSequenceRuleSets;
-    FClassDefinitions: TCustomOpenTypeClassDefinitionTable;
+    FSequenceRules: TChainedSequenceRuleSets;
+    FClassDefinitions: array[TContextPart] of TCustomOpenTypeClassDefinitionTable;
   protected
-    procedure SetClassDefinitions(const Value: TCustomOpenTypeClassDefinitionTable);
+    procedure SetClassDefinitions(Index: TContextPart; const Value: TCustomOpenTypeClassDefinitionTable);
   public
     constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
@@ -140,29 +146,31 @@ type
 
     function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
 
-    property SequenceRules: TSequenceRuleSets read FSequenceRules write FSequenceRules;
-    property ClassDefinitions: TCustomOpenTypeClassDefinitionTable read FClassDefinitions write SetClassDefinitions;
+    property SequenceRules: TChainedSequenceRuleSets read FSequenceRules write FSequenceRules;
+    property BacktrackClassDefinitions: TCustomOpenTypeClassDefinitionTable index cpBacktrack read FClassDefinitions[cpBacktrack] write SetClassDefinitions;
+    property InputClassDefinitions: TCustomOpenTypeClassDefinitionTable index cpInput read FClassDefinitions[cpInput] write SetClassDefinitions;
+    property LookaheadClassDefinitions: TCustomOpenTypeClassDefinitionTable index cpLookahead read FClassDefinitions[cpLookahead] write SetClassDefinitions;
   end;
 
 
 //------------------------------------------------------------------------------
 //
-//              TOpenTypeSubstitutionSubTableContextCoverage
+//              TOpenTypeSubstitutionSubTableChainedContextCoverage
 //
 //------------------------------------------------------------------------------
-// Sequence Context Format 3: coverage-based glyph contexts
+// Chained Sequence Context Format 3: coverage-based glyph contexts
 //------------------------------------------------------------------------------
-// https://learn.microsoft.com/en-us/typography/opentype/spec/chapter2#sequence-context-format-3-coverage-based-glyph-contexts
+// https://learn.microsoft.com/en-us/typography/opentype/spec/chapter2#chained-sequence-context-format-3-coverage-based-glyph-contexts
 //------------------------------------------------------------------------------
 type
-  TOpenTypeSubstitutionSubTableContextCoverage = class(TCustomOpenTypeLookupSubTable)
+  TOpenTypeSubstitutionSubTableChainedContextCoverage = class(TCustomOpenTypeLookupSubTable)
   private type
     TCoverageTables = TList<TCustomOpenTypeCoverageTable>;
   private
     FSequenceRules: TCustomOpenTypeLookupSubTable.TSequenceLookupRecords;
-    FCoverageTables: TCoverageTables;
+    FCoverageTables: array[TContextPart] of TCoverageTables;
   protected
-    procedure SetCoverageTables(Value: TCoverageTables);
+    procedure SetCoverageTables(Index: TContextPart; Value: TCoverageTables);
   public
     constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
@@ -175,7 +183,9 @@ type
     function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
 
     property SequenceRules: TCustomOpenTypeLookupSubTable.TSequenceLookupRecords read FSequenceRules write FSequenceRules;
-    property CoverageTables: TCoverageTables read FCoverageTables write SetCoverageTables;
+    property BacktrackCoverageTables: TCoverageTables index cpBacktrack read FCoverageTables[cpBacktrack] write SetCoverageTables;
+    property InputCoverageTables: TCoverageTables index cpInput read FCoverageTables[cpInput] write SetCoverageTables;
+    property LookaheadCoverageTables: TCoverageTables index cpLookahead read FCoverageTables[cpLookahead] write SetCoverageTables;
   end;
 
 
@@ -189,25 +199,26 @@ uses
   SysUtils,
   PT_Types,
   PascalType.Unicode,
-  PT_ResourceStrings;
+  PT_ResourceStrings,
+  PascalType.Tables.OpenType.GSUB;
 
 //------------------------------------------------------------------------------
 //
-//              TOpenTypeSubstitutionLookupTableContext
+//              TOpenTypeSubstitutionLookupTableChainedContext
 //
 //------------------------------------------------------------------------------
-function TOpenTypeSubstitutionLookupTableContext.GetSubTableClass(ASubFormat: Word): TOpenTypeLookupSubTableClass;
+function TOpenTypeSubstitutionLookupTableChainedContext.GetSubTableClass(ASubFormat: Word): TOpenTypeLookupSubTableClass;
 begin
   case TGlyphContextSubstitution(ASubFormat) of
 
-    gcsSimple:
-      Result := TOpenTypeSubstitutionSubTableContextSimple;
+    gccsSimple:
+      Result := TOpenTypeSubstitutionSubTableChainedContextSimple;
 
-    gcsClass:
-      Result := TOpenTypeSubstitutionSubTableContextClass;
+    gccsClass:
+      Result := TOpenTypeSubstitutionSubTableChainedContextClass;
 
-    gcsCoverage:
-      Result := TOpenTypeSubstitutionSubTableContextCoverage;
+    gccsCoverage:
+      Result := TOpenTypeSubstitutionSubTableChainedContextCoverage;
 
   else
     Result := nil;
@@ -217,29 +228,29 @@ end;
 
 //------------------------------------------------------------------------------
 //
-//              TOpenTypeSubstitutionSubTableContextSimple
+//              TOpenTypeSubstitutionSubTableChainedContextSimple
 //
 //------------------------------------------------------------------------------
-constructor TOpenTypeSubstitutionSubTableContextSimple.Create(AParent: TCustomPascalTypeTable);
+constructor TOpenTypeSubstitutionSubTableChainedContextSimple.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
 end;
 
-destructor TOpenTypeSubstitutionSubTableContextSimple.Destroy;
+destructor TOpenTypeSubstitutionSubTableChainedContextSimple.Destroy;
 begin
   inherited;
 end;
 
-procedure TOpenTypeSubstitutionSubTableContextSimple.Assign(Source: TPersistent);
+procedure TOpenTypeSubstitutionSubTableChainedContextSimple.Assign(Source: TPersistent);
 begin
   inherited;
-  if Source is TOpenTypeSubstitutionSubTableContextSimple then
+  if Source is TOpenTypeSubstitutionSubTableChainedContextSimple then
   begin
-    FSequenceRules := Copy(TOpenTypeSubstitutionSubTableContextSimple(Source).FSequenceRules);
+    FSequenceRules := Copy(TOpenTypeSubstitutionSubTableChainedContextSimple(Source).FSequenceRules);
   end;
 end;
 
-procedure TOpenTypeSubstitutionSubTableContextSimple.LoadFromStream(Stream: TStream);
+procedure TOpenTypeSubstitutionSubTableChainedContextSimple.LoadFromStream(Stream: TStream);
 var
   StartPos: Int64;
   SavePos: Int64;
@@ -248,8 +259,10 @@ var
   SequenceRuleOffsets: array of Word;
   StartGlyph: Word;
   Sequence: TGlyphString;
-  SequenceLookupRecords: TSequenceLookupRecords;
+  SequenceLookupRecords: TArray<TSequenceLookupRecord>;
 begin
+  // Test font: "Monoid Regular" (font does not appears to contain valid data for this table)
+
   SetLength(FSequenceRules, 0);
 
   StartPos := Stream.Position;
@@ -272,8 +285,6 @@ begin
   // Read a lists of Sequence Rule Sets
   for i := 0 to High(SequenceRuleSetOffsets) do
   begin
-    if (SequenceRuleSetOffsets[i] = 0) then
-      continue;
 
     Stream.Position := StartPos + SequenceRuleSetOffsets[i];
 
@@ -286,7 +297,7 @@ begin
     StartGlyph := CoverageTable.GlyphByIndex(i);
 
     // Read a Sequence Rule Set
-    SetLength(FSequenceRules[i], Length(SequenceRuleOffsets));
+    SetLength(FSequenceRules[i], length(SequenceRuleOffsets));
     for j := 0 to High(SequenceRuleOffsets) do
     begin
       if (SequenceRuleOffsets[j] = 0) then
@@ -294,11 +305,14 @@ begin
 
       Stream.Position := StartPos + SequenceRuleSetOffsets[i] + SequenceRuleOffsets[j];
 
-      // Read InputSequence and SequenceLookupRecord lengths
-      SetLength(FSequenceRules[i][j].InputSequence, BigEndianValueReader.ReadWord(Stream));
-      SetLength(FSequenceRules[i][j].SequenceLookupRecords, BigEndianValueReader.ReadWord(Stream));
+      // Read BacktrackSequence
+      SetLength(FSequenceRules[i][j].BacktrackSequence, BigEndianValueReader.ReadWord(Stream));
+      Sequence := FSequenceRules[i][j].BacktrackSequence;
+      for k := 0 to High(Sequence) do
+        Sequence[k] := BigEndianValueReader.ReadWord(Stream);
 
       // Read InputSequence
+      SetLength(FSequenceRules[i][j].InputSequence, BigEndianValueReader.ReadWord(Stream));
       Sequence := FSequenceRules[i][j].InputSequence;
       if (Length(Sequence) > 0) then
       begin
@@ -310,7 +324,14 @@ begin
           Sequence[k] := BigEndianValueReader.ReadWord(Stream);
       end;
 
+      // Read LookaheadSequence
+      SetLength(FSequenceRules[i][j].LookaheadSequence, BigEndianValueReader.ReadWord(Stream));
+      Sequence := FSequenceRules[i][j].LookaheadSequence;
+      for k := 0 to High(Sequence) do
+        Sequence[k] := BigEndianValueReader.ReadWord(Stream);
+
       // Read SequenceLookupRecords
+      SetLength(FSequenceRules[i][j].SequenceLookupRecords, BigEndianValueReader.ReadWord(Stream));
       SequenceLookupRecords := FSequenceRules[i][j].SequenceLookupRecords;
       for k := 0 to High(SequenceLookupRecords) do
       begin
@@ -323,16 +344,16 @@ begin
   Stream.Position := SavePos;
 end;
 
-procedure TOpenTypeSubstitutionSubTableContextSimple.SaveToStream(Stream: TStream);
+procedure TOpenTypeSubstitutionSubTableChainedContextSimple.SaveToStream(Stream: TStream);
 begin
   // TODO
 end;
 
-function TOpenTypeSubstitutionSubTableContextSimple.Apply(AGlyphString: TPascalTypeGlyphString;
+function TOpenTypeSubstitutionSubTableChainedContextSimple.Apply(AGlyphString: TPascalTypeGlyphString;
   var AIndex: integer): boolean;
 var
   SequenceRuleSetIndex: integer;
-  SequenceRuleSet: TSequenceRuleSet;
+  SequenceRuleSet: TChainedSequenceRuleSet;
   i: integer;
 begin
   Result := False;
@@ -350,8 +371,21 @@ begin
   for i := 0 to High(SequenceRuleSet) do
   begin
     // Compare each character in the sequence string to the source string
-    if (not AGlyphString.Match(AIndex, SequenceRuleSet[i].InputSequence)) then
-      continue;
+    // Note: We have already implicitly matched the first character via the
+    // coverage table, so we skip the first character
+    if (Length(SequenceRuleSet[i].InputSequence) > 1) then
+      if (not AGlyphString.Match(AIndex, SequenceRuleSet[i].InputSequence, True)) then
+        continue;
+
+    // Backtrack
+    if (Length(SequenceRuleSet[i].BacktrackSequence) > 0) then
+      if (not AGlyphString.MatchBacktrack(AIndex-1, SequenceRuleSet[i].BacktrackSequence)) then
+        continue;
+
+    // Lookahead
+    if (Length(SequenceRuleSet[i].LookaheadSequence) > 0) then
+      if (not AGlyphString.Match(AIndex+Length(SequenceRuleSet[i].InputSequence), SequenceRuleSet[i].LookaheadSequence)) then
+        continue;
 
     // We have a match. Apply the rules.
     Result := ApplyLookupRecords(AGlyphString, AIndex, SequenceRuleSet[i].SequenceLookupRecords);
@@ -362,57 +396,63 @@ end;
 
 //------------------------------------------------------------------------------
 //
-//              TOpenTypeSubstitutionSubTableContextClass
+//              TOpenTypeSubstitutionSubTableChainedContextClass
 //
 //------------------------------------------------------------------------------
-constructor TOpenTypeSubstitutionSubTableContextClass.Create(AParent: TCustomPascalTypeTable);
+constructor TOpenTypeSubstitutionSubTableChainedContextClass.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
 end;
 
-destructor TOpenTypeSubstitutionSubTableContextClass.Destroy;
+destructor TOpenTypeSubstitutionSubTableChainedContextClass.Destroy;
 begin
   inherited;
 end;
 
-procedure TOpenTypeSubstitutionSubTableContextClass.Assign(Source: TPersistent);
+procedure TOpenTypeSubstitutionSubTableChainedContextClass.Assign(Source: TPersistent);
+var
+  Part: TContextPart;
 begin
   inherited;
-  if Source is TOpenTypeSubstitutionSubTableContextClass then
+  if Source is TOpenTypeSubstitutionSubTableChainedContextClass then
   begin
-    FSequenceRules := Copy(TOpenTypeSubstitutionSubTableContextClass(Source).FSequenceRules);
+    FSequenceRules := Copy(TOpenTypeSubstitutionSubTableChainedContextClass(Source).FSequenceRules);
     // Assignment via property setter makes a copy
-    SetClassDefinitions(TOpenTypeSubstitutionSubTableContextClass(Source).FClassDefinitions);
+    for Part := Low(TContextPart) to High(TContextPart) do
+      SetClassDefinitions(Part, TOpenTypeSubstitutionSubTableChainedContextClass(Source).FClassDefinitions[Part]);
   end;
 end;
 
-procedure TOpenTypeSubstitutionSubTableContextClass.LoadFromStream(Stream: TStream);
+procedure TOpenTypeSubstitutionSubTableChainedContextClass.LoadFromStream(Stream: TStream);
 var
   StartPos: Int64;
   SavePos: Int64;
+  Part: TContextPart;
   i, j, k: integer;
   SequenceRuleSetOffsets: array of Word;
   SequenceRuleOffsets: array of Word;
   Sequence: TGlyphString;
-  SequenceLookupRecords: TSequenceLookupRecords;
-  ClassDefOffset: Word;
+  SequenceLookupRecords: TArray<TSequenceLookupRecord>;
+  ClassDefOffset: array[TContextPart] of Word;
   ClassDefinitionFormat: TClassDefinitionFormat;
   ClassDefinitionTableClass: TOpenTypeClassDefinitionTableClass;
 begin
-  // Test font: "Arial Unicode MS"
+  // Test font: "Arial Unicode MS", "Segoe UI Variable" (i¨ j¨ i´)
   SetLength(FSequenceRules, 0);
-  FreeAndNil(FClassDefinitions);
+  for Part := Low(FClassDefinitions) to High(FClassDefinitions) do
+    FreeAndNil(FClassDefinitions[Part]);
 
   StartPos := Stream.Position;
 
   inherited;
 
   // check (minimum) table size
-  if Stream.Position + 2 * SizeOf(Word) > Stream.Size then
+  if Stream.Position + 4 * SizeOf(Word) > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  // Get the offset to the class definition table
-  ClassDefOffset := BigEndianValueReader.ReadWord(Stream);
+  // Get the offsets to the class definition tables
+  for Part := Low(ClassDefOffset) to High(ClassDefOffset) do
+    ClassDefOffset[Part] := BigEndianValueReader.ReadWord(Stream);
 
   // Read list of sequence rule set offsets
   SetLength(SequenceRuleSetOffsets, BigEndianValueReader.ReadWord(Stream));
@@ -422,16 +462,19 @@ begin
   SavePos := Stream.Position;
 
   // Read the class definition tables
-  Stream.Position := StartPos + ClassDefOffset;
-  ClassDefinitionFormat := TClassDefinitionFormat(BigEndianValueReader.ReadWord(Stream));
-
-  ClassDefinitionTableClass := TCustomOpenTypeClassDefinitionTable.ClassByFormat(ClassDefinitionFormat);
-  if (ClassDefinitionTableClass <> nil) then
+  for Part := Low(FClassDefinitions) to High(FClassDefinitions) do
   begin
-    FClassDefinitions := ClassDefinitionTableClass.Create(Self);
+    Stream.Position := StartPos + ClassDefOffset[Part];
+    ClassDefinitionFormat := TClassDefinitionFormat(BigEndianValueReader.ReadWord(Stream));
 
-    Stream.Position := StartPos + ClassDefOffset;
-    FClassDefinitions.LoadFromStream(Stream);
+    ClassDefinitionTableClass := TCustomOpenTypeClassDefinitionTable.ClassByFormat(ClassDefinitionFormat);
+    if (ClassDefinitionTableClass <> nil) then
+    begin
+      FClassDefinitions[Part] := ClassDefinitionTableClass.Create(Self);
+
+      Stream.Position := StartPos + ClassDefOffset[Part];
+      FClassDefinitions[Part].LoadFromStream(Stream);
+    end;
   end;
 
   // Read a lists of Sequence Rule Sets
@@ -458,14 +501,18 @@ begin
 
       Stream.Position := StartPos + SequenceRuleSetOffsets[i] + SequenceRuleOffsets[j];
 
-      // Read InputSequence and SequenceLookupRecord lengths
-      SetLength(FSequenceRules[i][j].InputSequence, BigEndianValueReader.ReadWord(Stream));
-      SetLength(FSequenceRules[i][j].SequenceLookupRecords, BigEndianValueReader.ReadWord(Stream));
+      // Read BacktrackSequence
+      SetLength(FSequenceRules[i][j].BacktrackSequence, BigEndianValueReader.ReadWord(Stream));
+      Sequence := FSequenceRules[i][j].BacktrackSequence;
+      for k := 0 to High(Sequence) do
+        Sequence[k] := BigEndianValueReader.ReadWord(Stream);
 
       // Read InputSequence
+      SetLength(FSequenceRules[i][j].InputSequence, BigEndianValueReader.ReadWord(Stream));
       Sequence := FSequenceRules[i][j].InputSequence;
       if (Length(Sequence) > 0) then
       begin
+        // First component is matched via coverage table
         Sequence[0] := 0;
 
         // Read remaining from input sequence list
@@ -473,11 +520,14 @@ begin
           Sequence[k] := BigEndianValueReader.ReadWord(Stream);
       end;
 
-      Sequence := FSequenceRules[i][j].InputSequence;
+      // Read LookaheadSequence
+      SetLength(FSequenceRules[i][j].LookaheadSequence, BigEndianValueReader.ReadWord(Stream));
+      Sequence := FSequenceRules[i][j].LookaheadSequence;
       for k := 0 to High(Sequence) do
         Sequence[k] := BigEndianValueReader.ReadWord(Stream);
 
       // Read SequenceLookupRecords
+      SetLength(FSequenceRules[i][j].SequenceLookupRecords, BigEndianValueReader.ReadWord(Stream));
       SequenceLookupRecords := FSequenceRules[i][j].SequenceLookupRecords;
       for k := 0 to High(SequenceLookupRecords) do
       begin
@@ -490,25 +540,25 @@ begin
   Stream.Position := SavePos;
 end;
 
-procedure TOpenTypeSubstitutionSubTableContextClass.SaveToStream(Stream: TStream);
+procedure TOpenTypeSubstitutionSubTableChainedContextClass.SaveToStream(Stream: TStream);
 begin
   // TODO
 end;
 
-procedure TOpenTypeSubstitutionSubTableContextClass.SetClassDefinitions(const Value: TCustomOpenTypeClassDefinitionTable);
+procedure TOpenTypeSubstitutionSubTableChainedContextClass.SetClassDefinitions(Index: TContextPart; const Value: TCustomOpenTypeClassDefinitionTable);
 begin
-  FreeAndNil(FClassDefinitions);
+  FreeAndNil(FClassDefinitions[Index]);
   if (Value <> nil) then
   begin
-    FClassDefinitions := TOpenTypeClassDefinitionTableClass(Value.ClassType).Create(Self);
-    FClassDefinitions.Assign(Value);
+    FClassDefinitions[Index] := TOpenTypeClassDefinitionTableClass(Value.ClassType).Create(Self);
+    FClassDefinitions[Index].Assign(Value);
   end;
 end;
 
-function TOpenTypeSubstitutionSubTableContextClass.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
+function TOpenTypeSubstitutionSubTableChainedContextClass.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
 var
   SequenceRuleSetIndex: integer;
-  SequenceRuleSet: TSequenceRuleSet;
+  SequenceRuleSet: TChainedSequenceRuleSet;
   i: integer;
 begin
   Result := False;
@@ -522,7 +572,7 @@ begin
 
   // Get the class ID of the first character and use that as an index into the
   // rule set table.
-  SequenceRuleSetIndex := FClassDefinitions.ClassByGlyphID(AGlyphString[AIndex].GlyphID);
+  SequenceRuleSetIndex := FClassDefinitions[cpInput].ClassByGlyphID(AGlyphString[AIndex].GlyphID);
 
   SequenceRuleSet := FSequenceRules[SequenceRuleSetIndex];
   for i := 0 to High(SequenceRuleSet) do
@@ -530,7 +580,17 @@ begin
     // Compare each character in the sequence string to the source string
     // Skip first glyph
     if (Length(SequenceRuleSet[i].InputSequence) > 1) then
-      if (not AGlyphString.Match(AIndex, SequenceRuleSet[i].InputSequence, FClassDefinitions.ClassByGlyphID, True)) then
+      if (not AGlyphString.Match(AIndex, SequenceRuleSet[i].InputSequence, FClassDefinitions[cpInput].ClassByGlyphID, True)) then
+        continue;
+
+    // Backtrack
+    if (Length(SequenceRuleSet[i].BacktrackSequence) > 0) then
+      if (not AGlyphString.MatchBacktrack(AIndex-1, SequenceRuleSet[i].BacktrackSequence, FClassDefinitions[cpBacktrack].ClassByGlyphID)) then
+        continue;
+
+    // Lookahead
+    if (Length(SequenceRuleSet[i].LookaheadSequence) > 0) then
+      if (not AGlyphString.Match(AIndex+Length(SequenceRuleSet[i].InputSequence), SequenceRuleSet[i].LookaheadSequence, FClassDefinitions[cpLookahead].ClassByGlyphID)) then
         continue;
 
     // We have a match. Apply the rules.
@@ -539,61 +599,74 @@ begin
   end;
 end;
 
-
 //------------------------------------------------------------------------------
 //
-//              TOpenTypeSubstitutionSubTableContextCoverage
+//              TOpenTypeSubstitutionSubTableChainedContextCoverage
 //
 //------------------------------------------------------------------------------
-constructor TOpenTypeSubstitutionSubTableContextCoverage.Create(AParent: TCustomPascalTypeTable);
+constructor TOpenTypeSubstitutionSubTableChainedContextCoverage.Create(AParent: TCustomPascalTypeTable);
+var
+  Part: TContextPart;
 begin
   inherited;
 
-  FCoverageTables := TObjectList<TCustomOpenTypeCoverageTable>.Create;
+  for Part := Low(TContextPart) to High(TContextPart) do
+    FCoverageTables[Part] := TObjectList<TCustomOpenTypeCoverageTable>.Create;
 end;
 
-destructor TOpenTypeSubstitutionSubTableContextCoverage.Destroy;
+destructor TOpenTypeSubstitutionSubTableChainedContextCoverage.Destroy;
+var
+  Part: TContextPart;
 begin
-  FCoverageTables.Free;
+  for Part := Low(TContextPart) to High(TContextPart) do
+    FCoverageTables[Part].Free;
 
   inherited;
 end;
 
-procedure TOpenTypeSubstitutionSubTableContextCoverage.Assign(Source: TPersistent);
+procedure TOpenTypeSubstitutionSubTableChainedContextCoverage.Assign(Source: TPersistent);
+var
+  Part: TContextPart;
 begin
   inherited;
-  if Source is TOpenTypeSubstitutionSubTableContextCoverage then
+  if Source is TOpenTypeSubstitutionSubTableChainedContextCoverage then
   begin
-    FSequenceRules := Copy(TOpenTypeSubstitutionSubTableContextCoverage(Source).FSequenceRules);
+    FSequenceRules := Copy(TOpenTypeSubstitutionSubTableChainedContextCoverage(Source).FSequenceRules);
     // Assignment via property setter makes a copy
-    SetCoverageTables(TOpenTypeSubstitutionSubTableContextCoverage(Source).FCoverageTables);
+    for Part := Low(TContextPart) to High(TContextPart) do
+      SetCoverageTables(Part, TOpenTypeSubstitutionSubTableChainedContextCoverage(Source).FCoverageTables[Part]);
   end;
 end;
 
-procedure TOpenTypeSubstitutionSubTableContextCoverage.LoadFromStream(Stream: TStream);
+procedure TOpenTypeSubstitutionSubTableChainedContextCoverage.LoadFromStream(Stream: TStream);
 var
   StartPos: Int64;
+  Part: TContextPart;
   i: integer;
-  CoverageOffsets: array of Word;
+  CoverageOffsets: array[TContextPart] of array of Word;
   CoverageFormat: TCoverageFormat;
   CoverageTable: TCustomOpenTypeCoverageTable;
 begin
-  // Test font: None found
+  // Test font: "Arial"
   SetLength(FSequenceRules, 0);
-  FCoverageTables.Clear;
+  for Part := Low(FCoverageTables) to High(FCoverageTables) do
+    FCoverageTables[Part].Clear;
 
   StartPos := Stream.Position;
 
   inherited;
 
   // check (minimum) table size
-  if Stream.Position + 2 * SizeOf(Word) > Stream.Size then
+  if Stream.Position + 4 * SizeOf(Word) > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // Read coverage table offsets
-  SetLength(CoverageOffsets, BigEndianValueReader.ReadWord(Stream));
-  for i := 0 to High(CoverageOffsets) do
-    CoverageOffsets[i] := BigEndianValueReader.ReadWord(Stream);
+  for Part := Low(FCoverageTables) to High(FCoverageTables) do
+  begin
+    SetLength(CoverageOffsets[Part], BigEndianValueReader.ReadWord(Stream));
+    for i := 0 to High(CoverageOffsets[Part]) do
+      CoverageOffsets[Part][i] := BigEndianValueReader.ReadWord(Stream);
+  end;
 
   // Read Sequence Rule
   SetLength(FSequenceRules, BigEndianValueReader.ReadWord(Stream));
@@ -603,33 +676,37 @@ begin
     FSequenceRules[i].LookupListIndex := BigEndianValueReader.ReadWord(Stream);
   end;
 
+
   // Read the coverage tables
-  FCoverageTables.Capacity := Length(CoverageOffsets);
-  for i := 0 to High(CoverageOffsets) do
+  for Part := Low(FCoverageTables) to High(FCoverageTables) do
   begin
-    Stream.Position := StartPos + CoverageOffsets[i];
+    FCoverageTables[Part].Capacity := Length(CoverageOffsets[Part]);
+    for i := 0 to High(CoverageOffsets[Part]) do
+    begin
+      Stream.Position := StartPos + CoverageOffsets[Part][i];
 
-    // Get the coverage type so we can create the correct object to read the coverage table
-    CoverageFormat := TCoverageFormat(BigEndianValueReader.ReadWord(Stream));
-    CoverageTable := TCustomOpenTypeCoverageTable.ClassByFormat(CoverageFormat).Create;
-    FCoverageTables.Add(CoverageTable);
+      // Get the coverage type so we can create the correct object to read the coverage table
+      CoverageFormat := TCoverageFormat(BigEndianValueReader.ReadWord(Stream));
+      CoverageTable := TCustomOpenTypeCoverageTable.ClassByFormat(CoverageFormat).Create;
+      FCoverageTables[Part].Add(CoverageTable);
 
-    Stream.Position := StartPos + CoverageOffsets[i];
-    CoverageTable.LoadFromStream(Stream);
+      Stream.Position := StartPos + CoverageOffsets[Part][i];
+      CoverageTable.LoadFromStream(Stream);
+    end;
   end;
 end;
 
-procedure TOpenTypeSubstitutionSubTableContextCoverage.SaveToStream(Stream: TStream);
+procedure TOpenTypeSubstitutionSubTableChainedContextCoverage.SaveToStream(Stream: TStream);
 begin
   // TODO
 end;
 
-procedure TOpenTypeSubstitutionSubTableContextCoverage.SetCoverageTables(Value: TCoverageTables);
+procedure TOpenTypeSubstitutionSubTableChainedContextCoverage.SetCoverageTables(Index: TContextPart; Value: TCoverageTables);
 var
   CoverageTable: TCustomOpenTypeCoverageTable;
   NewCoverageTable: TCustomOpenTypeCoverageTable;
 begin
-  FCoverageTables.Clear;
+  FCoverageTables[Index].Clear;
 
   if (Value = nil) then
     exit;
@@ -637,26 +714,47 @@ begin
   for CoverageTable in Value do
   begin
     NewCoverageTable := TCustomOpenTypeCoverageTable.ClassByFormat(CoverageTable.CoverageFormat).Create;
-    FCoverageTables.Add(NewCoverageTable);
+    FCoverageTables[Index].Add(NewCoverageTable);
     NewCoverageTable.Assign(CoverageTable);
   end;
 end;
 
-function TOpenTypeSubstitutionSubTableContextCoverage.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
+function TOpenTypeSubstitutionSubTableChainedContextCoverage.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
 var
   CoverageIndex: integer;
   i: integer;
 begin
   Result := False;
 
-  if (AIndex + FCoverageTables.Count > AGlyphString.Count) then
+  if (AIndex + FCoverageTables[cpInput].Count + FCoverageTables[cpLookahead].Count > AGlyphString.Count) then
+    exit;
+
+  if (AIndex - FCoverageTables[cpBacktrack].Count < 0) then
     exit;
 
   // The string is matched, character by character, against the coverage table.
   // The coverage index itself isn't used. We just need to determine if we should proceed.
-  for i := 0 to FCoverageTables.Count-1 do
+  for i := 0 to FCoverageTables[cpInput].Count-1 do
   begin
-    CoverageIndex := FCoverageTables[i].IndexOfGlyph(AGlyphString[AIndex+i].GlyphID);
+    CoverageIndex := FCoverageTables[cpInput][i].IndexOfGlyph(AGlyphString[AIndex+i].GlyphID);
+
+    if (CoverageIndex = -1) then
+      Exit;
+  end;
+
+  // Backtrack
+  for i := 0 to FCoverageTables[cpBacktrack].Count-1 do
+  begin
+    CoverageIndex := FCoverageTables[cpBacktrack][i].IndexOfGlyph(AGlyphString[AIndex-i].GlyphID);
+
+    if (CoverageIndex = -1) then
+      Exit;
+  end;
+
+  // Lookahead
+  for i := 0 to FCoverageTables[cpLookahead].Count-1 do
+  begin
+    CoverageIndex := FCoverageTables[cpLookahead][i].IndexOfGlyph(AGlyphString[AIndex+FCoverageTables[cpInput].Count+i].GlyphID);
 
     if (CoverageIndex = -1) then
       Exit;
@@ -669,6 +767,6 @@ end;
 //------------------------------------------------------------------------------
 
 initialization
-  TCustomOpenTypeSubstitutionLookupTable.RegisterSubstitutionFormat(gsContext, TOpenTypeSubstitutionLookupTableContext);
+  TCustomOpenTypeSubstitutionLookupTable.RegisterSubstitutionFormat(gsChainingContext, TOpenTypeSubstitutionLookupTableChainedContext);
 end.
 

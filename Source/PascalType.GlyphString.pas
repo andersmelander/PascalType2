@@ -75,6 +75,8 @@ type
 //
 //------------------------------------------------------------------------------
   TPascalTypeGlyphString = class
+  private type
+    TGlyphMapperDelegate = reference to function(GlyphID: TGlyphID): integer;
   private
     FGlyphs: TList<TPascalTypeGlyph>;
     function GetGlyph(Index: integer): TPascalTypeGlyph;
@@ -93,6 +95,14 @@ type
     function Extract(Index: integer): TPascalTypeGlyph; overload;
     function Extract(Glyph: TPascalTypeGlyph): TPascalTypeGlyph; overload;
     procedure Insert(Index: integer; Glyph: TPascalTypeGlyph);
+
+    function AsString: TGlyphString; overload;
+    function AsString(Mapper: TGlyphMapperDelegate): TGlyphString; overload;
+
+    function Match(AFromIndex: integer; const ASequence: TGlyphString; SkipFirst: boolean = False): boolean; overload;
+    function Match(AFromIndex: integer; const ASequence: TGlyphString; Mapper: TGlyphMapperDelegate; SkipFirst: boolean = False): boolean; overload;
+    function MatchBacktrack(AFromIndex: integer; const ASequence: TGlyphString): boolean; overload;
+    function MatchBacktrack(AFromIndex: integer; const ASequence: TGlyphString; Mapper: TGlyphMapperDelegate): boolean; overload;
 
     procedure SetLength(ALen: integer);
 
@@ -208,6 +218,86 @@ begin
   Glyph.SetOwner(Self);
 end;
 
+function TPascalTypeGlyphString.Match(AFromIndex: integer; const ASequence: TGlyphString; SkipFirst: boolean): boolean;
+var
+  i: integer;
+begin
+  // If the end of the sequence is past the end of our string then there can be no match
+  if (AFromIndex + Length(ASequence) > FGlyphs.Count) then
+    Exit(False);
+
+  // Match forward
+  for i := 0 to High(ASequence) do
+  begin
+    if (SkipFirst) then
+    begin
+      SkipFirst := False;
+      continue;
+    end;
+
+    if (FGlyphs[AFromIndex + i].GlyphID <> ASequence[i]) then
+      Exit(False);
+  end;
+
+  Result := True;
+end;
+
+function TPascalTypeGlyphString.Match(AFromIndex: integer; const ASequence: TGlyphString; Mapper: TGlyphMapperDelegate; SkipFirst: boolean): boolean;
+var
+  i: integer;
+begin
+  // If the end of the sequence is past the end of our string then there can be no match
+  if (AFromIndex + Length(ASequence) > FGlyphs.Count) then
+    Exit(False);
+
+  // Match forward
+  for i := 0 to High(ASequence) do
+  begin
+    if (SkipFirst) then
+    begin
+      SkipFirst := False;
+      continue;
+    end;
+
+    if (Mapper(FGlyphs[AFromIndex + i].GlyphID) <> ASequence[i]) then
+      Exit(False);
+  end;
+
+  Result := True;
+end;
+
+function TPascalTypeGlyphString.MatchBacktrack(AFromIndex: integer; const ASequence: TGlyphString; Mapper: TGlyphMapperDelegate): boolean;
+var
+  i: integer;
+begin
+  // If the start of the sequence is past the start of our string then there can be no match
+  if (AFromIndex - Length(ASequence) < 0) then
+    Exit(False);
+
+  // Match backward
+  for i := 0 to High(ASequence) do
+    if (Mapper(FGlyphs[AFromIndex - i].GlyphID) <> ASequence[i]) then
+      Exit(False);
+
+  Result := True;
+end;
+
+function TPascalTypeGlyphString.MatchBacktrack(AFromIndex: integer; const ASequence: TGlyphString): boolean;
+var
+  i: integer;
+begin
+  // If the start of the sequence is past the start of our string then there can be no match
+  if (AFromIndex - Length(ASequence) < 0) then
+    Exit(False);
+
+  // Match backward
+  for i := 0 to High(ASequence) do
+    if (FGlyphs[AFromIndex - i].GlyphID <> ASequence[i]) then
+      Exit(False);
+
+  Result := True;
+end;
+
 function TPascalTypeGlyphString.Extract(Glyph: TPascalTypeGlyph): TPascalTypeGlyph;
 begin
   Result := FGlyphs.Extract(Glyph);
@@ -243,6 +333,24 @@ begin
 
   while (FGlyphs.Count < ALen) do
     Add;
+end;
+
+function TPascalTypeGlyphString.AsString: TGlyphString;
+var
+  i: integer;
+begin
+  System.SetLength(Result, FGlyphs.Count);
+  for i := 0 to FGlyphs.Count-1 do
+    Result[i] := FGlyphs[i].GlyphID;
+end;
+
+function TPascalTypeGlyphString.AsString(Mapper: TGlyphMapperDelegate): TGlyphString;
+var
+  i: integer;
+begin
+  System.SetLength(Result, FGlyphs.Count);
+  for i := 0 to FGlyphs.Count-1 do
+    Result[i] := Mapper(FGlyphs[i].GlyphID);
 end;
 
 end.

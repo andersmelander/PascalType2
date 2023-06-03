@@ -217,11 +217,14 @@ begin
 end;
 
 function TOpenTypeClassDefinitionListTable.ClassByGlyphID(AGlyphID: Word): integer;
+var
+  Index: integer;
 begin
-  if (AGlyphID >= FStartGlyphID) and (AGlyphID-FStartGlyphID <= High(FClassIDArray)) then
-    Result := FClassIDArray[AGlyphID-FStartGlyphID]
+  Index := AGlyphID - FStartGlyphID;
+  if (Index >= 0) and (Index <= High(FClassIDArray)) then
+    Result := FClassIDArray[Index]
   else
-    Result := -1;
+    Result := 0; // Glyphs not in table belong to class #0
 end;
 
 function TOpenTypeClassDefinitionListTable.GetClassID(Index: Integer): Word;
@@ -302,7 +305,7 @@ var
   i: integer;
 begin
   // TODO : A binary search is possible here
-  Result := -1;
+  Result := 0; // Glyphs not in table belong to class #0
   i := 0;
   while (i <= High(FRangeArray)) and (AGlyphID >= FRangeArray[i].StartGlyphID) do
   begin
@@ -318,7 +321,7 @@ var
 begin
   inherited;
 
-  if Stream.Position + 2 > Stream.Size then
+  if Stream.Position + SizeOf(Word) > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   SetLength(FRangeArray, BigEndianValueReader.ReadWord(Stream));

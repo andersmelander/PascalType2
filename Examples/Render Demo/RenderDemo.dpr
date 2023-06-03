@@ -63,7 +63,9 @@ uses
   PascalType.Tables.OpenType.Substitution.Ligature in '..\..\Source\PascalType.Tables.OpenType.Substitution.Ligature.pas',
   PascalType.Unicode in '..\..\Source\PascalType.Unicode.pas',
   PascalType.Tables.TrueType.cmap in '..\..\Source\PascalType.Tables.TrueType.cmap.pas',
-  PascalType.Shaper.Plan in '..\..\Source\PascalType.Shaper.Plan.pas';
+  PascalType.Shaper.Plan in '..\..\Source\PascalType.Shaper.Plan.pas',
+  PascalType.Tables.OpenType.Substitution.Context in '..\..\Source\PascalType.Tables.OpenType.Substitution.Context.pas',
+  PascalType.Tables.OpenType.Substitution.ChainedContext in '..\..\Source\PascalType.Tables.OpenType.Substitution.ChainedContext.pas';
 
 {$R *.res}
 

@@ -331,7 +331,7 @@ var
 begin
   inherited;
 
-  if Stream.Position + 2 > Stream.Size then
+  if Stream.Position + SizeOf(Word) > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   SetLength(FRangeArray, BigEndianValueReader.ReadWord(Stream));

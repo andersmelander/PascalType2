@@ -45,6 +45,9 @@ uses
   PascalType.Tables.OpenType.Coverage;
 
 type
+  TCustomOpenTypeLookupTable = class;
+  TOpenTypeLookupListTable = class;
+
 //------------------------------------------------------------------------------
 //
 //              TCustomOpenTypeLookupSubTable
@@ -52,13 +55,18 @@ type
 //------------------------------------------------------------------------------
 // Base class for lookup table sub-formats
 //------------------------------------------------------------------------------
-  TCustomOpenTypeLookupTable = class;
-
   TCustomOpenTypeLookupSubTable = class abstract(TCustomPascalTypeTable)
+  public type
+    TSequenceLookupRecord = record
+      SequenceIndex: Word;
+      LookupListIndex: Word;
+    end;
+    TSequenceLookupRecords = TArray<TSequenceLookupRecord>;
   private
     FSubFormat: Word;
     function GetLookupTable: TCustomOpenTypeLookupTable;
   protected
+    function ApplyLookupRecords(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; const LookupRecords: TSequenceLookupRecords): boolean;
   public
     constructor Create(AParent: TCustomPascalTypeTable); override;
 
@@ -74,7 +82,6 @@ type
   end;
 
   TOpenTypeLookupSubTableClass = class of TCustomOpenTypeLookupSubTable;
-
 
 //------------------------------------------------------------------------------
 //
@@ -105,6 +112,7 @@ type
     procedure SetMarkFilteringSet(const Value: Word);
     function GetSubTable(Index: Integer): TCustomOpenTypeLookupSubTable;
     function GetSubTableCount: Integer;
+    function GetLookupList: TOpenTypeLookupListTable;
     procedure LookupFlagChanged; virtual;
     procedure MarkFilteringSetChanged; virtual;
     function GetSubTableClass(ASubFormat: Word): TOpenTypeLookupSubTableClass; virtual; abstract;
@@ -119,6 +127,8 @@ type
 
     function GetEnumerator: TEnumerator<TCustomOpenTypeLookupSubTable>;
 
+    function Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; virtual;
+
     // The meaning of LookupType depends on the parent type (GSUB/GPOS)
     property LookupType: Word read FLookupType;
     property LookupFlag: Word read FLookupFlag write SetLookupFlag;
@@ -126,6 +136,8 @@ type
 
     property SubTableCount: Integer read GetSubTableCount;
     property SubTables[Index: Integer]: TCustomOpenTypeLookupSubTable read GetSubTable;
+
+    property LookupList: TOpenTypeLookupListTable read GetLookupList;
   end;
 
   TOpenTypeLookupTableClass = class of TCustomOpenTypeLookupTable;
@@ -141,7 +153,6 @@ type
 //------------------------------------------------------------------------------
   TCustomOpenTypeLookupSubTableWithCoverage = class abstract(TCustomOpenTypeLookupSubTable)
   private
-    FCoverageFormat: TCoverageFormat;
     FCoverageTable: TCustomOpenTypeCoverageTable;
   protected
   public
@@ -152,8 +163,35 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    property CoverageFormat: TCoverageFormat read FCoverageFormat;
     property CoverageTable: TCustomOpenTypeCoverageTable read FCoverageTable;
+  end;
+
+
+//------------------------------------------------------------------------------
+//
+//              TOpenTypeLookupListTable
+//
+//------------------------------------------------------------------------------
+// Lookup list table
+//------------------------------------------------------------------------------
+// https://learn.microsoft.com/en-us/typography/opentype/spec/chapter2#lookup-list-table
+//------------------------------------------------------------------------------
+  TOpenTypeLookupListTable = class(TCustomPascalTypeTable)
+  private
+    FLookupList: TPascalTypeTableInterfaceList<TCustomOpenTypeLookupTable>;
+    function GetLookupTableCount: Integer;
+    function GetLookupTable(Index: Integer): TCustomOpenTypeLookupTable;
+  public
+    constructor Create(AParent: TCustomPascalTypeTable); override;
+    destructor Destroy; override;
+
+    procedure Assign(Source: TPersistent); override;
+
+    procedure LoadFromStream(Stream: TStream); override;
+    procedure SaveToStream(Stream: TStream); override;
+
+    property LookupTableCount: Integer read GetLookupTableCount;
+    property LookupTables[Index: Integer]: TCustomOpenTypeLookupTable read GetLookupTable; default;
   end;
 
 
@@ -173,35 +211,6 @@ type
     end;
   protected
     function GetSubTableClass(ASubFormat: Word): TOpenTypeLookupSubTableClass; override;
-  end;
-
-
-//------------------------------------------------------------------------------
-//
-//              TOpenTypeLookupListTable
-//
-//------------------------------------------------------------------------------
-// Lookup list table
-//------------------------------------------------------------------------------
-// https://learn.microsoft.com/en-us/typography/opentype/spec/chapter2#lookup-list-table
-//------------------------------------------------------------------------------
-type
-  TOpenTypeLookupListTable = class(TCustomPascalTypeTable)
-  private
-    FLookupList: TPascalTypeTableInterfaceList<TCustomOpenTypeLookupTable>;
-    function GetLookupTableCount: Integer;
-    function GetLookupTable(Index: Integer): TCustomOpenTypeLookupTable;
-  public
-    constructor Create(AParent: TCustomPascalTypeTable); override;
-    destructor Destroy; override;
-
-    procedure Assign(Source: TPersistent); override;
-
-    procedure LoadFromStream(Stream: TStream); override;
-    procedure SaveToStream(Stream: TStream); override;
-
-    property LookupTableCount: Integer read GetLookupTableCount;
-    property LookupTables[Index: Integer]: TCustomOpenTypeLookupTable read GetLookupTable;
   end;
 
 
@@ -334,6 +343,22 @@ end;
 function TCustomOpenTypeLookupTable.GetEnumerator: TEnumerator<TCustomOpenTypeLookupSubTable>;
 begin
   Result := FSubTableList.GetEnumerator;
+end;
+
+function TCustomOpenTypeLookupTable.GetLookupList: TOpenTypeLookupListTable;
+begin
+  // Not so nice, but I'd rather not go through the FontFace to get at the list :-(
+  Result := Parent as TOpenTypeLookupListTable;
+end;
+
+function TCustomOpenTypeLookupTable.Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
+var
+  SubTable: TCustomOpenTypeLookupSubTable;
+begin
+  for SubTable in FSubTableList do
+    if (SubTable.Apply(GlyphString, AIndex)) then
+      Exit(True);
+  Result := False;
 end;
 
 function TCustomOpenTypeLookupTable.GetSubTable(Index: Integer): TCustomOpenTypeLookupSubTable;
@@ -515,6 +540,30 @@ begin
   WriteSwappedWord(Stream, FSubFormat);
 end;
 
+function TCustomOpenTypeLookupSubTable.ApplyLookupRecords(AGlyphString: TPascalTypeGlyphString; var AIndex: integer;
+  const LookupRecords: TSequenceLookupRecords): boolean;
+var
+  LookupList: TOpenTypeLookupListTable;
+  Lookup: TCustomOpenTypeLookupTable;
+  i: integer;
+begin
+  Result := False;
+
+  LookupList := LookupTable.LookupList;
+  for i := 0 to High(LookupRecords) do
+  begin
+    // Adjust the glyph index
+    Inc(AIndex, LookupRecords[i].SequenceIndex);
+
+    // Get the referenced lookup
+    Lookup := LookupList[LookupRecords[i].LookupListIndex];
+
+    // Recursively apply
+    // TODO : What to do about True/False here?
+    Result := Lookup.Apply(AGlyphString, AIndex) or Result;
+  end;
+end;
+
 procedure TCustomOpenTypeLookupSubTable.Assign(Source: TPersistent);
 begin
   inherited;
@@ -539,8 +588,12 @@ begin
   inherited;
   if (Source is TCustomOpenTypeLookupSubTableWithCoverage) then
   begin
-    FCoverageFormat := TCustomOpenTypeLookupSubTableWithCoverage(Source).CoverageFormat;
-    FCoverageTable.Assign(TCustomOpenTypeLookupSubTableWithCoverage(Source).CoverageTable);
+    FreeAndNil(FCoverageTable);
+    if (TCustomOpenTypeLookupSubTableWithCoverage(Source).CoverageTable <> nil) then
+    begin
+      FCoverageTable := TCustomOpenTypeCoverageTable.ClassByFormat(TCustomOpenTypeLookupSubTableWithCoverage(Source).CoverageTable.CoverageFormat).Create;
+      FCoverageTable.Assign(TCustomOpenTypeLookupSubTableWithCoverage(Source).CoverageTable);
+    end;
   end;
 end;
 
@@ -548,8 +601,11 @@ procedure TCustomOpenTypeLookupSubTableWithCoverage.LoadFromStream(Stream: TStre
 var
   StartPos: Int64;
   CoveragePos: Int64;
+  CoverageFormat: TCoverageFormat;
   SavePos: Int64;
 begin
+  FreeAndNil(FCoverageTable);
+
   StartPos := Stream.Position;
 
   inherited;
@@ -560,9 +616,8 @@ begin
 
   // Get the coverage type so we can create the correct object to read the coverage table
   Stream.Position := CoveragePos;
-  FCoverageFormat := TCoverageFormat(BigEndianValueReader.ReadWord(Stream));
-
-  FCoverageTable := TCustomOpenTypeCoverageTable.ClassByFormat(FCoverageFormat).Create;
+  CoverageFormat := TCoverageFormat(BigEndianValueReader.ReadWord(Stream));
+  FCoverageTable := TCustomOpenTypeCoverageTable.ClassByFormat(CoverageFormat).Create;
 
   Stream.Position := CoveragePos;
   FCoverageTable.LoadFromStream(Stream);
@@ -573,8 +628,9 @@ end;
 
 procedure TCustomOpenTypeLookupSubTableWithCoverage.SaveToStream(Stream: TStream);
 begin
+  Assert(FCoverageTable <> nil);
   inherited;
-  WriteSwappedWord(Stream, Ord(FCoverageFormat));
+  FCoverageTable.SaveToStream(Stream);
 end;
 
 //------------------------------------------------------------------------------

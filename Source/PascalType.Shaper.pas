@@ -139,7 +139,7 @@ type
     procedure SetScript(const Value: TTableType);
     procedure SetDirection(const Value: TPascalTypeDirection);
   protected
-    function CreatePlannedFeatureList(GlobalTable: TCustomOpenTypeCommonTable): TPlannedFeatures;
+    function CreatePlannedFeatureList(APlan: TPascalTypeShapingPlan; AGlobalTable: TCustomOpenTypeCommonTable): TPlannedFeatures;
 
     procedure Reset; virtual;
     function DecompositionFilter(CodePoint: TPascalTypeCodePoint): boolean; virtual;
@@ -340,7 +340,7 @@ begin
   Result := PascalTypeUnicode.Compose(Result, CompositionFilter);
 end;
 
-function TPascalTypeShaper.CreatePlannedFeatureList(GlobalTable: TCustomOpenTypeCommonTable): TPlannedFeatures;
+function TPascalTypeShaper.CreatePlannedFeatureList(APlan: TPascalTypeShapingPlan; AGlobalTable: TCustomOpenTypeCommonTable): TPlannedFeatures;
 var
   FeatureMap: TDictionary<TTableType, TCustomOpenTypeFeatureTable>;
   ScriptTable: TCustomOpenTypeScriptTable;
@@ -350,7 +350,7 @@ var
   Stage: TPascalTypeShapingPlanStage;
   Feature: TTableName;
 begin
-  Assert(GlobalTable <> nil);
+  Assert(AGlobalTable <> nil);
 
   Result := TPlannedFeatures.Create;
   try
@@ -360,7 +360,7 @@ begin
     try
 
       // Get script, fallback to default
-      ScriptTable := GlobalTable.ScriptListTable.FindScript(Script, True);
+      ScriptTable := AGlobalTable.ScriptListTable.FindScript(Script, True);
 
       if (ScriptTable <> nil) then
       begin
@@ -372,10 +372,10 @@ begin
           for i := 0 to LanguageSystem.FeatureIndexCount-1 do
           begin
             // LanguageSystem feature list contains index numbers into the FeatureListTable
-            FeatureTable := GlobalTable.FeatureListTable.Feature[LanguageSystem.FeatureIndex[i]];
+            FeatureTable := AGlobalTable.FeatureListTable.Feature[LanguageSystem.FeatureIndex[i]];
 
             // Ignore features that does not occur in the plan
-            if (FPlan.Stages.HasFeature(FeatureTable.TableType.AsAnsiChar)) then
+            if (APlan.Stages.HasFeature(FeatureTable.TableType.AsAnsiChar)) then
               FeatureMap.Add(FeatureTable.TableType, FeatureTable);
           end;
         end;
@@ -384,7 +384,7 @@ begin
       // Convert the stage feature tags into a sequential list of feature tables.
       // The list will contain the intersection between the features supported by
       // the fonts script/language and the featuirs in the shaping plan.
-      for Stage in FPlan.Stages do
+      for Stage in APlan.Stages do
         for Feature in Stage do
           if (FeatureMap.TryGetValue(Feature, FeatureTable)) then
             Result.Add(FeatureTable);
@@ -397,7 +397,6 @@ begin
     Result.Free;
     raise;
   end;
-
 end;
 
 procedure TPascalTypeShaper.SetDirection(const Value: TPascalTypeDirection);
@@ -471,9 +470,11 @@ var
   FeatureTable: TCustomOpenTypeFeatureTable;
   i: integer;
   LookupTable: TCustomOpenTypeLookupTable;
-  SubTable: TCustomOpenTypeLookupSubTable;
   GlyphIndex, NextGlyphIndex: integer;
   GlyphHandled: boolean;
+  LoopCount: integer;
+const
+  MaxLoop = 10;
 begin
   Assert(FSubstitutionTable <> nil);
 
@@ -484,10 +485,11 @@ begin
   begin
 
     GlyphIndex := 0;
+    NextGlyphIndex := 0;
+    LoopCount := 0;
     while (GlyphIndex < AGlyphs.Count) do
     begin
       GlyphHandled := False;
-      NextGlyphIndex := GlyphIndex;
 
       // A series of substitution operations on the same glyph or string requires multiple
       // lookups, one for each separate action. Each lookup has a different array index
@@ -502,21 +504,27 @@ begin
         // substituted as well as any other glyphs that formed a context for the operation.
         LookupTable := FSubstitutionTable.LookupListTable.LookupTables[FeatureTable.LookupList[i]];
 
-        for SubTable in LookupTable do
-          if (SubTable.Apply(AGlyphs, NextGlyphIndex)) then
-          begin
-            GlyphHandled := True;
-            break;
-          end;
-
-        if (GlyphHandled) then
+        NextGlyphIndex := GlyphIndex;
+        if (LookupTable.Apply(AGlyphs, NextGlyphIndex)) then
+        begin
+          GlyphHandled := True;
           break;
+        end;
       end;
 
-      if (GlyphHandled) and (NextGlyphIndex > GlyphIndex) then
-        GlyphIndex := NextGlyphIndex
-      else
-        // This also handles advancement if the substitution forgot to do it
+      if (GlyphHandled) then
+      begin
+        // It's legal to modify the glyph and not increment the index.
+        // It's not legal to decrement the index.
+        if (NextGlyphIndex <= GlyphIndex) then
+          Inc(LoopCount);
+
+        if (LoopCount >= MaxLoop) then
+          // Something's wrong. Get out of Dodge!
+          break;
+
+        GlyphIndex := NextGlyphIndex;
+      end else
         Inc(GlyphIndex);
     end;
   end;
@@ -571,7 +579,7 @@ begin
         // Build ordered list of features supported by the font.
         // This is only done once per "session". No need to do it once per character.
         if (FPlannedSubstitutionFeatures = nil) then
-          FPlannedSubstitutionFeatures := CreatePlannedFeatureList(FSubstitutionTable);
+          FPlannedSubstitutionFeatures := CreatePlannedFeatureList(FPlan, FSubstitutionTable);
 
         ApplySubstitution(FPlannedSubstitutionFeatures, Result);
       end;
@@ -585,7 +593,7 @@ begin
       if (FPositionTable <> nil) then
       begin
         if (FPlannedPositioningFeatures = nil) then
-          FPlannedPositioningFeatures := CreatePlannedFeatureList(FPositionTable);
+          FPlannedPositioningFeatures := CreatePlannedFeatureList(FPlan, FPositionTable);
 
         ApplyPositioning(FPlannedPositioningFeatures, Result);
       end;
