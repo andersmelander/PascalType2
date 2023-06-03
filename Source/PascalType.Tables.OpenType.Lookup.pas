@@ -558,9 +558,9 @@ begin
     // Get the referenced lookup
     Lookup := LookupList[LookupRecords[i].LookupListIndex];
 
-    // Recursively apply
-    // TODO : What to do about True/False here?
-    Result := Lookup.Apply(AGlyphString, AIndex) or Result;
+    // Recursively apply until one matches
+    if (Lookup.Apply(AGlyphString, AIndex)) then
+      Exit(True);
   end;
 end;
 
