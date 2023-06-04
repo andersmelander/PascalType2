@@ -40,7 +40,7 @@ uses
   Classes,
   PT_Types,
   PT_Classes,
-  PT_Tables,
+  PascalType.GlyphString,
   PascalType.Tables.OpenType.Lookup,
   PascalType.Tables.OpenType.Positioning,
   PascalType.Tables.OpenType.ClassDefinition;
@@ -61,7 +61,7 @@ type
     TGlyphPairPositioning = (
       gpsInvalid        = 0,
       gppSingle         = 1,
-      gppClass           = 2
+      gppClass          = 2
     );
   protected
     function GetSubTableClass(ASubFormat: Word): TOpenTypeLookupSubTableClass; override;
@@ -97,8 +97,11 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
+    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+
     property PairValues: TPairValues read FPairValues write FPairValues;
   end;
+
 
 //------------------------------------------------------------------------------
 //
@@ -110,7 +113,6 @@ type
 // https://learn.microsoft.com/en-us/typography/opentype/spec/gpos#pair-adjustment-positioning-format-2-class-pair-adjustment
 //------------------------------------------------------------------------------
 type
-
   TOpenTypePositioningSubTablePairClass = class(TCustomOpenTypePositioningSubTable)
   public type
     TClassValueRecord = record
@@ -134,6 +136,8 @@ type
 
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
+
+    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
 
     property FirstClassDefinitions: TCustomOpenTypeClassDefinitionTable read FFirstClassDefinitions write SetFirstClassDefinitions;
     property SecondClassDefinitions: TCustomOpenTypeClassDefinitionTable read FSecondClassDefinitions write SetSecondClassDefinitions;
@@ -182,6 +186,47 @@ begin
   inherited;
   if Source is TOpenTypePositioningSubTablePairSingle then
     FPairValues := TOpenTypePositioningSubTablePairSingle(Source).PairValues;
+end;
+
+function TOpenTypePositioningSubTablePairSingle.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
+var
+  CoverageIndex: integer;
+  i: integer;
+  SecondGlyphID: Word;
+begin
+  // Test font: "Arial" ("TA "), "Input" ("F_", "_V_")
+  if (AIndex >= AGlyphString.Count-1) then
+    Exit(False);
+
+  CoverageIndex := CoverageTable.IndexOfGlyph(AGlyphString[AIndex].GlyphID);
+  if (CoverageIndex = -1) then
+    Exit(False);
+
+  Result := False;
+
+  for i := 0 to High(FPairValues[CoverageIndex]) do
+  begin
+    SecondGlyphID := FPairValues[CoverageIndex, i].SecondGlyphID;
+
+    if (SecondGlyphID >= AGlyphString[AIndex+1].GlyphID) then
+    begin
+      if (SecondGlyphID = AGlyphString[AIndex+1].GlyphID) then
+      begin
+        AGlyphString[AIndex].ApplyPositioning(FPairValues[CoverageIndex, i].FirstValueRecord);
+        Inc(AIndex);
+
+        if (not FPairValues[CoverageIndex, i].SecondValueRecord.IsEmpty) then
+        begin
+          AGlyphString[AIndex].ApplyPositioning(FPairValues[CoverageIndex, i].SecondValueRecord);
+          Inc(AIndex);
+        end;
+
+        Result := True;
+      end;
+
+      break;
+    end;
+  end;
 end;
 
 procedure TOpenTypePositioningSubTablePairSingle.LoadFromStream(Stream: TStream);
@@ -312,6 +357,41 @@ begin
     FirstClassDefinitions := TOpenTypePositioningSubTablePairClass(Source).FirstClassDefinitions;
     SecondClassDefinitions := TOpenTypePositioningSubTablePairClass(Source).SecondClassDefinitions;
   end;
+end;
+
+function TOpenTypePositioningSubTablePairClass.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
+var
+  CoverageIndex: integer;
+  FirstClassID, SecondClassID: integer;
+  ClassValueRecord: TClassValueRecord;
+begin
+  // Test font: "Input" (all matches does nothing...), "Roboto Regular" ("P,", "PA", "?m" (Greek Capital Letter Gamma, m))
+  if (AIndex >= AGlyphString.Count-1) then
+    Exit(False);
+
+  CoverageIndex := CoverageTable.IndexOfGlyph(AGlyphString[AIndex].GlyphID);
+  if (CoverageIndex = -1) then
+    Exit(False);
+
+  FirstClassID := FFirstClassDefinitions.ClassByGlyphID(AGlyphString[AIndex].GlyphID);
+  SecondClassID := FSecondClassDefinitions.ClassByGlyphID(AGlyphString[AIndex+1].GlyphID);
+
+  ClassValueRecord := FClassValueRecords[FirstClassID, SecondClassID];
+
+  // TODO : I can't find any criteria documented besides the coverage table, so this is a guess:
+  if (ClassValueRecord.FirstValueRecord.IsEmpty) and (ClassValueRecord.SecondValueRecord.IsEmpty) then
+    Exit(False);
+
+  AGlyphString[AIndex].ApplyPositioning(ClassValueRecord.FirstValueRecord);
+  Inc(AIndex);
+
+  if (not ClassValueRecord.SecondValueRecord.IsEmpty) then
+  begin
+    AGlyphString[AIndex].ApplyPositioning(ClassValueRecord.SecondValueRecord);
+    Inc(AIndex);
+  end;
+
+  Result := True;
 end;
 
 procedure TOpenTypePositioningSubTablePairClass.LoadFromStream(Stream: TStream);
