@@ -37,6 +37,7 @@ interface
 uses
   Generics.Collections,
   PT_Classes,
+  PT_Types,
   PascalType.Unicode;
 
 //------------------------------------------------------------------------------
@@ -53,6 +54,10 @@ type
     FCodePoints: TPascalTypeCodePoints;
     FGlyphID: TGlyphID;
     FCluster: integer;
+    FXAdvance: integer;
+    FYAdvance: integer;
+    FXOffset: integer;
+    FYOffset: integer;
   protected
     procedure SetOwner(AOwner: TPascalTypeGlyphString);
   public
@@ -60,10 +65,16 @@ type
 
     procedure Assign(Source: TPascalTypeGlyph); virtual;
 
+    procedure ApplyPositioning(const AValueRecord: TOpenTypeValueRecord);
+
     property Owner: TPascalTypeGlyphString read FOwner;
     property CodePoints: TPascalTypeCodePoints read FCodePoints write FCodePoints;
     property GlyphID: TGlyphID read FGlyphID write FGlyphID;
     property Cluster: integer read FCluster write FCluster;
+    property XAdvance: integer read FXAdvance write FXAdvance;
+    property YAdvance: integer read FYAdvance write FYAdvance;
+    property XOffset: integer read FXOffset write FXOffset;
+    property YOffset: integer read FYOffset write FYOffset;
   end;
 
   TPascalTypeGlyphClass = class of TPascalTypeGlyph;
@@ -136,6 +147,14 @@ end;
 procedure TPascalTypeGlyph.SetOwner(AOwner: TPascalTypeGlyphString);
 begin
   FOwner := AOwner;
+end;
+
+procedure TPascalTypeGlyph.ApplyPositioning(const AValueRecord: TOpenTypeValueRecord);
+begin
+  Inc(FXOffset, AValueRecord.xPlacement);
+  Inc(FYOffset, AValueRecord.yPlacement);
+  Inc(FXAdvance, AValueRecord.xAdvance);
+  Inc(FYAdvance, AValueRecord.yAdvance);
 end;
 
 procedure TPascalTypeGlyph.Assign(Source: TPascalTypeGlyph);

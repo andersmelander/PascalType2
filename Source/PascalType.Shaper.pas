@@ -48,6 +48,7 @@ uses
   PascalType.Tables.OpenType.GSUB,
   PascalType.Tables.OpenType.GPOS,
   PascalType.Tables.OpenType.Feature,
+  PascalType.Tables.OpenType.Lookup,
   PascalType.Shaper.Plan;
 
 
@@ -146,6 +147,7 @@ type
     function CompositionFilter(CodePoint: TPascalTypeCodePoint): boolean; virtual;
     procedure ProcessCodePoints(var CodePoints: TPascalTypeCodePoints); virtual;
     function ProcessUnicode(const AText: string): TPascalTypeCodePoints; virtual;
+    procedure ApplyLookups(ALookupListTable: TOpenTypeLookupListTable; AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString);
     procedure ApplySubstitution(AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString); virtual;
     procedure ApplyPositioning(AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString); virtual;
 
@@ -186,7 +188,6 @@ uses
 
   PascalType.Tables.OpenType.Script,
   PascalType.Tables.OpenType.LanguageSystem,
-  PascalType.Tables.OpenType.Lookup,
   PascalType.Tables.OpenType.Substitution;
 
 //------------------------------------------------------------------------------
@@ -465,7 +466,9 @@ begin
   PlanApplyOptions(APlan);
 end;
 
-procedure TPascalTypeShaper.ApplySubstitution(AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString);
+
+procedure TPascalTypeShaper.ApplyLookups(ALookupListTable: TOpenTypeLookupListTable; AFeatures: TPlannedFeatures;
+  var AGlyphs: TPascalTypeGlyphString);
 var
   FeatureTable: TCustomOpenTypeFeatureTable;
   i: integer;
@@ -476,7 +479,7 @@ var
 const
   MaxLoop = 10;
 begin
-  Assert(FSubstitutionTable <> nil);
+  Assert(ALookupListTable <> nil);
 
   // Iterate over each feature and apply it to the individual glyphs.
   // Each glyph is only processed once by a feature, but it can be
@@ -502,7 +505,7 @@ begin
         // if specified. To move to the “next” glyph, the client will typically skip all
         // the glyphs that participated in the lookup operation: glyphs that were
         // substituted as well as any other glyphs that formed a context for the operation.
-        LookupTable := FSubstitutionTable.LookupListTable.LookupTables[FeatureTable.LookupList[i]];
+        LookupTable := ALookupListTable.LookupTables[FeatureTable.LookupList[i]];
 
         NextGlyphIndex := GlyphIndex;
         if (LookupTable.Apply(AGlyphs, NextGlyphIndex)) then
@@ -530,9 +533,16 @@ begin
   end;
 end;
 
+procedure TPascalTypeShaper.ApplySubstitution(AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString);
+begin
+  if (FSubstitutionTable <> nil) then
+    ApplyLookups(FSubstitutionTable.LookupListTable, AFeatures, AGlyphs);
+end;
+
 procedure TPascalTypeShaper.ApplyPositioning(AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString);
 begin
-  Assert(FPositionTable <> nil);
+  if (FPositionTable <> nil) then
+    ApplyLookups(FPositionTable.LookupListTable, AFeatures, AGlyphs);
 end;
 
 function TPascalTypeShaper.Shape(const AText: string): TPascalTypeGlyphString;

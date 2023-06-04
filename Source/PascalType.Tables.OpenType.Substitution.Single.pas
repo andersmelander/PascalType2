@@ -35,8 +35,6 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Generics.Collections,
-  Generics.Defaults,
   Classes,
   PT_Classes,
   PascalType.GlyphString,
@@ -110,7 +108,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
 
     property SubstituteGlyphIDs: TGlyphString read FSubstituteGlyphIDs;
   end;
@@ -165,7 +163,7 @@ begin
   inherited;
 
   // check (minimum) table size
-  if Stream.Position + 2 > Stream.Size then
+  if Stream.Position + SizeOf(Word) > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   FDeltaGlyphID := BigEndianValueReader.ReadSmallInt(Stream);
@@ -231,17 +229,17 @@ begin
     WriteSwappedWord(Stream, FSubstituteGlyphIDs[i]);
 end;
 
-function TOpenTypeSubstitutionSubTableSingleList.Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
+function TOpenTypeSubstitutionSubTableSingleList.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
 var
   SubstitutionIndex: integer;
 begin
-  SubstitutionIndex := CoverageTable.IndexOfGlyph(GlyphString[AIndex].GlyphID);
+  SubstitutionIndex := CoverageTable.IndexOfGlyph(AGlyphString[AIndex].GlyphID);
 //  if (TArray.BinarySearch<Word>(FSubstituteGlyphIDs, GlyphString[AIndex].GlyphID, Index)) then
 
   if (SubstitutionIndex = -1) then
     Exit(False);
 
-  GlyphString[AIndex].GlyphID := FSubstituteGlyphIDs[SubstitutionIndex];
+  AGlyphString[AIndex].GlyphID := FSubstituteGlyphIDs[SubstitutionIndex];
   Inc(AIndex);
   Result := True;
 end;

@@ -556,6 +556,9 @@ type
 
   *)
   TOpenTypeValueRecord = packed record
+  private
+    function GetEmpty: boolean;
+  public
     xPlacement: SmallInt;       // Horizontal adjustment for placement, in design units.
     yPlacement: SmallInt;       // Vertical adjustment for placement, in design units.
     xAdvance: SmallInt;         // Horizontal adjustment for advance, in design units - only used for horizontal layout.
@@ -564,6 +567,8 @@ type
     yPlaDeviceOffset: Word;     // Offset to Device table (non-variable font) / VariationIndex table (variable font) for vertical placement, from beginning of the immediate parent table (SinglePos or PairPosFormat2 lookup subtable, PairSet table within a PairPosFormat1 lookup subtable) — may be NULL.
     xAdvDeviceOffset: Word;     // Offset to Device table (non-variable font) / VariationIndex table (variable font) for horizontal advance, from beginning of the immediate parent table (SinglePos or PairPosFormat2 lookup subtable, PairSet table within a PairPosFormat1 lookup subtable) — may be NULL.
     yAdvDeviceOffset: Word;     // Offset to Device table (non-variable font) / VariationIndex table (variable font) for vertical advance, from beginning of the immediate parent table (SinglePos or PairPosFormat2 lookup subtable, PairSet table within a PairPosFormat1 lookup subtable) — may be NULL.
+
+    property IsEmpty: boolean read GetEmpty;
   end;
 
 const
@@ -1672,5 +1677,12 @@ begin
 end;
 
 {$ENDIF}
+
+{ TOpenTypeValueRecord }
+
+function TOpenTypeValueRecord.GetEmpty: boolean;
+begin
+  Result := (xPlacement = 0) and (yPlacement = 0) and (xAdvance = 0) and (yAdvance = 0);
+end;
 
 end.

@@ -35,12 +35,10 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Generics.Collections,
-  Generics.Defaults,
   Classes,
-  PT_Types,
   PT_Classes,
-  PT_Tables,
+  PT_Types,
+  PascalType.GlyphString,
   PascalType.Tables.OpenType.Lookup,
   PascalType.Tables.OpenType.Positioning;
 
@@ -49,6 +47,8 @@ uses
 //
 //              TOpenTypePositioningLookupTableSingle
 //
+//------------------------------------------------------------------------------
+// Lookup Type 1: Single Adjustment Positioning Subtable
 //------------------------------------------------------------------------------
 // https://learn.microsoft.com/en-us/typography/opentype/spec/gsub#lookuptype-1-single-substitution-subtable
 //------------------------------------------------------------------------------
@@ -68,18 +68,34 @@ type
 
 //------------------------------------------------------------------------------
 //
+//              TCustomOpenTypePositioningSubTableSingle
+//
+//------------------------------------------------------------------------------
+type
+  TCustomOpenTypePositioningSubTableSingle = class(TCustomOpenTypePositioningSubTable)
+  private
+  protected
+    function DoApply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ACoverageIndex: integer): boolean; virtual; abstract;
+  public
+    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+  end;
+
+
+//------------------------------------------------------------------------------
+//
 //              TOpenTypePositioningSubTableSingleSingle
 //
 //------------------------------------------------------------------------------
-// Single substitution offsetting specified glyph index
+// Single Adjustment Positioning Format 1: Single Positioning Value
 //------------------------------------------------------------------------------
-// https://learn.microsoft.com/en-us/typography/opentype/spec/gsub#11-single-substitution-format-1
+// https://learn.microsoft.com/en-us/typography/opentype/spec/gpos#single-adjustment-positioning-format-1-single-positioning-value
 //------------------------------------------------------------------------------
 type
-  TOpenTypePositioningSubTableSingleSingle = class(TCustomOpenTypePositioningSubTable)
+  TOpenTypePositioningSubTableSingleSingle = class(TCustomOpenTypePositioningSubTableSingle)
   private
     FValueRecord: TOpenTypeValueRecord;
   protected
+    function DoApply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ACoverageIndex: integer): boolean; override;
   public
     procedure Assign(Source: TPersistent); override;
 
@@ -89,22 +105,24 @@ type
     property ValueRecord: TOpenTypeValueRecord read FValueRecord write FValueRecord;
   end;
 
+
 //------------------------------------------------------------------------------
 //
 //              TOpenTypePositioningSubTableSingleList
 //
 //------------------------------------------------------------------------------
-// Single substitution by specified glyph index
+// Single Adjustment Positioning Format 2: Array of Positioning Values
 //------------------------------------------------------------------------------
-// https://learn.microsoft.com/en-us/typography/opentype/spec/gsub#12-single-substitution-format-2
+// https://learn.microsoft.com/en-us/typography/opentype/spec/gpos#single-adjustment-positioning-format-2-array-of-positioning-values
 //------------------------------------------------------------------------------
 type
-  TOpenTypePositioningSubTableSingleList = class(TCustomOpenTypePositioningSubTable)
+  TOpenTypePositioningSubTableSingleList = class(TCustomOpenTypePositioningSubTableSingle)
   private type
     TOpenTypeValueRecords = array of TOpenTypeValueRecord;
   private
     FValueRecords: TOpenTypeValueRecords;
   protected
+    function DoApply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ACoverageIndex: integer): boolean; override;
   public
     procedure Assign(Source: TPersistent); override;
 
@@ -148,6 +166,24 @@ end;
 
 //------------------------------------------------------------------------------
 //
+//              TCustomOpenTypePositioningSubTableSingle
+//
+//------------------------------------------------------------------------------
+function TCustomOpenTypePositioningSubTableSingle.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
+var
+  CoverageIndex: integer;
+begin
+  CoverageIndex := CoverageTable.IndexOfGlyph(AGlyphString[AIndex].GlyphID);
+
+  if (CoverageIndex <> -1) then
+    Result := DoApply(AGlyphString, AIndex, CoverageIndex)
+  else
+    Result := False;
+end;
+
+
+//------------------------------------------------------------------------------
+//
 //              TOpenTypePositioningSubTableSingleSingle
 //
 //------------------------------------------------------------------------------
@@ -158,6 +194,13 @@ begin
     FValueRecord := TOpenTypePositioningSubTableSingleSingle(Source).ValueRecord;
 end;
 
+function TOpenTypePositioningSubTableSingleSingle.DoApply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ACoverageIndex: integer): boolean;
+begin
+  AGlyphString[AIndex].ApplyPositioning(FValueRecord);
+  Inc(AIndex);
+  Result := True;
+end;
+
 procedure TOpenTypePositioningSubTableSingleSingle.LoadFromStream(Stream: TStream);
 var
   ValueFormat: Word;
@@ -165,7 +208,7 @@ begin
   inherited;
 
   // check (minimum) table size
-  if Stream.Position + 2 > Stream.Size then
+  if Stream.Position + SizeOf(Word) > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   ValueFormat := BigEndianValueReader.ReadWord(Stream);
@@ -185,7 +228,6 @@ begin
   SaveValueRecordToStream(Stream, FValueRecord, ValueFormat);
 end;
 
-
 //------------------------------------------------------------------------------
 //
 //              TOpenTypePositioningSubTableSingleList
@@ -198,6 +240,14 @@ begin
     FValueRecords := TOpenTypePositioningSubTableSingleList(Source).ValueRecords;
 end;
 
+function TOpenTypePositioningSubTableSingleList.DoApply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer;
+  ACoverageIndex: integer): boolean;
+begin
+  AGlyphString[AIndex].ApplyPositioning(FValueRecords[ACoverageIndex]);
+  Inc(AIndex);
+  Result := True;
+end;
+
 procedure TOpenTypePositioningSubTableSingleList.LoadFromStream(Stream: TStream);
 var
   ValueFormat: Word;
@@ -206,7 +256,7 @@ begin
   inherited;
 
   // check (minimum) table size
-  if Stream.Position + 4 > Stream.Size then
+  if Stream.Position + 2 * SizeOf(Word) > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   ValueFormat := BigEndianValueReader.ReadWord(Stream);

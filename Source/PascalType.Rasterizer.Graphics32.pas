@@ -908,7 +908,8 @@ begin
 
           // advance cursor
           GlyphMetric := GetGlyphMetric(GlyphIndex);
-          Pos.X := Pos.X + GlyphMetric.HorizontalMetric.AdvanceWidth;
+          Pos.X := Pos.X + GlyphMetric.HorizontalMetric.AdvanceWidth + ScalerX * Glyph.XAdvance;
+          Pos.Y := Pos.Y + ScalerY * Glyph.YAdvance;
         end;
 
       finally
