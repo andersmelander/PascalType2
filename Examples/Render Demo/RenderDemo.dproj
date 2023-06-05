@@ -171,6 +171,7 @@
         <DCCReference Include="..\..\Source\PascalType.Shaper.Plan.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Substitution.Context.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Substitution.ChainedContext.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Positioning.Cursive.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

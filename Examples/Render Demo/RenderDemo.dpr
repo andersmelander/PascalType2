@@ -65,7 +65,8 @@ uses
   PascalType.Tables.TrueType.cmap in '..\..\Source\PascalType.Tables.TrueType.cmap.pas',
   PascalType.Shaper.Plan in '..\..\Source\PascalType.Shaper.Plan.pas',
   PascalType.Tables.OpenType.Substitution.Context in '..\..\Source\PascalType.Tables.OpenType.Substitution.Context.pas',
-  PascalType.Tables.OpenType.Substitution.ChainedContext in '..\..\Source\PascalType.Tables.OpenType.Substitution.ChainedContext.pas';
+  PascalType.Tables.OpenType.Substitution.ChainedContext in '..\..\Source\PascalType.Tables.OpenType.Substitution.ChainedContext.pas',
+  PascalType.Tables.OpenType.Positioning.Cursive in '..\..\Source\PascalType.Tables.OpenType.Positioning.Cursive.pas';
 
 {$R *.res}
 
