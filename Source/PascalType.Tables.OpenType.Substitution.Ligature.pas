@@ -39,6 +39,7 @@ uses
   Generics.Defaults,
   Classes,
   PT_Classes,
+  PT_Types,
   PascalType.GlyphString,
   PascalType.Tables.OpenType.Lookup,
   PascalType.Tables.OpenType.Substitution;
@@ -94,7 +95,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
 
     property Ligatures: TGlyphLigatures read FLigatures;
   end;
@@ -108,7 +109,6 @@ implementation
 
 uses
   SysUtils,
-  PT_Types,
   PascalType.Unicode,
   PT_ResourceStrings;
 
@@ -236,8 +236,7 @@ begin
   // TODO
 end;
 
-function TOpenTypeSubstitutionSubTableLigatureList.Apply(AGlyphString: TPascalTypeGlyphString;
-  var AIndex: integer): boolean;
+function TOpenTypeSubstitutionSubTableLigatureList.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
 var
   SubstitutionIndex: integer;
   Glyph: TPascalTypeGlyph;

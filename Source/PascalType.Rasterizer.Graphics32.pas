@@ -879,7 +879,7 @@ end;
 procedure TPascalTypeRasterizerGraphics32.RenderShapedText(const Text: string; Canvas: TCustomPath; X, Y: Integer);
 var
   GlyphIndex: Integer;
-  Pos: TFloatPoint;
+  CursorPos, Pos: TFloatPoint;
   GlyphMetric: TGlyphMetric;
   Shaper: TPascalTypeShaper;
   ShapedText: TPascalTypeGlyphString;
@@ -887,8 +887,8 @@ var
 begin
   Canvas.BeginUpdate;
   try
-    Pos.X := X;
-    Pos.Y := Y;
+    CursorPos.X := X;
+    CursorPos.Y := Y;
 
     Shaper := TPascalTypeShaper.Create(FontFace);
     try
@@ -900,16 +900,18 @@ begin
 
         for Glyph in ShapedText do
         begin
-          // get glyph index
-          GlyphIndex := Glyph.GlyphID;
+          // Position glyph relative to cursor
+          Pos := CursorPos;
+          Pos.X := Pos.X + ScalerX * Glyph.XOffset;
+          Pos.Y := Pos.Y + ScalerY * Glyph.YOffset;
 
-          // rasterize character
-          RasterizeGlyph(GlyphIndex, Canvas, Pos.X, Pos.Y);
+          // Rasterize glyph
+          RasterizeGlyph(Glyph.GlyphID, Canvas, Pos.X, Pos.Y);
 
-          // advance cursor
-          GlyphMetric := GetGlyphMetric(GlyphIndex);
-          Pos.X := Pos.X + GlyphMetric.HorizontalMetric.AdvanceWidth + ScalerX * Glyph.XAdvance;
-          Pos.Y := Pos.Y + ScalerY * Glyph.YAdvance;
+          // Advance cursor
+          GlyphMetric := GetGlyphMetric(Glyph.GlyphID);
+          CursorPos.X := CursorPos.X + GlyphMetric.HorizontalMetric.AdvanceWidth + ScalerX * Glyph.XAdvance;
+          CursorPos.Y := CursorPos.Y + ScalerY * Glyph.YAdvance;
         end;
 
       finally

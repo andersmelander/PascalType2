@@ -56,9 +56,9 @@ type
   TOpenTypePositioningLookupTableSingle = class(TCustomOpenTypePositioningLookupTable)
   public type
     TGlyphSinglePositioning = (
-      gpsInvalid        = 0,
-      gpsSingle         = 1,
-      gpsList           = 2
+      gppInvalid        = 0,
+      gppSingle         = 1,
+      gppList           = 2
     );
   protected
     function GetSubTableClass(ASubFormat: Word): TOpenTypeLookupSubTableClass; override;
@@ -77,7 +77,7 @@ type
   protected
     function DoApply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ACoverageIndex: integer): boolean; virtual; abstract;
   public
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
   end;
 
 
@@ -152,10 +152,10 @@ function TOpenTypePositioningLookupTableSingle.GetSubTableClass(ASubFormat: Word
 begin
   case TGlyphSinglePositioning(ASubFormat) of
 
-    gpsSingle:
+    gppSingle:
       Result := TOpenTypePositioningSubTableSingleSingle;
 
-    gpsList:
+    gppList:
       Result := TOpenTypePositioningSubTableSingleList;
 
   else
@@ -169,7 +169,7 @@ end;
 //              TCustomOpenTypePositioningSubTableSingle
 //
 //------------------------------------------------------------------------------
-function TCustomOpenTypePositioningSubTableSingle.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
+function TCustomOpenTypePositioningSubTableSingle.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
 var
   CoverageIndex: integer;
 begin

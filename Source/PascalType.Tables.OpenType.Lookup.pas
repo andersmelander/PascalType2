@@ -66,7 +66,7 @@ type
     FSubFormat: Word;
     function GetLookupTable: TCustomOpenTypeLookupTable;
   protected
-    function ApplyLookupRecords(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; const LookupRecords: TSequenceLookupRecords): boolean;
+    function ApplyLookupRecords(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection; const LookupRecords: TSequenceLookupRecords): boolean;
   public
     constructor Create(AParent: TCustomPascalTypeTable); override;
 
@@ -75,7 +75,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; virtual; abstract;
+    function Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; virtual; abstract;
 
     property SubFormat: Word read FSubFormat;
     property LookupTable: TCustomOpenTypeLookupTable read GetLookupTable;
@@ -127,7 +127,7 @@ type
 
     function GetEnumerator: TEnumerator<TCustomOpenTypeLookupSubTable>;
 
-    function Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; virtual;
+    function Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; virtual;
 
     // The meaning of LookupType depends on the parent type (GSUB/GPOS)
     property LookupType: Word read FLookupType;
@@ -207,7 +207,7 @@ type
   private type
     TOpenTypeLookupSubTableGeneric = class(TCustomOpenTypeLookupSubTable)
     public
-      function Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+      function Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
     end;
   protected
     function GetSubTableClass(ASubFormat: Word): TOpenTypeLookupSubTableClass; override;
@@ -351,12 +351,12 @@ begin
   Result := Parent as TOpenTypeLookupListTable;
 end;
 
-function TCustomOpenTypeLookupTable.Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
+function TCustomOpenTypeLookupTable.Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
 var
   SubTable: TCustomOpenTypeLookupSubTable;
 begin
   for SubTable in FSubTableList do
-    if (SubTable.Apply(GlyphString, AIndex)) then
+    if (SubTable.Apply(GlyphString, AIndex, ADirection)) then
       Exit(True);
   Result := False;
 end;
@@ -412,7 +412,7 @@ begin
   Result := TOpenTypeLookupSubTableGeneric;
 end;
 
-function TOpenTypeLookupTableGeneric.TOpenTypeLookupSubTableGeneric.Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
+function TOpenTypeLookupTableGeneric.TOpenTypeLookupSubTableGeneric.Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
 begin
   Result := False;
 end;
@@ -540,7 +540,7 @@ begin
   WriteSwappedWord(Stream, FSubFormat);
 end;
 
-function TCustomOpenTypeLookupSubTable.ApplyLookupRecords(AGlyphString: TPascalTypeGlyphString; var AIndex: integer;
+function TCustomOpenTypeLookupSubTable.ApplyLookupRecords(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection;
   const LookupRecords: TSequenceLookupRecords): boolean;
 var
   LookupList: TOpenTypeLookupListTable;
@@ -559,7 +559,7 @@ begin
     Lookup := LookupList[LookupRecords[i].LookupListIndex];
 
     // Recursively apply until one matches
-    if (Lookup.Apply(AGlyphString, AIndex)) then
+    if (Lookup.Apply(AGlyphString, AIndex, ADirection)) then
       Exit(True);
   end;
 end;

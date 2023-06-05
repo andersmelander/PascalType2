@@ -37,6 +37,7 @@ interface
 uses
   Classes,
   PT_Classes,
+  PT_Types,
   PascalType.GlyphString,
   PascalType.Tables.OpenType.Lookup,
   PascalType.Tables.OpenType.Substitution;
@@ -83,7 +84,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
 
     property DeltaGlyphID: SmallInt read FDeltaGlyphID write FDeltaGlyphID;
   end;
@@ -108,7 +109,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
 
     property SubstituteGlyphIDs: TGlyphString read FSubstituteGlyphIDs;
   end;
@@ -122,7 +123,6 @@ implementation
 
 uses
   SysUtils,
-  PT_Types,
   PT_ResourceStrings;
 
 //------------------------------------------------------------------------------
@@ -176,7 +176,7 @@ begin
   WriteSwappedSmallInt(Stream, FDeltaGlyphID);
 end;
 
-function TOpenTypeSubstitutionSubTableSingleOffset.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
+function TOpenTypeSubstitutionSubTableSingleOffset.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
 var
   SubstitutionIndex: integer;
 begin
@@ -229,7 +229,7 @@ begin
     WriteSwappedWord(Stream, FSubstituteGlyphIDs[i]);
 end;
 
-function TOpenTypeSubstitutionSubTableSingleList.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
+function TOpenTypeSubstitutionSubTableSingleList.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
 var
   SubstitutionIndex: integer;
 begin

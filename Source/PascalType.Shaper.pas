@@ -508,7 +508,7 @@ begin
         LookupTable := ALookupListTable.LookupTables[FeatureTable.LookupList[i]];
 
         NextGlyphIndex := GlyphIndex;
-        if (LookupTable.Apply(AGlyphs, NextGlyphIndex)) then
+        if (LookupTable.Apply(AGlyphs, NextGlyphIndex, Direction)) then
         begin
           GlyphHandled := True;
           break;

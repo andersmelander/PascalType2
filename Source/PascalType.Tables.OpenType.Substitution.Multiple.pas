@@ -39,6 +39,7 @@ uses
   Generics.Defaults,
   Classes,
   PT_Classes,
+  PT_Types,
   PascalType.GlyphString,
   PascalType.Tables.OpenType.Lookup,
   PascalType.Tables.OpenType.Substitution;
@@ -86,7 +87,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
 
     property SubstituteSequenceList: TGlyphSequences read FSequenceList;
   end;
@@ -100,7 +101,6 @@ implementation
 
 uses
   SysUtils,
-  PT_Types,
   PT_ResourceStrings;
 
 //------------------------------------------------------------------------------
@@ -207,8 +207,7 @@ begin
   Stream.Position := SavePos;
 end;
 
-function TOpenTypeSubstitutionSubTableMultipleList.Apply(AGlyphString: TPascalTypeGlyphString;
-  var AIndex: integer): boolean;
+function TOpenTypeSubstitutionSubTableMultipleList.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
 var
   SubstitutionIndex: integer;
   Sequence: TGlyphString;

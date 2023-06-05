@@ -59,7 +59,7 @@ type
   TOpenTypePositioningLookupTablePair = class(TCustomOpenTypePositioningLookupTable)
   public type
     TGlyphPairPositioning = (
-      gpsInvalid        = 0,
+      gppInvalid        = 0,
       gppSingle         = 1,
       gppClass          = 2
     );
@@ -97,7 +97,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
 
     property PairValues: TPairValues read FPairValues write FPairValues;
   end;
@@ -137,7 +137,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
 
     property FirstClassDefinitions: TCustomOpenTypeClassDefinitionTable read FFirstClassDefinitions write SetFirstClassDefinitions;
     property SecondClassDefinitions: TCustomOpenTypeClassDefinitionTable read FSecondClassDefinitions write SetSecondClassDefinitions;
@@ -188,7 +188,7 @@ begin
     FPairValues := TOpenTypePositioningSubTablePairSingle(Source).PairValues;
 end;
 
-function TOpenTypePositioningSubTablePairSingle.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
+function TOpenTypePositioningSubTablePairSingle.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
 var
   CoverageIndex: integer;
   i: integer;
@@ -359,7 +359,7 @@ begin
   end;
 end;
 
-function TOpenTypePositioningSubTablePairClass.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
+function TOpenTypePositioningSubTablePairClass.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
 var
   CoverageIndex: integer;
   FirstClassID, SecondClassID: integer;

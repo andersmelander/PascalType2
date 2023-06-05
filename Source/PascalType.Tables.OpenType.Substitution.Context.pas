@@ -39,6 +39,7 @@ uses
   Generics.Defaults,
   Classes,
   PT_Classes,
+  PT_Types,
   PascalType.GlyphString,
   PascalType.Tables.OpenType.Lookup,
   PascalType.Tables.OpenType.Substitution,
@@ -100,7 +101,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
 
     property SequenceRules: TSequenceRuleSets read FSequenceRules write FSequenceRules;
   end;
@@ -138,7 +139,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
 
     property SequenceRules: TSequenceRuleSets read FSequenceRules write FSequenceRules;
     property ClassDefinitions: TCustomOpenTypeClassDefinitionTable read FClassDefinitions write SetClassDefinitions;
@@ -172,7 +173,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean; override;
+    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
 
     property SequenceRules: TCustomOpenTypeLookupSubTable.TSequenceLookupRecords read FSequenceRules write FSequenceRules;
     property CoverageTables: TCoverageTables read FCoverageTables write SetCoverageTables;
@@ -187,7 +188,6 @@ implementation
 
 uses
   SysUtils,
-  PT_Types,
   PascalType.Unicode,
   PT_ResourceStrings;
 
@@ -328,8 +328,7 @@ begin
   // TODO
 end;
 
-function TOpenTypeSubstitutionSubTableContextSimple.Apply(AGlyphString: TPascalTypeGlyphString;
-  var AIndex: integer): boolean;
+function TOpenTypeSubstitutionSubTableContextSimple.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
 var
   SequenceRuleSetIndex: integer;
   SequenceRuleSet: TSequenceRuleSet;
@@ -354,7 +353,7 @@ begin
       continue;
 
     // We have a match. Apply the rules.
-    Result := ApplyLookupRecords(AGlyphString, AIndex, SequenceRuleSet[i].SequenceLookupRecords);
+    Result := ApplyLookupRecords(AGlyphString, AIndex, ADirection, SequenceRuleSet[i].SequenceLookupRecords);
     break;
   end;
 end;
@@ -505,7 +504,7 @@ begin
   end;
 end;
 
-function TOpenTypeSubstitutionSubTableContextClass.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
+function TOpenTypeSubstitutionSubTableContextClass.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
 var
   SequenceRuleSetIndex: integer;
   SequenceRuleSet: TSequenceRuleSet;
@@ -534,7 +533,7 @@ begin
         continue;
 
     // We have a match. Apply the rules.
-    Result := ApplyLookupRecords(AGlyphString, AIndex, SequenceRuleSet[i].SequenceLookupRecords);
+    Result := ApplyLookupRecords(AGlyphString, AIndex, ADirection, SequenceRuleSet[i].SequenceLookupRecords);
     break;
   end;
 end;
@@ -642,7 +641,7 @@ begin
   end;
 end;
 
-function TOpenTypeSubstitutionSubTableContextCoverage.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer): boolean;
+function TOpenTypeSubstitutionSubTableContextCoverage.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
 var
   CoverageIndex: integer;
   i: integer;
@@ -663,7 +662,7 @@ begin
   end;
 
   // We have a match. Apply the rules.
-  Result := ApplyLookupRecords(AGlyphString, AIndex, FSequenceRules);
+  Result := ApplyLookupRecords(AGlyphString, AIndex, ADirection, FSequenceRules);
 end;
 
 //------------------------------------------------------------------------------
