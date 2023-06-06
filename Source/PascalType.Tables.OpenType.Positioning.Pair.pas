@@ -41,6 +41,7 @@ uses
   PT_Types,
   PT_Classes,
   PascalType.GlyphString,
+  PascalType.Tables.OpenType.Common.ValueRecord,
   PascalType.Tables.OpenType.Lookup,
   PascalType.Tables.OpenType.Positioning,
   PascalType.Tables.OpenType.ClassDefinition;

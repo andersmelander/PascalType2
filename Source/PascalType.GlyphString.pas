@@ -38,7 +38,8 @@ uses
   Generics.Collections,
   PT_Classes,
   PT_Types,
-  PascalType.Unicode;
+  PascalType.Unicode,
+  PascalType.Tables.OpenType.Common.ValueRecord;
 
 //------------------------------------------------------------------------------
 //
@@ -58,6 +59,10 @@ type
     FYAdvance: integer;
     FXOffset: integer;
     FYOffset: integer;
+    FMarkAttachment: integer;
+    FLigatureComponent: integer;
+    function GetIsLigature: boolean;
+    function GetIsMark: boolean;
   protected
     procedure SetOwner(AOwner: TPascalTypeGlyphString);
   public
@@ -75,6 +80,13 @@ type
     property YAdvance: integer read FYAdvance write FYAdvance;
     property XOffset: integer read FXOffset write FXOffset;
     property YOffset: integer read FYOffset write FYOffset;
+
+    // Shaper state
+    property LigatureComponent: integer read FLigatureComponent write FLigatureComponent;
+    property MarkAttachment: integer read FMarkAttachment write FMarkAttachment;
+
+    property IsMark: boolean read GetIsMark;
+    property IsLigature: boolean read GetIsLigature;
   end;
 
   TPascalTypeGlyphClass = class of TPascalTypeGlyph;
@@ -142,6 +154,25 @@ constructor TPascalTypeGlyph.Create(AOwner: TPascalTypeGlyphString);
 begin
   inherited Create;
   FOwner := AOwner;
+  FLigatureComponent := -1;
+  FMarkAttachment := -1;
+end;
+
+function TPascalTypeGlyph.GetIsLigature: boolean;
+begin
+  Result := (Length(FCodePoints) > 1);
+end;
+
+function TPascalTypeGlyph.GetIsMark: boolean;
+var
+  CodePoint: TPascalTypeCodePoint;
+begin
+  if (Length(FCodePoints) = 0) then
+    Exit(False);
+  for CodePoint in FCodePoints do
+    if (not PascalTypeUnicode.IsMark(CodePoint)) then
+      Exit(False);
+  Result := True;
 end;
 
 procedure TPascalTypeGlyph.SetOwner(AOwner: TPascalTypeGlyphString);

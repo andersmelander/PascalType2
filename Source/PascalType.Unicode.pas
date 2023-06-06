@@ -100,6 +100,7 @@ type
     //
     //------------------------------------------------------------------------------
     class function IsWhiteSpace(const AChar: TPascalTypeCodePoint): boolean; static;
+    class function IsMark(const AChar: TPascalTypeCodePoint): boolean; static;
 
   end;
 
@@ -423,6 +424,11 @@ end;
 //              Categorization
 //
 //------------------------------------------------------------------------------
+class function PascalTypeUnicode.IsMark(const AChar: TPascalTypeCodePoint): boolean;
+begin
+  Result := (PUCUUnicodeGetCategoryFromTable(AChar) in [PUCUUnicodeCategoryMn, PUCUUnicodeCategoryMe, PUCUUnicodeCategoryMc]);
+end;
+
 class function PascalTypeUnicode.IsWhiteSpace(const AChar: TPascalTypeCodePoint): boolean;
 begin
   Result := PUCUUnicodeIsWhiteSpace(AChar);

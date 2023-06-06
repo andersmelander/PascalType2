@@ -43,7 +43,8 @@ uses
   PascalType.GlyphString,
   PascalType.Tables.OpenType.Lookup,
   PascalType.Tables.OpenType.Positioning,
-  PascalType.Tables.OpenType.ClassDefinition;
+  PascalType.Tables.OpenType.ClassDefinition,
+  PascalType.Tables.OpenType.Common.Anchor;
 
 
 //------------------------------------------------------------------------------
@@ -80,35 +81,9 @@ type
 type
   TOpenTypePositioningSubTableCursiveAttachment = class(TCustomOpenTypePositioningSubTable)
   public type
-    TCursiveAttachmentAnchorFormat = (caaDesignUnits, caaDUContourPoints, caaDUDeviceVariantion);
-
-    TAnchorPoint = record
-      X: SmallInt;
-      Y: SmallInt;
-    end;
-
-    TCursiveAttachmentAnchor = class abstract
-    private
-      FCursiveAttachment: TOpenTypePositioningSubTableCursiveAttachment;
-      FAnchorFormat: TCursiveAttachmentAnchorFormat;
-    public
-      constructor Create(ACursiveAttachment: TOpenTypePositioningSubTableCursiveAttachment; AAnchorFormat: TCursiveAttachmentAnchorFormat); virtual;
-
-      procedure LoadFromStream(Stream: TStream); virtual;
-      procedure SaveToStream(Stream: TStream); virtual;
-
-      procedure Assign(Source: TCursiveAttachmentAnchor); virtual;
-
-      function Position: TAnchorPoint; virtual; abstract;
-
-      property CursiveAttachment: TOpenTypePositioningSubTableCursiveAttachment read FCursiveAttachment;
-      property AnchorFormat: TCursiveAttachmentAnchorFormat read FAnchorFormat;
-    end;
-    TCursiveAttachmentAnchorClass = class of TCursiveAttachmentAnchor;
-
     TCursiveAttachmentAnchorItem = record
-      EntryAnchor: TCursiveAttachmentAnchor;
-      ExitAnchor: TCursiveAttachmentAnchor;
+      EntryAnchor: TOpenTypeAnchor;
+      ExitAnchor: TOpenTypeAnchor;
     end;
 
   private
@@ -117,7 +92,6 @@ type
     function GetCount: integer;
   protected
     procedure ClearAnchors;
-    class function AnchorClassByAnchorFormat(AnchorFormat: TCursiveAttachmentAnchorFormat): TCursiveAttachmentAnchorClass;
   public
     constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
@@ -163,183 +137,6 @@ end;
 
 
 //------------------------------------------------------------------------------
-//      TOpenTypePositioningSubTableCursiveAttachment.TCursiveAttachmentAnchor
-//------------------------------------------------------------------------------
-procedure TOpenTypePositioningSubTableCursiveAttachment.TCursiveAttachmentAnchor.Assign(Source: TCursiveAttachmentAnchor);
-begin
-  Assert(AnchorFormat = Source.AnchorFormat);
-end;
-
-constructor TOpenTypePositioningSubTableCursiveAttachment.TCursiveAttachmentAnchor.Create(
-  ACursiveAttachment: TOpenTypePositioningSubTableCursiveAttachment; AAnchorFormat: TCursiveAttachmentAnchorFormat);
-begin
-  inherited Create;
-  FCursiveAttachment := ACursiveAttachment;
-  FAnchorFormat := AAnchorFormat;
-end;
-
-procedure TOpenTypePositioningSubTableCursiveAttachment.TCursiveAttachmentAnchor.LoadFromStream(Stream: TStream);
-var
-  AnchorFormat: TCursiveAttachmentAnchorFormat;
-begin
-  AnchorFormat := TCursiveAttachmentAnchorFormat(BigEndianValueReader.ReadWord(Stream));
-  Assert(AnchorFormat = FAnchorFormat);
-end;
-
-procedure TOpenTypePositioningSubTableCursiveAttachment.TCursiveAttachmentAnchor.SaveToStream(Stream: TStream);
-begin
-  WriteSwappedWord(Stream, Ord(AnchorFormat));
-end;
-
-
-//------------------------------------------------------------------------------
-//      TCursiveAttachmentAnchorDesignUnits
-//------------------------------------------------------------------------------
-type
-  TCursiveAttachmentAnchorDesignUnits = class(TOpenTypePositioningSubTableCursiveAttachment.TCursiveAttachmentAnchor)
-  private
-    FX: SmallInt;
-    FY: SmallInt;
-  public
-    procedure LoadFromStream(Stream: TStream); override;
-    procedure SaveToStream(Stream: TStream); override;
-
-    procedure Assign(Source: TOpenTypePositioningSubTableCursiveAttachment.TCursiveAttachmentAnchor); override;
-
-    function Position: TOpenTypePositioningSubTableCursiveAttachment.TAnchorPoint; override;
-
-    property X: SmallInt read FX write FX;
-    property Y: SmallInt read FY write FY;
-  end;
-
-function TCursiveAttachmentAnchorDesignUnits.Position: TOpenTypePositioningSubTableCursiveAttachment.TAnchorPoint;
-begin
-  Result.X := X;
-  Result.Y := Y;
-end;
-
-procedure TCursiveAttachmentAnchorDesignUnits.Assign(Source: TOpenTypePositioningSubTableCursiveAttachment.TCursiveAttachmentAnchor);
-begin
-  inherited;
-  if (Source is TCursiveAttachmentAnchorDesignUnits) then
-  begin
-    FX := TCursiveAttachmentAnchorDesignUnits(Source).X;
-    FY := TCursiveAttachmentAnchorDesignUnits(Source).Y;
-  end;
-end;
-
-procedure TCursiveAttachmentAnchorDesignUnits.LoadFromStream(Stream: TStream);
-begin
-  inherited;
-
-  FX := BigEndianValueReader.ReadSmallInt(Stream);
-  FY := BigEndianValueReader.ReadSmallInt(Stream);
-end;
-
-procedure TCursiveAttachmentAnchorDesignUnits.SaveToStream(Stream: TStream);
-begin
-  inherited;
-
-  WriteSwappedSmallInt(Stream, FX);
-  WriteSwappedSmallInt(Stream, FY);
-end;
-
-//------------------------------------------------------------------------------
-//      TCursiveAttachmentAnchorDUContourPoints
-//------------------------------------------------------------------------------
-type
-  TCursiveAttachmentAnchorDUContourPoints = class(TCursiveAttachmentAnchorDesignUnits)
-  private
-    FContourPointIndex: Word;
-  public
-    procedure LoadFromStream(Stream: TStream); override;
-    procedure SaveToStream(Stream: TStream); override;
-
-    procedure Assign(Source: TOpenTypePositioningSubTableCursiveAttachment.TCursiveAttachmentAnchor); override;
-
-    function Position: TOpenTypePositioningSubTableCursiveAttachment.TAnchorPoint; override;
-
-    property ContourPointIndex: Word read FContourPointIndex write FContourPointIndex;
-  end;
-
-function TCursiveAttachmentAnchorDUContourPoints.Position: TOpenTypePositioningSubTableCursiveAttachment.TAnchorPoint;
-begin
-  Result := inherited Position;
-  // TODO
-end;
-
-procedure TCursiveAttachmentAnchorDUContourPoints.Assign(Source: TOpenTypePositioningSubTableCursiveAttachment.TCursiveAttachmentAnchor);
-begin
-  inherited;
-  if (Source is TCursiveAttachmentAnchorDUContourPoints) then
-  begin
-    FContourPointIndex := TCursiveAttachmentAnchorDUContourPoints(Source).ContourPointIndex;
-  end;
-end;
-
-procedure TCursiveAttachmentAnchorDUContourPoints.LoadFromStream(Stream: TStream);
-begin
-  inherited;
-
-  FContourPointIndex := BigEndianValueReader.ReadWord(Stream);
-end;
-
-procedure TCursiveAttachmentAnchorDUContourPoints.SaveToStream(Stream: TStream);
-begin
-  inherited;
-
-  WriteSwappedWord(Stream, FContourPointIndex);
-end;
-
-//------------------------------------------------------------------------------
-//      TCursiveAttachmentAnchorDUDeviceVariantion
-//------------------------------------------------------------------------------
-type
-  TCursiveAttachmentAnchorDUDeviceVariantion = class(TCursiveAttachmentAnchorDesignUnits)
-  private
-  public
-    procedure LoadFromStream(Stream: TStream); override;
-    procedure SaveToStream(Stream: TStream); override;
-
-    procedure Assign(Source: TOpenTypePositioningSubTableCursiveAttachment.TCursiveAttachmentAnchor); override;
-
-    function Position: TOpenTypePositioningSubTableCursiveAttachment.TAnchorPoint; override;
-  end;
-
-function TCursiveAttachmentAnchorDUDeviceVariantion.Position: TOpenTypePositioningSubTableCursiveAttachment.TAnchorPoint;
-begin
-  Result := inherited Position;
-  // TODO
-end;
-
-procedure TCursiveAttachmentAnchorDUDeviceVariantion.Assign(Source: TOpenTypePositioningSubTableCursiveAttachment.TCursiveAttachmentAnchor);
-begin
-  inherited;
-  if (Source is TCursiveAttachmentAnchorDUDeviceVariantion) then
-  begin
-    // TODO
-  end;
-end;
-
-procedure TCursiveAttachmentAnchorDUDeviceVariantion.LoadFromStream(Stream: TStream);
-var
-  XDeviceOffset: Word;
-  YDeviceOffset: Word;
-begin
-  inherited;
-
-  XDeviceOffset := BigEndianValueReader.ReadWord(Stream);
-  YDeviceOffset := BigEndianValueReader.ReadWord(Stream);
-end;
-
-procedure TCursiveAttachmentAnchorDUDeviceVariantion.SaveToStream(Stream: TStream);
-begin
-  inherited;
-
-  // TODO
-end;
-
-//------------------------------------------------------------------------------
 //
 //              TOpenTypePositioningSubTableCursiveAttachment
 //
@@ -355,29 +152,12 @@ begin
     ClearAnchors;
     for SourceAnchorItem in TOpenTypePositioningSubTableCursiveAttachment(Source).FAnchors do
     begin
-      NewAnchorItem.EntryAnchor := AnchorClassByAnchorFormat(SourceAnchorItem.EntryAnchor.AnchorFormat).Create(Self, SourceAnchorItem.EntryAnchor.AnchorFormat);
-      NewAnchorItem.ExitAnchor := AnchorClassByAnchorFormat(SourceAnchorItem.ExitAnchor.AnchorFormat).Create(Self, SourceAnchorItem.ExitAnchor.AnchorFormat);
+      NewAnchorItem.EntryAnchor := TOpenTypeAnchor.AnchorClassByAnchorFormat(SourceAnchorItem.EntryAnchor.AnchorFormat).Create(SourceAnchorItem.EntryAnchor.AnchorFormat);
+      NewAnchorItem.ExitAnchor := TOpenTypeAnchor.AnchorClassByAnchorFormat(SourceAnchorItem.ExitAnchor.AnchorFormat).Create(SourceAnchorItem.ExitAnchor.AnchorFormat);
       FAnchors.Add(NewAnchorItem);
       NewAnchorItem.EntryAnchor.Assign(SourceAnchorItem.EntryAnchor);
       NewAnchorItem.ExitAnchor.Assign(SourceAnchorItem.ExitAnchor);
     end;
-  end;
-end;
-
-class function TOpenTypePositioningSubTableCursiveAttachment.AnchorClassByAnchorFormat(AnchorFormat: TCursiveAttachmentAnchorFormat): TCursiveAttachmentAnchorClass;
-begin
-  case AnchorFormat of
-    caaDesignUnits:
-      Result := TCursiveAttachmentAnchorDesignUnits;
-
-    caaDUContourPoints:
-      Result := TCursiveAttachmentAnchorDUContourPoints;
-
-    caaDUDeviceVariantion:
-      Result := TCursiveAttachmentAnchorDUDeviceVariantion;
-
-  else
-    Result := nil;
   end;
 end;
 
@@ -422,8 +202,8 @@ var
   NextGlyph: TPascalTypeGlyph;
   CoverageIndex: integer;
   AnchorItem: TCursiveAttachmentAnchorItem;
-  EntryAnchor: TCursiveAttachmentAnchor;
-  ExitAnchor: TCursiveAttachmentAnchor;
+  EntryAnchor: TOpenTypeAnchor;
+  ExitAnchor: TOpenTypeAnchor;
   EntryAnchorPoint: TAnchorPoint;
   ExitAnchorPoint: TAnchorPoint;
   Delta: integer;
@@ -451,7 +231,7 @@ begin
   if (EntryAnchor = nil) then
     Exit(False);
 
-  // Align entry anchor-point with exit anchor-point
+  // Align exit anchor-point with entry anchor-point
   EntryAnchorPoint := EntryAnchor.Position;
   ExitAnchorPoint := ExitAnchor.Position;
 
@@ -496,7 +276,6 @@ var
     ExitAnchorOffset: Word;
   end;
   i: integer;
-  AnchorFormat: TCursiveAttachmentAnchorFormat;
   Anchor: TCursiveAttachmentAnchorItem;
 begin
   // Test font: "Arabic Typesetting"
@@ -523,24 +302,14 @@ begin
       if (EntryExitRecordOffsets[i].EntryAnchorOffset <> 0) then
       begin
         Stream.Position := StartPos + EntryExitRecordOffsets[i].EntryAnchorOffset;
-
-        AnchorFormat := TCursiveAttachmentAnchorFormat(BigEndianValueReader.ReadWord(Stream));
-        Anchor.EntryAnchor := AnchorClassByAnchorFormat(AnchorFormat).Create(Self, AnchorFormat);
-
-        Stream.Position := StartPos + EntryExitRecordOffsets[i].EntryAnchorOffset;
-        Anchor.EntryAnchor.LoadFromStream(Stream);
+        Anchor.EntryAnchor := TOpenTypeAnchor.CreateFromStream(Stream);
       end;
 
       // Read exit anchor
       if (EntryExitRecordOffsets[i].ExitAnchorOffset <> 0) then
       begin
         Stream.Position := StartPos + EntryExitRecordOffsets[i].ExitAnchorOffset;
-
-        AnchorFormat := TCursiveAttachmentAnchorFormat(BigEndianValueReader.ReadWord(Stream));
-        Anchor.ExitAnchor := AnchorClassByAnchorFormat(AnchorFormat).Create(Self, AnchorFormat);
-
-        Stream.Position := StartPos + EntryExitRecordOffsets[i].ExitAnchorOffset;
-        Anchor.ExitAnchor.LoadFromStream(Stream);
+        Anchor.ExitAnchor := TOpenTypeAnchor.CreateFromStream(Stream);
       end;
 
       FAnchors.Add(Anchor);

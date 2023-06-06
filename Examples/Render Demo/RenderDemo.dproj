@@ -172,6 +172,10 @@
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Substitution.Context.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Substitution.ChainedContext.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Positioning.Cursive.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Positioning.MarkToBase.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Common.ValueRecord.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Common.Mark.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Common.Anchor.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

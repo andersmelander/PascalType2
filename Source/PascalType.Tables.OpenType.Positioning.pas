@@ -41,6 +41,7 @@ uses
   PT_Types,
   PT_Classes,
   PT_Tables,
+  PascalType.Tables.OpenType.Common.ValueRecord,
   PascalType.Tables.OpenType.Coverage,
   PascalType.Tables.OpenType.Lookup;
 
