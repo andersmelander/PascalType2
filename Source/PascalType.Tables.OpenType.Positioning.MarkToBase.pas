@@ -150,8 +150,7 @@ begin
   begin
     ClearBaseRecords;
     FreeAndNil(FBaseCoverage);
-    FBaseCoverage := TCustomOpenTypeCoverageTable.ClassByFormat(TOpenTypePositioningSubTableMarkToBaseAttachment(Source).FBaseCoverage.CoverageFormat).Create;
-    FBaseCoverage.Assign(TOpenTypePositioningSubTableMarkToBaseAttachment(Source).FBaseCoverage);
+    FBaseCoverage := TOpenTypePositioningSubTableMarkToBaseAttachment(Source).FBaseCoverage.Clone;
 
     FMarks.Assign(TOpenTypePositioningSubTableMarkToBaseAttachment(Source).FMarks);
 
@@ -162,9 +161,8 @@ begin
       FBaseRecords[i].Capacity := TOpenTypePositioningSubTableMarkToBaseAttachment(Source).FBaseRecords[i].Count;
       for Anchor in TOpenTypePositioningSubTableMarkToBaseAttachment(Source).FBaseRecords[i] do
       begin
-        NewAnchor := TOpenTypeAnchor.AnchorClassByAnchorFormat(Anchor.AnchorFormat).Create(Anchor.AnchorFormat);
+        NewAnchor := Anchor.Clone;
         FBaseRecords[i].Add(NewAnchor);
-        NewAnchor.Assign(Anchor);
       end;
     end;
   end;
@@ -279,10 +277,7 @@ begin
   BaseArrayOffset := BigEndianValueReader.ReadWord(Stream);
 
   Stream.Position := StartPos + CoverageOffset;
-
-  // Get the coverage type so we can create the correct object to read the coverage table
-  CoverageFormat := TCoverageFormat(BigEndianValueReader.ReadWord(Stream));
-  FBaseCoverage := TCustomOpenTypeCoverageTable.ClassByFormat(CoverageFormat).Create;
+  FBaseCoverage := TCustomOpenTypeCoverageTable.CreateFromStream(Stream);
 
   Stream.Position := StartPos + MarkArrayOffset;
   FMarks.LoadFromStream(Stream);

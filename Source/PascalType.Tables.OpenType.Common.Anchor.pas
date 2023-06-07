@@ -98,6 +98,8 @@ type
 
     function Position: TAnchorPoint; virtual; abstract;
 
+    function Clone: TOpenTypeAnchor;
+
     property AnchorFormat: TOpenTypeAnchorFormat read FAnchorFormat;
   end;
 
@@ -286,6 +288,17 @@ end;
 procedure TOpenTypeAnchor.Assign(Source: TOpenTypeAnchor);
 begin
   Assert(AnchorFormat = Source.AnchorFormat);
+end;
+
+function TOpenTypeAnchor.Clone: TOpenTypeAnchor;
+begin
+  Result := AnchorClassByAnchorFormat(AnchorFormat).Create(AnchorFormat);
+  try
+    Result.Assign(Self);
+  except
+    Result.Free;
+    raise;
+  end;
 end;
 
 constructor TOpenTypeAnchor.Create(AAnchorFormat: TOpenTypeAnchorFormat);

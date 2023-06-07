@@ -643,7 +643,6 @@ var
   Part: TContextPart;
   i: integer;
   CoverageOffsets: array[TContextPart] of array of Word;
-  CoverageFormat: TCoverageFormat;
   CoverageTable: TCustomOpenTypeCoverageTable;
 begin
   // Test font: "Arial"
@@ -683,14 +682,8 @@ begin
     for i := 0 to High(CoverageOffsets[Part]) do
     begin
       Stream.Position := StartPos + CoverageOffsets[Part][i];
-
-      // Get the coverage type so we can create the correct object to read the coverage table
-      CoverageFormat := TCoverageFormat(BigEndianValueReader.ReadWord(Stream));
-      CoverageTable := TCustomOpenTypeCoverageTable.ClassByFormat(CoverageFormat).Create;
+      CoverageTable := TCustomOpenTypeCoverageTable.CreateFromStream(Stream);
       FCoverageTables[Part].Add(CoverageTable);
-
-      Stream.Position := StartPos + CoverageOffsets[Part][i];
-      CoverageTable.LoadFromStream(Stream);
     end;
   end;
 end;
@@ -712,9 +705,8 @@ begin
 
   for CoverageTable in Value do
   begin
-    NewCoverageTable := TCustomOpenTypeCoverageTable.ClassByFormat(CoverageTable.CoverageFormat).Create;
+    NewCoverageTable := CoverageTable.Clone;
     FCoverageTables[Index].Add(NewCoverageTable);
-    NewCoverageTable.Assign(CoverageTable);
   end;
 end;
 

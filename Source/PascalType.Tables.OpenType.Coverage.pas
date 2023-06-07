@@ -72,7 +72,10 @@ type
     function IndexOfGlyph(AGlyphID: Word): integer; virtual; abstract;
     function GlyphByIndex(AIndex: Word): integer; virtual; abstract;
 
+    function Clone: TCustomOpenTypeCoverageTable;
+
     class function ClassByFormat(ACoverageFormat: TCoverageFormat): TOpenTypeCoverageTableClass;
+    class function CreateFromStream(Stream: TStream): TCustomOpenTypeCoverageTable;
 
     property CoverageFormat: TCoverageFormat read FCoverageFormat;
   end;
@@ -198,6 +201,35 @@ begin
   end;
 end;
 
+function TCustomOpenTypeCoverageTable.Clone: TCustomOpenTypeCoverageTable;
+begin
+  Result := ClassByFormat(CoverageFormat).Create;
+  try
+    Result.Assign(Self);
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+class function TCustomOpenTypeCoverageTable.CreateFromStream(Stream: TStream): TCustomOpenTypeCoverageTable;
+var
+  SavePos: Int64;
+  CoverageFormat: TCoverageFormat;
+begin
+  SavePos := Stream.Position;
+
+  // Get the coverage type so we can create the correct object to read the coverage table
+  CoverageFormat := TCoverageFormat(BigEndianValueReader.ReadWord(Stream));
+  Result := TCustomOpenTypeCoverageTable.ClassByFormat(CoverageFormat).Create;
+  try
+    Stream.Position := SavePos;
+    Result.LoadFromStream(Stream);
+  except
+    Result.Free;
+    raise;
+  end;
+end;
 
 //------------------------------------------------------------------------------
 //

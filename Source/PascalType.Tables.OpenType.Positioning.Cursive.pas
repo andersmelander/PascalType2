@@ -152,11 +152,16 @@ begin
     ClearAnchors;
     for SourceAnchorItem in TOpenTypePositioningSubTableCursiveAttachment(Source).FAnchors do
     begin
-      NewAnchorItem.EntryAnchor := TOpenTypeAnchor.AnchorClassByAnchorFormat(SourceAnchorItem.EntryAnchor.AnchorFormat).Create(SourceAnchorItem.EntryAnchor.AnchorFormat);
-      NewAnchorItem.ExitAnchor := TOpenTypeAnchor.AnchorClassByAnchorFormat(SourceAnchorItem.ExitAnchor.AnchorFormat).Create(SourceAnchorItem.ExitAnchor.AnchorFormat);
+      NewAnchorItem := Default(TCursiveAttachmentAnchorItem);
+      try
+        NewAnchorItem.EntryAnchor := SourceAnchorItem.EntryAnchor.Clone;
+        NewAnchorItem.ExitAnchor := SourceAnchorItem.ExitAnchor.Clone;
+      except
+        NewAnchorItem.EntryAnchor.Free;
+        NewAnchorItem.ExitAnchor.Free;
+        raise;
+      end;
       FAnchors.Add(NewAnchorItem);
-      NewAnchorItem.EntryAnchor.Assign(SourceAnchorItem.EntryAnchor);
-      NewAnchorItem.ExitAnchor.Assign(SourceAnchorItem.ExitAnchor);
     end;
   end;
 end;

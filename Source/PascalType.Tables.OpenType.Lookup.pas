@@ -590,10 +590,7 @@ begin
   begin
     FreeAndNil(FCoverageTable);
     if (TCustomOpenTypeLookupSubTableWithCoverage(Source).CoverageTable <> nil) then
-    begin
-      FCoverageTable := TCustomOpenTypeCoverageTable.ClassByFormat(TCustomOpenTypeLookupSubTableWithCoverage(Source).CoverageTable.CoverageFormat).Create;
-      FCoverageTable.Assign(TCustomOpenTypeLookupSubTableWithCoverage(Source).CoverageTable);
-    end;
+      FCoverageTable := TCustomOpenTypeLookupSubTableWithCoverage(Source).CoverageTable.Clone;
   end;
 end;
 
@@ -601,7 +598,6 @@ procedure TCustomOpenTypeLookupSubTableWithCoverage.LoadFromStream(Stream: TStre
 var
   StartPos: Int64;
   CoveragePos: Int64;
-  CoverageFormat: TCoverageFormat;
   SavePos: Int64;
 begin
   FreeAndNil(FCoverageTable);
@@ -616,11 +612,7 @@ begin
 
   // Get the coverage type so we can create the correct object to read the coverage table
   Stream.Position := CoveragePos;
-  CoverageFormat := TCoverageFormat(BigEndianValueReader.ReadWord(Stream));
-  FCoverageTable := TCustomOpenTypeCoverageTable.ClassByFormat(CoverageFormat).Create;
-
-  Stream.Position := CoveragePos;
-  FCoverageTable.LoadFromStream(Stream);
+  FCoverageTable := TCustomOpenTypeCoverageTable.CreateFromStream(Stream);
 
   // Sub table header continues after CoveragePos
   Stream.Position := SavePos;

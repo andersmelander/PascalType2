@@ -77,6 +77,7 @@ type
     procedure SaveToStream(Stream: TStream);
 
     procedure Assign(Source: TOpenTypeMark);
+    function Clone: TOpenTypeMark;
 
     property MarkClass: Word read FMarkClass write FMarkClass;
     property Anchor: TOpenTypeAnchor read FAnchor;
@@ -126,7 +127,20 @@ procedure TOpenTypeMark.Assign(Source: TOpenTypeMark);
 begin
   FMarkClass := Source.MarkClass;
   FreeAndNil(FAnchor);
-  FAnchor := TOpenTypeAnchor.AnchorClassByAnchorFormat(Source.Anchor.AnchorFormat).Create(Source.Anchor.AnchorFormat);
+  FAnchor := Source.Anchor.Clone;
+end;
+
+function TOpenTypeMark.Clone: TOpenTypeMark;
+begin
+  Result := TOpenTypeMark.Create;
+  try
+
+    Result.Assign(Self);
+
+  except
+    Result.Free;
+    raise;
+  end;
 end;
 
 destructor TOpenTypeMark.Destroy;
