@@ -589,13 +589,15 @@ begin
   if Stream.Position + 2 * SizeOf(Word) > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  // Read coverage table offsets
+  // Read coverage table and Sequence Rule counts
   SetLength(CoverageOffsets, BigEndianValueReader.ReadWord(Stream));
+  SetLength(FSequenceRules, BigEndianValueReader.ReadWord(Stream));
+
+  // Read coverage table offsets
   for i := 0 to High(CoverageOffsets) do
     CoverageOffsets[i] := BigEndianValueReader.ReadWord(Stream);
 
-  // Read Sequence Rule
-  SetLength(FSequenceRules, BigEndianValueReader.ReadWord(Stream));
+  // Read sequence rules
   for i := 0 to High(FSequenceRules) do
   begin
     FSequenceRules[i].SequenceIndex := BigEndianValueReader.ReadWord(Stream);
