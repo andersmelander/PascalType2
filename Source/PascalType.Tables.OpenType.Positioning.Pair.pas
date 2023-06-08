@@ -265,8 +265,8 @@ begin
     for j := 0 to High(FPairValues[i]) do
     begin
       FPairValues[i, j].SecondGlyphID := BigEndianValueReader.ReadWord(Stream);
-      LoadValueRecordFromStream(Stream, FPairValues[i, j].FirstValueRecord, ValueFormat1);
-      LoadValueRecordFromStream(Stream, FPairValues[i, j].SecondValueRecord, ValueFormat2);
+      FPairValues[i, j].FirstValueRecord.LoadFromStream(Stream, ValueFormat1);
+      FPairValues[i, j].SecondValueRecord.LoadFromStream(Stream, ValueFormat2);
     end;
   end;
 end;
@@ -291,10 +291,10 @@ begin
   for i := 0 to High(FPairValues) do
     for j := 0 to High(FPairValues[i]) do
     begin
-      CreateValueFormat(FPairValues[i, j].FirstValueRecord, ValueFormat);
+      FPairValues[i, j].FirstValueRecord.BuildValueFormat(ValueFormat);
       ValueFormat1 := ValueFormat1 or ValueFormat;
 
-      CreateValueFormat(FPairValues[i, j].SecondValueRecord, ValueFormat);
+      FPairValues[i, j].SecondValueRecord.BuildValueFormat(ValueFormat);
       ValueFormat2 := ValueFormat2 or ValueFormat;
     end;
   WriteSwappedWord(Stream, ValueFormat1);
@@ -315,8 +315,8 @@ begin
     for j := 0 to High(FPairValues[i]) do
     begin
       WriteSwappedWord(Stream, FPairValues[i, j].SecondGlyphID);
-      SaveValueRecordToStream(Stream, FPairValues[i, j].FirstValueRecord, ValueFormat1);
-      SaveValueRecordToStream(Stream, FPairValues[i, j].SecondValueRecord, ValueFormat2);
+      FPairValues[i, j].FirstValueRecord.SaveToStream(Stream, ValueFormat1);
+      FPairValues[i, j].SecondValueRecord.SaveToStream(Stream, ValueFormat2);
     end;
   end;
 
@@ -436,8 +436,8 @@ begin
 
     for j := 0 to High(FClassValueRecords[i]) do
     begin
-      LoadValueRecordFromStream(Stream, FClassValueRecords[i, j].FirstValueRecord, ValueFormat1);
-      LoadValueRecordFromStream(Stream, FClassValueRecords[i, j].SecondValueRecord, ValueFormat2);
+      FClassValueRecords[i, j].FirstValueRecord.LoadFromStream(Stream, ValueFormat1);
+      FClassValueRecords[i, j].SecondValueRecord.LoadFromStream(Stream, ValueFormat2);
     end;
   end;
 

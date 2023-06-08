@@ -574,7 +574,6 @@ var
   StartPos: Int64;
   i: integer;
   CoverageOffsets: array of Word;
-  CoverageFormat: TCoverageFormat;
   CoverageTable: TCustomOpenTypeCoverageTable;
 begin
   // Test font: None found

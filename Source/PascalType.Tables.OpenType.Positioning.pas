@@ -81,14 +81,7 @@ type
 // GPOS lookup sub tables
 //------------------------------------------------------------------------------
 type
-  TCustomOpenTypePositioningSubTable = class abstract(TCustomOpenTypeLookupSubTableWithCoverage)
-  private
-  protected
-    class function LoadValueRecordFromStream(Stream: TStream; var ValueRecord: TOpenTypeValueRecord; ValueFormat: Word): integer;
-    class function SaveValueRecordToStream(Stream: TStream; const ValueRecord: TOpenTypeValueRecord; ValueFormat: Word): integer;
-    class function CreateValueFormat(const ValueRecord: TOpenTypeValueRecord; var ValueFormat: Word): integer;
-  public
-  end;
+  TCustomOpenTypePositioningSubTable = class abstract(TCustomOpenTypeLookupSubTableWithCoverage);
 
   TOpenTypePositioningSubTableClass = class of TCustomOpenTypePositioningSubTable;
 
@@ -133,78 +126,6 @@ begin
     FPositioningFormatRegistry := TDictionary<TGlyphPositioning, TOpenTypePositioningLookupTableClass>.Create;
 
   FPositioningFormatRegistry.AddOrSetValue(APositioningFormat, APositioningTableClass);
-end;
-
-
-//------------------------------------------------------------------------------
-//
-//              TCustomOpenTypePositioningSubTable
-//
-//------------------------------------------------------------------------------
-class function TCustomOpenTypePositioningSubTable.CreateValueFormat(const ValueRecord: TOpenTypeValueRecord; var ValueFormat: Word): integer;
-var
-  pValue: PWord;
-  Mask: Word;
-begin
-  Result := 0;
-  ValueFormat := 0;
-  Mask := $0001;
-  pValue := PWord(@ValueRecord);
-  while (Mask and VALUEFORMAT_Reserved = 0) do
-  begin
-    if (pValue^ <> 0) then
-    begin
-      ValueFormat := ValueFormat or Mask;
-      Inc(Result, SizeOf(Word));
-    end;
-
-    Mask := Mask shl 1;
-    Inc(pValue);
-  end;
-end;
-
-class function TCustomOpenTypePositioningSubTable.LoadValueRecordFromStream(Stream: TStream; var ValueRecord: TOpenTypeValueRecord;
-  ValueFormat: Word): integer;
-var
-  pValue: PWord;
-begin
-  ValueRecord := Default(TOpenTypeValueRecord);
-  ValueFormat := ValueFormat and (not VALUEFORMAT_Reserved);
-
-  Result := 0;
-  pValue := PWord(@ValueRecord);
-  while (ValueFormat <> 0) do
-  begin
-    if (ValueFormat and $0001 <> 0) then
-    begin
-      pValue^ := BigEndianValueReader.ReadWord(Stream);
-      Inc(Result, SizeOf(Word));
-    end;
-
-    ValueFormat := ValueFormat shr 1;
-    Inc(pValue);
-  end;
-end;
-
-class function TCustomOpenTypePositioningSubTable.SaveValueRecordToStream(Stream: TStream; const ValueRecord: TOpenTypeValueRecord;
-  ValueFormat: Word): integer;
-var
-  pValue: PWord;
-begin
-  Result := 0;
-  ValueFormat := ValueFormat and (not VALUEFORMAT_Reserved);
-  pValue := PWord(@ValueRecord);
-  while (ValueFormat <> 0) do
-  begin
-    if (ValueFormat and $0001 <> 0) then
-    begin
-      WriteSwappedWord(Stream, pValue^);
-      Inc(Result, SizeOf(Word));
-    end;
-
-    ValueFormat := ValueFormat shr 1;
-    Inc(pValue);
-  end;
 end;
 
 //------------------------------------------------------------------------------

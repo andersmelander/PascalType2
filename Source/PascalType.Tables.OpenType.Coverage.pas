@@ -72,10 +72,10 @@ type
     function IndexOfGlyph(AGlyphID: Word): integer; virtual; abstract;
     function GlyphByIndex(AIndex: Word): integer; virtual; abstract;
 
-    function Clone: TCustomOpenTypeCoverageTable;
+    function Clone(AParent: TCustomPascalTypeTable = nil): TCustomOpenTypeCoverageTable;
 
     class function ClassByFormat(ACoverageFormat: TCoverageFormat): TOpenTypeCoverageTableClass;
-    class function CreateFromStream(Stream: TStream): TCustomOpenTypeCoverageTable;
+    class function CreateFromStream(Stream: TStream; AParent: TCustomPascalTypeTable = nil): TCustomOpenTypeCoverageTable;
 
     property CoverageFormat: TCoverageFormat read FCoverageFormat;
   end;
@@ -197,13 +197,13 @@ begin
     cfRange:
       Result := TOpenTypeCoverageRangeTable;
   else
-    Result := nil;
+    raise EPascalTypeError.Create('Invalid coverage format');
   end;
 end;
 
-function TCustomOpenTypeCoverageTable.Clone: TCustomOpenTypeCoverageTable;
+function TCustomOpenTypeCoverageTable.Clone(AParent: TCustomPascalTypeTable): TCustomOpenTypeCoverageTable;
 begin
-  Result := ClassByFormat(CoverageFormat).Create;
+  Result := ClassByFormat(CoverageFormat).Create(AParent);
   try
     Result.Assign(Self);
   except
@@ -212,7 +212,7 @@ begin
   end;
 end;
 
-class function TCustomOpenTypeCoverageTable.CreateFromStream(Stream: TStream): TCustomOpenTypeCoverageTable;
+class function TCustomOpenTypeCoverageTable.CreateFromStream(Stream: TStream; AParent: TCustomPascalTypeTable): TCustomOpenTypeCoverageTable;
 var
   SavePos: Int64;
   CoverageFormat: TCoverageFormat;
@@ -221,7 +221,7 @@ begin
 
   // Get the coverage type so we can create the correct object to read the coverage table
   CoverageFormat := TCoverageFormat(BigEndianValueReader.ReadWord(Stream));
-  Result := TCustomOpenTypeCoverageTable.ClassByFormat(CoverageFormat).Create;
+  Result := TCustomOpenTypeCoverageTable.ClassByFormat(CoverageFormat).Create(AParent);
   try
     Stream.Position := SavePos;
     Result.LoadFromStream(Stream);

@@ -590,7 +590,7 @@ begin
   begin
     FreeAndNil(FCoverageTable);
     if (TCustomOpenTypeLookupSubTableWithCoverage(Source).CoverageTable <> nil) then
-      FCoverageTable := TCustomOpenTypeLookupSubTableWithCoverage(Source).CoverageTable.Clone;
+      FCoverageTable := TCustomOpenTypeLookupSubTableWithCoverage(Source).CoverageTable.Clone(Self);
   end;
 end;
 
@@ -612,7 +612,7 @@ begin
 
   // Get the coverage type so we can create the correct object to read the coverage table
   Stream.Position := CoveragePos;
-  FCoverageTable := TCustomOpenTypeCoverageTable.CreateFromStream(Stream);
+  FCoverageTable := TCustomOpenTypeCoverageTable.CreateFromStream(Stream, Self);
 
   // Sub table header continues after CoveragePos
   Stream.Position := SavePos;

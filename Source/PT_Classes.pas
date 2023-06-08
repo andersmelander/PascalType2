@@ -531,6 +531,7 @@ begin
   while (ASize >= AElementSize) do
   begin
     case AElementSize of
+      1: ;
       2: PWord(p)^ := Swap16(PWord(p)^);
       4: PCardinal(p)^ := Swap32(PCardinal(p)^);
       8: PInt64(p)^ := Swap64(PInt64(p)^);

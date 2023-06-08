@@ -32,6 +32,9 @@ unit PascalType.Tables.OpenType.Common.ValueRecord;
 
 interface
 
+uses
+  Classes;
+
 {$I PT_Compiler.inc}
 
 //------------------------------------------------------------------------------
@@ -79,6 +82,10 @@ type
     xAdvDeviceOffset: Word;     // Offset to Device table (non-variable font) / VariationIndex table (variable font) for horizontal advance, from beginning of the immediate parent table (SinglePos or PairPosFormat2 lookup subtable, PairSet table within a PairPosFormat1 lookup subtable) — may be NULL.
     yAdvDeviceOffset: Word;     // Offset to Device table (non-variable font) / VariationIndex table (variable font) for vertical advance, from beginning of the immediate parent table (SinglePos or PairPosFormat2 lookup subtable, PairSet table within a PairPosFormat1 lookup subtable) — may be NULL.
 
+    function LoadFromStream(Stream: TStream; ValueFormat: Word): integer;
+    function SaveToStream(Stream: TStream; ValueFormat: Word): integer;
+    function BuildValueFormat(var ValueFormat: Word): integer;
+
     property IsEmpty: boolean read GetEmpty;
   end;
 
@@ -100,9 +107,81 @@ const
 
 implementation
 
+uses
+  PT_Classes;
+
+//------------------------------------------------------------------------------
+//
+//              TOpenTypeValueRecord
+//
+//------------------------------------------------------------------------------
 function TOpenTypeValueRecord.GetEmpty: boolean;
 begin
   Result := (xPlacement = 0) and (yPlacement = 0) and (xAdvance = 0) and (yAdvance = 0);
+end;
+
+function TOpenTypeValueRecord.BuildValueFormat(var ValueFormat: Word): integer;
+var
+  pValue: PWord;
+  Mask: Word;
+begin
+  Result := 0;
+  ValueFormat := 0;
+  Mask := $0001;
+  pValue := PWord(@Self);
+  while (Mask and VALUEFORMAT_Reserved = 0) do
+  begin
+    if (pValue^ <> 0) then
+    begin
+      ValueFormat := ValueFormat or Mask;
+      Inc(Result, SizeOf(Word));
+    end;
+
+    Mask := Mask shl 1;
+    Inc(pValue);
+  end;
+end;
+
+function TOpenTypeValueRecord.LoadFromStream(Stream: TStream; ValueFormat: Word): integer;
+var
+  pValue: PWord;
+begin
+  Self := Default(TOpenTypeValueRecord);
+  ValueFormat := ValueFormat and (not VALUEFORMAT_Reserved);
+
+  Result := 0;
+  pValue := PWord(@Self);
+  while (ValueFormat <> 0) do
+  begin
+    if (ValueFormat and $0001 <> 0) then
+    begin
+      pValue^ := BigEndianValueReader.ReadWord(Stream);
+      Inc(Result, SizeOf(Word));
+    end;
+
+    ValueFormat := ValueFormat shr 1;
+    Inc(pValue);
+  end;
+end;
+
+function TOpenTypeValueRecord.SaveToStream(Stream: TStream; ValueFormat: Word): integer;
+var
+  pValue: PWord;
+begin
+  Result := 0;
+  ValueFormat := ValueFormat and (not VALUEFORMAT_Reserved);
+  pValue := PWord(@Self);
+  while (ValueFormat <> 0) do
+  begin
+    if (ValueFormat and $0001 <> 0) then
+    begin
+      WriteSwappedWord(Stream, pValue^);
+      Inc(Result, SizeOf(Word));
+    end;
+
+    ValueFormat := ValueFormat shr 1;
+    Inc(pValue);
+  end;
 end;
 
 //------------------------------------------------------------------------------

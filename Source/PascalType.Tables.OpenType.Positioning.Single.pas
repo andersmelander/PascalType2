@@ -214,7 +214,7 @@ begin
 
   ValueFormat := BigEndianValueReader.ReadWord(Stream);
 
-  LoadValueRecordFromStream(Stream, FValueRecord, ValueFormat);
+  FValueRecord.LoadFromStream(Stream, ValueFormat);
 end;
 
 procedure TOpenTypePositioningSubTableSingleSingle.SaveToStream(Stream: TStream);
@@ -223,10 +223,10 @@ var
 begin
   inherited;
 
-  CreateValueFormat(FValueRecord, ValueFormat);
+  FValueRecord.BuildValueFormat(ValueFormat);
   WriteSwappedWord(Stream, ValueFormat);
 
-  SaveValueRecordToStream(Stream, FValueRecord, ValueFormat);
+  FValueRecord.SaveToStream(Stream, ValueFormat);
 end;
 
 //------------------------------------------------------------------------------
@@ -265,7 +265,7 @@ begin
   SetLength(FValueRecords, BigEndianValueReader.ReadWord(Stream));
 
   for i := 0 to High(FValueRecords) do
-    LoadValueRecordFromStream(Stream, FValueRecords[i], ValueFormat);
+    FValueRecords[i].LoadFromStream(Stream, ValueFormat);
 end;
 
 procedure TOpenTypePositioningSubTableSingleList.SaveToStream(Stream: TStream);
@@ -276,7 +276,7 @@ begin
   inherited;
 
   if (Length(FValueRecords) > 0) then
-    CreateValueFormat(FValueRecords[0], ValueFormat)
+    FValueRecords[0].BuildValueFormat(ValueFormat)
   else
     ValueFormat := 0;
 
@@ -285,7 +285,7 @@ begin
   WriteSwappedWord(Stream, Length(FValueRecords));
 
   for i := 0 to High(FValueRecords) do
-    SaveValueRecordToStream(Stream, FValueRecords[i], ValueFormat);
+    FValueRecords[i].SaveToStream(Stream, ValueFormat);
 end;
 
 //------------------------------------------------------------------------------

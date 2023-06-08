@@ -150,7 +150,7 @@ begin
   begin
     ClearBaseRecords;
     FreeAndNil(FBaseCoverage);
-    FBaseCoverage := TOpenTypePositioningSubTableMarkToBaseAttachment(Source).FBaseCoverage.Clone;
+    FBaseCoverage := TOpenTypePositioningSubTableMarkToBaseAttachment(Source).FBaseCoverage.Clone(Self);
 
     FMarks.Assign(TOpenTypePositioningSubTableMarkToBaseAttachment(Source).FMarks);
 
@@ -257,7 +257,6 @@ var
   MarkClassCount: Word;
   MarkArrayOffset: Word;
   BaseArrayOffset: Word;
-  CoverageFormat: TCoverageFormat;
   BaseRecordOffsets: array of array of Word;
   BaseRecords: array of TList<TOpenTypeAnchor>;
   i, j: integer;
@@ -277,7 +276,7 @@ begin
   BaseArrayOffset := BigEndianValueReader.ReadWord(Stream);
 
   Stream.Position := StartPos + CoverageOffset;
-  FBaseCoverage := TCustomOpenTypeCoverageTable.CreateFromStream(Stream);
+  FBaseCoverage := TCustomOpenTypeCoverageTable.CreateFromStream(Stream, Self);
 
   Stream.Position := StartPos + MarkArrayOffset;
   FMarks.LoadFromStream(Stream);
