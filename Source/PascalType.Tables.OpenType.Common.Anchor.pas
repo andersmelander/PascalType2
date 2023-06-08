@@ -281,7 +281,7 @@ begin
       Result := TOpenTypeAnchorDUDeviceVariantion;
 
   else
-    Result := nil;
+    raise EPascalTypeError.CreateFmt('Invalid anchor format: %d', [Ord(AnchorFormat)]);
   end;
 end;
 

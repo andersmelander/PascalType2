@@ -301,9 +301,6 @@ begin
 
       Anchor := TOpenTypeAnchor.CreateFromStream(Stream);
       BaseRecords[i].Add(Anchor);
-
-      Stream.Position := StartPos + BaseArrayOffset + BaseRecordOffsets[i, j];
-      Anchor.LoadFromStream(Stream);
     end;
   end;
 end;
@@ -374,6 +371,6 @@ end;
 //------------------------------------------------------------------------------
 
 initialization
-  TCustomOpenTypePositioningLookupTable.RegisterPositioningFormat(gpCursiveAttachment, TOpenTypePositioningLookupTableMarkToBaseAttachment);
+  TCustomOpenTypePositioningLookupTable.RegisterPositioningFormat(gpMarkToBaseAttachment, TOpenTypePositioningLookupTableMarkToBaseAttachment);
 end.
 

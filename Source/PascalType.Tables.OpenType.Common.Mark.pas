@@ -73,8 +73,7 @@ type
   public
     destructor Destroy; override;
 
-    procedure LoadFromStream(Stream: TStream);
-    procedure SaveToStream(Stream: TStream);
+    procedure LoadFromStream(Stream: TStream; StartPos: Int64);
 
     procedure Assign(Source: TOpenTypeMark);
     function Clone: TOpenTypeMark;
@@ -149,16 +148,20 @@ begin
   inherited;
 end;
 
-procedure TOpenTypeMark.LoadFromStream(Stream: TStream);
+procedure TOpenTypeMark.LoadFromStream(Stream: TStream; StartPos: Int64);
+var
+  SavePos: Int64;
+  AnchorOffset: Word;
 begin
   FMarkClass := BigEndianValueReader.ReadWord(Stream);
-  FAnchor := TOpenTypeAnchor.CreateFromStream(Stream);
-end;
+  AnchorOffset := BigEndianValueReader.ReadWord(Stream);
 
-procedure TOpenTypeMark.SaveToStream(Stream: TStream);
-begin
-  WriteSwappedWord(Stream, FMarkClass);
-  FAnchor.SaveToStream(Stream);
+  SavePos := Stream.Position;
+
+  Stream.Position := StartPos + AnchorOffset;
+  FAnchor := TOpenTypeAnchor.CreateFromStream(Stream);
+
+  Stream.Position := SavePos;
 end;
 
 
@@ -206,35 +209,63 @@ end;
 
 procedure TOpenTypeMarkList.LoadFromStream(Stream: TStream);
 var
-  StartPos: int64;
-  MarkOffsets: array of Word;
-  i: integer;
+  StartPos: Int64;
+  MarkCount: Word;
   Mark: TOpenTypeMark;
 begin
-  StartPos := Stream.Position;
-
   FMarks.Clear;
 
-  SetLength(MarkOffsets, BigEndianValueReader.ReadWord(Stream));
-  for i := 0 to High(MarkOffsets) do
-    MarkOffsets[i] := BigEndianValueReader.ReadWord(Stream);
+  StartPos := Stream.Position;
 
-  FMarks.Capacity := Length(MarkOffsets);
-  for i := 0 to High(MarkOffsets) do
+  MarkCount := BigEndianValueReader.ReadWord(Stream);
+
+  FMarks.Capacity := MarkCount;
+  while (MarkCount > 0) do
   begin
-    Stream.Position := StartPos + MarkOffsets[i];
     Mark := TOpenTypeMark.Create;
     FMarks.Add(Mark);
-    Mark.LoadFromStream(Stream);
+    Mark.LoadFromStream(Stream, StartPos);
+    Dec(MarkCount);
   end;
 end;
 
 procedure TOpenTypeMarkList.SaveToStream(Stream: TStream);
 var
+  StartPos: Int64;
+  SavePos: Int64;
+  ListPos: Int64;
   Mark: TOpenTypeMark;
+  AnchorOffsets: array of Word;
+  i: integer;
 begin
-  for Mark in FMarks do
-    Mark.SaveToStream(Stream);
+  StartPos := Stream.Position;
+
+  WriteSwappedWord(Stream, FMarks.Count);
+
+  ListPos := Stream.Position;
+  for i := 0 to FMarks.Count-1 do
+  begin
+    WriteSwappedWord(Stream, FMarks[i].MarkClass);
+    Stream.Position := Stream.Position + SizeOf(Word);
+  end;
+
+  SetLength(AnchorOffsets, FMarks.Count);
+  for i := 0 to FMarks.Count-1 do
+  begin
+    AnchorOffsets[i] := Stream.Position - StartPos;
+    FMarks[i].Anchor.SaveToStream(Stream);
+  end;
+
+  SavePos := Stream.Position;
+
+  Stream.Position := ListPos;
+  for i := 0 to FMarks.Count-1 do
+  begin
+    Stream.Position := Stream.Position + SizeOf(Word);
+    WriteSwappedWord(Stream, AnchorOffsets[i]);
+  end;
+
+  Stream.Position := SavePos;
 end;
 
 //------------------------------------------------------------------------------

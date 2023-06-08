@@ -597,7 +597,7 @@ end;
 procedure TCustomOpenTypeLookupSubTableWithCoverage.LoadFromStream(Stream: TStream);
 var
   StartPos: Int64;
-  CoveragePos: Int64;
+  CoverageOfs: Word;
   SavePos: Int64;
 begin
   FreeAndNil(FCoverageTable);
@@ -607,14 +607,13 @@ begin
   inherited;
 
   // Offset from start of sub-table to coverage table
-  CoveragePos := StartPos + BigEndianValueReader.ReadWord(Stream);
+  CoverageOfs := BigEndianValueReader.ReadWord(Stream);
   SavePos := Stream.Position;
 
-  // Get the coverage type so we can create the correct object to read the coverage table
-  Stream.Position := CoveragePos;
+  Stream.Position := StartPos + CoverageOfs;
   FCoverageTable := TCustomOpenTypeCoverageTable.CreateFromStream(Stream, Self);
 
-  // Sub table header continues after CoveragePos
+  // Sub table header continues after Coverage offset
   Stream.Position := SavePos;
 end;
 

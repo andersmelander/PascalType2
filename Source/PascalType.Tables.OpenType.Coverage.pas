@@ -197,7 +197,7 @@ begin
     cfRange:
       Result := TOpenTypeCoverageRangeTable;
   else
-    raise EPascalTypeError.Create('Invalid coverage format');
+    raise EPascalTypeError.CreateFmt('Invalid coverage format: %d', [Ord(ACoverageFormat)]);
   end;
 end;
 
