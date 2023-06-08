@@ -1245,17 +1245,16 @@ var
 begin
   MemoryStream := TMemoryStream.Create;
   try
-    // set stream position
-    Stream.Position := TableEntry.Offset;
 
-    // copy from stream
+    // Copy from stream and DWORD align (for checksum)
+    Stream.Position := TableEntry.Offset;
     MemoryStream.CopyFrom(Stream, 4 * ((TableEntry.Length + 3) div 4));
 
 {$IFDEF ChecksumTest}
     ValidateChecksum(MemoryStream, TableEntry);
 {$ENDIF}
-    // reset memory stream position
-    MemoryStream.Seek(soFromBeginning, 0);
+
+    MemoryStream.Position := 0;
 
     // restore original table length
     MemoryStream.Size := TableEntry.Length;

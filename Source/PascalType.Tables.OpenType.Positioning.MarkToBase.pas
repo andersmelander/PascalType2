@@ -82,10 +82,10 @@ type
 type
   TOpenTypePositioningSubTableMarkToBaseAttachment = class(TCustomOpenTypePositioningSubTable)
   private type
-    TAnchorList = TObjectList<TOpenTypeAnchor>;
+    TAnchorList = TArray<TOpenTypeAnchor>;
   private
     FBaseCoverage: TCustomOpenTypeCoverageTable;
-    FBaseRecords: array of TAnchorList;
+    FBaseRecords: TArray<TAnchorList>;
     FMarks: TOpenTypeMarkList;
   protected
     function GetMarkCoverage: TCustomOpenTypeCoverageTable;
@@ -143,7 +143,7 @@ procedure TOpenTypePositioningSubTableMarkToBaseAttachment.Assign(Source: TPersi
 var
   Anchor: TOpenTypeAnchor;
   NewAnchor: TOpenTypeAnchor;
-  i: integer;
+  i, j: integer;
 begin
   inherited;
   if Source is TOpenTypePositioningSubTableMarkToBaseAttachment then
@@ -157,12 +157,15 @@ begin
     SetLength(FBaseRecords, Length(TOpenTypePositioningSubTableMarkToBaseAttachment(Source).FBaseRecords));
     for i := 0 to High(FBaseRecords) do
     begin
-      FBaseRecords[i] := TAnchorList.Create;
-      FBaseRecords[i].Capacity := TOpenTypePositioningSubTableMarkToBaseAttachment(Source).FBaseRecords[i].Count;
-      for Anchor in TOpenTypePositioningSubTableMarkToBaseAttachment(Source).FBaseRecords[i] do
+      SetLength(FBaseRecords[i], Length(TOpenTypePositioningSubTableMarkToBaseAttachment(Source).FBaseRecords[i]));
+      for j := 0 to High(TOpenTypePositioningSubTableMarkToBaseAttachment(Source).FBaseRecords[i]) do
       begin
-        NewAnchor := Anchor.Clone;
-        FBaseRecords[i].Add(NewAnchor);
+        Anchor := TOpenTypePositioningSubTableMarkToBaseAttachment(Source).FBaseRecords[i, j];
+        if (Anchor <> nil) then
+          NewAnchor := Anchor.Clone
+        else
+          NewAnchor := nil;
+        FBaseRecords[i, j] := NewAnchor;
       end;
     end;
   end;
@@ -171,9 +174,11 @@ end;
 procedure TOpenTypePositioningSubTableMarkToBaseAttachment.ClearBaseRecords;
 var
   AnchorList: TAnchorList;
+  Anchor: TOpenTypeAnchor;
 begin
   for AnchorList in FBaseRecords do
-    AnchorList.Free;
+    for Anchor in AnchorList do
+      Anchor.Free;
   SetLength(FBaseRecords, 0);
 end;
 
@@ -215,12 +220,16 @@ function TOpenTypePositioningSubTableMarkToBaseAttachment.Apply(AGlyphString: TP
 
 var
   MarkGlyph: TPascalTypeGlyph;
-  MarkIndex: integer;
   BaseGlyph: TPascalTypeGlyph;
+  MarkIndex: integer;
   BaseIndex: integer;
+  BaseGlyphIndex: integer;
   Mark: TOpenTypeMark;
   BaseAnchor: TOpenTypeAnchor;
 begin
+  // Testfont: "Arial"
+  // - U+1EAA Latin Capital Letter A with Circumflex and Tilde
+  // - U+1EEE Latin Capital Letter U with Horn and Tilde
   if (AIndex < 1) then
     Exit(False);
 
@@ -230,21 +239,23 @@ begin
     Exit(False);
 
   // Scan backward for a base glyph
-  BaseIndex := AIndex;
-  while (BaseIndex >= 0) and ((AGlyphString[BaseIndex].IsMark) or (AGlyphString[BaseIndex].LigatureComponent > 0)) do
-    Dec(BaseIndex);
-  if (BaseIndex < 0) then
+  BaseGlyphIndex := AIndex-1;
+  while (BaseGlyphIndex >= 0) and ((AGlyphString[BaseGlyphIndex].IsMark) or (AGlyphString[BaseGlyphIndex].LigatureComponent > 0)) do
+    Dec(BaseGlyphIndex);
+  if (BaseGlyphIndex < 0) then
     Exit(False);
 
-  BaseGlyph := AGlyphString[BaseIndex];
+  BaseGlyph := AGlyphString[BaseGlyphIndex];
   BaseIndex := BaseCoverage.IndexOfGlyph(BaseGlyph.GlyphID);
   if (BaseIndex = -1) then
     Exit(False);
 
   Mark := FMarks[MarkIndex];
   BaseAnchor := FBaseRecords[BaseIndex][Mark.MarkClass];
+  if (BaseAnchor = nil) then
+    Exit(False);
 
-  ApplyAnchor(Mark.Anchor, BaseAnchor, MarkIndex, BaseIndex);
+  ApplyAnchor(Mark.Anchor, BaseAnchor, AIndex, BaseGlyphIndex);
 
   Result := True;
   Inc(AIndex);
@@ -258,7 +269,6 @@ var
   MarkArrayOffset: Word;
   BaseArrayOffset: Word;
   BaseRecordOffsets: array of array of Word;
-  BaseRecords: array of TList<TOpenTypeAnchor>;
   i, j: integer;
   Anchor: TOpenTypeAnchor;
 begin
@@ -270,17 +280,21 @@ begin
   if Stream.Position + 4 * SizeOf(Word) > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
+  // Offsets and count
   CoverageOffset := BigEndianValueReader.ReadWord(Stream);
   MarkClassCount := BigEndianValueReader.ReadWord(Stream);
   MarkArrayOffset := BigEndianValueReader.ReadWord(Stream);
   BaseArrayOffset := BigEndianValueReader.ReadWord(Stream);
 
+  // Coverage table
   Stream.Position := StartPos + CoverageOffset;
   FBaseCoverage := TCustomOpenTypeCoverageTable.CreateFromStream(Stream, Self);
 
+  // Mark array
   Stream.Position := StartPos + MarkArrayOffset;
   FMarks.LoadFromStream(Stream);
 
+  // Base offset array
   Stream.Position := StartPos + BaseArrayOffset;
   SetLength(BaseRecordOffsets, BigEndianValueReader.ReadWord(Stream));
   for i := 0 to High(BaseRecordOffsets) do
@@ -290,17 +304,21 @@ begin
       BaseRecordOffsets[i, j] := BigEndianValueReader.ReadWord(Stream);
   end;
 
-  SetLength(BaseRecords, Length(BaseRecordOffsets));
+  // Base records
+  SetLength(FBaseRecords, Length(BaseRecordOffsets));
   for i := 0 to High(BaseRecordOffsets) do
   begin
-    BaseRecords[i] := TAnchorList.Create;
-    BaseRecords[i].Capacity := MarkClassCount;
+    SetLength(FBaseRecords[i], MarkClassCount);
     for j := 0 to MarkClassCount-1 do
     begin
-      Stream.Position := StartPos + BaseArrayOffset + BaseRecordOffsets[i, j];
+      if (BaseRecordOffsets[i, j] <> 0) then
+      begin
+        Stream.Position := StartPos + BaseArrayOffset + BaseRecordOffsets[i, j];
+        Anchor := TOpenTypeAnchor.CreateFromStream(Stream);
+      end else
+        Anchor := nil;
 
-      Anchor := TOpenTypeAnchor.CreateFromStream(Stream);
-      BaseRecords[i].Add(Anchor);
+      FBaseRecords[i, j] := Anchor;
     end;
   end;
 end;
@@ -344,8 +362,12 @@ begin
   for i := 0 to High(FBaseRecords) do
     for j := 0 to FMarks.Count-1 do
     begin
-      BaseRecordOffsets[i, j] := Stream.Position - StartPos - BaseArrayOffset;
-      FBaseRecords[i][j].SaveToStream(Stream);
+      if (FBaseRecords[i][j] <> nil) then
+      begin
+        BaseRecordOffsets[i, j] := Stream.Position - StartPos - BaseArrayOffset;
+        FBaseRecords[i][j].SaveToStream(Stream);
+      end else
+        BaseRecordOffsets[i, j] := 0;
     end;
 
   SavePos := Stream.Position;

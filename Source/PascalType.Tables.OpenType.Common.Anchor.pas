@@ -70,7 +70,7 @@ uses
   variation instance, as needed.
 *)
 type
-  TOpenTypeAnchorFormat = (caaDesignUnits, caaDUContourPoints, caaDUDeviceVariantion);
+  TOpenTypeAnchorFormat = (caaInvalid, caaDesignUnits, caaDUContourPoints, caaDUDeviceVariantion);
 
 type
   TAnchorPoint = record
@@ -167,10 +167,10 @@ end;
 
 
 //------------------------------------------------------------------------------
-//      TOpenTypeAnchorDUContourPoints
+//      TOpenTypeAnchorDUContourPoint
 //------------------------------------------------------------------------------
 type
-  TOpenTypeAnchorDUContourPoints = class(TOpenTypeAnchorDesignUnits)
+  TOpenTypeAnchorDUContourPoint = class(TOpenTypeAnchorDesignUnits)
   private
     FContourPointIndex: Word;
   public
@@ -184,29 +184,29 @@ type
     property ContourPointIndex: Word read FContourPointIndex write FContourPointIndex;
   end;
 
-function TOpenTypeAnchorDUContourPoints.Position: TAnchorPoint;
+function TOpenTypeAnchorDUContourPoint.Position: TAnchorPoint;
 begin
   Result := inherited Position;
   // TODO
 end;
 
-procedure TOpenTypeAnchorDUContourPoints.Assign(Source: TOpenTypeAnchor);
+procedure TOpenTypeAnchorDUContourPoint.Assign(Source: TOpenTypeAnchor);
 begin
   inherited;
-  if (Source is TOpenTypeAnchorDUContourPoints) then
+  if (Source is TOpenTypeAnchorDUContourPoint) then
   begin
-    FContourPointIndex := TOpenTypeAnchorDUContourPoints(Source).ContourPointIndex;
+    FContourPointIndex := TOpenTypeAnchorDUContourPoint(Source).ContourPointIndex;
   end;
 end;
 
-procedure TOpenTypeAnchorDUContourPoints.LoadFromStream(Stream: TStream);
+procedure TOpenTypeAnchorDUContourPoint.LoadFromStream(Stream: TStream);
 begin
   inherited;
 
   FContourPointIndex := BigEndianValueReader.ReadWord(Stream);
 end;
 
-procedure TOpenTypeAnchorDUContourPoints.SaveToStream(Stream: TStream);
+procedure TOpenTypeAnchorDUContourPoint.SaveToStream(Stream: TStream);
 begin
   inherited;
 
@@ -275,7 +275,7 @@ begin
       Result := TOpenTypeAnchorDesignUnits;
 
     caaDUContourPoints:
-      Result := TOpenTypeAnchorDUContourPoints;
+      Result := TOpenTypeAnchorDUContourPoint;
 
     caaDUDeviceVariantion:
       Result := TOpenTypeAnchorDUDeviceVariantion;
