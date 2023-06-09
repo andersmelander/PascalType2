@@ -101,6 +101,7 @@ type
     //------------------------------------------------------------------------------
     class function IsWhiteSpace(const AChar: TPascalTypeCodePoint): boolean; static;
     class function IsMark(const AChar: TPascalTypeCodePoint): boolean; static;
+    class function IsDefaultIgnorable(const AChar: TPascalTypeCodePoint): boolean; static;
 
   end;
 
@@ -432,6 +433,41 @@ end;
 class function PascalTypeUnicode.IsWhiteSpace(const AChar: TPascalTypeCodePoint): boolean;
 begin
   Result := PUCUUnicodeIsWhiteSpace(AChar);
+end;
+
+class function PascalTypeUnicode.IsDefaultIgnorable(const AChar: TPascalTypeCodePoint): boolean;
+var
+  UnicodePlane: Word;
+begin
+  // From DerivedCoreProperties.txt in the Unicode database,
+  // minus U+115F, U+1160, U+3164 and U+FFA0, which is what
+  // Harfbuzz and Uniscribe do.
+  UnicodePlane := AChar shr 16;
+  if (UnicodePlane = 0) then
+  begin
+    // BMP
+    case AChar shr 8 of
+      $00: Result := (AChar = $00AD);
+      $03: Result := (AChar = $034F);
+      $06: Result := (AChar = $061C);
+      $17: Result := (AChar >= $17B4) and (AChar <= $17B5);
+      $18: Result := (AChar >= $180B) and (AChar <= $180E);
+      $20: Result := ((AChar >= $200B) and (AChar <= $200F)) or ((AChar >= $202A) and (AChar <= $202E)) or ((AChar >= $2060) and (AChar <= $206F));
+      $FE: Result := (AChar >= $FE00) and (AChar <= $FE0F) or (AChar = $FEFF);
+      $FF: Result := (AChar >= $FFF0) and (AChar <= $FFF8);
+    else
+      Result := False;
+    end;
+  end else
+  begin
+    // Other planes
+    case UnicodePlane of
+      $01: Result := ((AChar >= $1BCA0) and (AChar <= $1BCA3)) or ((AChar >= $1D173) and (AChar <= $1D17A));
+      $0E: Result := (AChar >= $E0000) and (AChar <= $E0FFF);
+    else
+      Result := False;
+    end;
+  end;
 end;
 
 end.

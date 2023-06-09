@@ -103,6 +103,8 @@ type
     function GetGlyphByCharacter(ACharacter: AnsiChar): Integer; overload;
     function HasGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): boolean;
 
+    function GetAdvanceWidth(GlyphIndex: Word): Word; virtual;
+
     // required tables
     property HeaderTable: TPascalTypeHeaderTable read FHeaderTable;
     property HorizontalHeader: TPascalTypeHorizontalHeaderTable read FHorizontalHeader;
@@ -162,7 +164,7 @@ type
     procedure SaveToStream(Stream: TStream); override;
     function ContainsTable(TableType: TTableType): Boolean;
     function GetGlyphMetric(GlyphIndex: Word): TTrueTypeGlyphMetric;
-    function GetAdvanceWidth(GlyphIndex: Word): Word; deprecated 'Use GetGlyphMetric';
+    function GetAdvanceWidth(GlyphIndex: Word): Word; override;
     function GetKerning(Last, Next: Word): Word;
 
     function GetGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): Integer; override;
@@ -687,6 +689,10 @@ begin
   Result := (GetGlyphByCharacter(ACodePoint) <> 0);
 end;
 
+function TCustomPascalTypeFontFace.GetAdvanceWidth(GlyphIndex: Word): Word;
+begin
+  Result := HorizontalHeader.AdvanceWidthMax; // Better than nothing :-(
+end;
 
 { TPascalTypeFontFaceScan }
 

@@ -878,9 +878,7 @@ end;
 
 procedure TPascalTypeRasterizerGraphics32.RenderShapedText(const Text: string; Canvas: TCustomPath; X, Y: Integer);
 var
-  GlyphIndex: Integer;
   CursorPos, Pos: TFloatPoint;
-  GlyphMetric: TGlyphMetric;
   Shaper: TPascalTypeShaper;
   ShapedText: TPascalTypeGlyphString;
   Glyph: TPascalTypeGlyph;
@@ -901,16 +899,14 @@ begin
         for Glyph in ShapedText do
         begin
           // Position glyph relative to cursor
-          Pos := CursorPos;
-          Pos.X := Pos.X + ScalerX * Glyph.XOffset;
-          Pos.Y := Pos.Y + ScalerY * Glyph.YOffset;
+          Pos.X := CursorPos.X + ScalerX * Glyph.XOffset;
+          Pos.Y := CursorPos.Y + ScalerY * Glyph.YOffset;
 
           // Rasterize glyph
           RasterizeGlyph(Glyph.GlyphID, Canvas, Pos.X, Pos.Y);
 
           // Advance cursor
-          GlyphMetric := GetGlyphMetric(Glyph.GlyphID);
-          CursorPos.X := CursorPos.X + GlyphMetric.HorizontalMetric.AdvanceWidth + ScalerX * Glyph.XAdvance;
+          CursorPos.X := CursorPos.X + ScalerX * Glyph.XAdvance;
           CursorPos.Y := CursorPos.Y + ScalerY * Glyph.YAdvance;
         end;
 

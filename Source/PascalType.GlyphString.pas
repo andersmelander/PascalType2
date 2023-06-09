@@ -61,6 +61,7 @@ type
     FYOffset: integer;
     FMarkAttachment: integer;
     FLigatureComponent: integer;
+    FCursiveAttachment: integer;
     function GetIsLigature: boolean;
     function GetIsMark: boolean;
   protected
@@ -84,6 +85,7 @@ type
     // Shaper state
     property LigatureComponent: integer read FLigatureComponent write FLigatureComponent;
     property MarkAttachment: integer read FMarkAttachment write FMarkAttachment;
+    property CursiveAttachment: integer read FCursiveAttachment write FCursiveAttachment;
 
     property IsMark: boolean read GetIsMark;
     property IsLigature: boolean read GetIsLigature;
@@ -108,7 +110,7 @@ type
     class function GetGlyphClass: TPascalTypeGlyphClass; virtual;
     function CreateGlyph(AOwner: TPascalTypeGlyphString): TPascalTypeGlyph; overload; virtual;
   public
-    constructor Create(const ACodePoints: TPascalTypeCodePoints); virtual;
+    constructor Create(const ACodePoints: TPascalTypeCodePoints);
     destructor Destroy; override;
 
     function CreateGlyph: TPascalTypeGlyph; overload;
@@ -129,13 +131,15 @@ type
 
     procedure SetLength(ALen: integer);
 
+    procedure HideDefaultIgnorables; virtual;
+
     function GetEnumerator: TEnumerator<TPascalTypeGlyph>;
 
     property Count: integer read GetCount;
     property Glyphs[Index: integer]: TPascalTypeGlyph read GetGlyph; default;
   end;
 
-  TPascalTypeGlyphStringClass = class of TPascalTypeGlyphString;
+//  TPascalTypeGlyphStringClass = class of TPascalTypeGlyphString;
 
 
 //------------------------------------------------------------------------------
@@ -169,9 +173,11 @@ var
 begin
   if (Length(FCodePoints) = 0) then
     Exit(False);
+
   for CodePoint in FCodePoints do
     if (not PascalTypeUnicode.IsMark(CodePoint)) then
       Exit(False);
+
   Result := True;
 end;
 
@@ -241,6 +247,11 @@ end;
 class function TPascalTypeGlyphString.GetGlyphClass: TPascalTypeGlyphClass;
 begin
   Result := TPascalTypeGlyph;
+end;
+
+procedure TPascalTypeGlyphString.HideDefaultIgnorables;
+begin
+  // Overridden in TShaperGlyphString
 end;
 
 function TPascalTypeGlyphString.Add: TPascalTypeGlyph;

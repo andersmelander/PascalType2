@@ -260,12 +260,11 @@ begin
 
   if (LookupTable.LookupFlag and TCustomOpenTypeLookupTable.RIGHT_TO_LEFT <> 0) then
   begin
-    // TODO
-//    CurrentGlyph.CursiveAttachment := AIndex + 1;
+    CurrentGlyph.CursiveAttachment := AIndex + 1;
     CurrentGlyph.YOffset := EntryAnchorPoint.Y - ExitAnchorPoint.Y;
   end else
   begin
-//    NextGlyph.CursiveAttachment := AIndex;
+    NextGlyph.CursiveAttachment := AIndex;
     CurrentGlyph.YOffset := ExitAnchorPoint.Y - EntryAnchorPoint.Y;
   end;
 

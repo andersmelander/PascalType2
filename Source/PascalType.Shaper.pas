@@ -101,6 +101,28 @@ const
 
 //------------------------------------------------------------------------------
 //
+//              TShaperGlyphString
+//
+//------------------------------------------------------------------------------
+// A glyph string with knowledge about the font
+//------------------------------------------------------------------------------
+type
+  TShaperGlyphString = class(TPascalTypeGlyphString)
+  private
+    FFont: TCustomPascalTypeFontFace;
+  public
+    constructor Create(AFont: TCustomPascalTypeFontFace; const ACodePoints: TPascalTypeCodePoints); virtual;
+
+    procedure HideDefaultIgnorables; override;
+
+    property Font: TCustomPascalTypeFontFace read FFont;
+  end;
+
+  TShaperGlyphStringClass = class of TShaperGlyphString;
+
+
+//------------------------------------------------------------------------------
+//
 //              TPascalTypeShaper
 //
 //------------------------------------------------------------------------------
@@ -150,9 +172,13 @@ type
     procedure ApplyLookups(ALookupListTable: TOpenTypeLookupListTable; AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString);
     procedure ApplySubstitution(AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString); virtual;
     procedure ApplyPositioning(AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString); virtual;
+    procedure ExecuteSubstitution(var AGlyphs: TPascalTypeGlyphString);
+    procedure ExecutePositioning(var AGlyphs: TPascalTypeGlyphString);
+    procedure PreProcessPositioning(var AGlyphs: TPascalTypeGlyphString);
+    procedure PostProcessPositioning(var AGlyphs: TPascalTypeGlyphString);
 
-    function CreateGlyphString(const ACodePoints: TPascalTypeCodePoints): TPascalTypeGlyphString; virtual;
-    function GetGlyphStringClass: TPascalTypeGlyphStringClass; virtual;
+    function GetGlyphStringClass: TShaperGlyphStringClass; virtual;
+    function CreateGlyphString(const ACodePoints: TPascalTypeCodePoints): TShaperGlyphString; virtual;
 
     function GetShapingPlanClass: TPascalTypeShapingPlanClass; virtual;
     function CreateShapingPlan: TPascalTypeShapingPlan; virtual;
@@ -227,20 +253,20 @@ begin
   FreeAndNil(FPlan);
 end;
 
-function TPascalTypeShaper.CreateGlyphString(const ACodePoints: TPascalTypeCodePoints): TPascalTypeGlyphString;
+function TPascalTypeShaper.CreateGlyphString(const ACodePoints: TPascalTypeCodePoints): TShaperGlyphString;
 var
   Glyph: TPascalTypeGlyph;
 begin
-  Result := GetGlyphStringClass.Create(ACodePoints);
+  Result := GetGlyphStringClass.Create(Font, ACodePoints);
 
   // Map Unicode CodePoints to Glyph IDs
   for Glyph in Result do
     Glyph.GlyphID := Font.GetGlyphByCharacter(Glyph.CodePoints[0]);
 end;
 
-function TPascalTypeShaper.GetGlyphStringClass: TPascalTypeGlyphStringClass;
+function TPascalTypeShaper.GetGlyphStringClass: TShaperGlyphStringClass;
 begin
-  Result := TPascalTypeGlyphString;
+  Result := TShaperGlyphString;
 end;
 
 function TPascalTypeShaper.CreateShapingPlan: TPascalTypeShapingPlan;
@@ -539,10 +565,111 @@ begin
     ApplyLookups(FSubstitutionTable.LookupListTable, AFeatures, AGlyphs);
 end;
 
+procedure TPascalTypeShaper.ExecuteSubstitution(var AGlyphs: TPascalTypeGlyphString);
+begin
+  if (FSubstitutionTable <> nil) then
+  begin
+    // Build ordered list of features supported by the font.
+    // This is only done once per "session". No need to do it once per character.
+    if (FPlannedSubstitutionFeatures = nil) then
+      FPlannedSubstitutionFeatures := CreatePlannedFeatureList(FPlan, FSubstitutionTable);
+
+    ApplySubstitution(FPlannedSubstitutionFeatures, AGlyphs);
+  end;
+end;
+
 procedure TPascalTypeShaper.ApplyPositioning(AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString);
 begin
   if (FPositionTable <> nil) then
     ApplyLookups(FPositionTable.LookupListTable, AFeatures, AGlyphs);
+end;
+
+procedure TPascalTypeShaper.PreProcessPositioning(var AGlyphs: TPascalTypeGlyphString);
+var
+  Glyph: TPascalTypeGlyph;
+begin
+  // Get default positions
+  for Glyph in AGlyphs do
+    Glyph.XAdvance := Font.GetAdvanceWidth(Glyph.GlyphID);
+end;
+
+procedure TPascalTypeShaper.ExecutePositioning(var AGlyphs: TPascalTypeGlyphString);
+begin
+  PreProcessPositioning(AGlyphs);
+
+  if (FPositionTable <> nil) then
+  begin
+    if (FPlannedPositioningFeatures = nil) then
+      FPlannedPositioningFeatures := CreatePlannedFeatureList(FPlan, FPositionTable);
+
+    ApplyPositioning(FPlannedPositioningFeatures, AGlyphs);
+  end;
+
+  PostProcessPositioning(AGlyphs);
+end;
+
+procedure TPascalTypeShaper.PostProcessPositioning(var AGlyphs: TPascalTypeGlyphString);
+
+  procedure FixupCursiveAttachment(Glyph: TPascalTypeGlyph);
+  var
+    CursiveAttachmentGlyph: TPascalTypeGlyph;
+  begin
+    if (Glyph.CursiveAttachment = -1) then
+      exit;
+
+    CursiveAttachmentGlyph := AGlyphs[Glyph.CursiveAttachment];
+
+    Glyph.CursiveAttachment := -1;
+
+    FixupCursiveAttachment(CursiveAttachmentGlyph);
+
+    Glyph.YOffset := Glyph.YOffset + CursiveAttachmentGlyph.YOffset;
+  end;
+
+  procedure FixupCursiveAttachments;
+  var
+    Glyph: TPascalTypeGlyph;
+  begin
+    for Glyph in AGlyphs do
+      FixupCursiveAttachment(Glyph);
+  end;
+
+  procedure FixupMarkAttachments;
+  var
+    i, j: integer;
+    Glyph: TPascalTypeGlyph;
+  begin
+    for i := 0 to AGlyphs.Count-1 do
+    begin
+      Glyph := AGlyphs[i];
+
+      if (Glyph.MarkAttachment = -1) then
+        continue;
+
+      Glyph.XOffset := Glyph.XOffset + AGlyphs[Glyph.MarkAttachment].XOffset;
+      Glyph.YOffset := Glyph.YOffset + AGlyphs[Glyph.MarkAttachment].YOffset;
+
+      if (Direction = dirLeftToRight) then
+      begin
+        for j := Glyph.MarkAttachment to i-1 do
+        begin
+          Glyph.XOffset := Glyph.XOffset - AGlyphs[j].XAdvance;
+          Glyph.YOffset := Glyph.YOffset - AGlyphs[j].YAdvance;
+        end;
+      end else
+      begin
+        for j := Glyph.MarkAttachment+1 to i do
+        begin
+          Glyph.XOffset := Glyph.XOffset + AGlyphs[j].XAdvance;
+          Glyph.YOffset := Glyph.YOffset + AGlyphs[j].YAdvance;
+        end;
+      end;
+    end;
+  end;
+
+begin
+  FixupCursiveAttachments;
+  FixupMarkAttachments;
 end;
 
 function TPascalTypeShaper.Shape(const AText: string): TPascalTypeGlyphString;
@@ -565,50 +692,39 @@ begin
 
 
     (*
-    ** Apply first GSUB features and then GPOS features
+    ** First apply GSUB features and then GPOS features
     *)
-    if (FSubstitutionTable <> nil) or (FPositionTable <> nil) then
-    begin
 
-      (*
-      ** Create a shaping plan.
-      ** The plan contains a collection of plan stages and each plan stage contains
-      ** a list of features that belong to that stage.
-      *)
-      if (FPlan = nil) then
-        FPlan := CreateShapingPlan;
+    (*
+    ** Create a shaping plan.
+    ** The plan contains a collection of plan stages and each plan stage contains
+    ** a list of features that belong to that stage.
+    *)
+    if (FPlan = nil) then
+      FPlan := CreateShapingPlan;
 
 
-      (*
-      ** Execute substitution plan.
-      ** The substitution plan is the intersection between the features in the plan
-      ** and the features supported by the font (via the GSUB table).
-      *)
-      if (FSubstitutionTable <> nil) then
-      begin
-        // Build ordered list of features supported by the font.
-        // This is only done once per "session". No need to do it once per character.
-        if (FPlannedSubstitutionFeatures = nil) then
-          FPlannedSubstitutionFeatures := CreatePlannedFeatureList(FPlan, FSubstitutionTable);
-
-        ApplySubstitution(FPlannedSubstitutionFeatures, Result);
-      end;
+    (*
+    ** Execute substitution plan.
+    ** The substitution plan is the intersection between the features in the plan
+    ** and the features supported by the font (via the GSUB table).
+    *)
+    ExecuteSubstitution(Result);
 
 
-      (*
-      ** Execute positioning plan.
-      ** The positioning plan is the intersection between the features in the plan
-      ** and the features supported by the font (via the GPOS table).
-      *)
-      if (FPositionTable <> nil) then
-      begin
-        if (FPlannedPositioningFeatures = nil) then
-          FPlannedPositioningFeatures := CreatePlannedFeatureList(FPlan, FPositionTable);
+    (*
+    ** Execute positioning plan.
+    ** The positioning plan is the intersection between the features in the plan
+    ** and the features supported by the font (via the GPOS table).
+    *)
+    ExecutePositioning(Result);
 
-        ApplyPositioning(FPlannedPositioningFeatures, Result);
-      end;
 
-    end;
+    (*
+    ** Hide do-nothing characters
+    *)
+    // TODO : Why not do this earlier?
+    Result.HideDefaultIgnorables;
 
   except
     Result.Free;
@@ -655,5 +771,28 @@ begin
 end;
 
 //------------------------------------------------------------------------------
+
+{ TShaperGlyphString }
+
+constructor TShaperGlyphString.Create(AFont: TCustomPascalTypeFontFace; const ACodePoints: TPascalTypeCodePoints);
+begin
+  FFont := AFont;
+  inherited Create(ACodePoints);
+end;
+
+procedure TShaperGlyphString.HideDefaultIgnorables;
+var
+  SpaceGlyph: Word;
+  Glyph: TPascalTypeGlyph;
+begin
+  SpaceGlyph := Font.GetGlyphByCharacter(32);
+  for Glyph in Self do
+    if (Length(Glyph.CodePoints) = 0) or (PascalTypeUnicode.IsDefaultIgnorable(Glyph.CodePoints[0])) then
+    begin
+      Glyph.GlyphID := SpaceGlyph;
+      Glyph.XAdvance := 0;
+      Glyph.YAdvance := 0;
+    end;
+end;
 
 end.
