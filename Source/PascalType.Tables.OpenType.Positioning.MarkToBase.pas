@@ -216,7 +216,11 @@ function TOpenTypePositioningSubTableMarkToBaseAttachment.Apply(AGlyphString: TP
 
     Glyph := AGlyphString[MarkIndex];
     Glyph.XOffset := BasePos.X - MarkPos.X;
+{$ifdef Inverse_Y_axis_xxx_not_implemented_here}
+    Glyph.YOffset := MarkPos.Y - BasePos.Y;
+{$else Inverse_Y_axis}
     Glyph.YOffset := BasePos.Y - MarkPos.Y;
+{$endif Inverse_Y_axis}
 
     Glyph.MarkAttachment := BaseIndex;
   end;

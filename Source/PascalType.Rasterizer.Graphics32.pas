@@ -753,7 +753,11 @@ begin
       continue;
 
     CurrentPoint.X := Origin.X + Contour[0].XPos * ScalerX;
+{$ifdef Inverse_Y_axis}
     CurrentPoint.Y := Origin.Y - Contour[0].YPos * ScalerY;
+{$else Inverse_Y_axis}
+    CurrentPoint.Y := Origin.Y + Contour[0].YPos * ScalerY;
+{$endif Inverse_Y_axis}
 
     // Process the start point
     if (Contour[0].Flags and TTrueTypeFontSimpleGlyphData.GLYF_ON_CURVE <> 0) then
@@ -771,14 +775,22 @@ begin
         // the first point as the control-point.
         // Seen with: Kalinga Bold, small letter "r"
         CurrentPoint.X := Origin.X + Contour[High(Contour)].XPos * ScalerX;
+{$ifdef Inverse_Y_axis}
         CurrentPoint.Y := Origin.Y - Contour[High(Contour)].YPos * ScalerY;
+{$else Inverse_Y_axis}
+        CurrentPoint.Y := Origin.Y + Contour[High(Contour)].YPos * ScalerY;
+{$endif Inverse_Y_axis}
       end else
       begin
         // Both first and last points are control-points.
         // Synthesize a curve-point in between the two control-points.
         // Seen with: SimSun-ExtB, small letter "a"
         CurrentPoint.X := Origin.X + (Contour[0].XPos + Contour[High(Contour)].XPos) * 0.5 * ScalerX;
+{$ifdef Inverse_Y_axis}
         CurrentPoint.Y := Origin.Y - (Contour[0].YPos + Contour[High(Contour)].YPos) * 0.5 * ScalerY;
+{$else Inverse_Y_axis}
+        CurrentPoint.Y := Origin.Y + (Contour[0].YPos + Contour[High(Contour)].YPos) * 0.5 * ScalerY;
+{$endif Inverse_Y_axis}
       end;
       PathState := psControl;
     end;
@@ -795,7 +807,11 @@ begin
     begin
       // Get the next point
       CurrentPoint.X := Origin.X + Contour[PointIndex].XPos * ScalerX;
+{$ifdef Inverse_Y_axis}
       CurrentPoint.Y := Origin.Y - Contour[PointIndex].YPos * ScalerY;
+{$else Inverse_Y_axis}
+      CurrentPoint.Y := Origin.Y + Contour[PointIndex].YPos * ScalerY;
+{$endif Inverse_Y_axis}
 
       // Is it a curve-point?
       IsOnCurve := (Contour[PointIndex].Flags and TTrueTypeFontSimpleGlyphData.GLYF_ON_CURVE <> 0);
@@ -889,7 +905,11 @@ begin
     begin
       // Position glyph relative to cursor
       Pos.X := CursorPos.X + ScalerX * Glyph.XOffset;
+{$ifdef Inverse_Y_axis}
+      Pos.Y := CursorPos.Y - ScalerY * Glyph.YOffset;
+{$else Inverse_Y_axis}
       Pos.Y := CursorPos.Y + ScalerY * Glyph.YOffset;
+{$endif Inverse_Y_axis}
 
       // Rasterize glyph
       RasterizeGlyph(Glyph.GlyphID, Canvas, Pos.X, Pos.Y);
@@ -930,7 +950,7 @@ begin
         GlyphIndex := FontFace.GetGlyphByCharacter(Text[CharIndex]);
 
         // rasterize character
-        RasterizeGlyph(GlyphIndex, Canvas, Round(Pos.X), Round(Pos.Y));
+        RasterizeGlyph(GlyphIndex, Canvas, Pos.X, Pos.Y);
 
         // advance cursor
         GlyphMetric := GetGlyphMetric(GlyphIndex);
