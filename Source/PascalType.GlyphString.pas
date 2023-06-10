@@ -62,6 +62,7 @@ type
     FMarkAttachment: integer;
     FLigatureComponent: integer;
     FCursiveAttachment: integer;
+    FLigatureID: integer;
     function GetIsLigature: boolean;
     function GetIsMark: boolean;
   protected
@@ -83,6 +84,7 @@ type
     property YOffset: integer read FYOffset write FYOffset;
 
     // Shaper state
+    property LigatureID: integer read FLigatureID write FLigatureID;
     property LigatureComponent: integer read FLigatureComponent write FLigatureComponent;
     property MarkAttachment: integer read FMarkAttachment write FMarkAttachment;
     property CursiveAttachment: integer read FCursiveAttachment write FCursiveAttachment;
@@ -104,6 +106,7 @@ type
     TGlyphMapperDelegate = reference to function(GlyphID: TGlyphID): integer;
   private
     FGlyphs: TList<TPascalTypeGlyph>;
+    FLigatureID: integer;
     function GetGlyph(Index: integer): TPascalTypeGlyph;
     function GetCount: integer;
   protected
@@ -132,6 +135,8 @@ type
 
     procedure SetLength(ALen: integer);
 
+    function GetNextLigatureID: integer;
+
     procedure HideDefaultIgnorables; virtual;
 
     function GetEnumerator: TEnumerator<TPascalTypeGlyph>;
@@ -159,6 +164,7 @@ constructor TPascalTypeGlyph.Create(AOwner: TPascalTypeGlyphString);
 begin
   inherited Create;
   FOwner := AOwner;
+  FLigatureID := -1;
   FLigatureComponent := -1;
   FMarkAttachment := -1;
   FCursiveAttachment := -1;
@@ -249,6 +255,12 @@ end;
 class function TPascalTypeGlyphString.GetGlyphClass: TPascalTypeGlyphClass;
 begin
   Result := TPascalTypeGlyph;
+end;
+
+function TPascalTypeGlyphString.GetNextLigatureID: integer;
+begin
+  Inc(FLigatureID);
+  Result := FLigatureID;
 end;
 
 procedure TPascalTypeGlyphString.HideDefaultIgnorables;

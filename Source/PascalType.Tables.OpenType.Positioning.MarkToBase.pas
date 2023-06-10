@@ -83,13 +83,16 @@ type
   TOpenTypePositioningSubTableMarkToBaseAttachment = class(TCustomOpenTypePositioningSubTable)
   private type
     TAnchorList = TArray<TOpenTypeAnchor>;
+    TBaseRecords = TArray<TAnchorList>;
   private
     FBaseCoverage: TCustomOpenTypeCoverageTable;
-    FBaseRecords: TArray<TAnchorList>;
+    FBaseRecords: TBaseRecords;
     FMarks: TOpenTypeMarkList;
   protected
     function GetMarkCoverage: TCustomOpenTypeCoverageTable;
     procedure ClearBaseRecords;
+    property BaseRecords: TBaseRecords read FBaseRecords;
+    property Marks: TOpenTypeMarkList read FMarks;
   public
     constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
@@ -198,7 +201,7 @@ end;
 
 function TOpenTypePositioningSubTableMarkToBaseAttachment.GetMarkCoverage: TCustomOpenTypeCoverageTable;
 begin
-  Result := CoverageTable;
+  Result := inherited CoverageTable;
 end;
 
 function TOpenTypePositioningSubTableMarkToBaseAttachment.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;

@@ -108,7 +108,8 @@ type
 implementation
 
 uses
-  SysUtils,
+  System.Math,
+  System.SysUtils,
   PascalType.Unicode,
   PT_ResourceStrings;
 
@@ -237,6 +238,105 @@ begin
 end;
 
 function TOpenTypeSubstitutionSubTableLigatureList.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
+
+  procedure UpdateLigatureState(Glyph: TPascalTypeGlyph);
+  var
+    IsMarkLigature: boolean;
+    i: integer;
+    LastLigatureID: integer;
+    LastComponentCount: integer;
+    ComponentCount: integer;
+    Index: integer;
+    MatchIndex: integer;
+    GlyphLigatureComponent: integer;
+    LigatureComponent: integer;
+  begin
+    // From Harfbuzz:
+    // - If it *is* a mark ligature, we don't allocate a new ligature id, and leave
+    //   the ligature to keep its old ligature id.  This will allow it to attach to
+    //   a base ligature in GPOS.  Eg. if the sequence is: LAM,LAM,SHADDA,FATHA,HEH,
+    //   and LAM,LAM,HEH for a ligature, they will leave SHADDA and FATHA with a
+    //   ligature id and component value of 2.  Then if SHADDA,FATHA form a ligature
+    //   later, we don't want them to lose their ligature id/component, otherwise
+    //   GPOS will fail to correctly position the mark ligature on top of the
+    //   LAM,LAM,HEH ligature. See https://bugzilla.gnome.org/show_bug.cgi?id=676343
+    //
+    // - If a ligature is formed of components, some of which are also ligatures
+    //   themselves, and those ligature components had marks attached to *their*
+    //   components, we have to attach the marks to the new ligature component
+    //   positions!  Now *that*'s tricky!  And these marks may be following the
+    //   last component of the whole sequence, so we should loop forward looking
+    //   for them and update them.
+    //
+    //   Eg. the sequence is LAM,LAM,SHADDA,FATHA,HEH, and the font first forms a
+    //   'calt' ligature of LAM,HEH, leaving the SHADDA and FATHA with a ligature
+    //   id and component == 1.  Now, during 'liga', the LAM and the LAM-HEH ligature
+    //   form a LAM-LAM-HEH ligature.  We need to reassign the SHADDA and FATHA to
+    //   the new ligature with a component value of 2.
+    //
+    //   This in fact happened to a font...  See https://bugzilla.gnome.org/show_bug.cgi?id=437633
+
+    IsMarkLigature := Glyph.IsMark;
+    i := 1;
+    while (IsMarkLigature) and (i < Length(Glyph.CodePoints)) do
+    begin
+      IsMarkLigature := AGlyphString[AIndex + i].IsMark;
+      Inc(i);
+    end;
+
+    if (IsMarkLigature) then
+      Glyph.LigatureID := -1
+    else
+      Glyph.LigatureID := AGlyphString.GetNextLigatureID;
+
+    LastLigatureID := Glyph.LigatureID;
+    LastComponentCount := Length(Glyph.CodePoints);
+    ComponentCount := LastComponentCount;
+    Index := AIndex + 1;
+
+    // Note: The following code assumes that we are using an iterator that skips certain glyphs
+    // (which is what Harfbuzz and FontKit does). I'm not doing that (yet) so the operation
+    // is pretty pointless. However, I've chosed to include the code in case we later introduce
+    // an iterator.
+
+    // Set ligatureID and LigatureComponent on glyphs that were skipped in the matched sequence.
+    // This allows GPOS to attach marks to the correct ligature components.
+    for MatchIndex := AIndex to AIndex+Length(Glyph.CodePoints)-1 do
+    begin
+      // Don't assign new ligature components for mark ligatures (see above)
+      if (IsMarkLigature) then
+        Index := MatchIndex
+      else
+      begin
+        while (Index < MatchIndex) do
+        begin
+          GlyphLigatureComponent := Max(1, AGlyphString[Index].LigatureComponent);
+          LigatureComponent := ComponentCount - LastComponentCount + Min(GlyphLigatureComponent, LastComponentCount);
+          AGlyphString[Index].LigatureID := Glyph.LigatureID;
+          AGlyphString[Index].LigatureComponent := LigatureComponent;
+          Inc(Index);
+        end;
+      end;
+
+      LastLigatureID := AGlyphString[Index].LigatureID;
+      LastComponentCount := Length(AGlyphString[Index].CodePoints);
+      ComponentCount := ComponentCount + LastComponentCount;
+      Inc(Index); // skip base glyph
+    end;
+
+    // Adjust ligature components for any marks following
+    if (LastLigatureID <> -1) and (not IsMarkLigature) then
+      for i := Index to AGlyphString.Count-1 do
+      begin
+        if (AGlyphString[i].LigatureID <> LastLigatureID) then
+          break;
+
+        GlyphLigatureComponent := Max(1, AGlyphString[i].LigatureComponent);
+        LigatureComponent := ComponentCount - LastComponentCount + Min(GlyphLigatureComponent, LastComponentCount);
+        AGlyphString[i].LigatureComponent := LigatureComponent;
+      end;
+  end;
+
 var
   SubstitutionIndex: integer;
   Glyph: TPascalTypeGlyph;
@@ -289,20 +389,31 @@ begin
     begin
       // We have a match. Replace the source character with the ligature string
 
+      // Note: First entry in glyph string is reused...
+
+      Glyph := AGlyphString[AIndex];
+
       // Save a list of the codepoints we're replacing
       SetLength(CodePoints, Length(FLigatures[i].Components));
       for j := 0 to High(FLigatures[i].Components) do
         CodePoints[j] := FLigatures[i].Components[j];
-      AGlyphString[AIndex].CodePoints := CodePoints;
+      Glyph.CodePoints := CodePoints;
+
+      // TODO
+      // Glyph.IsLigated := True;
+      // Glyph.Substituted := True;
+
+      UpdateLigatureState(Glyph);
 
       // First entry in glyph string is reused...
-      AGlyphString[AIndex].GlyphID := FLigatures[i].Glyph;
+      Glyph.GlyphID := FLigatures[i].Glyph;
 
       // ...Remaining are deleted
       for j := 1 to High(FLigatures[i].Components) do
         AGlyphString.Delete(AIndex+1);
 
-      // Advance past the chacter we just processed
+      // Advance past the character we just processed.
+      // Note that we only advance one position because we have deleted the remaining characters that were processed.
       Inc(AIndex);
 
       Exit(True);

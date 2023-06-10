@@ -176,6 +176,7 @@
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Common.ValueRecord.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Common.Mark.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Common.Anchor.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Positioning.MarkToMark.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

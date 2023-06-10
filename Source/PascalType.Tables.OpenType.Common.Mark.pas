@@ -234,7 +234,6 @@ var
   StartPos: Int64;
   SavePos: Int64;
   ListPos: Int64;
-  Mark: TOpenTypeMark;
   AnchorOffsets: array of Word;
   i: integer;
 begin

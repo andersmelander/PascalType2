@@ -70,7 +70,8 @@ uses
   PascalType.Tables.OpenType.Positioning.MarkToBase in '..\..\Source\PascalType.Tables.OpenType.Positioning.MarkToBase.pas',
   PascalType.Tables.OpenType.Common.ValueRecord in '..\..\Source\PascalType.Tables.OpenType.Common.ValueRecord.pas',
   PascalType.Tables.OpenType.Common.Mark in '..\..\Source\PascalType.Tables.OpenType.Common.Mark.pas',
-  PascalType.Tables.OpenType.Common.Anchor in '..\..\Source\PascalType.Tables.OpenType.Common.Anchor.pas';
+  PascalType.Tables.OpenType.Common.Anchor in '..\..\Source\PascalType.Tables.OpenType.Common.Anchor.pas',
+  PascalType.Tables.OpenType.Positioning.MarkToMark in '..\..\Source\PascalType.Tables.OpenType.Positioning.MarkToMark.pas';
 
 {$R *.res}
 
