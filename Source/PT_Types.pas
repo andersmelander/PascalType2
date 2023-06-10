@@ -495,6 +495,7 @@ type
 
   // GPOS lookup Types
   TGlyphPositioning = (
+    gpInvalid                  = 0,
     gpSingleAdjustment         = 1, // Adjust position of a single glyph
     gpPairAdjustment           = 2, // Adjust position of a pair of glyphs
     gpCursiveAttachment        = 3, // Attach cursive glyphs

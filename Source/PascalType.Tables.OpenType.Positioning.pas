@@ -93,7 +93,11 @@ type
 implementation
 
 uses
-  SysUtils,
+  System.SysUtils,
+{$ifdef DEBUG}
+  WinApi.Windows,
+  TypInfo,
+{$endif DEBUG}
   PT_ResourceStrings;
 
 
@@ -117,6 +121,10 @@ class function TCustomOpenTypePositioningLookupTable.GetPositioningLookupTableCl
 begin
   if (FPositioningFormatRegistry = nil) or (not FPositioningFormatRegistry.TryGetValue(APositioningFormat, Result)) then
     Result := nil;
+{$ifdef DEBUG}
+  if (Result = nil) then
+    OutputDebugString(PChar(Format('GPOS format type not implemented:  %d (%s)', [Ord(APositioningFormat), GetEnumName(TypeInfo(TGlyphPositioning), Ord(APositioningFormat))])));
+{$endif DEBUG}
 end;
 
 class procedure TCustomOpenTypePositioningLookupTable.RegisterPositioningFormat(APositioningFormat: TGlyphPositioning;

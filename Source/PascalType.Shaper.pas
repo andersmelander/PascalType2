@@ -212,7 +212,10 @@ type
 implementation
 
 uses
-  SysUtils,
+  System.SysUtils,
+{$ifdef DEBUG}
+  WinApi.Windows,
+{$endif DEBUG}
 
   PascalType.Tables.OpenType.Script,
   PascalType.Tables.OpenType.LanguageSystem,
@@ -412,7 +415,7 @@ begin
 
       // Convert the stage feature tags into a sequential list of feature tables.
       // The list will contain the intersection between the features supported by
-      // the fonts script/language and the featuirs in the shaping plan.
+      // the fonts script/language and the features in the shaping plan.
       for Stage in APlan.Stages do
         for Feature in Stage do
           if (FeatureMap.TryGetValue(Feature, FeatureTable)) then
@@ -538,6 +541,9 @@ begin
         NextGlyphIndex := GlyphIndex;
         if (LookupTable.Apply(AGlyphs, NextGlyphIndex, Direction)) then
         begin
+{$ifdef DEBUG}
+          OutputDebugString(PChar(Format('Applied feature %s (%s), lookup %d: %s', [string(FeatureTable.TableType.AsAnsiChar), FeatureTable.DisplayName, FeatureTable.LookupList[i], LookupTable.ClassName])));
+{$endif DEBUG}
           GlyphHandled := True;
           break;
         end;

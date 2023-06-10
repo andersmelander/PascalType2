@@ -37,7 +37,7 @@ interface
 uses
   Generics.Collections,
   Generics.Defaults,
-  Classes,
+  System.Classes,
   PT_Types,
   PT_Classes,
   PT_Tables,
@@ -221,7 +221,10 @@ type
 implementation
 
 uses
-  SysUtils,
+  System.SysUtils,
+{$ifdef DEBUG}
+  WinApi.Windows,
+{$endif DEBUG}
   PT_ResourceStrings,
   PascalType.Tables.OpenType.Common;
 
@@ -414,6 +417,10 @@ end;
 
 function TOpenTypeLookupTableGeneric.TOpenTypeLookupSubTableGeneric.Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
 begin
+{$ifdef DEBUG}
+  OutputDebugString(PChar(Format('%s lookup not implemented. Lookup type: %d, sub-format: %d', [string(TCustomPascalTypeNamedTable(TOpenTypeLookupTableGeneric(parent).LookupList.Parent).TableType.AsAnsiChar), TOpenTypeLookupTableGeneric(Parent).LookupType, SubFormat])));
+{$endif DEBUG}
+
   Result := False;
 end;
 

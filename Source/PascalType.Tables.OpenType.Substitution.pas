@@ -96,7 +96,11 @@ type
 implementation
 
 uses
-  SysUtils,
+  System.SysUtils,
+{$ifdef DEBUG}
+  WinApi.Windows,
+  TypInfo,
+{$endif DEBUG}
   PT_ResourceStrings;
 
 
@@ -120,6 +124,10 @@ class function TCustomOpenTypeSubstitutionLookupTable.GetSubstitutionLookupTable
 begin
   if (FSubstitutionFormatRegistry = nil) or (not FSubstitutionFormatRegistry.TryGetValue(ASubstFormat, Result)) then
     Result := nil;
+{$ifdef DEBUG}
+  if (Result = nil) then
+    OutputDebugString(PChar(Format('GSUB format type not implemented:  %d (%s)', [Ord(ASubstFormat), GetEnumName(TypeInfo(TGlyphSubstitution), Ord(ASubstFormat))])));
+{$endif DEBUG}
 end;
 
 class procedure TCustomOpenTypeSubstitutionLookupTable.RegisterSubstitutionFormat(ASubstFormat: TGlyphSubstitution;
