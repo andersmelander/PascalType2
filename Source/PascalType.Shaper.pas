@@ -169,6 +169,7 @@ type
     function CompositionFilter(CodePoint: TPascalTypeCodePoint): boolean; virtual;
     procedure ProcessCodePoints(var CodePoints: TPascalTypeCodePoints); virtual;
     function ProcessUnicode(const AText: string): TPascalTypeCodePoints; virtual;
+    function NeedUnicodeComposition: boolean; virtual;
 
     procedure ApplyLookups(ALookupListTable: TOpenTypeLookupListTable; AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString);
     procedure ApplySubstitution(AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString); virtual;
@@ -285,6 +286,11 @@ begin
   Result := TPascalTypeShapingPlan;
 end;
 
+function TPascalTypeShaper.NeedUnicodeComposition: boolean;
+begin
+  Result := False;
+end;
+
 function TPascalTypeShaper.CompositionFilter(CodePoint: TPascalTypeCodePoint): boolean;
 begin
   // Lookup codepoint in font.
@@ -367,9 +373,10 @@ begin
   ProcessCodePoints(Result);
 
   (*
-  ** Unicode composition
+  ** Unicode composition (optional)
   *)
-  Result := PascalTypeUnicode.Compose(Result, CompositionFilter);
+  if (NeedUnicodeComposition) then
+    Result := PascalTypeUnicode.Compose(Result, CompositionFilter);
 end;
 
 function TPascalTypeShaper.CreatePlannedFeatureList(APlan: TPascalTypeShapingPlan; AGlobalTable: TCustomOpenTypeCommonTable): TPlannedFeatures;

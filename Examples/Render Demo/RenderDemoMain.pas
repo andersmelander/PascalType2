@@ -123,7 +123,7 @@ type
   end;
 
 const
-  TestCases: array[0..13] of TTestCase = (
+  TestCases: array[0..14] of TTestCase = (
     (Name: 'Default'; FontName: 'Arial'; Text: 'PascalType Render Demo'),
     (Name: 'Substitution, Single, Single/frac'; FontName: 'Cascadia Mono Regular'; Text: '1/2½'),
     (Name: 'Substitution, Single, List'; FontName: 'Candara'; Text: #$0386#$038C#$038E#$038F),
@@ -136,6 +136,7 @@ const
     (Name: 'Positioning, Pair, Class'; FontName: 'Roboto Regular'; Text: 'P, PA '#$0393'm'),
     (Name: 'Positioning, Cursive'; FontName: 'Arabic Typesetting'; Script: (AsAnsiChar: 'arab'); Direction: dirRightToLeft; Text: #$FE98#$067C#$067D), // Doesn't work or incorrect testcase
     (Name: 'Positioning, MarkToBase'; FontName: 'Segoe UI'; Text: #$1EAA#32#$1EEE),
+    (Name: 'Positioning, MarkToMark'; FontName: 'Arabic Typesetting'; Text: 'A'#$0327#$0323),//#$03BC#$03B1#$0390#$03C3#$03C4#$03C1#$03BF#$03C2), // Segoe UI appears to have a bug with this test case
     (Name: 'Unicode normalization'; FontName: 'Arial'; Text: 'זרוֶ״ֵ'),
     (Name: 'Composite glyphs'; FontName: 'Segoe UI'; Text: '½הגויע')
   );
