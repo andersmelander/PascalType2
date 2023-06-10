@@ -61,8 +61,8 @@ type
   TOpenTypePositioningLookupTableMarkToBaseAttachment = class(TCustomOpenTypePositioningLookupTable)
   public type
     TGlyphPositioningFormat = (
-      gpmbInvalid        = 0,
-      gpmbCursiveAttachment = 1
+      gpmbInvalid       = 0,
+      gpmbAttachment    = 1
     );
   protected
     function GetSubTableClass(ASubFormat: Word): TOpenTypeLookupSubTableClass; override;
@@ -125,7 +125,7 @@ function TOpenTypePositioningLookupTableMarkToBaseAttachment.GetSubTableClass(AS
 begin
   case TGlyphPositioningFormat(ASubFormat) of
 
-    gpmbCursiveAttachment :
+    gpmbAttachment :
       Result := TOpenTypePositioningSubTableMarkToBaseAttachment;
 
   else
@@ -227,9 +227,6 @@ var
   Mark: TOpenTypeMark;
   BaseAnchor: TOpenTypeAnchor;
 begin
-  // Testfont: "Arial"
-  // - U+1EAA Latin Capital Letter A with Circumflex and Tilde
-  // - U+1EEE Latin Capital Letter U with Horn and Tilde
   if (AIndex < 1) then
     Exit(False);
 

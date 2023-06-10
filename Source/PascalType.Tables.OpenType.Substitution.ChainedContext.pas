@@ -736,7 +736,7 @@ begin
   // Backtrack
   for i := 0 to FCoverageTables[cpBacktrack].Count-1 do
   begin
-    CoverageIndex := FCoverageTables[cpBacktrack][i].IndexOfGlyph(AGlyphString[AIndex-i].GlyphID);
+    CoverageIndex := FCoverageTables[cpBacktrack][i].IndexOfGlyph(AGlyphString[AIndex-1-i].GlyphID);
 
     if (CoverageIndex = -1) then
       Exit;

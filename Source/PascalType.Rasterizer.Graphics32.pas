@@ -46,6 +46,7 @@ uses
   PT_Classes,
   PascalType.FontFace,
   PascalType.Rasterizer,
+  PascalType.GlyphString,
   PT_TablesTrueType;
 
 type
@@ -56,8 +57,8 @@ type
   public
     procedure RenderText(const Text: string; Canvas: TCustomPath); overload; virtual;
     procedure RenderText(const Text: string; Canvas: TCustomPath; X, Y: Integer); overload; virtual;
-    procedure RenderShapedText(const Text: string; Canvas: TCustomPath); overload; virtual;
-    procedure RenderShapedText(const Text: string; Canvas: TCustomPath; X, Y: Integer); overload; virtual;
+    procedure RenderShapedText(ShapedText: TPascalTypeGlyphString; Canvas: TCustomPath); overload; virtual;
+    procedure RenderShapedText(ShapedText: TPascalTypeGlyphString; Canvas: TCustomPath; X, Y: Integer); overload; virtual;
 
     // GDI like functions
     function GetGlyphOutlineA(Character: Cardinal; Format: TGetGlyphOutlineUnion;
@@ -83,8 +84,6 @@ uses
   Math,
   GR32,
   PT_Tables,
-  PascalType.Shaper,
-  PascalType.GlyphString,
   PascalType.FontFace.SFNT,
   PascalType.Tables.TrueType.glyf,
   PascalType.Tables.TrueType.hhea;
@@ -871,16 +870,14 @@ begin
   RenderText(Text, Canvas, 0, 0);
 end;
 
-procedure TPascalTypeRasterizerGraphics32.RenderShapedText(const Text: string; Canvas: TCustomPath);
+procedure TPascalTypeRasterizerGraphics32.RenderShapedText(ShapedText: TPascalTypeGlyphString; Canvas: TCustomPath);
 begin
-  RenderShapedText(Text, Canvas, 0, 0);
+  RenderShapedText(ShapedText, Canvas, 0, 0);
 end;
 
-procedure TPascalTypeRasterizerGraphics32.RenderShapedText(const Text: string; Canvas: TCustomPath; X, Y: Integer);
+procedure TPascalTypeRasterizerGraphics32.RenderShapedText(ShapedText: TPascalTypeGlyphString; Canvas: TCustomPath; X, Y: Integer);
 var
   CursorPos, Pos: TFloatPoint;
-  Shaper: TPascalTypeShaper;
-  ShapedText: TPascalTypeGlyphString;
   Glyph: TPascalTypeGlyph;
 begin
   Canvas.BeginUpdate;
@@ -888,34 +885,18 @@ begin
     CursorPos.X := X;
     CursorPos.Y := Y;
 
-    Shaper := TPascalTypeShaper.Create(FontFace);
-    try
-      // TODO : Test only. Enable all optional features for test purpose
-      Shaper.Features.EnableAll := True;
+    for Glyph in ShapedText do
+    begin
+      // Position glyph relative to cursor
+      Pos.X := CursorPos.X + ScalerX * Glyph.XOffset;
+      Pos.Y := CursorPos.Y + ScalerY * Glyph.YOffset;
 
-      ShapedText := Shaper.Shape(Text);
-      try
+      // Rasterize glyph
+      RasterizeGlyph(Glyph.GlyphID, Canvas, Pos.X, Pos.Y);
 
-        for Glyph in ShapedText do
-        begin
-          // Position glyph relative to cursor
-          Pos.X := CursorPos.X + ScalerX * Glyph.XOffset;
-          Pos.Y := CursorPos.Y + ScalerY * Glyph.YOffset;
-
-          // Rasterize glyph
-          RasterizeGlyph(Glyph.GlyphID, Canvas, Pos.X, Pos.Y);
-
-          // Advance cursor
-          CursorPos.X := CursorPos.X + ScalerX * Glyph.XAdvance;
-          CursorPos.Y := CursorPos.Y + ScalerY * Glyph.YAdvance;
-        end;
-
-      finally
-        ShapedText.Free;
-      end;
-
-    finally
-      Shaper.Free;
+      // Advance cursor
+      CursorPos.X := CursorPos.X + ScalerX * Glyph.XAdvance;
+      CursorPos.Y := CursorPos.Y + ScalerY * Glyph.YAdvance;
     end;
 
   finally

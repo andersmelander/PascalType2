@@ -195,7 +195,6 @@ var
   i: integer;
   SecondGlyphID: Word;
 begin
-  // Test font: "Arial" ("TA "), "Input" ("F_", "_V_")
   if (AIndex >= AGlyphString.Count-1) then
     Exit(False);
 
@@ -366,7 +365,6 @@ var
   FirstClassID, SecondClassID: integer;
   ClassValueRecord: TClassValueRecord;
 begin
-  // Test font: "Input" (all matches does nothing...), "Roboto Regular" ("P,", "PA", "?m" (Greek Capital Letter Gamma, m))
   if (AIndex >= AGlyphString.Count-1) then
     Exit(False);
 

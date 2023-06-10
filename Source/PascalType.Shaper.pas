@@ -169,6 +169,7 @@ type
     function CompositionFilter(CodePoint: TPascalTypeCodePoint): boolean; virtual;
     procedure ProcessCodePoints(var CodePoints: TPascalTypeCodePoints); virtual;
     function ProcessUnicode(const AText: string): TPascalTypeCodePoints; virtual;
+
     procedure ApplyLookups(ALookupListTable: TOpenTypeLookupListTable; AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString);
     procedure ApplySubstitution(AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString); virtual;
     procedure ApplyPositioning(AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString); virtual;
@@ -176,6 +177,7 @@ type
     procedure ExecutePositioning(var AGlyphs: TPascalTypeGlyphString);
     procedure PreProcessPositioning(var AGlyphs: TPascalTypeGlyphString);
     procedure PostProcessPositioning(var AGlyphs: TPascalTypeGlyphString);
+    procedure ApplyRightToLeft(var AGlyphs: TPascalTypeGlyphString);
 
     function GetGlyphStringClass: TShaperGlyphStringClass; virtual;
     function CreateGlyphString(const ACodePoints: TPascalTypeCodePoints): TShaperGlyphString; virtual;
@@ -672,6 +674,12 @@ begin
   FixupMarkAttachments;
 end;
 
+procedure TPascalTypeShaper.ApplyRightToLeft(var AGlyphs: TPascalTypeGlyphString);
+begin
+  if (Direction = dirRightToLeft) then
+    AGlyphs.Reverse;
+end;
+
 function TPascalTypeShaper.Shape(const AText: string): TPascalTypeGlyphString;
 var
   UTF32: TPascalTypeCodePoints;
@@ -719,6 +727,8 @@ begin
     *)
     ExecutePositioning(Result);
 
+
+    ApplyRightToLeft(Result);
 
     (*
     ** Hide do-nothing characters
@@ -787,7 +797,7 @@ var
 begin
   SpaceGlyph := Font.GetGlyphByCharacter(32);
   for Glyph in Self do
-    if (Length(Glyph.CodePoints) = 0) or (PascalTypeUnicode.IsDefaultIgnorable(Glyph.CodePoints[0])) then
+    if (Length(Glyph.CodePoints) > 0) and (PascalTypeUnicode.IsDefaultIgnorable(Glyph.CodePoints[0])) then
     begin
       Glyph.GlyphID := SpaceGlyph;
       Glyph.XAdvance := 0;

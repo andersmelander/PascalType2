@@ -4,7 +4,7 @@ object FmRenderDemo: TFmRenderDemo
   BorderIcons = [biSystemMenu, biMaximize]
   Caption = 'PascalType Render Demo'
   ClientHeight = 436
-  ClientWidth = 676
+  ClientWidth = 916
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -16,7 +16,7 @@ object FmRenderDemo: TFmRenderDemo
   OnDestroy = FormDestroy
   OnShow = FormShow
   DesignSize = (
-    676
+    916
     436)
   TextHeight = 13
   object LabelText: TLabel
@@ -27,16 +27,15 @@ object FmRenderDemo: TFmRenderDemo
     Caption = 'Text:'
   end
   object LabelFont: TLabel
-    Left = 384
+    Left = 660
     Top = 11
     Width = 26
     Height = 13
     Anchors = [akTop, akRight]
     Caption = 'Font:'
-    ExplicitLeft = 199
   end
   object LabelFontSize: TLabel
-    Left = 596
+    Left = 836
     Top = 11
     Width = 23
     Height = 13
@@ -44,10 +43,18 @@ object FmRenderDemo: TFmRenderDemo
     Caption = 'Size:'
     ExplicitLeft = 391
   end
+  object Label1: TLabel
+    Left = 492
+    Top = 11
+    Width = 50
+    Height = 13
+    Anchors = [akTop, akRight]
+    Caption = 'Test case:'
+  end
   object EditText: TEdit
     Left = 40
     Top = 8
-    Width = 338
+    Width = 441
     Height = 21
     Anchors = [akLeft, akTop, akRight]
     TabOrder = 0
@@ -55,16 +62,16 @@ object FmRenderDemo: TFmRenderDemo
     OnChange = EditTextChange
   end
   object ComboBoxFont: TComboBox
-    Left = 416
+    Left = 692
     Top = 8
-    Width = 174
+    Width = 138
     Height = 21
     Anchors = [akTop, akRight]
     TabOrder = 1
     OnChange = ComboBoxFontChange
   end
   object ComboBoxFontSize: TComboBox
-    Left = 625
+    Left = 865
     Top = 8
     Width = 43
     Height = 21
@@ -75,10 +82,10 @@ object FmRenderDemo: TFmRenderDemo
     Font.Height = -11
     Font.Name = 'MS Sans Serif'
     Font.Style = []
-    ItemIndex = 8
+    ItemIndex = 13
     ParentFont = False
     TabOrder = 2
-    Text = '20'
+    Text = '36'
     OnChange = ComboBoxFontSizeChange
     Items.Strings = (
       '8'
@@ -100,11 +107,12 @@ object FmRenderDemo: TFmRenderDemo
       '96'
       '128'
       '256')
+    ExplicitLeft = 625
   end
   object GridPanel1: TGridPanel
     Left = 8
     Top = 35
-    Width = 660
+    Width = 900
     Height = 393
     Anchors = [akLeft, akTop, akRight, akBottom]
     BevelOuter = bvNone
@@ -152,11 +160,12 @@ object FmRenderDemo: TFmRenderDemo
       end>
     ShowCaption = False
     TabOrder = 3
+    ExplicitWidth = 660
     object PanelGDI: TPanel
       AlignWithMargins = True
       Left = 0
       Top = 1
-      Width = 658
+      Width = 900
       Height = 97
       Margins.Left = 0
       Margins.Top = 1
@@ -167,10 +176,9 @@ object FmRenderDemo: TFmRenderDemo
       Caption = 'GDI TextOut'
       ShowCaption = False
       TabOrder = 0
-      ExplicitLeft = 1
-      ExplicitHeight = 98
+      ExplicitWidth = 660
       object PaintBox1: TPaintBox
-        Left = 637
+        Left = 879
         Top = 0
         Width = 21
         Height = 97
@@ -182,7 +190,7 @@ object FmRenderDemo: TFmRenderDemo
       object PaintBoxWindows: TPaintBox
         Left = 0
         Top = 0
-        Width = 637
+        Width = 879
         Height = 97
         Align = alClient
         OnPaint = PaintBoxWindowsPaint
@@ -196,7 +204,7 @@ object FmRenderDemo: TFmRenderDemo
       AlignWithMargins = True
       Left = 0
       Top = 99
-      Width = 658
+      Width = 900
       Height = 97
       Margins.Left = 0
       Margins.Top = 1
@@ -207,10 +215,9 @@ object FmRenderDemo: TFmRenderDemo
       Caption = 'PascalType GDI'
       ShowCaption = False
       TabOrder = 1
-      ExplicitLeft = 1
-      ExplicitHeight = 98
+      ExplicitWidth = 660
       object PaintBox2: TPaintBox
-        Left = 637
+        Left = 879
         Top = 0
         Width = 21
         Height = 97
@@ -222,7 +229,7 @@ object FmRenderDemo: TFmRenderDemo
       object PaintBoxGDI: TPaintBox
         Left = 0
         Top = 0
-        Width = 637
+        Width = 879
         Height = 97
         Align = alClient
         OnPaint = PaintBoxGDIPaint
@@ -235,8 +242,8 @@ object FmRenderDemo: TFmRenderDemo
       AlignWithMargins = True
       Left = 0
       Top = 197
-      Width = 658
-      Height = 96
+      Width = 900
+      Height = 98
       Margins.Left = 0
       Margins.Top = 1
       Margins.Right = 0
@@ -246,13 +253,12 @@ object FmRenderDemo: TFmRenderDemo
       Caption = 'PascalType Graphics32'
       ShowCaption = False
       TabOrder = 2
-      ExplicitLeft = 1
-      ExplicitHeight = 97
+      ExplicitWidth = 660
       object PaintBox3: TPaintBox
-        Left = 637
+        Left = 879
         Top = 0
         Width = 21
-        Height = 96
+        Height = 98
         Align = alRight
         OnPaint = PaintBox1Paint
         ExplicitLeft = 484
@@ -261,8 +267,8 @@ object FmRenderDemo: TFmRenderDemo
       object PaintBoxGraphics32: TPaintBox
         Left = 0
         Top = 0
-        Width = 637
-        Height = 96
+        Width = 879
+        Height = 98
         Align = alClient
         OnPaint = PaintBoxGraphics32Paint
         ExplicitLeft = 4
@@ -273,8 +279,8 @@ object FmRenderDemo: TFmRenderDemo
     object PanelImage32: TPanel
       AlignWithMargins = True
       Left = 0
-      Top = 294
-      Width = 658
+      Top = 296
+      Width = 900
       Height = 97
       Margins.Left = 0
       Margins.Top = 1
@@ -285,10 +291,9 @@ object FmRenderDemo: TFmRenderDemo
       Caption = 'Image32'
       ShowCaption = False
       TabOrder = 3
-      ExplicitLeft = 1
-      ExplicitHeight = 98
+      ExplicitWidth = 660
       object PaintBox4: TPaintBox
-        Left = 637
+        Left = 879
         Top = 0
         Width = 21
         Height = 97
@@ -300,7 +305,7 @@ object FmRenderDemo: TFmRenderDemo
       object PaintBoxImage32: TPaintBox
         Left = 0
         Top = 0
-        Width = 637
+        Width = 879
         Height = 97
         Align = alClient
         OnPaint = PaintBoxImage32Paint
@@ -309,5 +314,14 @@ object FmRenderDemo: TFmRenderDemo
         ExplicitHeight = 133
       end
     end
+  end
+  object ComboBoxTestCase: TComboBox
+    Left = 544
+    Top = 8
+    Width = 105
+    Height = 21
+    Anchors = [akTop, akRight]
+    TabOrder = 4
+    OnChange = ComboBoxTestCaseChange
   end
 end

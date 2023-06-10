@@ -120,6 +120,7 @@ type
     function Extract(Index: integer): TPascalTypeGlyph; overload;
     function Extract(Glyph: TPascalTypeGlyph): TPascalTypeGlyph; overload;
     procedure Insert(Index: integer; Glyph: TPascalTypeGlyph);
+    procedure Reverse;
 
     function AsString: TGlyphString; overload;
     function AsString(Mapper: TGlyphMapperDelegate): TGlyphString; overload;
@@ -160,6 +161,7 @@ begin
   FOwner := AOwner;
   FLigatureComponent := -1;
   FMarkAttachment := -1;
+  FCursiveAttachment := -1;
 end;
 
 function TPascalTypeGlyph.GetIsLigature: boolean;
@@ -341,6 +343,14 @@ begin
       Exit(False);
 
   Result := True;
+end;
+
+procedure TPascalTypeGlyphString.Reverse;
+var
+  i: integer;
+begin
+  for i := 0 to FGlyphs.Count div 2 do
+    FGlyphs.Exchange(i, FGlyphs.Count-i-1);
 end;
 
 function TPascalTypeGlyphString.MatchBacktrack(AFromIndex: integer; const ASequence: TGlyphString): boolean;

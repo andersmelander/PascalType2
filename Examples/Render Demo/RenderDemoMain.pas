@@ -17,7 +17,7 @@ uses
 
 {$I ..\..\Source\PT_Compiler.inc}
 
-{-$define IMAGE32} // Define to include Image32 text output
+{$define IMAGE32} // Define to include Image32 text output
 {-$define RASTERIZER_GDI} // Define to include GDI rasterizer
 {$define WIN_ANTIALIAS} // Define to have Windows TextOut anti-aliased
 
@@ -47,6 +47,8 @@ type
     PanelImage32: TPanel;
     PaintBox4: TPaintBox;
     PaintBoxImage32: TPaintBox;
+    ComboBoxTestCase: TComboBox;
+    Label1: TLabel;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -58,6 +60,7 @@ type
     procedure PaintBoxGraphics32Paint(Sender: TObject);
     procedure PaintBoxImage32Paint(Sender: TObject);
     procedure PaintBox1Paint(Sender: TObject);
+    procedure ComboBoxTestCaseChange(Sender: TObject);
   private
     FFontFace: TPascalTypeFontFace;
     FRasterizerGDI  : TPascalTypeFontRasterizerGDI;
@@ -68,6 +71,9 @@ type
     FFontSize    : Integer;
     FFontName    : string;
     FFontFilename: string;
+    FLanguage: TTableType;
+    FScript: TTableType;
+    FDirection: TPascalTypeDirection;
     procedure FontScannedHandler(Sender: TObject; FontFileName: TFilename; Font: TCustomPascalTypeFontFacePersistent);
     procedure SetText(const Value: string);
     procedure SetFontSize(const Value: Integer);
@@ -80,6 +86,9 @@ type
     property Text: string read FText write SetText;
     property FontSize: Integer read FFontSize write SetFontSize;
     property FontName: string read FFontName write SetFontName;
+    property Script: TTableType read FScript;
+    property Language: TTableType read FLanguage;
+    property Direction: TPascalTypeDirection read FDirection;
   end;
 
 var
@@ -99,9 +108,42 @@ uses
   GR32,
   GR32_Polygons,
   GR32_Brushes,
-  GR32_Paths;
+  GR32_Paths,
+  PascalType.Shaper,
+  PascalType.GlyphString;
+
+type
+  TTestCase = record
+    Name: string;
+    FontName: string;
+    Script: TTableType;
+    Language: TTableType;
+    Direction: TPascalTypeDirection;
+    Text: string;
+  end;
+
+const
+  TestCases: array[0..13] of TTestCase = (
+    (Name: 'Default'; FontName: 'Arial'; Text: 'PascalType Render Demo'),
+    (Name: 'Substitution, Single, Single/frac'; FontName: 'Cascadia Mono Regular'; Text: '1/2Ω'),
+    (Name: 'Substitution, Single, List'; FontName: 'Candara'; Text: #$0386#$038C#$038E#$038F),
+    (Name: 'Substitution, Ligature'; FontName: 'Arabic Typesetting'; Text: 'ff fi ffi ft fft'),
+    (Name: 'Substitution, Multiple'; FontName: 'Microsoft Sans Serif'; Script: (AsAnsiChar: 'thai'); Text: #$0E01#$0E33#$0E44#$0E23' '#$0E19#$0E33),
+    (Name: 'Substitution, Chained, Simple'; FontName: 'Monoid Regular'; Text: ' _/Ø\_/Ø\_'),
+    (Name: 'Substitution, Chained, Class'; FontName: 'Segoe UI Variable'; Text: 'i® j® i¥'),
+    (Name: 'Substitution, Chained, Coverage'; FontName: 'Segoe UI Variable'; Text: '1/2 3/4'),
+    (Name: 'Positioning, Pair, Single'; FontName: 'Arial'; Text: 'LTAVAWA 11.Y.F'),
+    (Name: 'Positioning, Pair, Class'; FontName: 'Roboto Regular'; Text: 'P, PA '#$0393'm'),
+    (Name: 'Positioning, Cursive'; FontName: 'Arabic Typesetting'; Script: (AsAnsiChar: 'arab'); Direction: dirRightToLeft; Text: #$FE98#$067C#$067D), // Doesn't work or incorrect testcase
+    (Name: 'Positioning, MarkToBase'; FontName: 'Segoe UI'; Text: #$1EAA#32#$1EEE),
+    (Name: 'Unicode normalization'; FontName: 'Arial'; Text: 'Ê¯Â∆ÿ≈'),
+    (Name: 'Composite glyphs'; FontName: 'Segoe UI'; Text: 'Ω‰‚ÂÈÚ')
+  );
+
 
 procedure TFmRenderDemo.FormCreate(Sender: TObject);
+var
+  TestCase: TTestCase;
 begin
 {$ifndef IMAGE32}
   PanelImage32.Free;
@@ -126,7 +168,7 @@ begin
   FRasterizerGraphics32.FontFace := FFontFace;
 
   // set initial properties
-  FFontSize := StrToIntDef(ComboBoxFontSize.Text, 20);
+  FFontSize := StrToIntDef(ComboBoxFontSize.Text, 36);
 
   FFontScanner := TFontNameScanner.Create(True);
   with FFontScanner do
@@ -134,6 +176,9 @@ begin
     OnFontScanned := FontScannedHandler;
     Start;
   end;
+
+  for TestCase in TestCases do
+    ComboBoxTestCase.Items.Add(TestCase.Name);
 end;
 
 procedure TFmRenderDemo.FormDestroy(Sender: TObject);
@@ -152,7 +197,7 @@ end;
 
 procedure TFmRenderDemo.FormShow(Sender: TObject);
 begin
- Text := EditText.Text;
+  Text := EditText.Text;
 end;
 
 procedure TFmRenderDemo.PaintBox1Paint(Sender: TObject);
@@ -189,6 +234,8 @@ var
   Canvas: TCanvas;
   Canvas32: TCanvas32;
   Bitmap32: TBitmap32;
+  Shaper: TPascalTypeShaper;
+  ShapedText: TPascalTypeGlyphString;
 {$define FILL_PATH}
 {-$define STROKE_PATH}
 {$ifdef FILL_PATH}
@@ -224,7 +271,28 @@ begin
 {$endif STROKE_PATH}
       FRasterizerGraphics32.FontSize := 0; // TODO : We need to force a recalc of the scale. Changing the font doesn't notify the rasterizer.
       FRasterizerGraphics32.FontSize := FFontSize;
-      FRasterizerGraphics32.RenderShapedText(FText, Canvas32);
+
+      Shaper := TPascalTypeShaper.Create(FFontFace);
+      try
+        // TODO : Test only. Enable all optional features for test purpose
+        Shaper.Features.EnableAll := True;
+        Shaper.Language := FLanguage;
+        Shaper.Script := FScript;
+        Shaper.Direction := FDirection;
+
+        ShapedText := Shaper.Shape(FText);
+        try
+
+          FRasterizerGraphics32.RenderShapedText(ShapedText, Canvas32);
+
+        finally
+          ShapedText.Free;
+        end;
+
+      finally
+        Shaper.Free;
+      end;
+
     finally
       Canvas32.Free;
     end;
@@ -346,7 +414,7 @@ end;
 
 procedure TFmRenderDemo.SetFontName(const Value: string);
 begin
- if FFontName <> Value then
+  if FFontName <> Value then
   begin
     FFontName := Value;
     FontNameChanged;
@@ -355,7 +423,7 @@ end;
 
 procedure TFmRenderDemo.SetFontSize(const Value: Integer);
 begin
- if FFontSize <> Value then
+  if FFontSize <> Value then
   begin
    FFontSize := Value;
    FontSizeChanged;
@@ -364,7 +432,7 @@ end;
 
 procedure TFmRenderDemo.SetText(const Value: string);
 begin
- if FText <> Value then
+  if FText <> Value then
   begin
    FText := Value;
    TextChanged;
@@ -373,18 +441,37 @@ end;
 
 procedure TFmRenderDemo.ComboBoxFontChange(Sender: TObject);
 begin
- if (ComboBoxFont.ItemIndex >= 0) and (ComboBoxFont.ItemIndex < Length(FFontArray)) then
-   FontName := FFontArray[ComboBoxFont.ItemIndex].FullFontName;
+  if (ComboBoxFont.ItemIndex >= 0) and (ComboBoxFont.ItemIndex < Length(FFontArray)) then
+    FontName := FFontArray[ComboBoxFont.ItemIndex].FullFontName;
 end;
 
 procedure TFmRenderDemo.ComboBoxFontSizeChange(Sender: TObject);
 begin
- FontSize := StrToInt(ComboBoxFontSize.Text);
+  FontSize := StrToInt(ComboBoxFontSize.Text);
+end;
+
+procedure TFmRenderDemo.ComboBoxTestCaseChange(Sender: TObject);
+var
+  TestCase: TTestCase;
+begin
+  if (TComboBox(Sender).ItemIndex = -1) then
+    exit;
+
+  TestCase := TestCases[TComboBox(Sender).ItemIndex];
+
+  EditText.Text := TestCase.Text;
+  ComboBoxFont.Text := TestCase.FontName;
+  FontName := TestCase.FontName;
+  FLanguage := TestCase.Language;
+  FScript := TestCase.Script;
+  FDirection := TestCase.Direction;
+
+  Invalidate;
 end;
 
 procedure TFmRenderDemo.EditTextChange(Sender: TObject);
 begin
- Text := EditText.Text;
+  Text := EditText.Text;
 end;
 
 procedure TFmRenderDemo.FontScannedHandler(Sender: TObject; FontFileName: TFilename;
