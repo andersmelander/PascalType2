@@ -39,6 +39,7 @@ uses
   PT_Classes,
   PT_Types,
   PascalType.Unicode,
+  PascalType.Tables.OpenType.Common.Anchor,
   PascalType.Tables.OpenType.Common.ValueRecord;
 
 //------------------------------------------------------------------------------
@@ -73,6 +74,7 @@ type
     procedure Assign(Source: TPascalTypeGlyph); virtual;
 
     procedure ApplyPositioning(const AValueRecord: TOpenTypeValueRecord);
+    procedure ApplyAnchor(MarkAnchor, BaseAnchor: TOpenTypeAnchor; BaseIndex: integer);
 
     property Owner: TPascalTypeGlyphString read FOwner;
     property CodePoints: TPascalTypeCodePoints read FCodePoints write FCodePoints;
@@ -133,6 +135,8 @@ type
     function MatchBacktrack(AFromIndex: integer; const ASequence: TGlyphString): boolean; overload;
     function MatchBacktrack(AFromIndex: integer; const ASequence: TGlyphString; Mapper: TGlyphMapperDelegate): boolean; overload;
 
+    procedure ApplyAnchor(MarkAnchor, BaseAnchor: TOpenTypeAnchor; MarkIndex, BaseIndex: integer);
+
     procedure SetLength(ALen: integer);
 
     function GetNextLigatureID: integer;
@@ -192,6 +196,24 @@ end;
 procedure TPascalTypeGlyph.SetOwner(AOwner: TPascalTypeGlyphString);
 begin
   FOwner := AOwner;
+end;
+
+procedure TPascalTypeGlyph.ApplyAnchor(MarkAnchor, BaseAnchor: TOpenTypeAnchor; BaseIndex: integer);
+var
+  MarkPos, BasePos: TAnchorPoint;
+  Glyph: TPascalTypeGlyph;
+begin
+  MarkPos := MarkAnchor.Position;
+  BasePos := BaseAnchor.Position;
+
+  XOffset := BasePos.X - MarkPos.X;
+{$ifdef Inverse_Y_axis_xxx_not_implemented_here}
+  YOffset := MarkPos.Y - BasePos.Y;
+{$else Inverse_Y_axis}
+  YOffset := BasePos.Y - MarkPos.Y;
+{$endif Inverse_Y_axis}
+
+  MarkAttachment := BaseIndex;
 end;
 
 procedure TPascalTypeGlyph.ApplyPositioning(const AValueRecord: TOpenTypeValueRecord);
@@ -425,6 +447,11 @@ begin
   System.SetLength(Result, FGlyphs.Count);
   for i := 0 to FGlyphs.Count-1 do
     Result[i] := FGlyphs[i].GlyphID;
+end;
+
+procedure TPascalTypeGlyphString.ApplyAnchor(MarkAnchor, BaseAnchor: TOpenTypeAnchor; MarkIndex, BaseIndex: integer);
+begin
+  FGlyphs[MarkIndex].ApplyAnchor(MarkAnchor, BaseAnchor, BaseIndex);
 end;
 
 function TPascalTypeGlyphString.AsString(Mapper: TGlyphMapperDelegate): TGlyphString;

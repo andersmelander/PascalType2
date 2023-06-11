@@ -129,6 +129,8 @@ type
 type
   TPascalTypeShaper = class
   private type
+    TZeroMarkWidths = (zmwNever, zmwBeforeGPOS, zmwAfterGPOS);
+  private type
     TPascalTypeShaperFeatures = class
     private
       FShaper: TPascalTypeShaper;
@@ -170,6 +172,7 @@ type
     procedure ProcessCodePoints(var CodePoints: TPascalTypeCodePoints); virtual;
     function ProcessUnicode(const AText: string): TPascalTypeCodePoints; virtual;
     function NeedUnicodeComposition: boolean; virtual;
+    function ZeroMarkWidths: TZeroMarkWidths; virtual;
 
     procedure ApplyLookups(ALookupListTable: TOpenTypeLookupListTable; AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString);
     procedure ApplySubstitution(AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString); virtual;
@@ -179,6 +182,7 @@ type
     procedure PreProcessPositioning(var AGlyphs: TPascalTypeGlyphString);
     procedure PostProcessPositioning(var AGlyphs: TPascalTypeGlyphString);
     procedure ApplyRightToLeft(var AGlyphs: TPascalTypeGlyphString);
+    procedure ClearMarkAdvance(var AGlyphs: TPascalTypeGlyphString);
 
     function GetGlyphStringClass: TShaperGlyphStringClass; virtual;
     function CreateGlyphString(const ACodePoints: TPascalTypeCodePoints): TShaperGlyphString; virtual;
@@ -289,6 +293,18 @@ end;
 function TPascalTypeShaper.NeedUnicodeComposition: boolean;
 begin
   Result := False;
+end;
+
+procedure TPascalTypeShaper.ClearMarkAdvance(var AGlyphs: TPascalTypeGlyphString);
+var
+  Glyph: TPascalTypeGlyph;
+begin
+  for Glyph in AGlyphs do
+    if (Glyph.IsMark) then
+    begin
+      Glyph.XAdvance := 0;
+      Glyph.YAdvance := 0;
+    end;
 end;
 
 function TPascalTypeShaper.CompositionFilter(CodePoint: TPascalTypeCodePoint): boolean;
@@ -606,6 +622,9 @@ begin
   // Get default positions
   for Glyph in AGlyphs do
     Glyph.XAdvance := Font.GetAdvanceWidth(Glyph.GlyphID);
+
+  if (ZeroMarkWidths = zmwBeforeGPOS) then
+    ClearMarkAdvance(AGlyphs);
 end;
 
 procedure TPascalTypeShaper.ExecutePositioning(var AGlyphs: TPascalTypeGlyphString);
@@ -683,6 +702,9 @@ procedure TPascalTypeShaper.PostProcessPositioning(var AGlyphs: TPascalTypeGlyph
   end;
 
 begin
+  if (ZeroMarkWidths = zmwAfterGPOS) then
+    ClearMarkAdvance(AGlyphs);
+
   FixupCursiveAttachments;
   FixupMarkAttachments;
 end;
@@ -753,6 +775,11 @@ begin
     Result.Free;
     raise;
   end;
+end;
+
+function TPascalTypeShaper.ZeroMarkWidths: TZeroMarkWidths;
+begin
+  Result := zmwAfterGPOS;
 end;
 
 //------------------------------------------------------------------------------

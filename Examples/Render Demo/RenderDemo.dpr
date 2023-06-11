@@ -71,7 +71,9 @@ uses
   PascalType.Tables.OpenType.Common.ValueRecord in '..\..\Source\PascalType.Tables.OpenType.Common.ValueRecord.pas',
   PascalType.Tables.OpenType.Common.Mark in '..\..\Source\PascalType.Tables.OpenType.Common.Mark.pas',
   PascalType.Tables.OpenType.Common.Anchor in '..\..\Source\PascalType.Tables.OpenType.Common.Anchor.pas',
-  PascalType.Tables.OpenType.Positioning.MarkToMark in '..\..\Source\PascalType.Tables.OpenType.Positioning.MarkToMark.pas';
+  PascalType.Tables.OpenType.Positioning.MarkToMark in '..\..\Source\PascalType.Tables.OpenType.Positioning.MarkToMark.pas',
+  PascalType.Tables.OpenType.Positioning.MarkToLigature in '..\..\Source\PascalType.Tables.OpenType.Positioning.MarkToLigature.pas',
+  PascalType.Tables.OpenType.Positioning.Mark in '..\..\Source\PascalType.Tables.OpenType.Positioning.Mark.pas';
 
 {$R *.res}
 

@@ -36,14 +36,7 @@ interface
 
 uses
   Generics.Collections,
-  Generics.Defaults,
-  Classes,
-  PT_Types,
-  PT_Classes,
-  PascalType.GlyphString,
-  PascalType.Tables.OpenType.Lookup,
-  PascalType.Tables.OpenType.Positioning,
-  PascalType.Tables.OpenType.ClassDefinition;
+  System.Classes;
 
 
 //------------------------------------------------------------------------------
@@ -103,6 +96,8 @@ type
     property AnchorFormat: TOpenTypeAnchorFormat read FAnchorFormat;
   end;
 
+  TAnchorList = TArray<TOpenTypeAnchor>;
+
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -110,8 +105,10 @@ type
 implementation
 
 uses
-  SysUtils,
-  PT_ResourceStrings;
+  System.SysUtils,
+  PT_ResourceStrings,
+  PT_Classes,
+  PT_Types;
 
 //------------------------------------------------------------------------------
 //      TOpenTypeAnchorDesignUnits

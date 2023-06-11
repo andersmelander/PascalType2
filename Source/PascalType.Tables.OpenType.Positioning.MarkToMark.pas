@@ -140,22 +140,6 @@ begin
 end;
 
 function TOpenTypePositioningSubTableMarkToMarkAttachment.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
-
-  procedure ApplyAnchor(Mark1Anchor, Mark2Anchor: TOpenTypeAnchor; Mark1Index, Mark2Index: integer);
-  var
-    Mark1Pos, Mark2Pos: TAnchorPoint;
-    Glyph: TPascalTypeGlyph;
-  begin
-    Mark1Pos := Mark1Anchor.Position;
-    Mark2Pos := Mark2Anchor.Position;
-
-    Glyph := AGlyphString[Mark1Index];
-    Glyph.XOffset := Mark2Pos.X - Mark1Pos.X;
-    Glyph.YOffset := Mark2Pos.Y - Mark1Pos.Y;
-
-    Glyph.MarkAttachment := Mark2Index;
-  end;
-
 var
   Mark1Glyph: TPascalTypeGlyph;
   Mark2Glyph: TPascalTypeGlyph;
@@ -212,7 +196,7 @@ begin
   if (Mark2Anchor = nil) then
     Exit(False);
 
-  ApplyAnchor(Mark1.Anchor, Mark2Anchor, AIndex, Mark2GlyphIndex);
+  Mark1Glyph.ApplyAnchor(Mark1.Anchor, Mark2Anchor, Mark2GlyphIndex);
 
   Result := True;
   Inc(AIndex);

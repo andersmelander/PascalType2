@@ -123,20 +123,21 @@ type
   end;
 
 const
-  TestCases: array[0..14] of TTestCase = (
+  TestCases: array[0..15] of TTestCase = (
     (Name: 'Default'; FontName: 'Arial'; Text: 'PascalType Render Demo'),
-    (Name: 'Substitution, Single, Single/frac'; FontName: 'Cascadia Mono Regular'; Text: '1/2Ω'),
-    (Name: 'Substitution, Single, List'; FontName: 'Candara'; Text: #$0386#$038C#$038E#$038F),
-    (Name: 'Substitution, Ligature'; FontName: 'Arabic Typesetting'; Text: 'ff fi ffi ft fft'),
-    (Name: 'Substitution, Multiple'; FontName: 'Microsoft Sans Serif'; Script: (AsAnsiChar: 'thai'); Text: #$0E01#$0E33#$0E44#$0E23' '#$0E19#$0E33),
-    (Name: 'Substitution, Chained, Simple'; FontName: 'Monoid Regular'; Text: ' _/Ø\_/Ø\_'),
-    (Name: 'Substitution, Chained, Class'; FontName: 'Segoe UI Variable'; Text: 'i® j® i¥'),
-    (Name: 'Substitution, Chained, Coverage'; FontName: 'Segoe UI Variable'; Text: '1/2 3/4'),
-    (Name: 'Positioning, Pair, Single'; FontName: 'Arial'; Text: 'LTAVAWA 11.Y.F'),
-    (Name: 'Positioning, Pair, Class'; FontName: 'Roboto Regular'; Text: 'P, PA '#$0393'm'),
-    (Name: 'Positioning, Cursive'; FontName: 'Arabic Typesetting'; Script: (AsAnsiChar: 'arab'); Direction: dirRightToLeft; Text: #$FE98#$067C#$067D), // Doesn't work or incorrect testcase
-    (Name: 'Positioning, MarkToBase'; FontName: 'Segoe UI'; Text: #$1EAA#32#$1EEE),
-    (Name: 'Positioning, MarkToMark'; FontName: 'Arabic Typesetting'; Text: 'A'#$0327#$0323),//#$03BC#$03B1#$0390#$03C3#$03C4#$03C1#$03BF#$03C2), // Segoe UI appears to have a bug with this test case
+    (Name: 'GSUB, Single, Single/frac'; FontName: 'Cascadia Mono Regular'; Text: '1/2Ω'),
+    (Name: 'GSUB, Single, List'; FontName: 'Candara'; Text: #$0386#$038C#$038E#$038F),
+    (Name: 'GSUB, Ligature'; FontName: 'Arabic Typesetting'; Text: 'ff fi ffi ft fft'),
+    (Name: 'GSUB, Multiple'; FontName: 'Microsoft Sans Serif'; Script: (AsAnsiChar: 'thai'); Text: #$0E01#$0E33#$0E44#$0E23' '#$0E19#$0E33),
+    (Name: 'GSUB, Chained, Simple'; FontName: 'Monoid Regular'; Text: ' _/Ø\_/Ø\_'),
+    (Name: 'GSUB, Chained, Class'; FontName: 'Segoe UI Variable'; Text: 'i® j® i¥'),
+    (Name: 'GSUB, Chained, Coverage'; FontName: 'Segoe UI Variable'; Text: '1/2 3/4'),
+    (Name: 'GPOS, Pair, Single'; FontName: 'Arial'; Text: 'LTAVAWA 11.Y.F'),
+    (Name: 'GPOS, Pair, Class'; FontName: 'Roboto Regular'; Text: 'P, PA '#$0393'm'),
+    (Name: 'GPOS, Cursive'; FontName: 'Arabic Typesetting'; Script: (AsAnsiChar: 'arab'); Direction: dirRightToLeft; Text: #$FE98#$067C#$067D), // Doesn't work or incorrect testcase
+    (Name: 'GPOS, MarkToBase'; FontName: 'Segoe UI'; Text: #$1EAA#32#$1EEE),
+    (Name: 'GPOS, MarkToMark'; FontName: 'Arabic Typesetting'; Text: 'A'#$0327#$0323),//#$03BC#$03B1#$0390#$03C3#$03C4#$03C1#$03BF#$03C2), // Segoe UI appears to have a bug with this test case
+    (Name: 'GPOS, MarkToLigature'; FontName: 'Arabic Typesetting'; Script: (AsAnsiChar: 'arab'); Direction: dirRightToLeft; Text: #$FEF8#$0612'  '#$0644#$0627#$0654#$0612), // #$FEF8 is a ligature for #$0644#$0627#$0654
     (Name: 'Unicode normalization'; FontName: 'Arial'; Text: 'Ê¯Â∆ÿ≈'),
     (Name: 'Composite glyphs'; FontName: 'Segoe UI'; Text: 'Ω‰‚ÂÈÚ')
   );
