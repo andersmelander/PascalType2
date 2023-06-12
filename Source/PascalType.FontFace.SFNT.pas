@@ -125,6 +125,7 @@ type
   protected
     procedure LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry); override;
   public
+    function GetGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): Integer; override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -324,6 +325,8 @@ type
     function GetFontFace: IPascalTypeFontFace; override;
   public
     constructor Create(const AFontFace: IPascalTypeFontFace); reintroduce;
+    procedure LoadFromStream(Stream: TStream); override;
+    procedure SaveToStream(Stream: TStream); override;
   end;
 
 constructor TPascalTypeTableRoot.Create(const AFontFace: IPascalTypeFontFace);
@@ -335,6 +338,16 @@ end;
 function TPascalTypeTableRoot.GetFontFace: IPascalTypeFontFace;
 begin
   Result := FFontFace;
+end;
+
+procedure TPascalTypeTableRoot.LoadFromStream(Stream: TStream);
+begin
+  raise EPascalTypeError.Create(RCStrNotImplemented);
+end;
+
+procedure TPascalTypeTableRoot.SaveToStream(Stream: TStream);
+begin
+  raise EPascalTypeError.Create(RCStrNotImplemented);
 end;
 
 constructor TCustomPascalTypeFontFace.Create;
@@ -695,6 +708,11 @@ begin
 end;
 
 { TPascalTypeFontFaceScan }
+
+function TPascalTypeFontFaceScan.GetGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): Integer;
+begin
+  Result := 0;
+end;
 
 procedure TPascalTypeFontFaceScan.LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry);
 var

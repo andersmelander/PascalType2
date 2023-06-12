@@ -326,10 +326,10 @@ begin
 end;
 
 procedure TOpenTypePositioningSubTableCursiveAttachment.SaveToStream(Stream: TStream);
-var
-  StartPos: Int64;
+//var
+//  StartPos: Int64;
 begin
-  StartPos := Stream.Position;
+//  StartPos := Stream.Position;
 
   inherited;
 

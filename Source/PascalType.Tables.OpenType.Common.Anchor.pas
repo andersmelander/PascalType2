@@ -242,14 +242,13 @@ begin
 end;
 
 procedure TOpenTypeAnchorDUDeviceVariantion.LoadFromStream(Stream: TStream);
-var
-  XDeviceOffset: Word;
-  YDeviceOffset: Word;
 begin
   inherited;
 
+(* TODO
   XDeviceOffset := BigEndianValueReader.ReadWord(Stream);
   YDeviceOffset := BigEndianValueReader.ReadWord(Stream);
+*)
 end;
 
 procedure TOpenTypeAnchorDUDeviceVariantion.SaveToStream(Stream: TStream);

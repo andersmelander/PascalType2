@@ -201,7 +201,6 @@ end;
 procedure TPascalTypeGlyph.ApplyAnchor(MarkAnchor, BaseAnchor: TOpenTypeAnchor; BaseIndex: integer);
 var
   MarkPos, BasePos: TAnchorPoint;
-  Glyph: TPascalTypeGlyph;
 begin
   MarkPos := MarkAnchor.Position;
   BasePos := BaseAnchor.Position;

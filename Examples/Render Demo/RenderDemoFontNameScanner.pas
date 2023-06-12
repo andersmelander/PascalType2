@@ -22,7 +22,7 @@ type
     procedure FontScanned;
   protected
     procedure Execute; override;
-  published
+  public
     property OnFontScanned: TFontScannedEvent read FOnFontName write FOnFontName;
   end;
 

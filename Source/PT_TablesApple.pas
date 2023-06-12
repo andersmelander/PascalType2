@@ -2913,6 +2913,10 @@ begin
     // Assert(Position = StartPos + GroupOffset);
 
     // TODO: Finish implementation of TPascalTypeZapfGlyphInfoTable (see http://developer.apple.com/fonts/TTRefMan/RM06/Chap6Zapf.html)
+    // Dummy asserts to silence compiler hints
+    Assert(FeatOffset <> 0);
+    Assert(GroupOffset <> 0);
+    Assert(StartPos <> 0);
 
   end;
 end;

@@ -91,40 +91,34 @@ function TPascalTypeFontRasterizerGDI.GetTextMetricsA(
 begin
   Result := False;
 
-  if Assigned(FontFace.OS2Table) then
-    with FontFace, OS2Table, TextMetric do
+  if (FontFace.OS2Table = nil) then
+    exit;
+
+  with FontFace, OS2Table, TextMetric do
+  begin
+    // find right ascent/descent pair and calculate leading
+    if fsfUseTypoMetrics in FontSelectionFlags then
     begin
-      // find right ascent/descent pair and calculate leading
-      if fsfUseTypoMetrics in FontSelectionFlags then
+      tmAscent := RoundedScaleY(TypographicAscent);
+      tmDescent := RoundedScaleY(TypographicDescent);
+      tmInternalLeading := RoundedScaleY(TypographicAscent + TypographicDescent - HeaderTable.UnitsPerEm);
+      tmExternalLeading := Max(0, RoundedScaleY(HorizontalHeader.LineGap - ((TypographicAscent + TypographicDescent) - (HorizontalHeader.Ascent - HorizontalHeader.Descent))));
+    end else
+    begin
+      if (WindowsAscent + WindowsDescent) = 0 then
       begin
-        tmAscent := RoundedScaleY(TypographicAscent);
-        tmDescent := RoundedScaleY(TypographicDescent);
-        tmInternalLeading := RoundedScaleY(TypographicAscent + TypographicDescent - HeaderTable.UnitsPerEm);
-        tmExternalLeading := Max(0, RoundedScaleY(HorizontalHeader.LineGap -
-          ((TypographicAscent + TypographicDescent) -
-           (HorizontalHeader.Ascent - HorizontalHeader.Descent))));
-      end
-      else
+        tmAscent := RoundedScaleY(HorizontalHeader.Ascent);
+        tmDescent := RoundedScaleY(-HorizontalHeader.Descent);
+        tmInternalLeading := RoundedScaleY(HorizontalHeader.Ascent + HorizontalHeader.Descent - HeaderTable.UnitsPerEm);
+        tmExternalLeading := Max(0, RoundedScaleY(HorizontalHeader.LineGap - ((HorizontalHeader.Ascent + HorizontalHeader.Descent) - (HorizontalHeader.Ascent - HorizontalHeader.Descent))));
+      end else
       begin
-        if (WindowsAscent + WindowsDescent) = 0 then
-        begin
-          tmAscent := RoundedScaleY(HorizontalHeader.Ascent);
-          tmDescent := RoundedScaleY(-HorizontalHeader.Descent);
-          tmInternalLeading := RoundedScaleY(HorizontalHeader.Ascent + HorizontalHeader.Descent - HeaderTable.UnitsPerEm);
-          tmExternalLeading := Max(0, RoundedScaleY(HorizontalHeader.LineGap -
-            ((HorizontalHeader.Ascent + HorizontalHeader.Descent) -
-             (HorizontalHeader.Ascent - HorizontalHeader.Descent))));
-        end
-        else
-        begin
-          tmAscent := RoundedScaleY(WindowsAscent);
-          tmDescent := RoundedScaleY(WindowsDescent);
-          tmInternalLeading := RoundedScaleY(WindowsAscent + WindowsDescent - HeaderTable.UnitsPerEm);
-          tmExternalLeading := Max(0, RoundedScaleY(HorizontalHeader.LineGap -
-            ((WindowsAscent + WindowsDescent) -
-             (HorizontalHeader.Ascent - HorizontalHeader.Descent))));
-        end;
+        tmAscent := RoundedScaleY(WindowsAscent);
+        tmDescent := RoundedScaleY(WindowsDescent);
+        tmInternalLeading := RoundedScaleY(WindowsAscent + WindowsDescent - HeaderTable.UnitsPerEm);
+        tmExternalLeading := Max(0, RoundedScaleY(HorizontalHeader.LineGap - ((WindowsAscent + WindowsDescent) - (HorizontalHeader.Ascent - HorizontalHeader.Descent))));
       end;
+    end;
 
     tmHeight := tmAscent + tmDescent;
 
@@ -138,7 +132,7 @@ begin
     tmDigitizedAspectX := PixelPerInchX;
     tmDigitizedAspectY := PixelPerInchY;
 
-    {$IFDEF FPC}
+{$IFDEF FPC}
     if WideChar(UnicodeFirstCharacterIndex) < #$FF then
       tmFirstChar := BCHAR(UnicodeFirstCharacterIndex)
     else
@@ -148,7 +142,7 @@ begin
       tmLastChar := BCHAR(UnicodeLastCharacterIndex)
     else
       tmLastChar := $FF;
-    {$ELSE}
+{$ELSE}
     if WideChar(UnicodeFirstCharacterIndex) < #$FF then
       tmFirstChar := AnsiChar(UnicodeFirstCharacterIndex)
     else
@@ -158,8 +152,7 @@ begin
       tmLastChar := AnsiChar(UnicodeLastCharacterIndex)
     else
       tmLastChar := #$FF;
-    {$ENDIF}
-
+{$ENDIF}
     tmItalic := Integer(fsfItalic in FontSelectionFlags);
     tmUnderlined := Integer(fsfUnderscore in FontSelectionFlags);
     tmStruckOut := Integer(fsfStrikeout in FontSelectionFlags);
@@ -175,8 +168,8 @@ begin
         tmPitchAndFamily := FF_MODERN; // monospaced!
       1, 2, 4, 5:
         tmPitchAndFamily := FF_ROMAN;
-      else
-        tmPitchAndFamily := 0;
+    else
+      tmPitchAndFamily := 0;
     end;
 
     if (Self.FontFace.PostScriptTable.IsFixedPitch = 0) then
@@ -188,28 +181,28 @@ begin
     if Self.FontFace.ContainsTable('HDMX') then
       tmPitchAndFamily := tmPitchAndFamily + TMPF_DEVICE;
 
-(*
-    if Assigned(AddendumTable) then
-     begin
+    (*
+      if Assigned(AddendumTable) then
+      begin
       tmBreakChar := Char(AddendumTable.BreakChar);
       tmDefaultChar := Char(Integer(tmBreakChar) - 1); // WideChar(AddendumTable.DefaultChar);
-     end
-    else
-     begin
+      end
+      else
+      begin
       if tmFirstChar <= #1
-       then tmBreakChar := WChar(Integer(tmFirstChar) + 2) else
+      then tmBreakChar := WChar(Integer(tmFirstChar) + 2) else
       if tmFirstChar > #$FF
-       then tmBreakChar := #$20
-       else tmBreakChar := tmFirstChar;
+      then tmBreakChar := #$20
+      else tmBreakChar := tmFirstChar;
       tmDefaultChar := WChar(Integer(tmBreakChar) - 1);
-     end;
-*)
+      end;
+    *)
 
-    if Assigned(CodePageRange) and (CodePageRange.SupportsLatin1) then
+    if (CodePageRange <> nil) and (CodePageRange.SupportsLatin1) then
       tmCharSet := 0;
-   end;
+  end;
 
- Result := True;
+  Result := True;
 end;
 
 function TPascalTypeFontRasterizerGDI.GetTextMetricsW(
@@ -217,38 +210,32 @@ function TPascalTypeFontRasterizerGDI.GetTextMetricsW(
 begin
   Result := False;
 
-  if Assigned(FontFace.OS2Table) then
-    with FontFace, OS2Table, TextMetric do
+  if (FontFace.OS2Table = nil) then
+    exit;
+
+  with FontFace, OS2Table, TextMetric do
+  begin
+    // find right ascent/descent pair and calculate leading
+    if fsfUseTypoMetrics in FontSelectionFlags then
     begin
-      // find right ascent/descent pair and calculate leading
-      if fsfUseTypoMetrics in FontSelectionFlags then
-      begin
-        tmAscent := RoundedScaleY(TypographicAscent);
-        tmDescent := RoundedScaleY(TypographicDescent);
-        tmInternalLeading := RoundedScaleY(TypographicAscent + TypographicDescent - HeaderTable.UnitsPerEm);
-        tmExternalLeading := Max(0, RoundedScaleY(HorizontalHeader.LineGap -
-          ((TypographicAscent + TypographicDescent) -
-           (HorizontalHeader.Ascent - HorizontalHeader.Descent))));
-      end
-      else
-      begin
+      tmAscent := RoundedScaleY(TypographicAscent);
+      tmDescent := RoundedScaleY(TypographicDescent);
+      tmInternalLeading := RoundedScaleY(TypographicAscent + TypographicDescent - HeaderTable.UnitsPerEm);
+      tmExternalLeading := Max(0, RoundedScaleY(HorizontalHeader.LineGap - ((TypographicAscent + TypographicDescent) - (HorizontalHeader.Ascent - HorizontalHeader.Descent))));
+    end else
+    begin
       if (WindowsAscent + WindowsDescent) = 0 then
       begin
         tmAscent := RoundedScaleY(HorizontalHeader.Ascent);
         tmDescent := RoundedScaleY(-HorizontalHeader.Descent);
         tmInternalLeading := RoundedScaleY(HorizontalHeader.Ascent + HorizontalHeader.Descent - HeaderTable.UnitsPerEm);
-        tmExternalLeading := Max(0, RoundedScaleY(HorizontalHeader.LineGap -
-          ((HorizontalHeader.Ascent + HorizontalHeader.Descent) -
-           (HorizontalHeader.Ascent - HorizontalHeader.Descent))));
-      end
-      else
+        tmExternalLeading := Max(0, RoundedScaleY(HorizontalHeader.LineGap - ((HorizontalHeader.Ascent + HorizontalHeader.Descent) - (HorizontalHeader.Ascent - HorizontalHeader.Descent))));
+      end else
       begin
         tmAscent := RoundedScaleY(WindowsAscent);
         tmDescent := RoundedScaleY(WindowsDescent);
         tmInternalLeading := RoundedScaleY(WindowsAscent + WindowsDescent - HeaderTable.UnitsPerEm);
-        tmExternalLeading := Max(0, RoundedScaleY(HorizontalHeader.LineGap -
-          ((WindowsAscent + WindowsDescent) -
-           (HorizontalHeader.Ascent - HorizontalHeader.Descent))));
+        tmExternalLeading := Max(0, RoundedScaleY(HorizontalHeader.LineGap - ((WindowsAscent + WindowsDescent) - (HorizontalHeader.Ascent - HorizontalHeader.Descent))));
       end;
     end;
 
@@ -282,8 +269,8 @@ begin
         tmPitchAndFamily := FF_MODERN;
       1, 2, 4, 5:
         tmPitchAndFamily := FF_ROMAN;
-      else
-        tmPitchAndFamily := 0;
+    else
+      tmPitchAndFamily := 0;
     end;
     if (Self.FontFace.PostScriptTable.IsFixedPitch = 0) then
       tmPitchAndFamily := tmPitchAndFamily + TMPF_FIXED_PITCH;
@@ -297,24 +284,24 @@ begin
     if Assigned(AddendumTable) then
     begin
       tmBreakChar := WideChar(AddendumTable.BreakChar);
-      tmDefaultChar := WChar(Integer(tmBreakChar) - 1); // WideChar(AddendumTable.DefaultChar);
-    end
-    else
+      tmDefaultChar := WChar(Integer(tmBreakChar) - 1);
+      // WideChar(AddendumTable.DefaultChar);
+    end else
     begin
       if tmFirstChar <= #1 then
-        tmBreakChar := WChar(Integer(tmFirstChar) + 2) else
-      if tmFirstChar > #$FF then
+        tmBreakChar := WChar(Integer(tmFirstChar) + 2)
+      else if tmFirstChar > #$FF then
         tmBreakChar := #$20
       else
         tmBreakChar := tmFirstChar;
       tmDefaultChar := WChar(Integer(tmBreakChar) - 1);
     end;
 
-    if Assigned(CodePageRange) and (CodePageRange.SupportsLatin1) then
+    if (CodePageRange <> nil) and (CodePageRange.SupportsLatin1) then
       tmCharSet := 0;
-   end;
+  end;
 
- Result := True;
+  Result := True;
 end;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -570,10 +557,8 @@ end;
 
 function TPascalTypeFontRasterizerGDI.GetTextExtentPoint32A(const Text: string;
   var Size: TSize): Boolean;
-var
-  GlyphIndex: Integer;
 begin
-// GlyphIndex := GetGlyphByCharacter(Character);
+  // TODO
   Result := False;
 end;
 
@@ -623,14 +608,15 @@ function TPascalTypeFontRasterizerGDI.GetGlyphOutlineA(Character: Cardinal;
   Format: TGetGlyphOutlineUnion; out GlyphMetrics: TGlyphMetrics;
   BufferSize: Cardinal; Buffer: Pointer;
   const TransformationMatrix: TTransformationMatrix): Cardinal;
-var
-  GlyphIndex: Integer;
 begin
+  // TODO
+(*
   // get glyph index
   if (ggoGlyphIndex in Format.Flags) then
     GlyphIndex := Character
   else
     GlyphIndex := FontFace.GetGlyphByCharacter(Character);
+*)
 
 (*
  if Buffer = nil then
@@ -639,15 +625,15 @@ begin
 
   end;
 *)
+  Result := 0;
 end;
 
 function TPascalTypeFontRasterizerGDI.GetGlyphOutlineW(Character: Cardinal;
   Format: TGetGlyphOutlineUnion; out GlyphMetrics: TGlyphMetrics;
   BufferSize: Cardinal; Buffer: Pointer;
   const TransformationMatrix: TTransformationMatrix): Cardinal;
-var
-  GlyphIndex: Integer;
 begin
+(*
   // get glyph index
   if (ggoGlyphIndex in Format.Flags) then
     GlyphIndex := Character
@@ -663,7 +649,7 @@ begin
     gmCellIncX := RoundedScaleX(XMax);
     gmCellIncY := 0;
   end;
-
+*)
 (*
  if Buffer = nil then
   case Format.Format of
@@ -671,6 +657,7 @@ begin
 
   end;
 *)
+  Result := 0;
 end;
 
 ////////////////////////////////////////////////////////////////////////////////
