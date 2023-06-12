@@ -1984,7 +1984,7 @@ begin
     // read glyph name index array (with speed optimization)
     if Stream is TMemoryStream then
     begin
-      BigEndianValueReader.Copy(PWord(Integer(TMemoryStream(Stream).Memory) + Position)^, FGlyphNameIndex[0], Length(FGlyphNameIndex));
+      BigEndianValueReader.Copy(PWord(NativeInt(TMemoryStream(Stream).Memory) + Position)^, FGlyphNameIndex[0], Length(FGlyphNameIndex));
       // CopySwappedWord(PWord(Integer(TMemoryStream(Stream).Memory) + Position), @FGlyphNameIndex[0], Length(FGlyphNameIndex));
       Position := Position + Length(FGlyphNameIndex) * SizeOf(Word);
     end
