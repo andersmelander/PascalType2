@@ -87,16 +87,13 @@ resourcestring
   RCStrUnsupportedVersion = 'Unsupported version';
   RCStrWrongChainLength = 'Chain length must be a multiple of 4!';
   RCStrWrongCharacterIndex = 'Wrong character index!';
-  RCStrWrongEntrySelector = 'Wrong entry selector!';
   RCStrWrongFilesize = 'Wrong file size!';
   RCStrWrongFormat = 'Wrong Format';
   RCStrWrongIndexToLocFormat = 'Wrong IndexToLocFormat (%d)';
   RCStrWrongMajorVersion = 'Wrong major version (%d)';
-  RCStrWrongRangeShift = 'Wrong range shift!';
-  RCStrWrongSearchRange = 'Wrong search range!';
-  {$IFDEF ValidateEveryReadOperation}
+{$IFDEF ValidateEveryReadOperation}
   RCStrStreamReadError = 'Stream read error!';
-  {$ENDIF}
+{$ENDIF}
 
 
 implementation

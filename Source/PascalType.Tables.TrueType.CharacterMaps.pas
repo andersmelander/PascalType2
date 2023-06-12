@@ -112,12 +112,6 @@ type
   private
     FLength: Word;                    // This is the length in bytes of the subtable.
     FLanguage: Word;                  // Please see 'Note on the language field in 'cmap' subtables' in this document.
-{$ifdef CMAP_BSEARCH}
-    FSegCountX2: Word;                // 2 x segCount.
-    FSearchRange: Word;               // 2 x (2**floor(log2(segCount)))
-    FEntrySelector: Word;             // log2(searchRange / 2)
-    FRangeShift: Word;                // 2 x segCount - searchRange
-{$endif CMAP_BSEARCH}
     FEndCode: array of Word;          // End characterCode for each segment, last=0xFFFF.
     FStartCode: array of Word;        // Start character code for each segment.
     FIdDelta: array of SmallInt;      // Delta for all character codes in segment.
@@ -342,12 +336,6 @@ begin
   begin
     FLength := TPascalTypeFormat4CharacterMap(Source).FLength;
     FLanguage := TPascalTypeFormat4CharacterMap(Source).FLanguage;
-{$ifdef CMAP_BSEARCH}
-    FSegCountX2 := TPascalTypeFormat4CharacterMap(Source).FSegCountX2;
-    FSearchRange := TPascalTypeFormat4CharacterMap(Source).FSearchRange;
-    FEntrySelector := TPascalTypeFormat4CharacterMap(Source).FEntrySelector;
-    FRangeShift := TPascalTypeFormat4CharacterMap(Source).FRangeShift;
-{$endif CMAP_BSEARCH}
     FEndCode := TPascalTypeFormat4CharacterMap(Source).FEndCode;
     FStartCode := TPascalTypeFormat4CharacterMap(Source).FStartCode;
     FIdDelta := TPascalTypeFormat4CharacterMap(Source).FIdDelta;
@@ -417,12 +405,6 @@ var
 {$IFDEF AmbigiousExceptions}
   Value16: Word;
 {$ENDIF}
-{$ifdef CMAP_BSEARCH}
-    FSegCountX2 := TPascalTypeFormat4CharacterMap(Source).FSegCountX2;
-    FSearchRange := TPascalTypeFormat4CharacterMap(Source).FSearchRange;
-    FEntrySelector := TPascalTypeFormat4CharacterMap(Source).FEntrySelector;
-    FRangeShift := TPascalTypeFormat4CharacterMap(Source).FRangeShift;
-{$endif CMAP_BSEARCH}
   Count: integer;
 begin
   StartPos := Stream.Position;
@@ -443,39 +425,8 @@ begin
   // read language
   FLanguage := BigEndianValueReader.ReadWord(Stream);
 
-{$ifdef CMAP_BSEARCH}
-
-  // read segCountX2
-  FSegCountX2 := BigEndianValueReader.ReadWord(Stream);
-  Count := FSegCountX2 div 2;
-
-  // read search range
-  FSearchRange := BigEndianValueReader.ReadWord(Stream);
-
-  // confirm search range has a valid value
-  if FSearchRange <> 2 * (1 shl FloorLog2(Count)) then
-    raise EPascalTypeError.Create(RCStrCharMapError + ': ' + 'wrong search range!');
-
-  // read entry selector
-  FEntrySelector := BigEndianValueReader.ReadWord(Stream);
-
-  // confirm entry selector has a valid value
-  if 2 shl FEntrySelector <> FSearchRange then
-    raise EPascalTypeError.Create(RCStrCharMapError + ': ' + 'wrong entry selector!');
-
-  // read range shift
-  FRangeShift := BigEndianValueReader.ReadWord(Stream);
-
-{$IFDEF AmbigiousExceptions}
-  // confirm range shift has a valid value
-  if FRangeShift <> FSegCountX2 - FSearchRange then
-    raise EPascalTypeError.Create(RCStrCharMapError + ': ' + 'wrong range shift!');
-{$ENDIF}
-
-{$else CMAP_BSEARCH}
   Count := BigEndianValueReader.ReadWord(Stream) div 2;
   Stream.Seek(3*SizeOf(Word), soFromCurrent);
-{$endif CMAP_BSEARCH}
 
   SetLength(FEndCode, Count);
   SetLength(FStartCode, Count);

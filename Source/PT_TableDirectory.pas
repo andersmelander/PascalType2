@@ -356,11 +356,6 @@ var
   TableIndex    : Integer;
   TableEntry    : TPascalTypeDirectoryTableEntry;
   NumTables     : Word; // number of tables
-  {$IFDEF AmbigiousExceptions}
-  SearchRange   : Word; // (maximum power of 2 <= numTables) * 16
-  EntrySelector : Word; // log2(maximum power of 2 <= numTables)
-  RangeShift    : Word; // numTables * 16 - searchRange
-  {$ENDIF}
 begin
   inherited;
 
@@ -385,24 +380,7 @@ begin
     // read number of tables
     NumTables := BigEndianValueReader.ReadWord(Stream);
 
-    {$IFDEF AmbigiousExceptions}
-    // read search range
-    SearchRange := BigEndianValueReader.ReadWord(Stream);
-    if SearchRange > Round(16 * (1 shl FloorLog2(NumTables))) then
-      raise EPascalTypeError.Create(RCStrWrongSearchRange);
-
-    // read entry selector
-    EntrySelector := BigEndianValueReader.ReadWord(Stream);
-    if EntrySelector < Round(Log2(SearchRange / 16)) then
-      raise EPascalTypeError.Create(RCStrWrongEntrySelector);
-
-    // read range shift
-    RangeShift := BigEndianValueReader.ReadWord(Stream);
-    if RangeShift <> (16 * NumTables - SearchRange) then
-      raise EPascalTypeError.Create(RCStrWrongRangeShift);
-    {$ELSE}
     Seek(6, soFromCurrent);
-    {$ENDIF}
 
     // read table entries from stream
     for TableIndex := 0 to NumTables - 1 do

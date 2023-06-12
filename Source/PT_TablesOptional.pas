@@ -1125,11 +1125,6 @@ end;
 procedure TPascalTypeKerningFormat0SubTable.LoadFromStream(Stream: TStream);
 var
   PairIndex    : Integer;
-{$ifdef KERN_BSEARCH}
-  SearchRange  : Word;
-  EntrySelector: Word;
-  RangeShift   : Word;
-{$endif KERN_BSEARCH}
 begin
   inherited;
 
@@ -1140,40 +1135,7 @@ begin
   // read number of pairs
   SetLength(FPairs, BigEndianValueReader.ReadWord(Stream));
 
-{$ifdef KERN_BSEARCH}
-  // Note: Cambria Light Bold has zero in SearchRange
-
-  // read search range
-  SearchRange := BigEndianValueReader.ReadWord(Stream);
-
-  // confirm search range has a valid value
-  if (SearchRange <> 0) and (SearchRange > Round(6 * (1 shl FloorLog2(Length(FPairs))))) then
-    raise EPascalTypeError.Create(RCStrErrorInKerningSubTable + ': ' +
-      RCStrWrongSearchRange);
-
-  // read entry selector
-  EntrySelector := BigEndianValueReader.ReadWord(Stream);
-
-  // confirm entry selector has a valid value
-  if (SearchRange <> 0) and (EntrySelector < Round(Log2(SearchRange / 6))) then
-    raise EPascalTypeError.Create(RCStrErrorInKerningSubTable + ': ' +
-      RCStrWrongEntrySelector);
-
-  // read range shift
-  RangeShift := BigEndianValueReader.ReadWord(Stream);
-
-{$IFDEF AmbigiousExceptions}
-  // confirm range shift has a valid value
-  // "Calibri" fails this one. Since I can't really imagine that we will use the value
-  // the test has been disabled.
-(*
-  if (SearchRange <> 0) and (RangeShift <> (6 * Length(FPairs) - SearchRange)) then
-    raise EPascalTypeError.Create(RCStrErrorInKerningSubTable + ': ' + RCStrWrongRangeShift);
-*)
-{$ENDIF}
-{$else KERN_BSEARCH}
   Stream.Seek(3*SizeOf(Word), soFromCurrent);
-{$endif KERN_BSEARCH}
 
   for PairIndex := 0 to High(FPairs) do
   begin

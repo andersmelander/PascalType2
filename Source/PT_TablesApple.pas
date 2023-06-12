@@ -59,9 +59,6 @@ type
   private
     FUnitSize: Word; // Size of a lookup unit for this search in bytes.
     FnUnits  : Word; // Number of units of the preceding size to be searched.
-    FSearchRange: Word; // The value of unitSize times the largest power of 2 that is less than or equal to the value of nUnits.
-    FEntrySelector: Word; // The log base 2 of the largest power of 2 less than or equal to the value of nUnits.
-    FRangeShift: Word; // The value of unitSize times the difference of the value of nUnits minus the largest power of 2 less than or equal to the value of nUnits.
   public
     procedure Assign(Source: TPersistent); override;
 
@@ -806,36 +803,24 @@ begin
   begin
     FUnitSize := TCustomPascalTypeBinarySearchingTable(Source).FUnitSize;
     FnUnits := TCustomPascalTypeBinarySearchingTable(Source).FnUnits;
-    FSearchRange := TCustomPascalTypeBinarySearchingTable(Source).FSearchRange;
-    FEntrySelector := TCustomPascalTypeBinarySearchingTable(Source).FEntrySelector;
-    FRangeShift := TCustomPascalTypeBinarySearchingTable(Source).FRangeShift;
   end;
 end;
 
 procedure TCustomPascalTypeBinarySearchingTable.LoadFromStream(Stream: TStream);
 begin
   inherited;
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 10 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read unit size
-    FUnitSize := BigEndianValueReader.ReadWord(Stream);
+  // check (minimum) table size
+  if Stream.Position + 10 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read unit count
-    FnUnits := BigEndianValueReader.ReadWord(Stream);
+  // read unit size
+  FUnitSize := BigEndianValueReader.ReadWord(Stream);
 
-    // read search range
-    FSearchRange := BigEndianValueReader.ReadWord(Stream);
+  // read unit count
+  FnUnits := BigEndianValueReader.ReadWord(Stream);
 
-    // read entry selector
-    FEntrySelector := BigEndianValueReader.ReadWord(Stream);
-
-    // read range shift
-    FRangeShift := BigEndianValueReader.ReadWord(Stream);
-  end;
+  Stream.Seek(3* SizeOf(Word), soFromCurrent);
 end;
 
 procedure TCustomPascalTypeBinarySearchingTable.SaveToStream(Stream: TStream);
