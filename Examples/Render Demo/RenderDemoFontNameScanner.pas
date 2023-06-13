@@ -11,13 +11,13 @@ uses
   PascalType.FontFace.SFNT;
 
 type
-  TFontScannedEvent = procedure(Sender: TObject; FileName: TFilename;
+  TFontScannedEvent = procedure(Sender: TObject; const FileName: string;
     Font: TCustomPascalTypeFontFacePersistent) of object;
 
   TFontNameScanner = class(TThread)
   private
     FOnFontName  : TFontScannedEvent;
-    FCurrentFile : TFileName;
+    FCurrentFile : string;
     FFontFaceScan : TPascalTypeFontFaceScan;
     procedure FontScanned;
   protected
@@ -34,6 +34,9 @@ procedure TFontNameScanner.Execute;
 var
   SR: TSearchRec;
 begin
+  if (not Assigned(FOnFontName)) then
+    exit;
+
   if FindFirst('*.ttf', faAnyFile, SR) = 0 then
   try
     repeat
@@ -44,8 +47,8 @@ begin
             // store current file
             FCurrentFile := SR.Name;
 
-            if FCurrentFile = 'tahoma.ttf' then
-              Continue;
+//            if FCurrentFile = 'tahoma.ttf' then
+//              Continue;
 
             // load font from file
             LoadFromFile(FCurrentFile);
@@ -70,7 +73,10 @@ end;
 procedure TFontNameScanner.FontScanned;
 begin
   if Assigned(FOnFontName) then
+  begin
+    UniqueString(FCurrentFile);
     FOnFontName(Self, FCurrentFile, FFontFaceScan);
+  end;
 end;
 
 end.

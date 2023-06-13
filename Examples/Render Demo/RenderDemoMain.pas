@@ -74,7 +74,7 @@ type
     FLanguage: TTableType;
     FScript: TTableType;
     FDirection: TPascalTypeDirection;
-    procedure FontScannedHandler(Sender: TObject; FontFileName: TFilename; Font: TCustomPascalTypeFontFacePersistent);
+    procedure FontScannedHandler(Sender: TObject; const FontFileName: string; Font: TCustomPascalTypeFontFacePersistent);
     procedure SetText(const Value: string);
     procedure SetFontSize(const Value: Integer);
     procedure SetFontName(const Value: string);
@@ -476,7 +476,7 @@ begin
   Text := EditText.Text;
 end;
 
-procedure TFmRenderDemo.FontScannedHandler(Sender: TObject; FontFileName: TFilename;
+procedure TFmRenderDemo.FontScannedHandler(Sender: TObject; const FontFileName: string;
   Font: TCustomPascalTypeFontFacePersistent);
 var
   CurrentFontName : string;
