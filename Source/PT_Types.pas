@@ -35,6 +35,7 @@ interface
 {$I PT_Compiler.inc}
 
 uses
+  Generics.Collections,
   SysUtils;
 
 type
@@ -51,9 +52,22 @@ type
   {$ENDIF}
 
 type
-  TTableName = array [0..3] of AnsiChar;
+  TArrayEnumerator<T> = class(TEnumerator<T>)
+  private
+    FArray: TArray<T>;
+    FIndex: Integer;
+  protected
+    function DoGetCurrent: T; override;
+    function DoMoveNext: Boolean; override;
+    function GetCurrent: T; inline;
+  public
+    constructor Create(const AArray: TArray<T>);
+    function MoveNext: Boolean; inline;
+    property Current: T read GetCurrent;
+  end;
 
-  TTableNames = array of TTableName;
+type
+  TTableName = array[0..3] of AnsiChar;
 
 type
   TTableType = record
@@ -77,11 +91,26 @@ type
     2: (AsAnsiChar : TTableName);
   end;
 
-  TTableTypes = array of TTableType;
+  TTableTypes = TArray<TTableType>;
+
+type
+  TTableNames = TArray<TTableName>;
+
+  TTableNamesHelper = record helper for TTableNames
+    procedure Add(const Tag: TTableType); overload;
+    procedure Add(const Tag: TTableName); overload;
+    procedure Add(const Tags: TTableNames); overload;
+    function Contains(const Tag: TTableName): boolean;
+    function IndexOf(const Tag: TTableName): integer;
+    function GetEnumerator: TEnumerator<TTableName>;
+  end;
 
 
 type
   TPascalTypeDirection = (dirLeftToRight, dirRightToLeft);
+
+const
+  PascalTypeDefaultDirection: TPascalTypeDirection = dirLeftToRight;
 
 type
   TFixedPoint = packed record
@@ -1625,5 +1654,79 @@ begin
 end;
 
 {$ENDIF}
+
+{ TTableNamesHelper }
+
+procedure TTableNamesHelper.Add(const Tags: TTableNames);
+var
+  i, Index: integer;
+begin
+  Index := Length(Self);
+  SetLength(Self, Length(Self)+Length(Tags));
+  for i := 0 to High(Tags) do
+  begin
+    Self[Index] := Tags[i];
+    Inc(Index);
+  end;
+end;
+
+procedure TTableNamesHelper.Add(const Tag: TTableName);
+begin
+  SetLength(Self, Length(Self)+1);
+  Self[High(Self)] := Tag;
+end;
+
+procedure TTableNamesHelper.Add(const Tag: TTableType);
+begin
+  Add(Tag.AsAnsiChar);
+end;
+
+function TTableNamesHelper.Contains(const Tag: TTableName): boolean;
+begin
+  Result := (IndexOf(Tag) <> -1);
+end;
+
+function TTableNamesHelper.GetEnumerator: TEnumerator<TTableName>;
+begin
+  Result := TArrayEnumerator<TTableName>.Create(Self);
+end;
+
+function TTableNamesHelper.IndexOf(const Tag: TTableName): integer;
+begin
+  Result := High(Self);
+  while (Result >= 0) and (Self[Result] <> Tag) do
+    Dec(Result);
+end;
+
+{ TArrayEnumerator<T> }
+
+constructor TArrayEnumerator<T>.Create(const AArray: TArray<T>);
+begin
+  inherited Create;
+  FArray := AArray;
+  FIndex := -1;
+end;
+
+function TArrayEnumerator<T>.DoGetCurrent: T;
+begin
+  Result := FArray[FIndex];
+end;
+
+function TArrayEnumerator<T>.DoMoveNext: Boolean;
+begin
+  Result := MoveNext;
+end;
+
+function TArrayEnumerator<T>.GetCurrent: T;
+begin
+  Result := Current;
+end;
+
+function TArrayEnumerator<T>.MoveNext: Boolean;
+begin
+  Result := (FIndex < High(FArray));
+  if (Result) then
+    Inc(FIndex);
+end;
 
 end.

@@ -94,7 +94,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
+    function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
   end;
 
 
@@ -168,7 +168,7 @@ begin
   SetLength(FBaseRecords, 0);
 end;
 
-function TOpenTypePositioningSubTableMarkToBaseAttachment.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
+function TOpenTypePositioningSubTableMarkToBaseAttachment.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
 var
   MarkGlyph: TPascalTypeGlyph;
   BaseGlyph: TPascalTypeGlyph;
@@ -178,22 +178,22 @@ var
   Mark: TOpenTypeMark;
   BaseAnchor: TOpenTypeAnchor;
 begin
-  if (AIndex < 1) then
+  if (AGlyphIterator.Index < 1) then
     Exit(False);
 
-  MarkGlyph := AGlyphString[AIndex];
+  MarkGlyph := AGlyphIterator.Glyph;
   MarkIndex := MarkCoverage.IndexOfGlyph(MarkGlyph.GlyphID);
   if (MarkIndex = -1) then
     Exit(False);
 
   // Scan backward for a base glyph
-  BaseGlyphIndex := AIndex-1;
-  while (BaseGlyphIndex >= 0) and ((AGlyphString[BaseGlyphIndex].IsMark) or (AGlyphString[BaseGlyphIndex].LigatureComponent > 0)) do
+  BaseGlyphIndex := AGlyphIterator.Peek(-1);
+  while (BaseGlyphIndex >= 0) and ((AGlyphIterator.GlyphString[BaseGlyphIndex].IsMark) or (AGlyphIterator.GlyphString[BaseGlyphIndex].LigatureComponent > 0)) do
     Dec(BaseGlyphIndex);
   if (BaseGlyphIndex < 0) then
     Exit(False);
 
-  BaseGlyph := AGlyphString[BaseGlyphIndex];
+  BaseGlyph := AGlyphIterator.GlyphString[BaseGlyphIndex];
   BaseIndex := BaseCoverage.IndexOfGlyph(BaseGlyph.GlyphID);
   if (BaseIndex = -1) then
     Exit(False);
@@ -205,8 +205,11 @@ begin
 
   MarkGlyph.ApplyAnchor(Mark.Anchor, BaseAnchor, BaseGlyphIndex);
 
+{$ifdef ApplyIncrements}
+  AGlyphIterator.Next;
+{$endif ApplyIncrements}
+
   Result := True;
-  Inc(AIndex);
 end;
 
 procedure TOpenTypePositioningSubTableMarkToBaseAttachment.LoadBaseArrayFromStream(Stream: TStream);

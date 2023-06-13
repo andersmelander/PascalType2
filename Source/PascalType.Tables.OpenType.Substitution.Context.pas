@@ -101,7 +101,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
+    function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
 
     property SequenceRules: TSequenceRuleSets read FSequenceRules write FSequenceRules;
   end;
@@ -139,7 +139,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
+    function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
 
     property SequenceRules: TSequenceRuleSets read FSequenceRules write FSequenceRules;
     property ClassDefinitions: TCustomOpenTypeClassDefinitionTable read FClassDefinitions write SetClassDefinitions;
@@ -173,7 +173,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
+    function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
 
     property SequenceRules: TCustomOpenTypeLookupSubTable.TSequenceLookupRecords read FSequenceRules write FSequenceRules;
     property CoverageTables: TCoverageTables read FCoverageTables write SetCoverageTables;
@@ -328,7 +328,7 @@ begin
   // TODO
 end;
 
-function TOpenTypeSubstitutionSubTableContextSimple.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
+function TOpenTypeSubstitutionSubTableContextSimple.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
 var
   SequenceRuleSetIndex: integer;
   SequenceRuleSet: TSequenceRuleSet;
@@ -337,7 +337,7 @@ begin
   Result := False;
 
   // The coverage table contains the index of the first character of the sequence.
-  SequenceRuleSetIndex := CoverageTable.IndexOfGlyph(AGlyphString[AIndex].GlyphID);
+  SequenceRuleSetIndex := CoverageTable.IndexOfGlyph(AGlyphIterator.Glyph.GlyphID);
 
   if (SequenceRuleSetIndex = -1) then
     Exit;
@@ -349,11 +349,11 @@ begin
   for i := 0 to High(SequenceRuleSet) do
   begin
     // Compare each character in the sequence string to the source string
-    if (not AGlyphString.Match(AIndex, SequenceRuleSet[i].InputSequence)) then
+    if (not AGlyphIterator.GlyphString.Match(AGlyphIterator, 1, SequenceRuleSet[i].InputSequence)) then
       continue;
 
     // We have a match. Apply the rules.
-    Result := ApplyLookupRecords(AGlyphString, AIndex, ADirection, SequenceRuleSet[i].SequenceLookupRecords);
+    Result := ApplyLookupRecords(AGlyphIterator, SequenceRuleSet[i].SequenceLookupRecords);
     break;
   end;
 end;
@@ -504,7 +504,7 @@ begin
   end;
 end;
 
-function TOpenTypeSubstitutionSubTableContextClass.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
+function TOpenTypeSubstitutionSubTableContextClass.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
 var
   SequenceRuleSetIndex: integer;
   SequenceRuleSet: TSequenceRuleSet;
@@ -514,26 +514,26 @@ begin
 
   // The coverage table contains the index of the first character of the sequence.
   // The index itself isn't used. We just need to determine if we should proceed.
-  SequenceRuleSetIndex := CoverageTable.IndexOfGlyph(AGlyphString[AIndex].GlyphID);
+  SequenceRuleSetIndex := CoverageTable.IndexOfGlyph(AGlyphIterator.Glyph.GlyphID);
 
   if (SequenceRuleSetIndex = -1) then
     Exit;
 
   // Get the class ID of the first character and use that as an index into the
   // rule set table.
-  SequenceRuleSetIndex := FClassDefinitions.ClassByGlyphID(AGlyphString[AIndex].GlyphID);
+  SequenceRuleSetIndex := FClassDefinitions.ClassByGlyphID(AGlyphIterator.Glyph.GlyphID);
 
   SequenceRuleSet := FSequenceRules[SequenceRuleSetIndex];
   for i := 0 to High(SequenceRuleSet) do
   begin
     // Compare each character in the sequence string to the source string
-    // Skip first glyph
+    // TODO : Skip first entry in InputSequence?
     if (Length(SequenceRuleSet[i].InputSequence) > 1) then
-      if (not AGlyphString.Match(AIndex, SequenceRuleSet[i].InputSequence, FClassDefinitions.ClassByGlyphID, True)) then
+      if (not AGlyphIterator.GlyphString.Match(AGlyphIterator, 1, SequenceRuleSet[i].InputSequence, FClassDefinitions.ClassByGlyphID)) then
         continue;
 
     // We have a match. Apply the rules.
-    Result := ApplyLookupRecords(AGlyphString, AIndex, ADirection, SequenceRuleSet[i].SequenceLookupRecords);
+    Result := ApplyLookupRecords(AGlyphIterator, SequenceRuleSet[i].SequenceLookupRecords);
     break;
   end;
 end;
@@ -635,28 +635,35 @@ begin
   end;
 end;
 
-function TOpenTypeSubstitutionSubTableContextCoverage.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
+function TOpenTypeSubstitutionSubTableContextCoverage.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
 var
   CoverageIndex: integer;
   i: integer;
+  Iterator: TPascalTypeGlyphGlyphIterator;
 begin
   Result := False;
 
-  if (AIndex + FCoverageTables.Count > AGlyphString.Count) then
+  if (AGlyphIterator.Index + FCoverageTables.Count > AGlyphIterator.GlyphString.Count) then
     exit;
 
   // The string is matched, character by character, against the coverage table.
   // The coverage index itself isn't used. We just need to determine if we should proceed.
+  Iterator := AGlyphIterator.Clone;
   for i := 0 to FCoverageTables.Count-1 do
   begin
-    CoverageIndex := FCoverageTables[i].IndexOfGlyph(AGlyphString[AIndex+i].GlyphID);
+    if (Iterator.EOF) then
+      Exit;
+
+    CoverageIndex := FCoverageTables[i].IndexOfGlyph(Iterator.Glyph.GlyphID);
 
     if (CoverageIndex = -1) then
       Exit;
+
+    Iterator.Next;
   end;
 
   // We have a match. Apply the rules.
-  Result := ApplyLookupRecords(AGlyphString, AIndex, ADirection, FSequenceRules);
+  Result := ApplyLookupRecords(AGlyphIterator, FSequenceRules);
 end;
 
 //------------------------------------------------------------------------------

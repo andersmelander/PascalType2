@@ -89,7 +89,7 @@ type
     function GetMark1Coverage: TCustomOpenTypeCoverageTable;
     function GetMark2Coverage: TCustomOpenTypeCoverageTable;
   public
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
+    function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
 
     property Mark1Coverage: TCustomOpenTypeCoverageTable read GetMark1Coverage;
     property Mark2Coverage: TCustomOpenTypeCoverageTable read GetMark2Coverage;
@@ -139,7 +139,7 @@ begin
   Result := inherited BaseCoverage;
 end;
 
-function TOpenTypePositioningSubTableMarkToMarkAttachment.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
+function TOpenTypePositioningSubTableMarkToMarkAttachment.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
 var
   Mark1Glyph: TPascalTypeGlyph;
   Mark2Glyph: TPascalTypeGlyph;
@@ -149,18 +149,18 @@ var
   Mark1: TOpenTypeMark;
   Mark2Anchor: TOpenTypeAnchor;
 begin
-  if (AIndex < 1) then
+  if (AGlyphIterator.Index < 1) then
     Exit(False);
 
-  Mark1Glyph := AGlyphString[AIndex];
+  Mark1Glyph := AGlyphIterator.Glyph;
   Mark1Index := Mark1Coverage.IndexOfGlyph(Mark1Glyph.GlyphID);
   if (Mark1Index = -1) then
     Exit(False);
 
   // Get previous mark to attach to
-  Mark2GlyphIndex := AIndex-1;
-  Mark2Glyph := AGlyphString[Mark2GlyphIndex];
-  if (not Mark2Glyph.IsMark) then
+  Mark2GlyphIndex := AGlyphIterator.Peek(-1);
+  Mark2Glyph := AGlyphIterator.GlyphString[Mark2GlyphIndex];
+  if (Mark2Glyph = nil) or (not Mark2Glyph.IsMark) then
     Exit(False);
 
   // The following logic was borrowed from Harfbuzz
@@ -198,8 +198,11 @@ begin
 
   Mark1Glyph.ApplyAnchor(Mark1.Anchor, Mark2Anchor, Mark2GlyphIndex);
 
+{$ifdef ApplyIncrements}
+  AGlyphIterator.Next;
+{$endif ApplyIncrements}
+
   Result := True;
-  Inc(AIndex);
 end;
 
 

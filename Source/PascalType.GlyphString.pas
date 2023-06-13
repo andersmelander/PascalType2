@@ -52,51 +52,112 @@ type
 
   TPascalTypeGlyph = class
   private
-    FOwner: TPascalTypeGlyphString;
+    FGlyphString: TPascalTypeGlyphString;
     FCodePoints: TPascalTypeCodePoints;
     FGlyphID: TGlyphID;
+    FIsSubstituted: boolean;
+    FIsLigated: boolean;
+    FIsBase: boolean;
+    FIsMark: boolean;
+    FIsLigature: boolean;
     FCluster: integer;
     FXAdvance: integer;
     FYAdvance: integer;
     FXOffset: integer;
     FYOffset: integer;
     FMarkAttachment: integer;
+    FMarkAttachmentType: integer;
     FLigatureComponent: integer;
     FCursiveAttachment: integer;
     FLigatureID: integer;
-    function GetIsLigature: boolean;
-    function GetIsMark: boolean;
+    FFeatures: TTableNames;
   protected
     procedure SetOwner(AOwner: TPascalTypeGlyphString);
+    procedure SetGlyphID(const Value: TGlyphID);
+    function AllIsMark: boolean;
   public
-    constructor Create(AOwner: TPascalTypeGlyphString = nil); virtual;
+    constructor Create(AGlyphString: TPascalTypeGlyphString = nil); virtual;
+    destructor Destroy; override;
 
     procedure Assign(Source: TPascalTypeGlyph); virtual;
 
     procedure ApplyPositioning(const AValueRecord: TOpenTypeValueRecord);
     procedure ApplyAnchor(MarkAnchor, BaseAnchor: TOpenTypeAnchor; BaseIndex: integer);
 
-    property Owner: TPascalTypeGlyphString read FOwner;
+    property GlyphString: TPascalTypeGlyphString read FGlyphString;
+
     property CodePoints: TPascalTypeCodePoints read FCodePoints write FCodePoints;
-    property GlyphID: TGlyphID read FGlyphID write FGlyphID;
+    property GlyphID: TGlyphID read FGlyphID write SetGlyphID;
     property Cluster: integer read FCluster write FCluster;
     property XAdvance: integer read FXAdvance write FXAdvance;
     property YAdvance: integer read FYAdvance write FYAdvance;
     property XOffset: integer read FXOffset write FXOffset;
     property YOffset: integer read FYOffset write FYOffset;
 
+    // Features to be applied by the shaper
+    property Features: TTableNames read FFeatures write FFeatures;
+
     // Shaper state
     property LigatureID: integer read FLigatureID write FLigatureID;
     property LigatureComponent: integer read FLigatureComponent write FLigatureComponent;
     property MarkAttachment: integer read FMarkAttachment write FMarkAttachment;
     property CursiveAttachment: integer read FCursiveAttachment write FCursiveAttachment;
+    property IsLigated: boolean read FIsLigated write FIsLigated;
+    property IsSubstituted: boolean read FIsSubstituted write FIsSubstituted;
 
-    property IsMark: boolean read GetIsMark;
-    property IsLigature: boolean read GetIsLigature;
+    property IsBase: boolean read FIsBase;
+    property IsMark: boolean read FIsMark;
+    property IsLigature: boolean read FIsLigature;
+    property MarkAttachmentType: integer read FMarkAttachmentType;
   end;
 
   TPascalTypeGlyphClass = class of TPascalTypeGlyph;
 
+
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeGlyphGlyphIterator
+// TODO : Rename GlyphGlyph -> Glyph
+//------------------------------------------------------------------------------
+// Skipping glyphstring iterator
+//------------------------------------------------------------------------------
+  TPascalTypeGlyphGlyphIterator = record
+  private
+    FGlyphString: TPascalTypeGlyphString;
+    FIndex: integer;
+    FLookupFlags: Word;
+    FMarkAttachmentFilter: integer;
+    function GetGlyph: TPascalTypeGlyph;
+    function GetEOF: boolean;
+    function ShouldIgnore(AGlyph: TPascalTypeGlyph): boolean;
+    procedure SetIndex(const Value: integer);
+  public
+    constructor Create(const AGlyphString: TPascalTypeGlyphString; ALookupFlags: Word = 0; AMarkAttachmentFilter: integer = -1);
+
+    function Clone: TPascalTypeGlyphGlyphIterator;
+
+    procedure Reset(ALookupFlags: Word = 0; AMarkAttachmentFilter: integer = -1);
+
+    // Move forward. Skip glyphs that should be ignored. Return new index.
+    function Next(AIncrement: integer = 1): integer;
+    // Move Backward. Skip glyphs that should be ignored. Return new index.
+    function Previous(AIncrement: integer = -1): integer;
+
+    // Simulate moving forward/backward. Skip glyphs that should be ignored. Return new index.
+    function Peek(AIncrement: integer = 1): integer;
+    function PeekGlyph(AIncrement: integer = 1): TPascalTypeGlyph;
+
+    function GetEnumerator: TEnumerator<integer>;
+
+    property Index: integer read FIndex write SetIndex;
+    property EOF: boolean read GetEOF;
+    // Current glyph. nil if there is no current.
+    property Glyph: TPascalTypeGlyph read GetGlyph;
+
+    property GlyphString: TPascalTypeGlyphString read FGlyphString;
+    property LookupFlags: Word read FLookupFlags write FLookupFlags;
+    property MarkAttachmentFilter: integer read FMarkAttachmentFilter;
+  end;
 
 //------------------------------------------------------------------------------
 //
@@ -108,9 +169,15 @@ type
     TGlyphMapperDelegate = reference to function(GlyphID: TGlyphID): integer;
   private
     FGlyphs: TList<TPascalTypeGlyph>;
+    FLanguage: TTableType;
+    FDirection: TPascalTypeDirection;
+    FScript: TTableType;
     FLigatureID: integer;
     function GetGlyph(Index: integer): TPascalTypeGlyph;
     function GetCount: integer;
+  protected
+    function GetGlyphClassID(AGlyph: TPascalTypeGlyph): integer; virtual;
+    function GetMarkAttachmentType(AGlyph: TPascalTypeGlyph): integer; virtual;
   protected
     class function GetGlyphClass: TPascalTypeGlyphClass; virtual;
     function CreateGlyph(AOwner: TPascalTypeGlyphString): TPascalTypeGlyph; overload; virtual;
@@ -130,10 +197,12 @@ type
     function AsString: TGlyphString; overload;
     function AsString(Mapper: TGlyphMapperDelegate): TGlyphString; overload;
 
-    function Match(AFromIndex: integer; const ASequence: TGlyphString; SkipFirst: boolean = False): boolean; overload;
-    function Match(AFromIndex: integer; const ASequence: TGlyphString; Mapper: TGlyphMapperDelegate; SkipFirst: boolean = False): boolean; overload;
-    function MatchBacktrack(AFromIndex: integer; const ASequence: TGlyphString): boolean; overload;
-    function MatchBacktrack(AFromIndex: integer; const ASequence: TGlyphString; Mapper: TGlyphMapperDelegate): boolean; overload;
+    function Match(var AIterator: TPascalTypeGlyphGlyphIterator; AOffset: integer; const ASequence: TGlyphString; SkipFirst: boolean = False; MoveOnMatch: boolean = False): boolean; overload;
+    function Match(var AIterator: TPascalTypeGlyphGlyphIterator; AOffset: integer; const ASequence: TGlyphString; Mapper: TGlyphMapperDelegate; SkipFirst: boolean = False; MoveOnMatch: boolean = False): boolean; overload;
+    function Match(AFromIndex: integer; const ASequence: TGlyphString; SkipFirst: boolean = False): boolean; overload; deprecated;
+    function Match(AFromIndex: integer; const ASequence: TGlyphString; Mapper: TGlyphMapperDelegate; SkipFirst: boolean = False): boolean; overload; deprecated;
+    function MatchBacktrack(AFromIndex: integer; const ASequence: TGlyphString): boolean; overload; deprecated;
+    function MatchBacktrack(AFromIndex: integer; const ASequence: TGlyphString; Mapper: TGlyphMapperDelegate): boolean; overload; deprecated;
 
     procedure ApplyAnchor(MarkAnchor, BaseAnchor: TOpenTypeAnchor; MarkIndex, BaseIndex: integer);
 
@@ -144,9 +213,15 @@ type
     procedure HideDefaultIgnorables; virtual;
 
     function GetEnumerator: TEnumerator<TPascalTypeGlyph>;
+    function CreateIterator(ALookupFlags: Word = 0; AMarkAttachmentFilter: integer = -1): TPascalTypeGlyphGlyphIterator; virtual;
 
     property Count: integer read GetCount;
     property Glyphs[Index: integer]: TPascalTypeGlyph read GetGlyph; default;
+
+    // Context
+    property Script: TTableType read FScript write FScript;
+    property Language: TTableType read FLanguage write FLanguage;
+    property Direction: TPascalTypeDirection read FDirection write FDirection;
   end;
 
 //  TPascalTypeGlyphStringClass = class of TPascalTypeGlyphString;
@@ -158,28 +233,59 @@ type
 
 implementation
 
+uses
+  System.Math,
+  PascalType.Tables.OpenType.Lookup;
 
 //------------------------------------------------------------------------------
 //
 //              TPascalTypeGlyph
 //
 //------------------------------------------------------------------------------
-constructor TPascalTypeGlyph.Create(AOwner: TPascalTypeGlyphString);
+constructor TPascalTypeGlyph.Create(AGlyphString: TPascalTypeGlyphString);
 begin
   inherited Create;
-  FOwner := AOwner;
+  FGlyphString := AGlyphString;
   FLigatureID := -1;
   FLigatureComponent := -1;
   FMarkAttachment := -1;
   FCursiveAttachment := -1;
 end;
 
-function TPascalTypeGlyph.GetIsLigature: boolean;
+destructor TPascalTypeGlyph.Destroy;
 begin
-  Result := (Length(FCodePoints) > 1);
+  if (FGlyphString <> nil) then
+    FGlyphString.Extract(Self);
+  inherited;
 end;
 
-function TPascalTypeGlyph.GetIsMark: boolean;
+procedure TPascalTypeGlyph.SetGlyphID(const Value: TGlyphID);
+var
+  ClassID: integer;
+begin
+  if (GlyphID = Value) then
+    exit;
+
+  FGlyphID := Value;
+  FIsSubstituted := True;
+
+  ClassID := GlyphString.GetGlyphClassID(Self);
+
+  FIsBase := (ClassID = 1);
+  FIsLigature := (ClassID = 2);
+  FIsMark := (ClassID = 3);
+
+  FMarkAttachmentType := GlyphString.GetMarkAttachmentType(Self);
+end;
+
+procedure TPascalTypeGlyph.SetOwner(AOwner: TPascalTypeGlyphString);
+begin
+  if (FGlyphString <> nil) then
+    FGlyphString.Extract(Self);
+  FGlyphString := AOwner;
+end;
+
+function TPascalTypeGlyph.AllIsMark: boolean;
 var
   CodePoint: TPascalTypeCodePoint;
 begin
@@ -191,11 +297,6 @@ begin
       Exit(False);
 
   Result := True;
-end;
-
-procedure TPascalTypeGlyph.SetOwner(AOwner: TPascalTypeGlyphString);
-begin
-  FOwner := AOwner;
 end;
 
 procedure TPascalTypeGlyph.ApplyAnchor(MarkAnchor, BaseAnchor: TOpenTypeAnchor; BaseIndex: integer);
@@ -270,12 +371,34 @@ end;
 
 function TPascalTypeGlyphString.CreateGlyph: TPascalTypeGlyph;
 begin
-  Result := CreateGlyph(nil);
+  Result := CreateGlyph(Self);
+end;
+
+function TPascalTypeGlyphString.CreateIterator(ALookupFlags: Word;
+  AMarkAttachmentFilter: integer): TPascalTypeGlyphGlyphIterator;
+begin
+  Result := TPascalTypeGlyphGlyphIterator.Create(Self, ALookupFlags, AMarkAttachmentFilter);
 end;
 
 class function TPascalTypeGlyphString.GetGlyphClass: TPascalTypeGlyphClass;
 begin
   Result := TPascalTypeGlyph;
+end;
+
+function TPascalTypeGlyphString.GetGlyphClassID(AGlyph: TPascalTypeGlyph): integer;
+begin
+  if (AGlyph.AllIsMark) then
+    Result := 3 // Mark
+  else
+  if (Length(AGlyph.CodePoints) > 1) then
+    Result := 2 // Ligature
+  else
+    Result := 1; // Base
+end;
+
+function TPascalTypeGlyphString.GetMarkAttachmentType(AGlyph: TPascalTypeGlyph): integer;
+begin
+  Result := 0;
 end;
 
 function TPascalTypeGlyphString.GetNextLigatureID: integer;
@@ -291,7 +414,7 @@ end;
 
 function TPascalTypeGlyphString.Add: TPascalTypeGlyph;
 begin
-  Result := CreateGlyph(Self);
+  Result := CreateGlyph;
   FGlyphs.Add(Result);
 end;
 
@@ -306,12 +429,86 @@ end;
 
 procedure TPascalTypeGlyphString.Insert(Index: integer; Glyph: TPascalTypeGlyph);
 begin
-  if (Glyph.Owner <> Self) and (Glyph.Owner <> nil) then
-    Glyph.Owner.Extract(Glyph);
+  if (Glyph.GlyphString <> Self) and (Glyph.GlyphString <> nil) then
+    Glyph.GlyphString.Extract(Glyph);
 
   FGlyphs.Insert(Index, Glyph);
 
   Glyph.SetOwner(Self);
+end;
+
+function TPascalTypeGlyphString.Match(var AIterator: TPascalTypeGlyphGlyphIterator; AOffset: integer; const ASequence: TGlyphString;
+  SkipFirst, MoveOnMatch: boolean): boolean;
+var
+  Iterator: TPascalTypeGlyphGlyphIterator;
+  Index: integer;
+begin
+  if (not AIterator.EOF) and (Length(ASequence) = 0) then
+    Exit(True);
+
+  // If the end of the sequence is past the end of our string then there can be no match
+  if (AIterator.EOF) or (AIterator.Index + AOffset < 0) or (AIterator.Index + AOffset + Length(ASequence) > FGlyphs.Count) then
+    Exit(False);
+
+  Iterator := AIterator.Clone;
+  if (AOffset <> 0) then
+    Iterator.Next(AOffset);
+
+  for Index := 0 to High(ASequence) do
+  begin
+    if (SkipFirst) then
+    begin
+      SkipFirst := False;
+      continue;
+    end;
+
+    if (Iterator.Glyph = nil) or (Iterator.Glyph.GlyphID <> ASequence[Index]) then
+      Exit(False);
+
+    Iterator.Next;
+  end;
+
+  if (MoveOnMatch) then
+    AIterator.Index := Iterator.Index;
+
+  Result := True;
+end;
+
+function TPascalTypeGlyphString.Match(var AIterator: TPascalTypeGlyphGlyphIterator; AOffset: integer; const ASequence: TGlyphString;
+  Mapper: TGlyphMapperDelegate; SkipFirst, MoveOnMatch: boolean): boolean;
+var
+  Iterator: TPascalTypeGlyphGlyphIterator;
+  Index: integer;
+begin
+  if (not AIterator.EOF) and (Length(ASequence) = 0) then
+    Exit(True);
+
+  // If the end of the sequence is past the end of our string then there can be no match
+  if (AIterator.EOF) or (AIterator.Index + AOffset < 0) or (AIterator.Index + AOffset + Length(ASequence) > FGlyphs.Count) then
+    Exit(False);
+
+  Iterator := AIterator.Clone;
+  if (AOffset <> 0) then
+    Iterator.Next(AOffset);
+
+  for Index := 0 to High(ASequence) do
+  begin
+    if (SkipFirst) then
+    begin
+      SkipFirst := False;
+      continue;
+    end;
+
+    if (Iterator.Glyph = nil) or (Mapper(Iterator.Glyph.GlyphID) <> ASequence[Index]) then
+      Exit(False);
+
+    Iterator.Next;
+  end;
+
+  if (MoveOnMatch) then
+    AIterator.Index := Iterator.Index;
+
+  Result := True;
 end;
 
 function TPascalTypeGlyphString.Match(AFromIndex: integer; const ASequence: TGlyphString; SkipFirst: boolean): boolean;
@@ -422,7 +619,13 @@ end;
 
 function TPascalTypeGlyphString.GetGlyph(Index: integer): TPascalTypeGlyph;
 begin
-  Result := FGlyphs[Index];
+  if (Index >= 0) then
+    Result := FGlyphs[Index]
+  else
+    // Iterator returns -1 on EOF, so we return nil. That way the caller
+    // can either test the iterator index against -1 or test the glyph
+    // against nil.
+    Result := nil;
 end;
 
 function TPascalTypeGlyphString.GetCount: integer;
@@ -460,6 +663,113 @@ begin
   System.SetLength(Result, FGlyphs.Count);
   for i := 0 to FGlyphs.Count-1 do
     Result[i] := Mapper(FGlyphs[i].GlyphID);
+end;
+
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeGlyphGlyphIterator
+//
+//------------------------------------------------------------------------------
+constructor TPascalTypeGlyphGlyphIterator.Create(const AGlyphString: TPascalTypeGlyphString; ALookupFlags: Word;
+  AMarkAttachmentFilter: integer);
+begin
+  FGlyphString := AGlyphString;
+  FLookupFlags := ALookupFlags;
+  FMarkAttachmentFilter := AMarkAttachmentFilter;
+end;
+
+function TPascalTypeGlyphGlyphIterator.Clone: TPascalTypeGlyphGlyphIterator;
+begin
+  Result := TPascalTypeGlyphGlyphIterator.Create(FGlyphString, FLookupFlags, FMarkAttachmentFilter);
+  Result.FIndex := FIndex;
+end;
+
+function TPascalTypeGlyphGlyphIterator.GetEnumerator: TEnumerator<integer>;
+begin
+  Result := nil; // TODO
+end;
+
+function TPascalTypeGlyphGlyphIterator.GetEOF: boolean;
+begin
+  Result := (FIndex = -1);
+end;
+
+function TPascalTypeGlyphGlyphIterator.GetGlyph: TPascalTypeGlyph;
+begin
+  if (FIndex <> -1) then
+    Result := FGlyphString[FIndex]
+  else
+    Result := nil;
+end;
+
+function TPascalTypeGlyphGlyphIterator.Next(AIncrement: integer): integer;
+begin
+  Result := Peek(AIncrement);
+  FIndex := Result;
+end;
+
+function TPascalTypeGlyphGlyphIterator.Peek(AIncrement: integer): integer;
+var
+  Direction: integer;
+begin
+  Result := FIndex;
+  if (AIncrement = 0) then
+    Exit;
+
+  if (AIncrement > 0) then
+    Direction := 1
+  else
+    Direction := -1;
+
+  while (AIncrement <> 0) and (Result >= 0) and (Result < FGlyphString.Count) do
+  begin
+    Inc(Result, Direction);
+    while (Result >= 0) and (Result < FGlyphString.Count) and ShouldIgnore(FGlyphString[Result]) do
+      Inc(Result, Direction);
+
+    Dec(AIncrement, Direction);
+  end;
+
+  if (Result < 0) or (Result >= FGlyphString.Count) then
+    Result := -1;
+end;
+
+function TPascalTypeGlyphGlyphIterator.PeekGlyph(AIncrement: integer): TPascalTypeGlyph;
+var
+  Index: integer;
+begin
+  Index := Peek(AIncrement);
+  if (Index <> -1) then
+    Result := FGlyphString[Index]
+  else
+    Result := nil;
+end;
+
+function TPascalTypeGlyphGlyphIterator.Previous(AIncrement: integer): integer;
+begin
+  Result := Peek(-AIncrement);
+  FIndex := Result;
+end;
+
+procedure TPascalTypeGlyphGlyphIterator.Reset(ALookupFlags: Word; AMarkAttachmentFilter: integer);
+begin
+  SetIndex(0);
+  FLookupFlags := ALookupFlags;
+  FMarkAttachmentFilter := AMarkAttachmentFilter;
+end;
+
+procedure TPascalTypeGlyphGlyphIterator.SetIndex(const Value: integer);
+begin
+  FIndex := Min(Max(0, Value), FGlyphString.Count-1);
+end;
+
+function TPascalTypeGlyphGlyphIterator.ShouldIgnore(AGlyph: TPascalTypeGlyph): boolean;
+begin
+  Result :=
+    ((FLookupFlags and TCustomOpenTypeLookupTable.IGNORE_BASE_GLYPHS <> 0) and (AGlyph.IsBase)) or
+    ((FLookupFlags and TCustomOpenTypeLookupTable.IGNORE_LIGATURES <> 0) and (AGlyph.IsLigature)) or
+    ((FLookupFlags and TCustomOpenTypeLookupTable.IGNORE_MARKS <> 0) and (AGlyph.IsMark)) or
+    ((FMarkAttachmentFilter <> -1) and (AGlyph.IsMark) and (FMarkAttachmentFilter <> AGlyph.MarkAttachmentType));
 end;
 
 end.

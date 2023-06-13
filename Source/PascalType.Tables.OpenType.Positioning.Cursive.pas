@@ -101,7 +101,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
+    function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
 
     property Count: integer read GetCount;
     property Anchors[Index: integer]: TCursiveAttachmentAnchorItem read GetAnchor;
@@ -201,9 +201,10 @@ begin
   Result := FAnchors.Count;
 end;
 
-function TOpenTypePositioningSubTableCursiveAttachment.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
+function TOpenTypePositioningSubTableCursiveAttachment.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
 var
   CurrentGlyph: TPascalTypeGlyph;
+  NextIndex: integer;
   NextGlyph: TPascalTypeGlyph;
   CoverageIndex: integer;
   AnchorItem: TCursiveAttachmentAnchorItem;
@@ -213,10 +214,10 @@ var
   ExitAnchorPoint: TAnchorPoint;
   Delta: integer;
 begin
-  if (AIndex >= AGlyphString.Count-1) then
+  if (AGlyphIterator.Index >= AGlyphIterator.GlyphString.Count-1) then
     Exit(False);
 
-  CurrentGlyph := AGlyphString[AIndex];
+  CurrentGlyph := AGlyphIterator.Glyph;
   CoverageIndex := CoverageTable.IndexOfGlyph(CurrentGlyph.GlyphID);
   if (CoverageIndex = -1) then
     Exit(False);
@@ -226,7 +227,10 @@ begin
   if (ExitAnchor = nil) then
     Exit(False);
 
-  NextGlyph := AGlyphString[AIndex+1];
+  NextIndex := AGlyphIterator.Peek;
+  if (NextIndex = -1) then
+    Exit(False);
+  NextGlyph := AGlyphIterator.GlyphString[NextIndex];
   CoverageIndex := CoverageTable.IndexOfGlyph(NextGlyph.GlyphID);
   if (CoverageIndex = -1) then
     Exit(False);
@@ -240,7 +244,7 @@ begin
   EntryAnchorPoint := EntryAnchor.Position;
   ExitAnchorPoint := ExitAnchor.Position;
 
-  case ADirection of
+  case AGlyphIterator.GlyphString.Direction of
     dirLeftToRight:
       begin
         CurrentGlyph.XAdvance := ExitAnchorPoint.X + CurrentGlyph.XOffset;
@@ -258,18 +262,21 @@ begin
       end;
   end;
 
-  if (LookupTable.LookupFlag and TCustomOpenTypeLookupTable.RIGHT_TO_LEFT <> 0) then
+  if (LookupTable.LookupFlags and TCustomOpenTypeLookupTable.RIGHT_TO_LEFT <> 0) then
   begin
-    CurrentGlyph.CursiveAttachment := AIndex + 1;
+    CurrentGlyph.CursiveAttachment := NextIndex;
     CurrentGlyph.YOffset := EntryAnchorPoint.Y - ExitAnchorPoint.Y;
   end else
   begin
-    NextGlyph.CursiveAttachment := AIndex;
+    NextGlyph.CursiveAttachment := AGlyphIterator.Index;
     CurrentGlyph.YOffset := ExitAnchorPoint.Y - EntryAnchorPoint.Y;
   end;
 
+{$ifdef ApplyIncrements}
+  AGlyphIterator.Next;
+{$endif ApplyIncrements}
+
   Result := True;
-  Inc(AIndex);
 end;
 
 procedure TOpenTypePositioningSubTableCursiveAttachment.LoadFromStream(Stream: TStream);

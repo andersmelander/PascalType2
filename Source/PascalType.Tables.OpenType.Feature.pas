@@ -56,7 +56,7 @@ type
   TCustomOpenTypeFeatureTable = class abstract(TCustomOpenTypeNamedTable)
   private
     FFeatureParams   : Word;          // = NULL (reserved for offset to FeatureParams)
-    FLookupListIndex : array of Word; // Array of LookupList indices for this feature -zero-based (first lookup is LookupListIndex = 0)
+    FLookupListIndex : TArray<Word>; // Array of LookupList indices for this feature -zero-based (first lookup is LookupListIndex = 0)
     function GetLookupList(Index: Integer): Word;
     function GetLookupListCount: Integer;
     procedure SetFeatureParams(const Value: Word);
@@ -71,11 +71,12 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    property DisplayName: string read GetDisplayName;
+    function GetEnumerator: TEnumerator<Word>;
+
     property FeatureParams: Word read FFeatureParams write SetFeatureParams;
     // https://learn.microsoft.com/en-us/typography/opentype/spec/images/gsub_fig3g.png
     property LookupListCount: Integer read GetLookupListCount;
-    property LookupList[Index: Integer]: Word read GetLookupList;
+    property LookupList[Index: Integer]: Word read GetLookupList; default;
   end;
 
   TOpenTypeFeatureTableClass = class of TCustomOpenTypeFeatureTable;
@@ -245,6 +246,11 @@ begin
     FFeatureParams := TCustomOpenTypeFeatureTable(Source).FFeatureParams;
     FLookupListIndex := TCustomOpenTypeFeatureTable(Source).FLookupListIndex;
   end;
+end;
+
+function TCustomOpenTypeFeatureTable.GetEnumerator: TEnumerator<Word>;
+begin
+  Result := TArrayEnumerator<Word>.Create(FLookupListIndex);
 end;
 
 function TCustomOpenTypeFeatureTable.GetLookupList(Index: Integer): Word;

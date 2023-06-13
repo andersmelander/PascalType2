@@ -66,7 +66,7 @@ type
     FSubFormat: Word;
     function GetLookupTable: TCustomOpenTypeLookupTable;
   protected
-    function ApplyLookupRecords(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection; const LookupRecords: TSequenceLookupRecords): boolean;
+    function ApplyLookupRecords(const AGlyphIterator: TPascalTypeGlyphGlyphIterator; const LookupRecords: TSequenceLookupRecords): boolean;
   public
     constructor Create(AParent: TCustomPascalTypeTable); override;
 
@@ -75,7 +75,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; virtual; abstract;
+    function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; virtual; abstract;
 
     property SubFormat: Word read FSubFormat;
     property LookupTable: TCustomOpenTypeLookupTable read GetLookupTable;
@@ -104,16 +104,16 @@ type
       MARK_ATTACHMENT_TYPE_MASK = $FF00;
   private
     FLookupType       : Word; // Different enumerations for GSUB and GPOS
-    FLookupFlag       : Word; // Lookup qualifiers
+    FLookupFlags      : Word; // Lookup qualifiers
     FMarkFilteringSet : Word; // Index (base 0) into GDEF mark glyph sets structure. This field is only present if bit UseMarkFilteringSet of lookup flags is set.
     FSubTableList: TPascalTypeTableInterfaceList<TCustomOpenTypeLookupSubTable>;
   protected
-    procedure SetLookupFlag(const Value: Word);
+    procedure SetLookupFlags(const Value: Word);
     procedure SetMarkFilteringSet(const Value: Word);
     function GetSubTable(Index: Integer): TCustomOpenTypeLookupSubTable;
     function GetSubTableCount: Integer;
     function GetLookupList: TOpenTypeLookupListTable;
-    procedure LookupFlagChanged; virtual;
+    procedure LookupFlagsChanged; virtual;
     procedure MarkFilteringSetChanged; virtual;
     function GetSubTableClass(ASubFormat: Word): TOpenTypeLookupSubTableClass; virtual; abstract;
   public
@@ -127,15 +127,15 @@ type
 
     function GetEnumerator: TEnumerator<TCustomOpenTypeLookupSubTable>;
 
-    function Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; virtual;
+    function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; virtual;
 
     // The meaning of LookupType depends on the parent type (GSUB/GPOS)
     property LookupType: Word read FLookupType;
-    property LookupFlag: Word read FLookupFlag write SetLookupFlag;
+    property LookupFlags: Word read FLookupFlags write SetLookupFlags;
     property MarkFilteringSet: Word read FMarkFilteringSet write SetMarkFilteringSet;
 
     property SubTableCount: Integer read GetSubTableCount;
-    property SubTables[Index: Integer]: TCustomOpenTypeLookupSubTable read GetSubTable;
+    property SubTables[Index: Integer]: TCustomOpenTypeLookupSubTable read GetSubTable; default;
 
     property LookupList: TOpenTypeLookupListTable read GetLookupList;
   end;
@@ -207,7 +207,7 @@ type
   private type
     TOpenTypeLookupSubTableGeneric = class(TCustomOpenTypeLookupSubTable)
     public
-      function Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
+      function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
     end;
   protected
     function GetSubTableClass(ASubFormat: Word): TOpenTypeLookupSubTableClass; override;
@@ -251,7 +251,7 @@ begin
   if Source is TCustomOpenTypeLookupTable then
   begin
     Assert(FLookupType = TCustomOpenTypeLookupTable(Source).FLookupType);
-    FLookupFlag := TCustomOpenTypeLookupTable(Source).FLookupFlag;
+    FLookupFlags := TCustomOpenTypeLookupTable(Source).FLookupFlags;
     FMarkFilteringSet := TCustomOpenTypeLookupTable(Source).FMarkFilteringSet;
     FSubTableList.Assign(TCustomOpenTypeLookupTable(Source).FSubTableList);
   end;
@@ -275,7 +275,7 @@ begin
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   FLookupType := BigEndianValueReader.ReadWord(Stream);
-  FLookupFlag := BigEndianValueReader.ReadWord(Stream);
+  FLookupFlags := BigEndianValueReader.ReadWord(Stream);
 
   // read subtable count
   SetLength(SubTableOffsets, BigEndianValueReader.ReadWord(Stream));
@@ -285,7 +285,7 @@ begin
     SubTableOffsets[LookupIndex] := BigEndianValueReader.ReadWord(Stream);
 
   // eventually read mark filtering set
-  if (FLookupFlag and USE_MARK_FILTERING_SET <> 0) then
+  if (FLookupFlags and USE_MARK_FILTERING_SET <> 0) then
     FMarkFilteringSet := BigEndianValueReader.ReadWord(Stream);
 
   for LookupIndex := 0 to High(SubTableOffsets) do
@@ -320,7 +320,7 @@ begin
   inherited;
 
   WriteSwappedWord(Stream, FLookupType);
-  WriteSwappedWord(Stream, FLookupFlag);
+  WriteSwappedWord(Stream, FLookupFlags);
 
   WriteSwappedWord(Stream, FSubTableList.Count);
   OffsetTablePos := Stream.Position;
@@ -354,12 +354,12 @@ begin
   Result := Parent as TOpenTypeLookupListTable;
 end;
 
-function TCustomOpenTypeLookupTable.Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
+function TCustomOpenTypeLookupTable.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
 var
   SubTable: TCustomOpenTypeLookupSubTable;
 begin
   for SubTable in FSubTableList do
-    if (SubTable.Apply(GlyphString, AIndex, ADirection)) then
+    if (SubTable.Apply(AGlyphIterator)) then
       Exit(True);
   Result := False;
 end;
@@ -376,12 +376,12 @@ begin
   Result := FSubTableList.Count;
 end;
 
-procedure TCustomOpenTypeLookupTable.SetLookupFlag(const Value: Word);
+procedure TCustomOpenTypeLookupTable.SetLookupFlags(const Value: Word);
 begin
-  if FLookupFlag <> Value then
+  if FLookupFlags <> Value then
   begin
-    FLookupFlag := Value;
-    LookupFlagChanged;
+    FLookupFlags := Value;
+    LookupFlagsChanged;
   end;
 end;
 
@@ -394,7 +394,7 @@ begin
   end;
 end;
 
-procedure TCustomOpenTypeLookupTable.LookupFlagChanged;
+procedure TCustomOpenTypeLookupTable.LookupFlagsChanged;
 begin
   Changed;
 end;
@@ -415,10 +415,10 @@ begin
   Result := TOpenTypeLookupSubTableGeneric;
 end;
 
-function TOpenTypeLookupTableGeneric.TOpenTypeLookupSubTableGeneric.Apply(GlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
+function TOpenTypeLookupTableGeneric.TOpenTypeLookupSubTableGeneric.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
 begin
 {$ifdef DEBUG}
-  OutputDebugString(PChar(Format('%s lookup not implemented. Lookup type: %d, sub-format: %d', [string(TCustomPascalTypeNamedTable(TOpenTypeLookupTableGeneric(parent).LookupList.Parent).TableType.AsAnsiChar), TOpenTypeLookupTableGeneric(Parent).LookupType, SubFormat])));
+  OutputDebugString(PChar(Format('%s lookup not implemented. Lookup type: %d, sub-format: %d', [string(TCustomPascalTypeNamedTable(TOpenTypeLookupTableGeneric(Parent).LookupList.Parent).TableType.AsAnsiChar), TOpenTypeLookupTableGeneric(Parent).LookupType, SubFormat])));
 {$endif DEBUG}
 
   Result := False;
@@ -547,28 +547,35 @@ begin
   WriteSwappedWord(Stream, FSubFormat);
 end;
 
-function TCustomOpenTypeLookupSubTable.ApplyLookupRecords(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection;
+function TCustomOpenTypeLookupSubTable.ApplyLookupRecords(const AGlyphIterator: TPascalTypeGlyphGlyphIterator;
   const LookupRecords: TSequenceLookupRecords): boolean;
 var
   LookupList: TOpenTypeLookupListTable;
   Lookup: TCustomOpenTypeLookupTable;
   i: integer;
+  Iterator: TPascalTypeGlyphGlyphIterator;
 begin
   Result := False;
 
   LookupList := LookupTable.LookupList;
   for i := 0 to High(LookupRecords) do
   begin
+    Iterator := AGlyphIterator.Clone;
+
     // Adjust the glyph index
-    Inc(AIndex, LookupRecords[i].SequenceIndex);
+    Iterator.Next(LookupRecords[i].SequenceIndex);
 
     // Get the referenced lookup
     Lookup := LookupList[LookupRecords[i].LookupListIndex];
 
+    Iterator.LookupFlags := Lookup.LookupFlags;
+
     // Recursively apply until one matches
-    if (Lookup.Apply(AGlyphString, AIndex, ADirection)) then
+    if (Lookup.Apply(Iterator)) then
+      // TODO : FontKit doesn't break the loop here
       Exit(True);
   end;
+  // TODO : FontKit doesn't increment the iterator (hence the const param). I believe that is wrong.
 end;
 
 procedure TCustomOpenTypeLookupSubTable.Assign(Source: TPersistent);

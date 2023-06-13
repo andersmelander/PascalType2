@@ -1,4 +1,4 @@
-unit PascalType.FontFace;
+unit PascalType.Shaper.OpenType.Processor.GSUB;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -32,81 +32,58 @@ unit PascalType.FontFace;
 
 interface
 
-{$I PT_Compiler.inc}
-
 uses
-  Classes, SysUtils, Types,
   PT_Types,
-  PT_Classes,
-  PT_TableDirectory,
-  PT_Tables;
+  PascalType.FontFace.SFNT,
+  PascalType.Tables.OpenType.Common,
+  PascalType.Tables.OpenType.GSUB,
+  PascalType.Shaper.OpenType.Processor;
 
+
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeOpenTypeProcessorGSUB
+//
+//------------------------------------------------------------------------------
+// GSUB table processor
+//------------------------------------------------------------------------------
 type
-  // TODO : This class can most likely be rolled into the derived class
-  // TCustomPascalTypeFontFace since we will probably only ever have that one derived class.
-  TCustomPascalTypeFontFacePersistent = class abstract(TInterfacedPersistent, IStreamPersist, IPascalTypeFontFaceChange)
+  TPascalTypeOpenTypeProcessorGSUB = class(TCustomPascalTypeOpenTypeProcessor)
   private
-    FOnChanged: TNotifyEvent;
+    FSubstitutionTable: TOpenTypeGlyphSubstitutionTable;
   protected
-    // IPascalTypeFontFaceChange
-    procedure Changed; virtual;
-
+    function GetTable: TCustomOpenTypeCommonTable; override;
   public
-    // IStreamPersist
-    procedure LoadFromStream(Stream: TStream); virtual; abstract;
-    procedure SaveToStream(Stream: TStream); virtual; abstract;
+    constructor Create(AFont: TCustomPascalTypeFontFace; AScript: TTableType; ALanguage: TTableType; ADirection: TPascalTypeDirection); override;
 
-  public
-    procedure LoadFromFile(FileName: TFileName);
-    procedure SaveToFile(FileName: TFileName);
-
-    // CreateLayoutEngine creates a layout engine spcific to the font technology
-    // handled by this font class.
-    // it really should return a TCustomPascalTypeLayoutEngine but due to unit
-    // and class dependencies that isn't feasible.
-    // Instead it returns the layout engine as a TObject and the caller must then
-    // case that to TCustomPascalTypeLayoutEngine.
-    function CreateLayoutEngine: TObject; virtual; abstract;
-
-    // TODO : Needs multicast. FontFace can be shared among rasterizers
-//    property OnChanged: TNotifyEvent read FOnChanged;
+    property SubstitutionTable: TOpenTypeGlyphSubstitutionTable read FSubstitutionTable;
   end;
+
+
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 
 implementation
 
-{ TCustomPascalTypeFontFace }
+uses
+  PT_Classes;
 
-procedure TCustomPascalTypeFontFacePersistent.Changed;
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeOpenTypeProcessorGSUB
+//
+//------------------------------------------------------------------------------
+constructor TPascalTypeOpenTypeProcessorGSUB.Create(AFont: TCustomPascalTypeFontFace; AScript: TTableType; ALanguage: TTableType; ADirection: TPascalTypeDirection);
 begin
-  if Assigned(FOnChanged) then
-    FOnChanged(Self);
+  inherited;
+
+  FSubstitutionTable := Font.GetTableByTableType(TOpenTypeGlyphSubstitutionTable.GetTableType) as TOpenTypeGlyphSubstitutionTable;
 end;
 
-procedure TCustomPascalTypeFontFacePersistent.LoadFromFile(FileName: TFileName);
-var
-  FileStream: TFileStream;
+function TPascalTypeOpenTypeProcessorGSUB.GetTable: TCustomOpenTypeCommonTable;
 begin
-  FileStream := TFileStream.Create(FileName, fmOpenRead or fmShareDenyNone);
-  try
-    LoadFromStream(FileStream);
-  finally
-    FileStream.Free;
-  end;
-end;
-
-procedure TCustomPascalTypeFontFacePersistent.SaveToFile(FileName: TFileName);
-var
-  FileStream: TFileStream;
-begin
-  if FileExists(FileName) then
-    FileStream := TFileStream.Create(FileName, fmCreate)
-  else
-    FileStream := TFileStream.Create(FileName, fmOpenWrite);
-  try
-    SaveToStream(FileStream);
-  finally
-    FileStream.Free;
-  end;
+  Result := FSubstitutionTable;
 end;
 
 end.

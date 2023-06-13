@@ -84,7 +84,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
+    function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
 
     property DeltaGlyphID: SmallInt read FDeltaGlyphID write FDeltaGlyphID;
   end;
@@ -109,7 +109,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
+    function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
 
     property SubstituteGlyphIDs: TGlyphString read FSubstituteGlyphIDs;
   end;
@@ -176,18 +176,20 @@ begin
   WriteSwappedSmallInt(Stream, FDeltaGlyphID);
 end;
 
-function TOpenTypeSubstitutionSubTableSingleOffset.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
+function TOpenTypeSubstitutionSubTableSingleOffset.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
 var
   SubstitutionIndex: integer;
 begin
   // The coverage table just tells us if the substitution applies.
-  SubstitutionIndex := CoverageTable.IndexOfGlyph(AGlyphString[AIndex].GlyphID);
+  SubstitutionIndex := CoverageTable.IndexOfGlyph(AGlyphIterator.Glyph.GlyphID);
 
   if (SubstitutionIndex = -1) then
     Exit(False);
 
-  AGlyphString[AIndex].GlyphID := Word((integer(AGlyphString[AIndex].GlyphID) + integer(FDeltaGlyphID)) and $0000FFFF);
-  Inc(AIndex);
+  AGlyphIterator.Glyph.GlyphID := Word((integer(AGlyphIterator.Glyph.GlyphID) + integer(FDeltaGlyphID)) and $0000FFFF);
+{$ifdef ApplyIncrements}
+  AGlyphIterator.Next;
+{$endif ApplyIncrements}
   Result := True;
 end;
 
@@ -229,18 +231,19 @@ begin
     WriteSwappedWord(Stream, FSubstituteGlyphIDs[i]);
 end;
 
-function TOpenTypeSubstitutionSubTableSingleList.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
+function TOpenTypeSubstitutionSubTableSingleList.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
 var
   SubstitutionIndex: integer;
 begin
-  SubstitutionIndex := CoverageTable.IndexOfGlyph(AGlyphString[AIndex].GlyphID);
-//  if (TArray.BinarySearch<Word>(FSubstituteGlyphIDs, GlyphString[AIndex].GlyphID, Index)) then
+  SubstitutionIndex := CoverageTable.IndexOfGlyph(AGlyphIterator.Glyph.GlyphID);
 
   if (SubstitutionIndex = -1) then
     Exit(False);
 
-  AGlyphString[AIndex].GlyphID := FSubstituteGlyphIDs[SubstitutionIndex];
-  Inc(AIndex);
+  AGlyphIterator.Glyph.GlyphID:= FSubstituteGlyphIDs[SubstitutionIndex];
+{$ifdef ApplyIncrements}
+  AGlyphIterator.Next;
+{$endif ApplyIncrements}
   Result := True;
 end;
 

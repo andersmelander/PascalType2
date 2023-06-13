@@ -49,54 +49,8 @@ uses
   PascalType.Tables.OpenType.GPOS,
   PascalType.Tables.OpenType.Feature,
   PascalType.Tables.OpenType.Lookup,
-  PascalType.Shaper.Plan;
-
-
-//------------------------------------------------------------------------------
-//
-//              Default feature plans
-//
-//------------------------------------------------------------------------------
-const
-  VariationFeatures: TTableNames = [
-    'rvrn'      // Required Variation Alternates
-  ];
-
-  CommonFeatures: TTableNames = [
-    'ccmp',     // Glyph Composition/Decomposition
-    'locl',     // Localized Forms
-    'rlig',     // Required Ligatures
-    'mark',     // Mark Positioning
-    'mkmk'      // Mark to Mark Positioning
-  ];
-
-  FractionalFeatures: TTableNames = [
-    'frac',     // Fractions, optional
-    'numr',     // Numerators, applied when 'frac' is used
-    'dnom'      // Denominators, applied when 'frac' is used
-  ];
-
-  HorizontalFeatures: TTableNames = [
-    'calt',     // Contextual Alternates
-    'clig',     // Contextual Ligatures
-    'liga',     // Standard Ligatures, optional
-    'rclt',     // Required Contextual Alternates
-    'curs',     // Cursive Positioning
-    'kern'      // Kerning, optional, enabled by default
-  ];
-
-  VerticalFeatures: TTableNames = [
-    'vert'      // Vertical Alternates
-  ];
-
-  DirectionalFeatures: array[TPascalTypeDirection] of TTableNames = (
-    [
-      'ltra',   // Left-to-right glyph alternates
-      'ltrm'    // Left-to-right mirrored forms
-    ], [
-      'rtla',   // Right-to-left alternates
-      'rtlm'    // Right-to-left mirrored forms
-    ]);
+  PascalType.Shaper.Plan,
+  PascalType.Shaper.Layout;
 
 
 //------------------------------------------------------------------------------
@@ -126,28 +80,20 @@ type
 //              TPascalTypeShaper
 //
 //------------------------------------------------------------------------------
+// The shaper represents the script specific layer.
+// Each script should have its own concrete shaper implementation, so we need a
+// specific shaper for Arabic, a specific shaper for Hangul, etc.
+// Scripts that are not handled by one of the script specific ones are handled
+// by the default shaper.
+//------------------------------------------------------------------------------
 type
-  TPascalTypeShaper = class
-  private type
-    TZeroMarkWidths = (zmwNever, zmwBeforeGPOS, zmwAfterGPOS);
-  private type
-    TPascalTypeShaperFeatures = class
-    private
-      FShaper: TPascalTypeShaper;
-      FFeatures: TDictionary<TTableName, boolean>;
-      FEnableAll: boolean;
-      function GetFeatureEnabled(const AKey: TTableName): boolean;
-      procedure SetFeatureEnabled(const AKey: TTableName; const Value: boolean);
-    public
-      constructor Create(AShaper: TPascalTypeShaper);
-      destructor Destroy; override;
-      function GetEnumerator: TEnumerator<TTableName>;
-      function IsEnabled(const AKey: TTableName; ADefault: boolean): boolean;
-      property Enabled[const AKey: TTableName]: boolean read GetFeatureEnabled write SetFeatureEnabled; default;
-      property EnableAll: boolean read FEnableAll write FEnableAll;
-    end;
+  TPascalTypeShaper = class;
+  TPascalTypeShaperClass = class of TPascalTypeShaper;
 
-    TPlannedFeatures = TList<TCustomOpenTypeFeatureTable>;
+  TPascalTypeShaper = class
+  private
+    class var FDefaultShaperClass: TPascalTypeShaperClass;
+    class var FShaperClasses: TDictionary<Cardinal, TPascalTypeShaperClass>;
   private
     FScript: TTableType;
     FLanguage: TTableType;
@@ -157,44 +103,35 @@ type
     FPositionTable: TOpenTypeGlyphPositionTable;
     FFeatures: TPascalTypeShaperFeatures;
     FPlan: TPascalTypeShapingPlan;
-    FPlannedSubstitutionFeatures: TPlannedFeatures;
-    FPlannedPositioningFeatures: TPlannedFeatures;
   private
     procedure SetLanguage(const Value: TTableType);
     procedure SetScript(const Value: TTableType);
     procedure SetDirection(const Value: TPascalTypeDirection);
+    procedure FeaturesChanged(Sender: TObject);
+  private
+    class constructor Create;
+    class destructor Destroy;
   protected
-    function CreatePlannedFeatureList(APlan: TPascalTypeShapingPlan; AGlobalTable: TCustomOpenTypeCommonTable): TPlannedFeatures;
-
     procedure Reset; virtual;
     function DecompositionFilter(CodePoint: TPascalTypeCodePoint): boolean; virtual;
     function CompositionFilter(CodePoint: TPascalTypeCodePoint): boolean; virtual;
     procedure ProcessCodePoints(var CodePoints: TPascalTypeCodePoints); virtual;
     function ProcessUnicode(const AText: string): TPascalTypeCodePoints; virtual;
-    function NeedUnicodeComposition: boolean; virtual;
+    function NeedUnicodeComposition: boolean; virtual; // TODO : Move this to the Layout Engine
     function ZeroMarkWidths: TZeroMarkWidths; virtual;
 
-    procedure ApplyLookups(ALookupListTable: TOpenTypeLookupListTable; AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString);
-    procedure ApplySubstitution(AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString); virtual;
-    procedure ApplyPositioning(AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString); virtual;
-    procedure ExecuteSubstitution(var AGlyphs: TPascalTypeGlyphString);
-    procedure ExecutePositioning(var AGlyphs: TPascalTypeGlyphString);
-    procedure PreProcessPositioning(var AGlyphs: TPascalTypeGlyphString);
-    procedure PostProcessPositioning(var AGlyphs: TPascalTypeGlyphString);
-    procedure ApplyRightToLeft(var AGlyphs: TPascalTypeGlyphString);
-    procedure ClearMarkAdvance(var AGlyphs: TPascalTypeGlyphString);
-
+    // TODO : This probably belongs in the font or in the layout engine
     function GetGlyphStringClass: TShaperGlyphStringClass; virtual;
     function CreateGlyphString(const ACodePoints: TPascalTypeCodePoints): TShaperGlyphString; virtual;
 
     function GetShapingPlanClass: TPascalTypeShapingPlanClass; virtual;
     function CreateShapingPlan: TPascalTypeShapingPlan; virtual;
+    procedure SetupPlan(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString; AFeatures: TPascalTypeShaperFeatures); virtual;
 
-    procedure SetupPlan(APlan: TPascalTypeShapingPlan); virtual;
-    procedure PlanPreprocessing(AStage: TPascalTypeShapingPlanStage);
-    procedure PlanFeatures(AStage: TPascalTypeShapingPlanStage); virtual;
-    procedure PlanPostprocessing(AStage: TPascalTypeShapingPlanStage);
-    procedure PlanApplyOptions(APlan: TPascalTypeShapingPlan);
+    // CreateLayoutEngine really belongs in the font since the concrete layout
+    // engine is specific to the font technology (e.g. OpenType, CFF, etc.) but
+    // due to unit and class dependencies we need to wrap it here too.
+    function CreateLayoutEngine: TCustomPascalTypeLayoutEngine;
 
     property Plan: TPascalTypeShapingPlan read FPlan;
     property SubstitutionTable: TOpenTypeGlyphSubstitutionTable read FSubstitutionTable;
@@ -203,12 +140,15 @@ type
     constructor Create(AFont: TCustomPascalTypeFontFace);
     destructor Destroy; override;
 
+    class function GetShaperForScript(const Script: TTableType): TPascalTypeShaperClass;
+    class procedure RegisterDefaultShaperClass(ShaperClass: TPascalTypeShaperClass);
+
     function Shape(const AText: string): TPascalTypeGlyphString; virtual;
 
-    property Language: TTableType read FLanguage write SetLanguage;
-    property Script: TTableType read FScript write SetScript;
-    property Direction: TPascalTypeDirection read FDirection write SetDirection;
     property Font: TCustomPascalTypeFontFace read FFont;
+    property Script: TTableType read FScript write SetScript;
+    property Language: TTableType read FLanguage write SetLanguage;
+    property Direction: TPascalTypeDirection read FDirection write SetDirection;
 
     // User feature overrides
     property Features: TPascalTypeShaperFeatures read FFeatures;
@@ -228,16 +168,60 @@ uses
 
 //------------------------------------------------------------------------------
 //
+//              TShaperGlyphString
+//
+//------------------------------------------------------------------------------
+constructor TShaperGlyphString.Create(AFont: TCustomPascalTypeFontFace; const ACodePoints: TPascalTypeCodePoints);
+begin
+  FFont := AFont;
+  inherited Create(ACodePoints);
+end;
+
+procedure TShaperGlyphString.HideDefaultIgnorables;
+var
+  SpaceGlyph: Word;
+  Glyph: TPascalTypeGlyph;
+begin
+  SpaceGlyph := Font.GetGlyphByCharacter(32);
+  for Glyph in Self do
+    if (Length(Glyph.CodePoints) > 0) and (PascalTypeUnicode.IsDefaultIgnorable(Glyph.CodePoints[0])) then
+    begin
+      Glyph.GlyphID := SpaceGlyph;
+      Glyph.XAdvance := 0;
+      Glyph.YAdvance := 0;
+    end;
+end;
+
+//------------------------------------------------------------------------------
+//
 //              TPascalTypeShaper
 //
 //------------------------------------------------------------------------------
+type
+  TPascalTypeShaperFeaturesCracker = class(TPascalTypeShaperFeatures);
+
+class constructor TPascalTypeShaper.Create;
+begin
+  FShaperClasses := TDictionary<Cardinal, TPascalTypeShaperClass>.Create;
+end;
+
+class destructor TPascalTypeShaper.Destroy;
+begin
+  FShaperClasses.Free;
+end;
+
 constructor TPascalTypeShaper.Create(AFont: TCustomPascalTypeFontFace);
 begin
   inherited Create;
+
   FFont := AFont;
   FScript := OpenTypeDefaultScript;
   FLanguage := OpenTypeDefaultLanguageSystem;
-  FFeatures := TPascalTypeShaperFeatures.Create(Self);
+  FDirection := PascalTypeDefaultDirection;
+
+  FFeatures := TPascalTypeShaperFeatures.Create;
+  TPascalTypeShaperFeaturesCracker(FFeatures).OnChanged := FeaturesChanged;
+
   // Cache GSUB & GPOS. We'll use it a lot
   FSubstitutionTable := TOpenTypeGlyphSubstitutionTable(IPascalTypeFontFace(FFont).GetTableByTableType(TOpenTypeGlyphSubstitutionTable.GetTableType));
   FPositionTable := TOpenTypeGlyphPositionTable(IPascalTypeFontFace(FFont).GetTableByTableType(TOpenTypeGlyphPositionTable.GetTableType));
@@ -250,16 +234,28 @@ destructor TPascalTypeShaper.Destroy;
 begin
   FPlan.Free;
   FFeatures.Free;
-  FPlannedSubstitutionFeatures.Free;
-  FPlannedPositioningFeatures.Free;
 
   inherited;
 end;
 
+class procedure TPascalTypeShaper.RegisterDefaultShaperClass(ShaperClass: TPascalTypeShaperClass);
+begin
+  FDefaultShaperClass := ShaperClass;
+end;
+
+class function TPascalTypeShaper.GetShaperForScript(const Script: TTableType): TPascalTypeShaperClass;
+begin
+  if (not FShaperClasses.TryGetValue(Script.AsCardinal, Result)) then
+    Result := FDefaultShaperClass;
+end;
+
+procedure TPascalTypeShaper.FeaturesChanged(Sender: TObject);
+begin
+  Reset;
+end;
+
 procedure TPascalTypeShaper.Reset;
 begin
-  FreeAndNil(FPlannedSubstitutionFeatures);
-  FreeAndNil(FPlannedPositioningFeatures);
   FreeAndNil(FPlan);
 end;
 
@@ -269,9 +265,18 @@ var
 begin
   Result := GetGlyphStringClass.Create(Font, ACodePoints);
 
+  Result.Script := Script;
+  Result.Language := Language;
+  Result.Direction := Direction;
+
   // Map Unicode CodePoints to Glyph IDs
   for Glyph in Result do
     Glyph.GlyphID := Font.GetGlyphByCharacter(Glyph.CodePoints[0]);
+end;
+
+function TPascalTypeShaper.CreateLayoutEngine: TCustomPascalTypeLayoutEngine;
+begin
+  Result := Font.CreateLayoutEngine as TCustomPascalTypeLayoutEngine;
 end;
 
 function TPascalTypeShaper.GetGlyphStringClass: TShaperGlyphStringClass;
@@ -282,7 +287,6 @@ end;
 function TPascalTypeShaper.CreateShapingPlan: TPascalTypeShapingPlan;
 begin
   Result := GetShapingPlanClass.Create;
-  SetupPlan(Result);
 end;
 
 function TPascalTypeShaper.GetShapingPlanClass: TPascalTypeShapingPlanClass;
@@ -292,19 +296,8 @@ end;
 
 function TPascalTypeShaper.NeedUnicodeComposition: boolean;
 begin
-  Result := False;
-end;
-
-procedure TPascalTypeShaper.ClearMarkAdvance(var AGlyphs: TPascalTypeGlyphString);
-var
-  Glyph: TPascalTypeGlyph;
-begin
-  for Glyph in AGlyphs do
-    if (Glyph.IsMark) then
-    begin
-      Glyph.XAdvance := 0;
-      Glyph.YAdvance := 0;
-    end;
+  // TODO : This decision belongs in the Layout Engine
+  Result := True;
 end;
 
 function TPascalTypeShaper.CompositionFilter(CodePoint: TPascalTypeCodePoint): boolean;
@@ -395,65 +388,6 @@ begin
     Result := PascalTypeUnicode.Compose(Result, CompositionFilter);
 end;
 
-function TPascalTypeShaper.CreatePlannedFeatureList(APlan: TPascalTypeShapingPlan; AGlobalTable: TCustomOpenTypeCommonTable): TPlannedFeatures;
-var
-  FeatureMap: TDictionary<TTableType, TCustomOpenTypeFeatureTable>;
-  ScriptTable: TCustomOpenTypeScriptTable;
-  LanguageSystem: TCustomOpenTypeLanguageSystemTable;
-  i: integer;
-  FeatureTable: TCustomOpenTypeFeatureTable;
-  Stage: TPascalTypeShapingPlanStage;
-  Feature: TTableName;
-begin
-  Assert(AGlobalTable <> nil);
-
-  Result := TPlannedFeatures.Create;
-  try
-
-    // Create a feature map (tag->table) for the current script and language
-    FeatureMap := TDictionary<TTableType, TCustomOpenTypeFeatureTable>.Create;
-    try
-
-      // Get script, fallback to default
-      ScriptTable := AGlobalTable.ScriptListTable.FindScript(Script, True);
-
-      if (ScriptTable <> nil) then
-      begin
-        // Get language system, fallback to default
-        LanguageSystem := ScriptTable.FindLanguageSystem(Language, True);
-
-        if (LanguageSystem <> nil) then
-        begin
-          for i := 0 to LanguageSystem.FeatureIndexCount-1 do
-          begin
-            // LanguageSystem feature list contains index numbers into the FeatureListTable
-            FeatureTable := AGlobalTable.FeatureListTable.Feature[LanguageSystem.FeatureIndex[i]];
-
-            // Ignore features that does not occur in the plan
-            if (APlan.Stages.HasFeature(FeatureTable.TableType.AsAnsiChar)) then
-              FeatureMap.Add(FeatureTable.TableType, FeatureTable);
-          end;
-        end;
-      end;
-
-      // Convert the stage feature tags into a sequential list of feature tables.
-      // The list will contain the intersection between the features supported by
-      // the fonts script/language and the features in the shaping plan.
-      for Stage in APlan.Stages do
-        for Feature in Stage do
-          if (FeatureMap.TryGetValue(Feature, FeatureTable)) then
-            Result.Add(FeatureTable);
-
-    finally
-      FeatureMap.Free;
-    end;
-
-  except
-    Result.Free;
-    raise;
-  end;
-end;
-
 procedure TPascalTypeShaper.SetDirection(const Value: TPascalTypeDirection);
 begin
   Reset;
@@ -472,252 +406,14 @@ begin
   FScript := Value;
 end;
 
-procedure TPascalTypeShaper.PlanPreprocessing(AStage: TPascalTypeShapingPlanStage);
+procedure TPascalTypeShaper.SetupPlan(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString; AFeatures: TPascalTypeShaperFeatures);
 begin
-  AStage.Add(VariationFeatures);
-  AStage.Add(DirectionalFeatures[FDirection]);
-  AStage.Add(FractionalFeatures);
-end;
-
-procedure TPascalTypeShaper.PlanFeatures(AStage: TPascalTypeShapingPlanStage);
-begin
-  // Do nothing by default
-end;
-
-procedure TPascalTypeShaper.PlanPostprocessing(AStage: TPascalTypeShapingPlanStage);
-begin
-  AStage.Add(CommonFeatures);
-  AStage.Add(HorizontalFeatures);
-end;
-
-procedure TPascalTypeShaper.PlanApplyOptions(APlan: TPascalTypeShapingPlan);
-var
-  Key: TTableName;
-begin
-  // Apply options; Some features are optional, other are mandatory. E.g. 'liga' is optional.
-  // We allow the user to disable any feature. Even mandatory ones.
-  for Key in Features do
-    if (Features[Key]) then
-      APlan.AddFeature(Key)
-    else
-      APlan.RemoveFeature(Key);
-end;
-
-procedure TPascalTypeShaper.SetupPlan(APlan: TPascalTypeShapingPlan);
-var
-  StagePreprocessing: TPascalTypeShapingPlanStage;
-  StageFeatures: TPascalTypeShapingPlanStage;
-  StagePostprocessing: TPascalTypeShapingPlanStage;
-begin
-  StagePreprocessing := APlan.Stages.AddStage;
-  StageFeatures := APlan.Stages.AddStage;
-  StagePostprocessing := APlan.Stages.AddStage;
-
-  PlanPreprocessing(StagePreprocessing);
-  PlanFeatures(StageFeatures);
-  PlanPostprocessing(StagePostprocessing);
-
-  PlanApplyOptions(APlan);
-end;
-
-
-procedure TPascalTypeShaper.ApplyLookups(ALookupListTable: TOpenTypeLookupListTable; AFeatures: TPlannedFeatures;
-  var AGlyphs: TPascalTypeGlyphString);
-var
-  FeatureTable: TCustomOpenTypeFeatureTable;
-  i: integer;
-  LookupTable: TCustomOpenTypeLookupTable;
-  GlyphIndex, NextGlyphIndex: integer;
-  GlyphHandled: boolean;
-  LoopCount: integer;
-const
-  MaxLoop = 10;
-begin
-  Assert(ALookupListTable <> nil);
-
-  // Iterate over each feature and apply it to the individual glyphs.
-  // Each glyph is only processed once by a feature, but it can be
-  // processed multiple times by different features.
-  for FeatureTable in AFeatures do
-  begin
-
-    GlyphIndex := 0;
-    NextGlyphIndex := 0;
-    LoopCount := 0;
-    while (GlyphIndex < AGlyphs.Count) do
-    begin
-      GlyphHandled := False;
-
-      // A series of substitution operations on the same glyph or string requires multiple
-      // lookups, one for each separate action. Each lookup has a different array index
-      // in the LookupList table and is applied in the LookupList order.
-      for i := 0 to FeatureTable.LookupListCount-1 do
-      begin
-        // During text processing, a client applies a lookup to each glyph in the string
-        // before moving to the next lookup. A lookup is finished for a glyph after the
-        // client locates the target glyph or glyph context and performs a substitution,
-        // if specified. To move to the “next” glyph, the client will typically skip all
-        // the glyphs that participated in the lookup operation: glyphs that were
-        // substituted as well as any other glyphs that formed a context for the operation.
-        LookupTable := ALookupListTable.LookupTables[FeatureTable.LookupList[i]];
-
-        NextGlyphIndex := GlyphIndex;
-        if (LookupTable.Apply(AGlyphs, NextGlyphIndex, Direction)) then
-        begin
-{$ifdef DEBUG}
-          OutputDebugString(PChar(Format('Applied feature %s (%s), lookup %d: %s', [string(FeatureTable.TableType.AsAnsiChar), FeatureTable.DisplayName, FeatureTable.LookupList[i], LookupTable.ClassName])));
-{$endif DEBUG}
-          GlyphHandled := True;
-          break;
-        end;
-      end;
-
-      if (GlyphHandled) then
-      begin
-        // It's legal to modify the glyph and not increment the index.
-        // It's not legal to decrement the index.
-        if (NextGlyphIndex <= GlyphIndex) then
-          Inc(LoopCount);
-
-        if (LoopCount >= MaxLoop) then
-          // Something's wrong. Get out of Dodge!
-          break;
-
-        GlyphIndex := NextGlyphIndex;
-      end else
-        Inc(GlyphIndex);
-    end;
-  end;
-end;
-
-procedure TPascalTypeShaper.ApplySubstitution(AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString);
-begin
-  if (FSubstitutionTable <> nil) then
-    ApplyLookups(FSubstitutionTable.LookupListTable, AFeatures, AGlyphs);
-end;
-
-procedure TPascalTypeShaper.ExecuteSubstitution(var AGlyphs: TPascalTypeGlyphString);
-begin
-  if (FSubstitutionTable <> nil) then
-  begin
-    // Build ordered list of features supported by the font.
-    // This is only done once per "session". No need to do it once per character.
-    if (FPlannedSubstitutionFeatures = nil) then
-      FPlannedSubstitutionFeatures := CreatePlannedFeatureList(FPlan, FSubstitutionTable);
-
-    ApplySubstitution(FPlannedSubstitutionFeatures, AGlyphs);
-  end;
-end;
-
-procedure TPascalTypeShaper.ApplyPositioning(AFeatures: TPlannedFeatures; var AGlyphs: TPascalTypeGlyphString);
-begin
-  if (FPositionTable <> nil) then
-    ApplyLookups(FPositionTable.LookupListTable, AFeatures, AGlyphs);
-end;
-
-procedure TPascalTypeShaper.PreProcessPositioning(var AGlyphs: TPascalTypeGlyphString);
-var
-  Glyph: TPascalTypeGlyph;
-begin
-  // Get default positions
-  for Glyph in AGlyphs do
-    Glyph.XAdvance := Font.GetAdvanceWidth(Glyph.GlyphID);
-
-  if (ZeroMarkWidths = zmwBeforeGPOS) then
-    ClearMarkAdvance(AGlyphs);
-end;
-
-procedure TPascalTypeShaper.ExecutePositioning(var AGlyphs: TPascalTypeGlyphString);
-begin
-  PreProcessPositioning(AGlyphs);
-
-  if (FPositionTable <> nil) then
-  begin
-    if (FPlannedPositioningFeatures = nil) then
-      FPlannedPositioningFeatures := CreatePlannedFeatureList(FPlan, FPositionTable);
-
-    ApplyPositioning(FPlannedPositioningFeatures, AGlyphs);
-  end;
-
-  PostProcessPositioning(AGlyphs);
-end;
-
-procedure TPascalTypeShaper.PostProcessPositioning(var AGlyphs: TPascalTypeGlyphString);
-
-  procedure FixupCursiveAttachment(Glyph: TPascalTypeGlyph);
-  var
-    CursiveAttachmentGlyph: TPascalTypeGlyph;
-  begin
-    if (Glyph.CursiveAttachment = -1) then
-      exit;
-
-    CursiveAttachmentGlyph := AGlyphs[Glyph.CursiveAttachment];
-
-    Glyph.CursiveAttachment := -1;
-
-    FixupCursiveAttachment(CursiveAttachmentGlyph);
-
-    Glyph.YOffset := Glyph.YOffset + CursiveAttachmentGlyph.YOffset;
-  end;
-
-  procedure FixupCursiveAttachments;
-  var
-    Glyph: TPascalTypeGlyph;
-  begin
-    for Glyph in AGlyphs do
-      FixupCursiveAttachment(Glyph);
-  end;
-
-  procedure FixupMarkAttachments;
-  var
-    i, j: integer;
-    Glyph: TPascalTypeGlyph;
-  begin
-    for i := 0 to AGlyphs.Count-1 do
-    begin
-      Glyph := AGlyphs[i];
-
-      if (Glyph.MarkAttachment = -1) then
-        continue;
-
-      Glyph.XOffset := Glyph.XOffset + AGlyphs[Glyph.MarkAttachment].XOffset;
-      Glyph.YOffset := Glyph.YOffset + AGlyphs[Glyph.MarkAttachment].YOffset;
-
-      if (Direction = dirLeftToRight) then
-      begin
-        for j := Glyph.MarkAttachment to i-1 do
-        begin
-          Glyph.XOffset := Glyph.XOffset - AGlyphs[j].XAdvance;
-          Glyph.YOffset := Glyph.YOffset - AGlyphs[j].YAdvance;
-        end;
-      end else
-      begin
-        for j := Glyph.MarkAttachment+1 to i do
-        begin
-          Glyph.XOffset := Glyph.XOffset + AGlyphs[j].XAdvance;
-          Glyph.YOffset := Glyph.YOffset + AGlyphs[j].YAdvance;
-        end;
-      end;
-    end;
-  end;
-
-begin
-  if (ZeroMarkWidths = zmwAfterGPOS) then
-    ClearMarkAdvance(AGlyphs);
-
-  FixupCursiveAttachments;
-  FixupMarkAttachments;
-end;
-
-procedure TPascalTypeShaper.ApplyRightToLeft(var AGlyphs: TPascalTypeGlyphString);
-begin
-  if (Direction = dirRightToLeft) then
-    AGlyphs.Reverse;
 end;
 
 function TPascalTypeShaper.Shape(const AText: string): TPascalTypeGlyphString;
 var
   UTF32: TPascalTypeCodePoints;
+  LayoutEngine: TCustomPascalTypeLayoutEngine;
 begin
   (*
   ** Process UTF16 unicode string and return a normalized UCS-4/UTF32 string
@@ -735,10 +431,6 @@ begin
 
 
     (*
-    ** First apply GSUB features and then GPOS features
-    *)
-
-    (*
     ** Create a shaping plan.
     ** The plan contains a collection of plan stages and each plan stage contains
     ** a list of features that belong to that stage.
@@ -746,30 +438,17 @@ begin
     if (FPlan = nil) then
       FPlan := CreateShapingPlan;
 
+    SetupPlan(FPlan, Result, FFeatures);
 
-    (*
-    ** Execute substitution plan.
-    ** The substitution plan is the intersection between the features in the plan
-    ** and the features supported by the font (via the GSUB table).
-    *)
-    ExecuteSubstitution(Result);
+    // TODO : Create LayoutEngine once, free on reset
+    LayoutEngine := CreateLayoutEngine;
+    try
+      LayoutEngine.ZeroMarkWidths := ZeroMarkWidths;
 
-
-    (*
-    ** Execute positioning plan.
-    ** The positioning plan is the intersection between the features in the plan
-    ** and the features supported by the font (via the GPOS table).
-    *)
-    ExecutePositioning(Result);
-
-
-    ApplyRightToLeft(Result);
-
-    (*
-    ** Hide do-nothing characters
-    *)
-    // TODO : Why not do this earlier?
-    Result.HideDefaultIgnorables;
+      LayoutEngine.Layout(FPlan, Result);
+    finally
+      LayoutEngine.Free;
+    end;
 
   except
     Result.Free;
@@ -779,70 +458,9 @@ end;
 
 function TPascalTypeShaper.ZeroMarkWidths: TZeroMarkWidths;
 begin
-  Result := zmwAfterGPOS;
+  Result := zmwAfterPositioning;
 end;
 
 //------------------------------------------------------------------------------
-//              TPascalTypeShaper.TPascalTypeShaperFeatures
-//------------------------------------------------------------------------------
-constructor TPascalTypeShaper.TPascalTypeShaperFeatures.Create(AShaper: TPascalTypeShaper);
-begin
-  inherited Create;
-  FShaper := AShaper;
-  FFeatures := TDictionary<TTableName, boolean>.Create;
-end;
-
-destructor TPascalTypeShaper.TPascalTypeShaperFeatures.Destroy;
-begin
-  FFeatures.Free;
-  inherited;
-end;
-
-function TPascalTypeShaper.TPascalTypeShaperFeatures.GetEnumerator: TEnumerator<TTableName>;
-begin
-  Result := FFeatures.Keys.GetEnumerator;
-end;
-
-function TPascalTypeShaper.TPascalTypeShaperFeatures.GetFeatureEnabled(const AKey: TTableName): boolean;
-begin
-  Result := IsEnabled(AKey, FEnableAll);
-end;
-
-function TPascalTypeShaper.TPascalTypeShaperFeatures.IsEnabled(const AKey: TTableName; ADefault: boolean): boolean;
-begin
-  if (not FFeatures.TryGetValue(AKey, Result)) then
-    Result := ADefault;
-end;
-
-procedure TPascalTypeShaper.TPascalTypeShaperFeatures.SetFeatureEnabled(const AKey: TTableName; const Value: boolean);
-begin
-  FFeatures.AddOrSetValue(AKey, Value);
-  FShaper.Reset;
-end;
-
-//------------------------------------------------------------------------------
-
-{ TShaperGlyphString }
-
-constructor TShaperGlyphString.Create(AFont: TCustomPascalTypeFontFace; const ACodePoints: TPascalTypeCodePoints);
-begin
-  FFont := AFont;
-  inherited Create(ACodePoints);
-end;
-
-procedure TShaperGlyphString.HideDefaultIgnorables;
-var
-  SpaceGlyph: Word;
-  Glyph: TPascalTypeGlyph;
-begin
-  SpaceGlyph := Font.GetGlyphByCharacter(32);
-  for Glyph in Self do
-    if (Length(Glyph.CodePoints) > 0) and (PascalTypeUnicode.IsDefaultIgnorable(Glyph.CodePoints[0])) then
-    begin
-      Glyph.GlyphID := SpaceGlyph;
-      Glyph.XAdvance := 0;
-      Glyph.YAdvance := 0;
-    end;
-end;
 
 end.

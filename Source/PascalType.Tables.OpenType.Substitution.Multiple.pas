@@ -87,7 +87,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
+    function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
 
     property SubstituteSequenceList: TGlyphSequences read FSequenceList;
   end;
@@ -207,7 +207,7 @@ begin
   Stream.Position := SavePos;
 end;
 
-function TOpenTypeSubstitutionSubTableMultipleList.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
+function TOpenTypeSubstitutionSubTableMultipleList.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
 var
   SubstitutionIndex: integer;
   Sequence: TGlyphString;
@@ -215,7 +215,7 @@ var
   i: integer;
 begin
   // The coverage table just tells us if the substitution applies.
-  SubstitutionIndex := CoverageTable.IndexOfGlyph(AGlyphString[AIndex].GlyphID);
+  SubstitutionIndex := CoverageTable.IndexOfGlyph(AGlyphIterator.Glyph.GlyphID);
 
   if (SubstitutionIndex = -1) then
     Exit(False);
@@ -227,25 +227,34 @@ begin
   begin
 
     // First entry in glyph string is reused
-    AGlyphString[AIndex].GlyphID := Sequence[0];
+    AGlyphIterator.Glyph.GlyphID := Sequence[0];
+    AGlyphIterator.Glyph.LigatureComponent := 0;
 
     // Remaining are inserted
     for i := 1 to High(Sequence) do
     begin
-      Glyph := AGlyphString.CreateGlyph;
+      Glyph := AGlyphIterator.GlyphString.CreateGlyph;
       Glyph.GlyphID := Sequence[i];
-      Glyph.Cluster := AGlyphString[AIndex].Cluster;
-      AGlyphString.Insert(AIndex+i, Glyph);
+      Glyph.Cluster := AGlyphIterator.Glyph.Cluster;
+      Glyph.IsLigated := AGlyphIterator.Glyph.IsLigated;
+      Glyph.LigatureComponent := i;
+      Glyph.IsSubstituted := True;
+// TODO      Glyph.IsMultiplied := True;
+
+      AGlyphIterator.GlyphString.Insert(AGlyphIterator.Index+i, Glyph);
     end;
 
   end else
   begin
     // If the sequence length is zero, delete the glyph.
     // The OpenType specs disallow this but it seems Harfbuzz and Uniscribe allow it.
-    AGlyphString.Delete(AIndex);
+    AGlyphIterator.GlyphString.Delete(AGlyphIterator.Index);
   end;
 
-  Inc(AIndex, Length(Sequence));
+{$ifdef ApplyIncrements}
+  AGlyphIterator.Next(Length(Sequence));
+{$endif ApplyIncrements}
+
   Result := True;
 end;
 

@@ -78,11 +78,6 @@ type
     function GetFontVersion: WideString;
     function GetUniqueIdentifier: WideString;
   protected
-    // IPascalTypeFontFaceTable
-    function GetTableByTableName(const ATableName: TTableName): TCustomPascalTypeNamedTable; virtual;
-    function GetTableByTableType(ATableType: TTableType): TCustomPascalTypeNamedTable; virtual;
-    function GetTableByTableClass(ATableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable; virtual;
-  protected
     procedure DirectoryTableLoaded(DirectoryTable: TPascalTypeDirectoryTable); virtual;
     procedure LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry); virtual; abstract;
 
@@ -96,6 +91,11 @@ type
     destructor Destroy; override;
 
     procedure LoadFromStream(Stream: TStream); override;
+
+    // IPascalTypeFontFaceTable
+    function GetTableByTableName(const ATableName: TTableName): TCustomPascalTypeNamedTable; virtual;
+    function GetTableByTableType(ATableType: TTableType): TCustomPascalTypeNamedTable; virtual;
+    function GetTableByTableClass(ATableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable; virtual;
 
     function GetGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): Integer; overload; virtual; abstract;
     function GetGlyphByCharacter(ACodePoint: Word): Integer; overload;
@@ -127,6 +127,7 @@ type
   public
     function GetGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): Integer; override;
     procedure SaveToStream(Stream: TStream); override;
+    function CreateLayoutEngine: TObject; override;
   end;
 
   TPascalTypeFontFace = class(TCustomPascalTypeFontFace)
@@ -149,18 +150,18 @@ type
     function GetGlyphCount: Word;
   protected
     function DoGetGlyphPath(GlyphIndex: Word; Depth: integer): TPascalTypePath;
-  protected
-    // IPascalTypeFontFaceTable
-    function GetTableByTableName(const TableName: TTableName): TCustomPascalTypeNamedTable; override;
-    function GetTableByTableType(ATableType: TTableType): TCustomPascalTypeNamedTable; override;
-    function GetTableByTableClass(TableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable; override;
-
-  protected
     procedure DirectoryTableLoaded(DirectoryTable : TPascalTypeDirectoryTable); override;
     procedure LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry); override;
   public
     constructor Create; override;
     destructor Destroy; override;
+
+    // IPascalTypeFontFaceTable
+    function GetTableByTableName(const TableName: TTableName): TCustomPascalTypeNamedTable; override;
+    function GetTableByTableType(ATableType: TTableType): TCustomPascalTypeNamedTable; override;
+    function GetTableByTableClass(TableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable; override;
+
+    function CreateLayoutEngine: TObject; override;
 
     procedure SaveToStream(Stream: TStream); override;
     function ContainsTable(TableType: TTableType): Boolean;
@@ -202,6 +203,7 @@ uses
   PT_Math,
   PT_TablesTrueType,
   PascalType.Tables.TrueType.glyf,
+  PascalType.Shaper.Layout.OpenType,
   PT_ResourceStrings;
 
 function CalculateCheckSum(Data: Pointer; Size: Integer): Cardinal; overload;
@@ -709,6 +711,11 @@ end;
 
 { TPascalTypeFontFaceScan }
 
+function TPascalTypeFontFaceScan.CreateLayoutEngine: TObject;
+begin
+  Result := nil;
+end;
+
 function TPascalTypeFontFaceScan.GetGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): Integer;
 begin
   Result := 0;
@@ -774,6 +781,11 @@ begin
   FreeAndNil(FOptionalTables);
   FreeAndNil(FOS2Table);
   inherited;
+end;
+
+function TPascalTypeFontFace.CreateLayoutEngine: TObject;
+begin
+  Result := TPascalTypeOpenTypeLayoutEngine.Create(Self);
 end;
 
 procedure TPascalTypeFontFace.DirectoryTableLoaded(DirectoryTable: TPascalTypeDirectoryTable);

@@ -12,7 +12,6 @@ uses
   PascalType.FontFace.SFNT,
   PascalType.Rasterizer.GDI,
   PascalType.Rasterizer.Graphics32,
-  PT_Windows,
   RenderDemoFontNameScanner;
 
 {$I ..\..\Source\PT_Compiler.inc}
@@ -109,7 +108,9 @@ uses
   GR32_Polygons,
   GR32_Brushes,
   GR32_Paths,
+  PascalType.Platform.Windows,
   PascalType.Shaper,
+  PascalType.Shaper.Script.Default,
   PascalType.GlyphString;
 
 type
@@ -125,13 +126,13 @@ type
 const
   TestCases: array[0..15] of TTestCase = (
     (Name: 'Default'; FontName: 'Arial'; Text: 'PascalType Render Demo'),
-    (Name: 'GSUB, Single, Single/frac'; FontName: 'Cascadia Mono Regular'; Text: '1/2½'),
+    (Name: 'GSUB, Single, Single/frac'; FontName: 'Cascadia Mono Regular'; Text: '123/456! ½ 8'#$2044'9'),
     (Name: 'GSUB, Single, List'; FontName: 'Candara'; Text: #$0386#$038C#$038E#$038F),
     (Name: 'GSUB, Ligature'; FontName: 'Arabic Typesetting'; Text: 'ff fi ffi ft fft'),
     (Name: 'GSUB, Multiple'; FontName: 'Microsoft Sans Serif'; Script: (AsAnsiChar: 'thai'); Text: #$0E01#$0E33#$0E44#$0E23' '#$0E19#$0E33),
     (Name: 'GSUB, Chained, Simple'; FontName: 'Monoid Regular'; Text: ' _/¯\_/¯\_'),
     (Name: 'GSUB, Chained, Class'; FontName: 'Segoe UI Variable'; Text: 'i¨ j¨ i´'),
-    (Name: 'GSUB, Chained, Coverage'; FontName: 'Segoe UI Variable'; Text: '1/2 3/4'),
+    (Name: 'GSUB, Chained, Coverage'; FontName: 'Segoe UI Variable'; Text: '1/2 3/4 123/456'),
     (Name: 'GPOS, Pair, Single'; FontName: 'Arial'; Text: 'LTAVAWA 11.Y.F'),
     (Name: 'GPOS, Pair, Class'; FontName: 'Roboto Regular'; Text: 'P, PA '#$0393'm'),
     (Name: 'GPOS, Cursive'; FontName: 'Arabic Typesetting'; Script: (AsAnsiChar: 'arab'); Direction: dirRightToLeft; Text: #$FE98#$067C#$067D), // Doesn't work or incorrect testcase
@@ -254,6 +255,7 @@ var
   Canvas: TCanvas;
   Canvas32: TCanvas32;
   Bitmap32: TBitmap32;
+  ShaperClass: TPascalTypeShaperClass;
   Shaper: TPascalTypeShaper;
   ShapedText: TPascalTypeGlyphString;
 {$define FILL_PATH}
@@ -292,7 +294,9 @@ begin
       FRasterizerGraphics32.FontSize := 0; // TODO : We need to force a recalc of the scale. Changing the font doesn't notify the rasterizer.
       FRasterizerGraphics32.FontSize := _DPIAware(FFontSize);
 
-      Shaper := TPascalTypeShaper.Create(FFontFace);
+      // TODO : For now we use the default non-complex shaper (as it's the only available one)
+      ShaperClass := TPascalTypeShaper.GetShaperForScript(FScript);
+      Shaper := ShaperClass.Create(FFontFace);
       try
         // TODO : Test only. Enable all optional features for test purpose
         Shaper.Features.EnableAll := True;

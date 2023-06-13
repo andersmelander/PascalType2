@@ -99,6 +99,7 @@ type
     //              Categorization
     //
     //------------------------------------------------------------------------------
+    class function IsDigit(const AChar: TPascalTypeCodePoint): boolean; static;
     class function IsWhiteSpace(const AChar: TPascalTypeCodePoint): boolean; static;
     class function IsMark(const AChar: TPascalTypeCodePoint): boolean; static;
     class function IsDefaultIgnorable(const AChar: TPascalTypeCodePoint): boolean; static;
@@ -433,6 +434,11 @@ end;
 class function PascalTypeUnicode.IsWhiteSpace(const AChar: TPascalTypeCodePoint): boolean;
 begin
   Result := PUCUUnicodeIsWhiteSpace(AChar);
+end;
+
+class function PascalTypeUnicode.IsDigit(const AChar: TPascalTypeCodePoint): boolean;
+begin
+  Result := (PUCUUnicodeGetCategoryFromTable(AChar) = PUCUUnicodeCategoryNd);
 end;
 
 class function PascalTypeUnicode.IsDefaultIgnorable(const AChar: TPascalTypeCodePoint): boolean;

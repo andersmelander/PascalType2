@@ -29,8 +29,8 @@ uses
   PT_TablesShared in '..\..\Source\PT_TablesShared.pas',
   PT_TablesTrueType in '..\..\Source\PT_TablesTrueType.pas',
   PT_Types in '..\..\Source\PT_Types.pas',
-  PT_UnicodeNames in '..\..\Source\PT_UnicodeNames.pas',
-  PT_Windows in '..\..\Source\PT_Windows.pas',
+  PascalType.Unicode.Names in '..\..\Source\PascalType.Unicode.Names.pas',
+  PascalType.Platform.Windows in '..\..\Source\PascalType.Platform.Windows.pas',
   RenderDemoFontNameScanner in 'RenderDemoFontNameScanner.pas',
   PascalType.Tables.OpenType in '..\..\Source\PascalType.Tables.OpenType.pas',
   PascalType.Tables.OpenType.GPOS in '..\..\Source\PascalType.Tables.OpenType.GPOS.pas',
@@ -73,7 +73,13 @@ uses
   PascalType.Tables.OpenType.Common.Anchor in '..\..\Source\PascalType.Tables.OpenType.Common.Anchor.pas',
   PascalType.Tables.OpenType.Positioning.MarkToMark in '..\..\Source\PascalType.Tables.OpenType.Positioning.MarkToMark.pas',
   PascalType.Tables.OpenType.Positioning.MarkToLigature in '..\..\Source\PascalType.Tables.OpenType.Positioning.MarkToLigature.pas',
-  PascalType.Tables.OpenType.Positioning.Mark in '..\..\Source\PascalType.Tables.OpenType.Positioning.Mark.pas';
+  PascalType.Tables.OpenType.Positioning.Mark in '..\..\Source\PascalType.Tables.OpenType.Positioning.Mark.pas',
+  PascalType.Shaper.Script.Default in '..\..\Source\PascalType.Shaper.Script.Default.pas',
+  PascalType.Shaper.OpenType.Processor.GPOS in '..\..\Source\PascalType.Shaper.OpenType.Processor.GPOS.pas',
+  PascalType.Shaper.OpenType.Processor.GSUB in '..\..\Source\PascalType.Shaper.OpenType.Processor.GSUB.pas',
+  PascalType.Shaper.Layout in '..\..\Source\PascalType.Shaper.Layout.pas',
+  PascalType.Shaper.OpenType.Processor in '..\..\Source\PascalType.Shaper.OpenType.Processor.pas',
+  PascalType.Shaper.Layout.OpenType in '..\..\Source\PascalType.Shaper.Layout.OpenType.pas';
 
 {$R *.res}
 

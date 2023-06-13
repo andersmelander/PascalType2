@@ -97,7 +97,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
+    function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
 
     property MarkCoverage: TCustomOpenTypeCoverageTable read GetMarkCoverage;
     property LigatureCoverage: TCustomOpenTypeCoverageTable read GetLigatureCoverage;
@@ -287,7 +287,7 @@ begin
   Result := inherited BaseCoverage;
 end;
 
-function TOpenTypePositioningSubTableMarkToLigatureAttachment.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
+function TOpenTypePositioningSubTableMarkToLigatureAttachment.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
 var
   MarkGlyph: TPascalTypeGlyph;
   LigatureGlyph: TPascalTypeGlyph;
@@ -299,22 +299,22 @@ var
   Mark: TOpenTypeMark;
   LigatureAnchor: TOpenTypeAnchor;
 begin
-  if (AIndex < 1) then
+  if (AGlyphIterator.Index < 1) then
     Exit(False);
 
-  MarkGlyph := AGlyphString[AIndex];
+  MarkGlyph := AGlyphIterator.Glyph;
   MarkIndex := MarkCoverage.IndexOfGlyph(MarkGlyph.GlyphID);
   if (MarkIndex = -1) then
     Exit(False);
 
   // Scan backward for a ligature glyph
-  LigatureGlyphIndex := AIndex-1;
-  while (LigatureGlyphIndex >= 0) and (AGlyphString[LigatureGlyphIndex].IsMark) do
+  LigatureGlyphIndex := AGlyphIterator.Peek(-1);
+  while (LigatureGlyphIndex >= 0) and (AGlyphIterator.GlyphString[LigatureGlyphIndex].IsMark) do
     Dec(LigatureGlyphIndex);
   if (LigatureGlyphIndex < 0) then
     Exit(False);
 
-  LigatureGlyph := AGlyphString[LigatureGlyphIndex];
+  LigatureGlyph := AGlyphIterator.GlyphString[LigatureGlyphIndex];
   LigatureIndex := BaseCoverage.IndexOfGlyph(LigatureGlyph.GlyphID);
   if (LigatureIndex = -1) then
     Exit(False);
@@ -333,8 +333,11 @@ begin
 
   MarkGlyph.ApplyAnchor(Mark.Anchor, LigatureAnchor, LigatureGlyphIndex);
 
+{$ifdef ApplyIncrements}
+  AGlyphIterator.Next;
+{$endif ApplyIncrements}
+
   Result := True;
-  Inc(AIndex);
 end;
 
 

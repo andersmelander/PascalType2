@@ -43,6 +43,7 @@ type
   // A GlyphID
   TGlyphID = Word;
   TGlyphString = TArray<TGlyphID>;
+  TGlyphStrings = TArray<TGlyphString>;
 
 type
   TContourPoint = record

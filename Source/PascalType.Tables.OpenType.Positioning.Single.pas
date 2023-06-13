@@ -76,9 +76,9 @@ type
   TCustomOpenTypePositioningSubTableSingle = class(TCustomOpenTypePositioningSubTable)
   private
   protected
-    function DoApply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ACoverageIndex: integer): boolean; virtual; abstract;
+    function DoApply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator; ACoverageIndex: integer): boolean; virtual; abstract;
   public
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
+    function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
   end;
 
 
@@ -96,7 +96,7 @@ type
   private
     FValueRecord: TOpenTypeValueRecord;
   protected
-    function DoApply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ACoverageIndex: integer): boolean; override;
+    function DoApply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator; ACoverageIndex: integer): boolean; override;
   public
     procedure Assign(Source: TPersistent); override;
 
@@ -123,7 +123,7 @@ type
   private
     FValueRecords: TOpenTypeValueRecords;
   protected
-    function DoApply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ACoverageIndex: integer): boolean; override;
+    function DoApply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator; ACoverageIndex: integer): boolean; override;
   public
     procedure Assign(Source: TPersistent); override;
 
@@ -170,14 +170,14 @@ end;
 //              TCustomOpenTypePositioningSubTableSingle
 //
 //------------------------------------------------------------------------------
-function TCustomOpenTypePositioningSubTableSingle.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
+function TCustomOpenTypePositioningSubTableSingle.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
 var
   CoverageIndex: integer;
 begin
-  CoverageIndex := CoverageTable.IndexOfGlyph(AGlyphString[AIndex].GlyphID);
+  CoverageIndex := CoverageTable.IndexOfGlyph(AGlyphIterator.Glyph.GlyphID);
 
   if (CoverageIndex <> -1) then
-    Result := DoApply(AGlyphString, AIndex, CoverageIndex)
+    Result := DoApply(AGlyphIterator, CoverageIndex)
   else
     Result := False;
 end;
@@ -195,10 +195,12 @@ begin
     FValueRecord := TOpenTypePositioningSubTableSingleSingle(Source).ValueRecord;
 end;
 
-function TOpenTypePositioningSubTableSingleSingle.DoApply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ACoverageIndex: integer): boolean;
+function TOpenTypePositioningSubTableSingleSingle.DoApply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator; ACoverageIndex: integer): boolean;
 begin
-  AGlyphString[AIndex].ApplyPositioning(FValueRecord);
-  Inc(AIndex);
+  AGlyphIterator.Glyph.ApplyPositioning(FValueRecord);
+{$ifdef ApplyIncrements}
+  AGlyphIterator.Next;
+{$endif ApplyIncrements}
   Result := True;
 end;
 
@@ -241,11 +243,12 @@ begin
     FValueRecords := TOpenTypePositioningSubTableSingleList(Source).ValueRecords;
 end;
 
-function TOpenTypePositioningSubTableSingleList.DoApply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer;
-  ACoverageIndex: integer): boolean;
+function TOpenTypePositioningSubTableSingleList.DoApply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator; ACoverageIndex: integer): boolean;
 begin
-  AGlyphString[AIndex].ApplyPositioning(FValueRecords[ACoverageIndex]);
-  Inc(AIndex);
+  AGlyphIterator.Glyph.ApplyPositioning(FValueRecords[ACoverageIndex]);
+{$ifdef ApplyIncrements}
+  AGlyphIterator.Next;
+{$endif ApplyIncrements}
   Result := True;
 end;
 

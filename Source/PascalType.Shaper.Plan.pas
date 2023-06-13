@@ -47,6 +47,35 @@ uses
 
 //------------------------------------------------------------------------------
 //
+//              TPascalTypeShaperFeatures
+//
+//------------------------------------------------------------------------------
+// A collection of user features.
+// Each feature is associated with a boolean state. True=Enable feature,
+// False=disable feature.
+//------------------------------------------------------------------------------
+type
+  TPascalTypeShaperFeatures = class
+  private
+    FFeatures: TDictionary<TTableName, boolean>;
+    FEnableAll: boolean;
+    function GetFeatureEnabled(const AKey: TTableName): boolean;
+    procedure SetFeatureEnabled(const AKey: TTableName; const Value: boolean);
+  protected
+    FOnChanged: TNotifyEvent;
+    property OnChanged: TNotifyEvent read FOnChanged write FOnChanged;
+    procedure Changed;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    function GetEnumerator: TEnumerator<TTableName>;
+    function IsEnabled(const AKey: TTableName; ADefault: boolean): boolean;
+    property Enabled[const AKey: TTableName]: boolean read GetFeatureEnabled write SetFeatureEnabled; default;
+    property EnableAll: boolean read FEnableAll write FEnableAll;
+  end;
+
+//------------------------------------------------------------------------------
+//
 //              TPascalTypeShapingPlanStage
 //
 //------------------------------------------------------------------------------
@@ -57,23 +86,33 @@ type
   TPascalTypeShapingPlan = class;
 
   TPascalTypeShapingPlanStage = class
+  public type
+    TPascalTypeShapingPlanDelegate = function(AProcessor: TObject; var AGlyphs: TPascalTypeGlyphString): TTableNames;
   private
     FStages: TPascalTypeShapingPlanStages;
     FFeatures: TList<TTableName>;
+    FDelegate: TPascalTypeShapingPlanDelegate;
     function GetCount: integer;
     function GetFeature(Index: integer): TTableName;
+    function GetFeatures: TTableNames;
+    function GetPlan: TPascalTypeShapingPlan;
   public
     constructor Create(AStages: TPascalTypeShapingPlanStages);
     destructor Destroy; override;
 
-    procedure Add(const AKey: TTableName); overload;
-    procedure Add(const AKeys: TTableNames); overload;
-    procedure Remove(const AKey: TTableName);
+    procedure Add(const AFeature: TTableName; AGlobal: boolean = True); overload;
+    procedure Add(const AFeatures: TTableNames; AGlobal: boolean = True); overload;
+    procedure Remove(const AFeature: TTableName);
 
     function GetEnumerator: TEnumerator<TTableName>;
 
+    property Plan: TPascalTypeShapingPlan read GetPlan;
+
+    property Delegate: TPascalTypeShapingPlanDelegate read FDelegate write FDelegate;
+
     property Count: integer read GetCount;
-    property Features[Index: integer]: TTableName read GetFeature; default;
+    property FeatureList[Index: integer]: TTableName read GetFeature; default;
+    property Features: TTableNames read GetFeatures;
   end;
 
 
@@ -92,18 +131,16 @@ type
     function GetCount: integer;
     function GetStage(Index: integer): TPascalTypeShapingPlanStage;
   protected
-    procedure DoAddFeature(const AKey: TTableName; AStage: TPascalTypeShapingPlanStage);
-    procedure DoRemoveFeature(const AKey: TTableName);
+    procedure DoAddFeature(const AFeature: TTableName; AGlobal: boolean; AStage: TPascalTypeShapingPlanStage);
+    procedure DoRemoveFeature(const AFeature: TTableName);
+    procedure RemoveFeature(const AFeature: TTableName);
+    function HasFeature(const AFeature: TTableName): boolean;
+    property Plan: TPascalTypeShapingPlan read FPlan;
   public
     constructor Create(APlan: TPascalTypeShapingPlan);
     destructor Destroy; override;
 
-    function AddStage: TPascalTypeShapingPlanStage;
-
-    procedure AddFeature(const AKey: TTableName; AStage: TPascalTypeShapingPlanStage = nil);
-    procedure AddFeatures(const AKeys: TTableNames; AStage: TPascalTypeShapingPlanStage = nil);
-    procedure RemoveFeature(const AKey: TTableName);
-    function HasFeature(const AKey: TTableName): boolean;
+    function Add: TPascalTypeShapingPlanStage;
 
     function GetEnumerator: TEnumerator<TPascalTypeShapingPlanStage>;
 
@@ -125,15 +162,26 @@ type
   TPascalTypeShapingPlan = class
   private
     FStages: TPascalTypeShapingPlanStages;
+    FGlobalFeatures: TList<TTableName>;
+    function GetGlobalFeatures: TTableNames;
+  protected
+    procedure DoAddFeature(const AFeature: TTableName; AGlobal: boolean; AStage: TPascalTypeShapingPlanStage);
+    procedure DoRemoveFeature(const AFeature: TTableName);
   public
     constructor Create; virtual;
     destructor Destroy; override;
 
-    procedure AddFeature(const AKey: TTableName);
-    procedure RemoveFeature(const AKey: TTableName);
-    function HasFeature(const AKey: TTableName): boolean;
+    procedure AddFeature(const AFeature: TTableName; AGlobal: boolean = True; AStage: TPascalTypeShapingPlanStage = nil);
+    procedure AddFeatures(const AFeatures: TTableNames; AGlobal: boolean = True; AStage: TPascalTypeShapingPlanStage = nil);
+    procedure RemoveFeature(const AFeature: TTableName);
+    function HasFeature(const AFeature: TTableName): boolean;
+
+    procedure ApplyUserFeatures(AFeatures: TPascalTypeShaperFeatures);
+
+    function GetEnumerator: TEnumerator<TPascalTypeShapingPlanStage>;
 
     property Stages: TPascalTypeShapingPlanStages read FStages;
+    property GlobalFeatures: TTableNames read GetGlobalFeatures;
   end;
 
 type
@@ -164,21 +212,21 @@ begin
   inherited;
 end;
 
-procedure TPascalTypeShapingPlanStage.Add(const AKey: TTableName);
+procedure TPascalTypeShapingPlanStage.Add(const AFeature: TTableName; AGlobal: boolean);
 begin
-  if (FStages.HasFeature(AKey)) then
+  if (FStages.HasFeature(AFeature)) then
     exit;
 
-  FFeatures.Add(AKey);
-  FStages.DoAddFeature(AKey, Self);
+  FFeatures.Add(AFeature);
+  FStages.DoAddFeature(AFeature, AGlobal, Self);
 end;
 
-procedure TPascalTypeShapingPlanStage.Add(const AKeys: TTableNames);
+procedure TPascalTypeShapingPlanStage.Add(const AFeatures: TTableNames; AGlobal: boolean);
 var
-  Key: TTableName;
+  Feature: TTableName;
 begin
-  for Key in AKeys do
-    Add(Key);
+  for Feature in AFeatures do
+    Add(Feature, AGlobal);
 end;
 
 function TPascalTypeShapingPlanStage.GetCount: integer;
@@ -196,15 +244,29 @@ begin
   Result := FFeatures[Index];
 end;
 
-procedure TPascalTypeShapingPlanStage.Remove(const AKey: TTableName);
+function TPascalTypeShapingPlanStage.GetFeatures: TTableNames;
+var
+  i: integer;
+begin
+  SetLength(Result, FFeatures.Count);
+  for i := 0 to FFeatures.Count-1 do
+    Result[i] := FFeatures[i];
+end;
+
+function TPascalTypeShapingPlanStage.GetPlan: TPascalTypeShapingPlan;
+begin
+  Result := FStages.Plan;
+end;
+
+procedure TPascalTypeShapingPlanStage.Remove(const AFeature: TTableName);
 var
   Index: integer;
 begin
-  Index := FFeatures.IndexOf(AKey);
+  Index := FFeatures.IndexOf(AFeature);
   if (Index <> -1) then
   begin
     FFeatures.Delete(Index);
-    FStages.DoRemoveFeature(AKey);
+    FStages.DoRemoveFeature(AFeature);
   end;
 end;
 
@@ -229,47 +291,22 @@ begin
   inherited;
 end;
 
-procedure TPascalTypeShapingPlanStages.AddFeature(const AKey: TTableName; AStage: TPascalTypeShapingPlanStage);
-begin
-  // Stage.Add also checks for this but since we would like to
-  // avoid adding a new empty space if the feature already exist
-  // we need to do it here too.
-  if (HasFeature(AKey)) then
-    exit;
-
-  if (AStage = nil) then
-  begin
-    if (FStages.Count > 0) then
-      AStage := FStages.Last
-    else
-      AStage := AddStage;
-  end;
-
-  AStage.Add(AKey);
-end;
-
-procedure TPascalTypeShapingPlanStages.AddFeatures(const AKeys: TTableNames; AStage: TPascalTypeShapingPlanStage);
-var
-  Key: TTableName;
-begin
-  for Key in AKeys do
-    AddFeature(Key, AStage);
-end;
-
-function TPascalTypeShapingPlanStages.AddStage: TPascalTypeShapingPlanStage;
+function TPascalTypeShapingPlanStages.Add: TPascalTypeShapingPlanStage;
 begin
   Result := TPascalTypeShapingPlanStage.Create(Self);
   FStages.Add(Result);
 end;
 
-procedure TPascalTypeShapingPlanStages.DoAddFeature(const AKey: TTableName; AStage: TPascalTypeShapingPlanStage);
+procedure TPascalTypeShapingPlanStages.DoAddFeature(const AFeature: TTableName; AGlobal: boolean; AStage: TPascalTypeShapingPlanStage);
 begin
-  FAllFeatures.Add(AKey, AStage);
+  FAllFeatures.Add(AFeature, AStage);
+  Plan.DoAddFeature(AFeature, AGlobal, AStage);
 end;
 
-procedure TPascalTypeShapingPlanStages.DoRemoveFeature(const AKey: TTableName);
+procedure TPascalTypeShapingPlanStages.DoRemoveFeature(const AFeature: TTableName);
 begin
-  FAllFeatures.Remove(AKey);
+  FAllFeatures.Remove(AFeature);
+  Plan.DoRemoveFeature(AFeature);
 end;
 
 function TPascalTypeShapingPlanStages.GetCount: integer;
@@ -287,17 +324,17 @@ begin
   Result := FStages[Index];
 end;
 
-function TPascalTypeShapingPlanStages.HasFeature(const AKey: TTableName): boolean;
+function TPascalTypeShapingPlanStages.HasFeature(const AFeature: TTableName): boolean;
 begin
-  Result := FAllFeatures.ContainsKey(AKey);
+  Result := FAllFeatures.ContainsKey(AFeature);
 end;
 
-procedure TPascalTypeShapingPlanStages.RemoveFeature(const AKey: TTableName);
+procedure TPascalTypeShapingPlanStages.RemoveFeature(const AFeature: TTableName);
 var
   Stage: TPascalTypeShapingPlanStage;
 begin
-  if (FAllFeatures.TryGetValue(AKey, Stage)) then
-    Stage.Remove(AKey);
+  if (FAllFeatures.TryGetValue(AFeature, Stage)) then
+    Stage.Remove(AFeature);
 end;
 
 
@@ -310,27 +347,134 @@ constructor TPascalTypeShapingPlan.Create;
 begin
   inherited Create;
   FStages := TPascalTypeShapingPlanStages.Create(Self);
+  FGlobalFeatures := TList<TTableName>.Create;
 end;
 
 destructor TPascalTypeShapingPlan.Destroy;
 begin
   FStages.Free;
+  FGlobalFeatures.Free;
   inherited;
 end;
 
-procedure TPascalTypeShapingPlan.AddFeature(const AKey: TTableName);
+procedure TPascalTypeShapingPlan.DoAddFeature(const AFeature: TTableName; AGlobal: boolean; AStage: TPascalTypeShapingPlanStage);
 begin
-  FStages.AddFeature(AKey);
+  if (AGlobal) then
+    FGlobalFeatures.Add(AFeature);
 end;
 
-function TPascalTypeShapingPlan.HasFeature(const AKey: TTableName): boolean;
+procedure TPascalTypeShapingPlan.DoRemoveFeature(const AFeature: TTableName);
 begin
-  Result := FStages.HasFeature(AKey);
+  FGlobalFeatures.Remove(AFeature);
 end;
 
-procedure TPascalTypeShapingPlan.RemoveFeature(const AKey: TTableName);
+function TPascalTypeShapingPlan.GetEnumerator: TEnumerator<TPascalTypeShapingPlanStage>;
 begin
-  FStages.RemoveFeature(AKey);
+  Result := FStages.GetEnumerator;
+end;
+
+function TPascalTypeShapingPlan.GetGlobalFeatures: TTableNames;
+var
+  i: integer;
+begin
+  SetLength(Result, FGlobalFeatures.Count);
+  for i := 0 to FGlobalFeatures.Count-1 do
+    Result[i] := FGlobalFeatures[i];
+end;
+
+procedure TPascalTypeShapingPlan.AddFeature(const AFeature: TTableName; AGlobal: boolean; AStage: TPascalTypeShapingPlanStage);
+begin
+  // Stage.Add also checks for this but since we would like to
+  // avoid adding a new empty space if the feature already exist
+  // we need to do it here too.
+  if (HasFeature(AFeature)) then
+    exit;
+
+  if (AStage = nil) then
+  begin
+    if (FStages.Count > 0) then
+      AStage := FStages[FStages.Count-1]
+    else
+      AStage := FStages.Add;
+  end;
+
+  AStage.Add(AFeature, AGlobal);
+end;
+
+procedure TPascalTypeShapingPlan.AddFeatures(const AFeatures: TTableNames; AGlobal: boolean; AStage: TPascalTypeShapingPlanStage);
+var
+  Feature: TTableName;
+begin
+  for Feature in AFeatures do
+    AddFeature(Feature, AGlobal, AStage);
+end;
+
+procedure TPascalTypeShapingPlan.ApplyUserFeatures(AFeatures: TPascalTypeShaperFeatures);
+var
+  Feature: TTableName;
+begin
+  // We use a feature dictionary because we need the ability to associate a boolean
+  // value with the feature tag in order to allow the user to disable features.
+  for Feature in AFeatures do
+    if (AFeatures[Feature]) then
+      AddFeature(Feature)
+    else
+      RemoveFeature(Feature);
+end;
+
+function TPascalTypeShapingPlan.HasFeature(const AFeature: TTableName): boolean;
+begin
+  Result := FStages.HasFeature(AFeature);
+end;
+
+procedure TPascalTypeShapingPlan.RemoveFeature(const AFeature: TTableName);
+begin
+  FStages.RemoveFeature(AFeature);
+end;
+
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeShaperFeatures
+//
+//------------------------------------------------------------------------------
+procedure TPascalTypeShaperFeatures.Changed;
+begin
+  if (Assigned(FOnChanged)) then
+    FOnChanged(Self);
+end;
+
+constructor TPascalTypeShaperFeatures.Create;
+begin
+  inherited Create;
+  FFeatures := TDictionary<TTableName, boolean>.Create;
+end;
+
+destructor TPascalTypeShaperFeatures.Destroy;
+begin
+  FFeatures.Free;
+  inherited;
+end;
+
+function TPascalTypeShaperFeatures.GetEnumerator: TEnumerator<TTableName>;
+begin
+  Result := FFeatures.Keys.GetEnumerator;
+end;
+
+function TPascalTypeShaperFeatures.GetFeatureEnabled(const AKey: TTableName): boolean;
+begin
+  Result := IsEnabled(AKey, FEnableAll);
+end;
+
+function TPascalTypeShaperFeatures.IsEnabled(const AKey: TTableName; ADefault: boolean): boolean;
+begin
+  if (not FFeatures.TryGetValue(AKey, Result)) then
+    Result := ADefault;
+end;
+
+procedure TPascalTypeShaperFeatures.SetFeatureEnabled(const AKey: TTableName; const Value: boolean);
+begin
+  FFeatures.AddOrSetValue(AKey, Value);
+  Changed;
 end;
 
 end.

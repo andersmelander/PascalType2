@@ -98,7 +98,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
+    function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
 
     property PairValues: TPairValues read FPairValues write FPairValues;
   end;
@@ -138,7 +138,7 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    function Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean; override;
+    function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
 
     property FirstClassDefinitions: TCustomOpenTypeClassDefinitionTable read FFirstClassDefinitions write SetFirstClassDefinitions;
     property SecondClassDefinitions: TCustomOpenTypeClassDefinitionTable read FSecondClassDefinitions write SetSecondClassDefinitions;
@@ -189,36 +189,45 @@ begin
     FPairValues := TOpenTypePositioningSubTablePairSingle(Source).PairValues;
 end;
 
-function TOpenTypePositioningSubTablePairSingle.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
+function TOpenTypePositioningSubTablePairSingle.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
 var
   CoverageIndex: integer;
   i: integer;
   SecondGlyphID: Word;
+  SecondGlyph: TPascalTypeGlyph;
 begin
-  if (AIndex >= AGlyphString.Count-1) then
-    Exit(False);
-
-  CoverageIndex := CoverageTable.IndexOfGlyph(AGlyphString[AIndex].GlyphID);
-  if (CoverageIndex = -1) then
-    Exit(False);
-
   Result := False;
+
+  if (AGlyphIterator.Index >= AGlyphIterator.GlyphString.Count-1) then
+    Exit;
+
+  CoverageIndex := CoverageTable.IndexOfGlyph(AGlyphIterator.Glyph.GlyphID);
+  if (CoverageIndex = -1) then
+    Exit;
+
+  SecondGlyph := AGlyphIterator.PeekGlyph;
+  if (SecondGlyph = nil) then
+    Exit;
 
   for i := 0 to High(FPairValues[CoverageIndex]) do
   begin
     SecondGlyphID := FPairValues[CoverageIndex, i].SecondGlyphID;
 
-    if (SecondGlyphID >= AGlyphString[AIndex+1].GlyphID) then
+    if (SecondGlyphID >= SecondGlyph.GlyphID) then
     begin
-      if (SecondGlyphID = AGlyphString[AIndex+1].GlyphID) then
+      if (SecondGlyphID = SecondGlyph.GlyphID) then
       begin
-        AGlyphString[AIndex].ApplyPositioning(FPairValues[CoverageIndex, i].FirstValueRecord);
-        Inc(AIndex);
+        AGlyphIterator.Glyph.ApplyPositioning(FPairValues[CoverageIndex, i].FirstValueRecord);
+{$ifdef ApplyIncrements}
+        AGlyphIterator.Next;
+{$endif ApplyIncrements}
 
         if (not FPairValues[CoverageIndex, i].SecondValueRecord.IsEmpty) then
         begin
-          AGlyphString[AIndex].ApplyPositioning(FPairValues[CoverageIndex, i].SecondValueRecord);
-          Inc(AIndex);
+          SecondGlyph.ApplyPositioning(FPairValues[CoverageIndex, i].SecondValueRecord);
+{$ifdef ApplyIncrements}
+          AGlyphIterator.Next;
+{$endif ApplyIncrements}
         end;
 
         Result := True;
@@ -359,21 +368,23 @@ begin
   end;
 end;
 
-function TOpenTypePositioningSubTablePairClass.Apply(AGlyphString: TPascalTypeGlyphString; var AIndex: integer; ADirection: TPascalTypeDirection): boolean;
+function TOpenTypePositioningSubTablePairClass.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
 var
   CoverageIndex: integer;
   FirstClassID, SecondClassID: integer;
   ClassValueRecord: TClassValueRecord;
+  SecondGlyph: TPascalTypeGlyph;
 begin
-  if (AIndex >= AGlyphString.Count-1) then
+  if (AGlyphIterator.Index >= AGlyphIterator.GlyphString.Count-1) then
     Exit(False);
 
-  CoverageIndex := CoverageTable.IndexOfGlyph(AGlyphString[AIndex].GlyphID);
+  CoverageIndex := CoverageTable.IndexOfGlyph(AGlyphIterator.Glyph.GlyphID);
   if (CoverageIndex = -1) then
     Exit(False);
 
-  FirstClassID := FFirstClassDefinitions.ClassByGlyphID(AGlyphString[AIndex].GlyphID);
-  SecondClassID := FSecondClassDefinitions.ClassByGlyphID(AGlyphString[AIndex+1].GlyphID);
+  FirstClassID := FFirstClassDefinitions.ClassByGlyphID(AGlyphIterator.Glyph.GlyphID);
+  SecondGlyph := AGlyphIterator.PeekGlyph;
+  SecondClassID := FSecondClassDefinitions.ClassByGlyphID(SecondGlyph.GlyphID);
 
   ClassValueRecord := FClassValueRecords[FirstClassID, SecondClassID];
 
@@ -381,13 +392,17 @@ begin
   if (ClassValueRecord.FirstValueRecord.IsEmpty) and (ClassValueRecord.SecondValueRecord.IsEmpty) then
     Exit(False);
 
-  AGlyphString[AIndex].ApplyPositioning(ClassValueRecord.FirstValueRecord);
-  Inc(AIndex);
+  AGlyphIterator.Glyph.ApplyPositioning(ClassValueRecord.FirstValueRecord);
+{$ifdef ApplyIncrements}
+  AGlyphIterator.Next;
+{$endif ApplyIncrements}
 
   if (not ClassValueRecord.SecondValueRecord.IsEmpty) then
   begin
-    AGlyphString[AIndex].ApplyPositioning(ClassValueRecord.SecondValueRecord);
-    Inc(AIndex);
+    SecondGlyph.ApplyPositioning(ClassValueRecord.SecondValueRecord);
+{$ifdef ApplyIncrements}
+    AGlyphIterator.Next;
+{$endif ApplyIncrements}
   end;
 
   Result := True;
