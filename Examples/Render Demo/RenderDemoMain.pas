@@ -143,6 +143,24 @@ const
   );
 
 
+var
+  OneOverDPIScale: Double;
+
+procedure GetDPIScale;
+begin
+  OneOverDPIScale := Screen.PixelsPerInch / 96;
+end;
+
+function _DPIAware(AValue: Integer): Integer; overload;
+begin
+  Result := Round(AValue * OneOverDPIScale);
+end;
+
+function _DPIAware(AValue: Double): Double; overload;
+begin
+  Result := AValue * OneOverDPIScale;
+end;
+
 procedure TFmRenderDemo.FormCreate(Sender: TObject);
 var
   TestCase: TTestCase;
@@ -227,7 +245,7 @@ begin
   Canvas.Brush.Color := clWhite;
   Canvas.FillRect(Canvas.ClipRect);
 
-  FRasterizerGDI.FontSize := FFontSize;
+  FRasterizerGDI.FontSize := _DPIAware(FFontSize);
   FRasterizerGDI.RenderText(FText, Canvas, 0, 0)
 end;
 
@@ -272,7 +290,7 @@ begin
       BrushStroke.EndStyle := esButt;
 {$endif STROKE_PATH}
       FRasterizerGraphics32.FontSize := 0; // TODO : We need to force a recalc of the scale. Changing the font doesn't notify the rasterizer.
-      FRasterizerGraphics32.FontSize := FFontSize;
+      FRasterizerGraphics32.FontSize := _DPIAware(FFontSize);
 
       Shaper := TPascalTypeShaper.Create(FFontFace);
       try
@@ -326,7 +344,7 @@ begin
     try
       Font := TFontCache.Create(FontReader);
       try
-        Font.FontHeight :=  FFontSize * 96 {DPI} div 72;
+        Font.FontHeight :=  _DPIAware(FFontSize);
 
         Font.InvertY := True;
 
@@ -500,4 +518,6 @@ begin
   end;
 end;
 
+initialization
+  GetDPIScale;
 end.
