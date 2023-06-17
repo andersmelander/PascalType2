@@ -215,6 +215,7 @@
         <DCCReference Include="..\..\Source\PascalType.Shaper.Layout.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Shaper.OpenType.Processor.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Shaper.Layout.OpenType.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.kern.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -79,7 +79,8 @@ uses
   PascalType.Shaper.OpenType.Processor.GSUB in '..\..\Source\PascalType.Shaper.OpenType.Processor.GSUB.pas',
   PascalType.Shaper.Layout in '..\..\Source\PascalType.Shaper.Layout.pas',
   PascalType.Shaper.OpenType.Processor in '..\..\Source\PascalType.Shaper.OpenType.Processor.pas',
-  PascalType.Shaper.Layout.OpenType in '..\..\Source\PascalType.Shaper.Layout.OpenType.pas';
+  PascalType.Shaper.Layout.OpenType in '..\..\Source\PascalType.Shaper.Layout.OpenType.pas',
+  PascalType.Tables.TrueType.kern in '..\..\Source\PascalType.Tables.TrueType.kern.pas';
 
 {$R *.res}
 

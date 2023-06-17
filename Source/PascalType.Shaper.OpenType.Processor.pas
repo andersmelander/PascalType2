@@ -76,7 +76,7 @@ type
     FFeatureMap: TFeatureMap;
   protected
     procedure LoadFeatureMap;
-    function GetAvailableFeatures: TTableNames;
+    function GetAvailableFeatures: TTableNames; virtual;
     function GetLookupsByFeatures(AFeatures: TTableNames): TLookupItems;
     function ApplyLookups(const ALookups: TLookupItems; var AGlyphs: TPascalTypeGlyphString): TTableNames;
     function ApplyLookup(var AGlyphIterator: TPascalTypeGlyphGlyphIterator; ALookupTable: TCustomOpenTypeLookupTable): boolean; virtual;
@@ -142,6 +142,8 @@ function TCustomPascalTypeOpenTypeProcessor.ExecutePlan(APlan: TPascalTypeShapin
 var
   Stage: TPascalTypeShapingPlanStage;
 begin
+  Result := [];
+
   LoadFeatureMap;
 
   for Stage in APlan do
@@ -150,7 +152,7 @@ begin
       Stage.Delegate(Self, AGlyphs);
 
     if (Stage.Count > 0) then
-      ApplyFeatures(Stage.Features, AGlyphs);
+      Result := Result + ApplyFeatures(Stage.Features, AGlyphs);
   end;
 end;
 

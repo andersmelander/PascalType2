@@ -97,8 +97,13 @@ type
 implementation
 
 uses
+  System.Math,
+{$ifdef DEBUG}
+  WinApi.Windows,
+{$endif DEBUG}
   PascalType.Tables.OpenType.Script,
-  PascalType.Tables.OpenType.LanguageSystem;
+  PascalType.Tables.OpenType.LanguageSystem,
+  PascalType.Tables.TrueType.kern; // TPascalTypeKerningTable
 
 
 //------------------------------------------------------------------------------
@@ -124,15 +129,63 @@ begin
 end;
 
 procedure TCustomPascalTypeLayoutEngine.ApplyKerning(var AGlyphs: TPascalTypeGlyphString);
+var
+  KerningTable: TPascalTypeKerningTable;
+  KerningSubTable: TPascalTypeKerningSubTable;
+  i, j: integer;
+  Delta: integer;
+{$ifdef DEBUG}
+  AnyApplied: boolean;
+{$endif DEBUG}
 begin
-(*
-  // TODO
-  // See: LayoutEngine.js line 110
-  if (FKernProcessor = nil) then
-    FKernProcessor := TPascalTypeTrueTypeKernProcessor.Create(Font);
+  // TODO : Move this to another unit
+{$ifdef DEBUG}
+  AnyApplied := False;
+{$endif DEBUG}
 
-  FKernProcessor.Apply(AGlyphs);
-*)
+  KerningTable := Font.GetTableByTableType('kern') as TPascalTypeKerningTable;
+
+  for i := 0 to AGlyphs.Count-2 do
+  begin
+    for j := 0 to KerningTable.KerningSubtableCount-1 do
+    begin
+      KerningSubTable := KerningTable.KerningSubtable[j];
+
+      // Ignore vertical kerning
+      if (KerningSubTable.IsCrossStream) then
+        continue;
+
+      case KerningSubTable.Version of
+        0:
+          if (not KerningSubTable.IsHorizontal) then
+            continue;
+
+      else
+        continue;
+      end;
+
+      // TODO : GetKerningValue should return a boolean indicating match/no-match
+      Delta := KerningSubTable.FormatTable.GetKerningValue(AGlyphs[i].GlyphID, AGlyphs[i+1].GlyphID);
+
+      if (Delta <> 0) then
+      begin
+{$ifdef DEBUG}
+        AnyApplied := True;
+{$endif DEBUG}
+        if (KerningSubTable.IsMinimum) then
+          AGlyphs[i].XAdvance := Max(Delta, AGlyphs[i].XAdvance)
+        else
+        if (KerningSubTable.IsReplace) then
+          AGlyphs[i].XAdvance := Delta
+        else
+          AGlyphs[i].XAdvance := AGlyphs[i].XAdvance + Delta;
+      end;
+    end;
+  end;
+{$ifdef DEBUG}
+  if (AnyApplied) then
+    OutputDebugString('Applied kern table');
+{$endif DEBUG}
 end;
 
 procedure TCustomPascalTypeLayoutEngine.ApplyRightToLeft(var AGlyphs: TPascalTypeGlyphString);

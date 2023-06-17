@@ -54,6 +54,7 @@ type
     FPositionTable: TOpenTypeGlyphPositionTable;
   protected
     function GetTable: TCustomOpenTypeCommonTable; override;
+    function GetAvailableFeatures: TTableNames; override;
   public
     constructor Create(AFont: TCustomPascalTypeFontFace; AScript: TTableType; ALanguage: TTableType; ADirection: TPascalTypeDirection); override;
 
@@ -83,6 +84,16 @@ begin
   inherited;
 
   FPositionTable := Font.GetTableByTableType(TOpenTypeGlyphPositionTable.GetTableType) as TOpenTypeGlyphPositionTable;
+end;
+
+function TPascalTypeOpenTypeProcessorGPOS.GetAvailableFeatures: TTableNames;
+begin
+  Result := inherited GetAvailableFeatures;
+
+  // If we do not have a 'kern' lookup, but we have an old-style kern table, then
+  // we indicate that we are able to apply the 'kern' feature.
+  if (not Result.Contains('kern')) and (Font.GetTableByTableType('kern') <> nil) then
+    Result.Add('kern');
 end;
 
 function TPascalTypeOpenTypeProcessorGPOS.GetTable: TCustomOpenTypeCommonTable;
