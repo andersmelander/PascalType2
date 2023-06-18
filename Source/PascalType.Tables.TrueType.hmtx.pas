@@ -72,7 +72,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property HorizontalMetric[Index: Integer]: THorizontalMetric read GetHorizontalMetric;
@@ -115,7 +115,7 @@ begin
   Result.AsAnsiChar := 'hmtx';
 end;
 
-procedure TPascalTypeHorizontalMetricsTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeHorizontalMetricsTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   HorHead  : TPascalTypeHorizontalHeaderTable;
   MaxProf  : TPascalTypeMaximumProfileTable;

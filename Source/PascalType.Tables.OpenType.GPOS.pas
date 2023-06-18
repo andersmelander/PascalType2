@@ -64,6 +64,7 @@ type
 
     class function GetTableType: TTableType; override;
 
+    function IsExtensionLookupType(LookupType: Word): boolean; override;
     function GetLookupTableClass(ALookupType: Word): TOpenTypeLookupTableClass; override;
   end;
 
@@ -99,6 +100,11 @@ end;
 class function TOpenTypeGlyphPositionTable.GetTableType: TTableType;
 begin
   Result := 'GPOS';
+end;
+
+function TOpenTypeGlyphPositionTable.IsExtensionLookupType(LookupType: Word): boolean;
+begin
+  Result := (TGlyphPositioning(LookupType) = gpExtensionPositioning);
 end;
 
 //------------------------------------------------------------------------------

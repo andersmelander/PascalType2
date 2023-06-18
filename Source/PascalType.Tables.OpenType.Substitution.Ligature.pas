@@ -92,7 +92,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
@@ -163,7 +163,7 @@ begin
   end;
 end;
 
-procedure TOpenTypeSubstitutionSubTableLigatureList.LoadFromStream(Stream: TStream);
+procedure TOpenTypeSubstitutionSubTableLigatureList.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   SavePos: Int64;

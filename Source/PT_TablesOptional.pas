@@ -54,7 +54,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property SignatureLength: Cardinal read GetSignatureLength;
@@ -90,7 +90,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: Cardinal read FVersion write SetVersion;
@@ -126,7 +126,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: Word read FVersion write SetVersion;
@@ -152,7 +152,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property ppem: Byte read Fppem write Setppem;
@@ -179,7 +179,7 @@ type
 
     class function GetTableType: TTableType; override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: Word read FVersion write SetVersion;
@@ -204,7 +204,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: Word read FVersion write SetVersion;
@@ -271,7 +271,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: TFixedPoint read FVersion write SetVersion;
@@ -311,7 +311,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -340,7 +340,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: Word read FVersion write SetVersion;
@@ -379,7 +379,7 @@ begin
   Result := Length(FSignature);
 end;
 
-procedure TPascalTypeDigitalSignatureBlock.LoadFromStream(Stream: TStream);
+procedure TPascalTypeDigitalSignatureBlock.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -495,7 +495,7 @@ begin
   Result := FSignatures.Count;
 end;
 
-procedure TPascalTypeDigitalSignatureTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeDigitalSignatureTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos : Int64;
   DirIndex : Integer;
@@ -673,8 +673,7 @@ begin
   Result := Length(FGaspRanges);
 end;
 
-procedure TPascalTypeGridFittingAndScanConversionProcedureTable.LoadFromStream
-  (Stream: TStream);
+procedure TPascalTypeGridFittingAndScanConversionProcedureTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   RangeIndex: Integer;
 begin
@@ -774,7 +773,7 @@ begin
   Result := Length(FWidths);
 end;
 
-procedure TPascalTypeHorizontalDeviceMetricsSubTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeHorizontalDeviceMetricsSubTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   MaxProfile: TPascalTypeMaximumProfileTable;
 begin
@@ -895,7 +894,7 @@ begin
   Result.AsAnsiChar := 'hdmx';
 end;
 
-procedure TPascalTypeHorizontalDeviceMetricsTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeHorizontalDeviceMetricsTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   OffsetPosition  : Int64;
   SizeDeviceRecord: Cardinal;
@@ -1011,7 +1010,7 @@ begin
   Result := Length(FVerticalPels);
 end;
 
-procedure TPascalTypeLinearThresholdTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeLinearThresholdTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -1116,7 +1115,7 @@ begin
   Result := string(FTypeface);
 end;
 
-procedure TPascalTypePCL5Table.LoadFromStream(Stream: TStream);
+procedure TPascalTypePCL5Table.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   Value32: Cardinal;
 begin
@@ -1434,7 +1433,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeVDMXGroupTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeVDMXGroupTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   EntryIndex: Integer;
 begin
@@ -1543,7 +1542,7 @@ begin
   Result.AsAnsiChar := 'VDMX';
 end;
 
-procedure TPascalTypeVerticalDeviceMetricsTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeVerticalDeviceMetricsTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   RatioIndex: Integer;
   Offsets   : array of Word;

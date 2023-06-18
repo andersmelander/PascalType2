@@ -84,7 +84,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
@@ -133,7 +133,7 @@ begin
     FSequenceList := TOpenTypeSubstitutionSubTableMultipleList(Source).SubstituteSequenceList;
 end;
 
-procedure TOpenTypeSubstitutionSubTableMultipleList.LoadFromStream(Stream: TStream);
+procedure TOpenTypeSubstitutionSubTableMultipleList.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   i, j: integer;

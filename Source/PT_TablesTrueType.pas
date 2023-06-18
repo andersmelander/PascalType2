@@ -45,7 +45,7 @@ type
 
   TTrueTypeFontControlValueTable = class(TCustomPascalTypeNamedTable)
   private
-    FControlValues: array of SmallInt;
+    FControlValues: TArray<SmallInt>;
     function GetControlValue(Index: Integer): SmallInt;
     function GetControlValueCount: Integer;
   public
@@ -56,7 +56,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property ControlValue[Index: Integer]: SmallInt read GetControlValue;
@@ -68,7 +68,7 @@ type
 
   TCustomTrueTypeFontInstructionTable = class(TCustomPascalTypeNamedTable)
   private
-    FInstructions: array of Byte;
+    FInstructions: TArray<Byte>;
     function GetInstruction(Index: Integer): Byte;
     function GetInstructionCount: Integer;
   public
@@ -77,7 +77,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Instruction[Index: Integer]: Byte read GetInstruction;
@@ -105,7 +105,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Location[Index: Integer]: Cardinal read GetLocation; default;
@@ -164,25 +164,19 @@ begin
   Result := Length(FControlValues);
 end;
 
-procedure TTrueTypeFontControlValueTable.LoadFromStream(Stream: TStream);
+procedure TTrueTypeFontControlValueTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
-  with Stream do
-  begin
-    SetLength(FControlValues, Size div 2);
-
-    // check for minimal table size
-    if Position + Length(FControlValues) * SizeOf(Word) > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-    // read control values
-    Read(FControlValues[0], Length(FControlValues) * SizeOf(Word));
-  end;
+  SetLength(FControlValues, Size div 2);
+  // TODO : Littel/Big Endian?
+  if (Size > 0) then
+    Stream.Read(FControlValues[0], Length(FControlValues) * SizeOf(SmallInt));
 end;
 
 procedure TTrueTypeFontControlValueTable.SaveToStream(Stream: TStream);
 begin
   // write control values
-  Stream.Write(FControlValues[0], Length(FControlValues) * SizeOf(Word));
+  if (Length(FControlValues) > 0) then
+    Stream.Write(FControlValues[0], Length(FControlValues) * SizeOf(Word));
 end;
 
 
@@ -219,16 +213,12 @@ begin
   Result := Length(FInstructions);
 end;
 
-procedure TCustomTrueTypeFontInstructionTable.LoadFromStream(Stream: TStream);
+procedure TCustomTrueTypeFontInstructionTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
-  SetLength(FInstructions, Stream.Size);
+  SetLength(FInstructions, Size);
 
-  // check for minimal table size
-  if Stream.Position + Length(FInstructions) > Stream.Size then
-    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-  // read control values
-  Stream.Read(FInstructions[0], Length(FInstructions) * SizeOf(Word));
+  if (Size > 0) then
+    Stream.Read(FInstructions[0], Length(FInstructions) * SizeOf(Byte));
 end;
 
 procedure TCustomTrueTypeFontInstructionTable.SaveToStream(Stream: TStream);
@@ -273,7 +263,7 @@ begin
   Result.AsAnsiChar := 'loca';
 end;
 
-procedure TTrueTypeFontLocationTable.LoadFromStream(Stream: TStream);
+procedure TTrueTypeFontLocationTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   LocationIndex: Integer;
   HeaderTable  : TPascalTypeHeaderTable;
@@ -291,7 +281,7 @@ begin
     ilShort:
       begin
         // check (minimum) table size
-        if (MaxProfTable.NumGlyphs + 1) * SizeOf(Word) > Stream.Size then
+        if (MaxProfTable.NumGlyphs + 1) * SizeOf(Word) > Size then
           raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
         // set location array length
@@ -305,7 +295,7 @@ begin
     ilLong:
       begin
         // check (minimum) table size
-        if (MaxProfTable.NumGlyphs + 1) * SizeOf(Cardinal) > Stream.Size then
+        if (MaxProfTable.NumGlyphs + 1) * SizeOf(Cardinal) > Size then
           raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
         // set location array length

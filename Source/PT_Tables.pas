@@ -56,7 +56,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Stream: TMemoryStream read FStream;
@@ -128,7 +128,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     // table data
@@ -208,7 +208,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: TFixedPoint read FVersion write SetVersion;
@@ -251,7 +251,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Name: WideString read FNameString;
@@ -325,7 +325,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Format: Word read FFormat write SetFormat;
@@ -350,7 +350,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function GlyphIndexToString(GlyphIndex: Integer): string;
@@ -397,7 +397,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: TFixedPoint read FVersion write SetVersion;
@@ -476,10 +476,11 @@ begin
   Result.AsInteger := 0;
 end;
 
-procedure TPascalTypeUnknownTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeUnknownTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
-  FStream.Seek(0, soFromBeginning);
-  FStream.CopyFrom(Stream, Stream.Size - Stream.Position);
+  FStream.Size := 0;
+  if (Size > 0) then
+    FStream.CopyFrom(Stream, Size);
 end;
 
 procedure TPascalTypeUnknownTable.SaveToStream(Stream: TStream);
@@ -534,7 +535,7 @@ begin
   Result.AsAnsiChar := 'head';
 end;
 
-procedure TPascalTypeHeaderTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeHeaderTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   Value64: Int64;
   Value32: Cardinal;
@@ -931,7 +932,7 @@ begin
   Result := FEncodingID;
 end;
 
-procedure TCustomTrueTypeFontNamePlatform.LoadFromStream(Stream: TStream);
+procedure TCustomTrueTypeFontNamePlatform.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   with Stream do
   begin
@@ -1189,7 +1190,7 @@ begin
     FreeAndNil(FNameSubTables[NameIndex]);
 end;
 
-procedure TPascalTypeNameTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeNameTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StoragePos : Int64;
   OldPosition: Int64;
@@ -1238,8 +1239,7 @@ begin
         piISO:
           FNameSubTables[NameIndex] := TTrueTypeFontNamePlatformISO.Create;
         piMicrosoft:
-          FNameSubTables[NameIndex] :=
-            TTrueTypeFontNamePlatformMicrosoft.Create;
+          FNameSubTables[NameIndex] := TTrueTypeFontNamePlatformMicrosoft.Create;
       else
         raise EPascalTypeError.CreateFmt(RCStrUnsupportedPlatform, [Value16]);
       end;
@@ -1326,7 +1326,7 @@ begin
   Result.AsAnsiChar := 'maxp';
 end;
 
-procedure TPascalTypeMaximumProfileTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeMaximumProfileTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   // check (minimum) table size
   if Stream.Position + $6 > Stream.Size then
@@ -1715,7 +1715,7 @@ end;
 {$DEFINE R_PLUS}
 {$RANGECHECKS OFF}
 {$ENDIF}
-procedure TPascalTypePostscriptTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypePostscriptTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   Value32: Cardinal;
 begin
@@ -1967,7 +1967,7 @@ begin
   end;
 end;
 
-procedure TPascalTypePostscriptVersion2Table.LoadFromStream(Stream: TStream);
+procedure TPascalTypePostscriptVersion2Table.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   GlyphIndex: Integer;
   Value8    : Byte;
@@ -1981,16 +1981,9 @@ begin
     // load number of glyphs
     SetLength(FGlyphNameIndex, BigEndianValueReader.ReadWord(Stream));
 
-    // read glyph name index array (with speed optimization)
-    if Stream is TMemoryStream then
-    begin
-      BigEndianValueReader.Copy(PWord(NativeInt(TMemoryStream(Stream).Memory) + Position)^, FGlyphNameIndex[0], Length(FGlyphNameIndex));
-      // CopySwappedWord(PWord(Integer(TMemoryStream(Stream).Memory) + Position), @FGlyphNameIndex[0], Length(FGlyphNameIndex));
-      Position := Position + Length(FGlyphNameIndex) * SizeOf(Word);
-    end
-    else
-      for GlyphIndex := 0 to High(FGlyphNameIndex) do
-        FGlyphNameIndex[GlyphIndex] := BigEndianValueReader.ReadWord(Stream);
+    // read glyph name index array
+    for GlyphIndex := 0 to High(FGlyphNameIndex) do
+      FGlyphNameIndex[GlyphIndex] := BigEndianValueReader.ReadWord(Stream);
 
     while Position < Size do
     begin

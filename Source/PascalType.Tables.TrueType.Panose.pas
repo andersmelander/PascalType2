@@ -65,7 +65,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Data[Index: Byte]: Byte read GetData write SetData;
@@ -87,7 +87,7 @@ type
   protected
     function GetInternalFamilyType: Byte; override;
   public
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
     class function GetFamilyType: Byte; override;
 
@@ -199,7 +199,7 @@ begin
   FData[Index] := Value;
 end;
 
-procedure TCustomPascalTypePanoseTable.LoadFromStream(Stream: TStream);
+procedure TCustomPascalTypePanoseTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -229,7 +229,7 @@ begin
   Result := 0; // not specified and thus identifier for unknown panose type
 end;
 
-procedure TPascalTypeDefaultPanoseTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeDefaultPanoseTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   // read family type frem stream prior to any other data
   Stream.Read(FFamilyType, 1);

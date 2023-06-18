@@ -74,7 +74,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Ascender: Shortint read FAscender write SetAscender;
@@ -137,7 +137,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property IndexSubTableArrayOffset: Cardinal read FIndexSubTableArrayOffset
@@ -186,7 +186,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeBitmapLineMetrics.LoadFromStream(Stream: TStream);
+procedure TPascalTypeBitmapLineMetrics.LoadFromStream(Stream: TStream; Size: Cardinal);
 {$IFDEF AmbigiousExceptions}
 var
   Value8: Byte;
@@ -462,7 +462,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeBitmapSizeTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeBitmapSizeTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 

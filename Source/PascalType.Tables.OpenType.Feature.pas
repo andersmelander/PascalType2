@@ -68,7 +68,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function GetEnumerator: TEnumerator<Word>;
@@ -121,7 +121,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function FindFeature(const ATableType: TTableType): TCustomOpenTypeFeatureTable;
@@ -265,7 +265,7 @@ begin
   Result := Length(FLookupListIndex);
 end;
 
-procedure TCustomOpenTypeFeatureTable.LoadFromStream(Stream: TStream);
+procedure TCustomOpenTypeFeatureTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   LookupIndex: integer;
 begin
@@ -362,7 +362,7 @@ begin
   Result := FFeatureList.Count;
 end;
 
-procedure TOpenTypeFeatureListTable.LoadFromStream(Stream: TStream);
+procedure TOpenTypeFeatureListTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos    : Int64;
   FeatureIndex: Integer;

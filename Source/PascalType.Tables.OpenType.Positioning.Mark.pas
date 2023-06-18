@@ -74,7 +74,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property MarkCoverage: TCustomOpenTypeCoverageTable read GetMarkCoverage; // Alias for CoverageTable property
@@ -129,7 +129,7 @@ begin
   Result := inherited CoverageTable;
 end;
 
-procedure TCustomOpenTypePositioningSubTableMarkAttachment.LoadFromStream(Stream: TStream);
+procedure TCustomOpenTypePositioningSubTableMarkAttachment.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   CoverageOffset: Word;

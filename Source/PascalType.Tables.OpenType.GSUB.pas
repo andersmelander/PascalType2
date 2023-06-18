@@ -65,6 +65,7 @@ type
 
     class function GetTableType: TTableType; override;
 
+    function IsExtensionLookupType(LookupType: Word): boolean; override;
     function GetLookupTableClass(ALookupType: Word): TOpenTypeLookupTableClass; override;
   end;
 
@@ -99,6 +100,11 @@ end;
 class function TOpenTypeGlyphSubstitutionTable.GetTableType: TTableType;
 begin
   Result := 'GSUB';
+end;
+
+function TOpenTypeGlyphSubstitutionTable.IsExtensionLookupType(LookupType: Word): boolean;
+begin
+  Result := (TGlyphSubstitution(LookupType) = gsExtensionSubstitution);
 end;
 
 //------------------------------------------------------------------------------

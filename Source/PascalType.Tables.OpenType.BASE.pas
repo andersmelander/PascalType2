@@ -60,7 +60,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -83,7 +83,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -102,7 +102,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -124,7 +124,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -151,7 +151,7 @@ begin
     FBaseLineTags := TOpenTypeBaselineTagListTable(Source).FBaseLineTags;
 end;
 
-procedure TOpenTypeBaselineTagListTable.LoadFromStream(Stream: TStream);
+procedure TOpenTypeBaselineTagListTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   TagIndex: Word;
 begin
@@ -206,7 +206,7 @@ begin
     FBaseLineScript := TOpenTypeBaselineScriptListTable(Source).FBaseLineScript;
 end;
 
-procedure TOpenTypeBaselineScriptListTable.LoadFromStream(Stream: TStream);
+procedure TOpenTypeBaselineScriptListTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   ScriptIndex: Word;
 begin
@@ -274,7 +274,7 @@ begin
   end;
 end;
 
-procedure TOpenTypeAxisTable.LoadFromStream(Stream: TStream);
+procedure TOpenTypeAxisTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   Offset: Word;
@@ -358,7 +358,7 @@ begin
   Result := 'BASE';
 end;
 
-procedure TOpenTypeBaselineTable.LoadFromStream(Stream: TStream);
+procedure TOpenTypeBaselineTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   HorzOffset: Word;

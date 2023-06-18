@@ -76,7 +76,7 @@ type
     function GetPairCount: Integer;
     function GetPair(Index: Integer): TKerningFormat0SubTable;
   public
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function GetKerningValue(LeftGlyphIndex: Word; RightGlyphIndex: Word): integer; override;
@@ -94,7 +94,7 @@ type
 type
   TPascalTypeKerningFormat2SubTable = class(TCustomPascalTypeKerningFormatSubTable)
   public
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -135,7 +135,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: Word read FVersion write SetVersion;
@@ -179,7 +179,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: Word read FVersion write SetVersion;
@@ -230,7 +230,7 @@ begin
   Result := Length(FPairs);
 end;
 
-procedure TPascalTypeKerningFormat0SubTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeKerningFormat0SubTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   PairIndex    : Integer;
 begin
@@ -289,7 +289,7 @@ end;
 //------------------------------------------------------------------------------
 // TPascalTypeKerningFormat2SubTable
 //------------------------------------------------------------------------------
-procedure TPascalTypeKerningFormat2SubTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeKerningFormat2SubTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
   raise EPascalTypeNotImplemented.Create(RCStrNotImplemented);
@@ -331,7 +331,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeKerningSubTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeKerningSubTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -556,7 +556,7 @@ begin
   Result.AsAnsiChar := 'kern';
 end;
 
-procedure TPascalTypeKerningTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeKerningTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   SubTableIndex: Integer;
   SubTable     : TPascalTypeKerningSubTable;

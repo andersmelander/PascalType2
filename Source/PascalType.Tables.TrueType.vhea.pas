@@ -106,7 +106,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: TFixedPoint read FVersion write SetVersion;
@@ -178,7 +178,7 @@ begin
   Result.AsAnsiChar := 'vhea';
 end;
 
-procedure TPascalTypeVerticalHeaderTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeVerticalHeaderTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   i: integer;
 begin

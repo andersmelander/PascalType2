@@ -65,7 +65,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer; override;
@@ -91,7 +91,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer; override;
@@ -122,7 +122,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer; override;
@@ -150,7 +150,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer; override;
@@ -184,7 +184,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer; override;
@@ -222,7 +222,7 @@ begin
   Result := 0;
 end;
 
-procedure TPascalTypeFormat0CharacterMap.LoadFromStream(Stream: TStream);
+procedure TPascalTypeFormat0CharacterMap.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -294,7 +294,7 @@ begin
   Result := ACodePoint;
 end;
 
-procedure TPascalTypeFormat2CharacterMap.LoadFromStream(Stream: TStream);
+procedure TPascalTypeFormat2CharacterMap.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -398,7 +398,7 @@ begin
     Result := (integer(ACodePoint) + FIdDelta[SegmentIndex]) and $0000FFFF;
 end;
 
-procedure TPascalTypeFormat4CharacterMap.LoadFromStream(Stream: TStream);
+procedure TPascalTypeFormat4CharacterMap.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   SegIndex: Integer;
@@ -535,7 +535,7 @@ begin
   Result := 6
 end;
 
-procedure TPascalTypeFormat6CharacterMap.LoadFromStream(Stream: TStream);
+procedure TPascalTypeFormat6CharacterMap.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   EntryIndex: Integer;
 begin
@@ -618,7 +618,7 @@ begin
   Result := 12;
 end;
 
-procedure TPascalTypeFormat12CharacterMap.LoadFromStream(Stream: TStream);
+procedure TPascalTypeFormat12CharacterMap.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   TableLength: Cardinal;

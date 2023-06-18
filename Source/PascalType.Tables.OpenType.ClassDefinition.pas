@@ -66,7 +66,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function ClassByGlyphID(AGlyphID: Word): integer; virtual; abstract;
@@ -99,7 +99,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function ClassByGlyphID(AGlyphID: Word): integer; override;
@@ -137,7 +137,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function ClassByGlyphID(AGlyphID: Word): integer; override;
@@ -169,7 +169,7 @@ begin
     Assert(ClassFormat = TCustomOpenTypeClassDefinitionTable(Source).ClassFormat);
 end;
 
-procedure TCustomOpenTypeClassDefinitionTable.LoadFromStream(Stream: TStream);
+procedure TCustomOpenTypeClassDefinitionTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -239,7 +239,7 @@ begin
   Result := Length(FClassIDArray);
 end;
 
-procedure TOpenTypeClassDefinitionListTable.LoadFromStream(Stream: TStream);
+procedure TOpenTypeClassDefinitionListTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   i: Integer;
 begin
@@ -315,7 +315,7 @@ begin
   end;
 end;
 
-procedure TOpenTypeClassDefinitionRangeTable.LoadFromStream(Stream: TStream);
+procedure TOpenTypeClassDefinitionRangeTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   i: Integer;
 begin

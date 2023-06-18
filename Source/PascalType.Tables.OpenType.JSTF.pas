@@ -64,7 +64,7 @@ type
     constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -98,7 +98,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -124,7 +124,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property DefaultLangSys: TCustomOpenTypeJustificationLanguageSystemTable read FDefaultLangSys write SetDefaultLangSys;
@@ -175,7 +175,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: TFixedPoint read FVersion write SetVersion;
@@ -270,7 +270,7 @@ begin
   inherited;
 end;
 
-procedure TCustomOpenTypeJustificationLanguageSystemTable.LoadFromStream(Stream: TStream);
+procedure TCustomOpenTypeJustificationLanguageSystemTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -318,7 +318,7 @@ begin
     FGlyphID := TOpenTypeExtenderGlyphTable(Source).FGlyphID;
 end;
 
-procedure TOpenTypeExtenderGlyphTable.LoadFromStream(Stream: TStream);
+procedure TOpenTypeExtenderGlyphTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   GlyphIdIndex: Integer;
 begin
@@ -428,7 +428,7 @@ begin
   Result := FLanguageSystemTables.Count;
 end;
 
-procedure TCustomOpenTypeJustificationScriptTable.LoadFromStream(Stream: TStream);
+procedure TCustomOpenTypeJustificationScriptTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos      : Int64;
   LangSysIndex  : Integer;
@@ -644,7 +644,7 @@ begin
   Result := FScripts.Count;
 end;
 
-procedure TOpenTypeJustificationTable.LoadFromStream(Stream: TStream);
+procedure TOpenTypeJustificationTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos : Int64;
   DirIndex : Integer;

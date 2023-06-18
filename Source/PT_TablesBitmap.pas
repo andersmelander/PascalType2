@@ -49,7 +49,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: TFixedPoint read FVersion write SetVersion;
@@ -69,7 +69,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -88,7 +88,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property BitmapSizeTableCount: Integer read GetBitmapSizeTableCount;
@@ -122,7 +122,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property PpemX: Byte read FPpemX write SetPpemX;
@@ -151,7 +151,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property BitmapScaleTableCount: Integer read GetBitmapScaleTableCount;
@@ -179,7 +179,7 @@ begin
     FVersion := TCustomPascalTypeEmbeddedBitmapTable(Source).FVersion;
 end;
 
-procedure TCustomPascalTypeEmbeddedBitmapTable.LoadFromStream(Stream: TStream);
+procedure TCustomPascalTypeEmbeddedBitmapTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -245,7 +245,7 @@ begin
   Result := 'EBDT';
 end;
 
-procedure TPascalTypeEmbeddedBitmapDataTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeEmbeddedBitmapDataTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 // var Value32 : Cardinal;
 begin
   inherited;
@@ -300,7 +300,7 @@ begin
   Result := 'EBLC';
 end;
 
-procedure TPascalTypeEmbeddedBitmapLocationTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeEmbeddedBitmapLocationTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   BitmapSizeCount: Cardinal;
   BitmapSizeIndex: Integer;
@@ -377,7 +377,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeBitmapScaleTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeBitmapScaleTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -528,7 +528,7 @@ begin
   Result := 'EBLC';
 end;
 
-procedure TPascalTypeEmbeddedBitmapScalingTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeEmbeddedBitmapScalingTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   BitmapScaleCount: Cardinal;
   BitmapScaleIndex: Integer;

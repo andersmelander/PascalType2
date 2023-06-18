@@ -102,7 +102,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
@@ -143,7 +143,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
@@ -179,7 +179,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
@@ -251,7 +251,7 @@ begin
   end;
 end;
 
-procedure TOpenTypeSubstitutionSubTableChainedContextSimple.LoadFromStream(Stream: TStream);
+procedure TOpenTypeSubstitutionSubTableChainedContextSimple.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   SavePos: Int64;
@@ -423,7 +423,7 @@ begin
   end;
 end;
 
-procedure TOpenTypeSubstitutionSubTableChainedContextClass.LoadFromStream(Stream: TStream);
+procedure TOpenTypeSubstitutionSubTableChainedContextClass.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   SavePos: Int64;
@@ -655,7 +655,7 @@ begin
   end;
 end;
 
-procedure TOpenTypeSubstitutionSubTableChainedContextCoverage.LoadFromStream(Stream: TStream);
+procedure TOpenTypeSubstitutionSubTableChainedContextCoverage.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   Part: TContextPart;

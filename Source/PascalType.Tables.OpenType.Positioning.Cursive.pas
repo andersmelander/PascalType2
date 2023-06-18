@@ -98,7 +98,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
@@ -279,7 +279,7 @@ begin
   Result := True;
 end;
 
-procedure TOpenTypePositioningSubTableCursiveAttachment.LoadFromStream(Stream: TStream);
+procedure TOpenTypePositioningSubTableCursiveAttachment.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   EntryExitRecordOffsets: array of record

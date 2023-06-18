@@ -40,10 +40,10 @@ uses
 type
   TCustomPascalTypePostscriptIndexTable = class(TCustomPascalTypeTable)
   protected
-    procedure ReadData(Index: Integer; Stream: TStream); virtual; abstract;
+    procedure ReadData(Index: Integer; Stream: TStream; Size: Cardinal); virtual; abstract;
     procedure WriteData(Index: Integer; Stream: TStream); virtual; abstract;
   public
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -53,7 +53,7 @@ type
     function GetFontName(Index: Integer): string;
     function GetFontNameCount: Integer;
   protected
-    procedure ReadData(Index: Integer; Stream: TStream); override;
+    procedure ReadData(Index: Integer; Stream: TStream; Size: Cardinal); override;
     procedure WriteData(Index: Integer; Stream: TStream); override;
 
   public
@@ -69,7 +69,7 @@ type
     function GetString(Index: Integer): string;
     function GetStringCount: Integer;
   protected
-    procedure ReadData(Index: Integer; Stream: TStream); override;
+    procedure ReadData(Index: Integer; Stream: TStream; Size: Cardinal); override;
     procedure WriteData(Index: Integer; Stream: TStream); override;
 
   public
@@ -129,7 +129,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     procedure Clear;
@@ -149,7 +149,7 @@ type
     procedure ClearDict;
     function GetStringIndex(Index: Integer; DictIndex: Integer): Integer;
   protected
-    procedure ReadData(Index: Integer; Stream: TStream); override;
+    procedure ReadData(Index: Integer; Stream: TStream; Size: Cardinal); override;
     procedure WriteData(Index: Integer; Stream: TStream); override;
   public
     destructor Destroy; override;
@@ -190,7 +190,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property VersionMajor: Byte read FVersionMajor write SetVersionMajor;
@@ -223,7 +223,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -1120,8 +1120,9 @@ begin
   raise EPascalTypeError.Create('String index not found');
 end;
 
-procedure TPascalTypePostscriptDictDataTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypePostscriptDictDataTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
+  StartPos: Int64;
   DictOp  : TCustomPascalTypePostscriptDictOperator;
   Operands: array of TCustomPascalTypePostscriptDictOperand;
   OpIndex : Integer;
@@ -1131,16 +1132,18 @@ var
   Nibble  : Byte;
   Token   : Byte;
 begin
+  StartPos := Stream.Position;
+
   inherited;
 
   // initialize DictOp variable
   DictOp := nil;
+  try
 
-  with Stream do
-    while Position < Size do
+    while (Stream.Position-StartPos < Size) do
     begin
       // read token
-      Read(Token, 1);
+      Stream.Read(Token, 1);
 
       // eventually increase value list length
       if Token in [28..30, 32..254] then
@@ -1214,7 +1217,7 @@ begin
         12:
           begin
             // escape
-            Read(Data[0], 1);
+            Stream.Read(Data[0], 1);
             DictOp := TPascalTypePostscriptEscapeOperator.Create;
             TPascalTypePostscriptEscapeOperator(DictOp).OpCode := Data[0];
           end;
@@ -1265,7 +1268,7 @@ begin
           end;
         28:
           begin
-            Read(Data[0], 2);
+            Stream.Read(Data[0], 2);
             Value := (Data[0] shl 8) or Data[1];
 
             Operands[High(Operands)] := TPascalTypePostscriptOperandSmallInt.Create;
@@ -1273,9 +1276,8 @@ begin
           end;
         29:
           begin
-            Read(Data[0], 4);
-            Value := (Data[0] shl 24) or (Data[1] shl 16) or (Data[2] shl 8)
-              or Data[3];
+            Stream.Read(Data[0], 4);
+            Value := (Data[0] shl 24) or (Data[1] shl 16) or (Data[2] shl 8) or Data[3];
 
             Operands[High(Operands)] := TPascalTypePostscriptOperandInteger.Create;
             TPascalTypePostscriptOperandInteger(Operands[High(Operands)]).Value := Value;
@@ -1289,7 +1291,7 @@ begin
 
             repeat
               // read two nibbles
-              Read(Data[0], 1);
+              Stream.Read(Data[0], 1);
 
               // get first nibble
               Nibble := Data[0] shr 4;
@@ -1345,7 +1347,7 @@ begin
           end;
         247..250:
           begin
-            Read(Data[0], 1);
+            Stream.Read(Data[0], 1);
             Value := (Token - 247) shl 8 + Data[0] + 108;
 
             Operands[High(Operands)] := TPascalTypePostscriptOperandComposite.Create;
@@ -1353,7 +1355,7 @@ begin
           end;
         251..254:
           begin
-            Read(Data[0], 1);
+            Stream.Read(Data[0], 1);
             Value := -(Token - 251) shl 8 - Data[0] - 108;
 
             Operands[High(Operands)] := TPascalTypePostscriptOperandComposite.Create;
@@ -1384,12 +1386,12 @@ begin
       end;
     end;
 
-  // eventually free operand items
-  for OpIndex := 0 to High(Operands) do
-    Operands[OpIndex].Free;
 
-  // free dictionary operator
-  DictOp.Free;
+  finally
+    for OpIndex := 0 to High(Operands) do
+      Operands[OpIndex].Free;
+    DictOp.Free;
+  end;
 end;
 
 procedure TPascalTypePostscriptDictDataTable.SaveToStream(Stream: TStream);
@@ -1407,7 +1409,7 @@ end;
 
 { TCustomPascalTypePostscriptIndexTable }
 
-procedure TCustomPascalTypePostscriptIndexTable.LoadFromStream(Stream: TStream);
+procedure TCustomPascalTypePostscriptIndexTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   Offsets : array of Integer; // Offset array (from byte preceding object data)
   OffIndex: Integer;
@@ -1485,7 +1487,7 @@ begin
       MS.Seek(0, soBeginning);
 
       // read data from memory stream
-      ReadData(OffIndex, MS);
+      ReadData(OffIndex, MS, MS.Size);
     end;
   finally
     MS.Free;
@@ -1520,18 +1522,17 @@ begin
   Result := Length(FFontNames);
 end;
 
-procedure TPascalTypePostscriptNameIndexTable.ReadData(Index: Integer;
-  Stream: TStream);
+procedure TPascalTypePostscriptNameIndexTable.ReadData(Index: Integer; Stream: TStream; Size: Cardinal);
 begin
   // eventually extend font name array
   if Index >= Length(FFontNames) then
     SetLength(FFontNames, Index + 1);
 
   // set length of string
-  SetLength(FFontNames[Index], Stream.Size);
+  SetLength(FFontNames[Index], Size);
 
   // read actual string
-  Stream.Read(FFontNames[Index][1], Stream.Size);
+  Stream.Read(FFontNames[Index][1], Size);
 end;
 
 procedure TPascalTypePostscriptNameIndexTable.WriteData(Index: Integer;
@@ -1574,14 +1575,14 @@ begin
   Result := Length(FStrings);
 end;
 
-procedure TPascalTypePostscriptStringIndexTable.ReadData(Index: Integer; Stream: TStream);
+procedure TPascalTypePostscriptStringIndexTable.ReadData(Index: Integer; Stream: TStream; Size: Cardinal);
 begin
   // eventually extend font String array
   if Index >= Length(FStrings) then
     SetLength(FStrings, Index + 1);
 
   // set length of string
-  SetLength(FStrings[Index], Stream.Size);
+  SetLength(FStrings[Index], Size div SizeOf(Char));
 
   // read actual string
   Stream.Read(FStrings[Index][1], Stream.Size);
@@ -1594,7 +1595,7 @@ begin
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
 
   // read actual string
-  Stream.Write(FStrings[Index][1], Length(FStrings[Index]));
+  Stream.Write(FStrings[Index][1], Length(FStrings[Index]) * SizeOf(Char));
 end;
 
 
@@ -1643,7 +1644,7 @@ begin
     FreeAndNil(FDict[DictIndex]);
 end;
 
-procedure TPascalTypePostscriptTopDictIndexTable.ReadData(Index: Integer; Stream: TStream);
+procedure TPascalTypePostscriptTopDictIndexTable.ReadData(Index: Integer; Stream: TStream; Size: Cardinal);
 begin
   // eventually extend font name array or reset dict to default
   if Index >= Length(FDict) then
@@ -1654,7 +1655,7 @@ begin
     FDict[High(FDict)].Clear;
 
   // load dict from stream
-  FDict[High(FDict)].LoadFromStream(Stream);
+  FDict[High(FDict)].LoadFromStream(Stream, Size);
 end;
 
 procedure TPascalTypePostscriptTopDictIndexTable.WriteData(Index: Integer; Stream: TStream);
@@ -1781,7 +1782,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeCompactFontFormatTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeCompactFontFormatTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos  : Int64;
   HeaderSize: Byte;
@@ -1900,7 +1901,7 @@ begin
   Result := 'VORG';
 end;
 
-procedure TPascalTypeVerticalOriginTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeVerticalOriginTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   Index: Integer;
 begin

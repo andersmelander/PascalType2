@@ -49,7 +49,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: TFixedPoint read FVersion write SetVersion;
@@ -62,7 +62,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -77,7 +77,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property IsFormat1: Boolean read GetIsFormat1;
@@ -92,7 +92,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -105,7 +105,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -133,7 +133,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -151,7 +151,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -168,7 +168,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -187,7 +187,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -197,7 +197,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -213,7 +213,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -228,7 +228,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -260,7 +260,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property BitmapSizeTableCount: Integer read GetBitmapSizeTableCount;
@@ -279,7 +279,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -342,7 +342,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -361,7 +361,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -376,7 +376,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -408,7 +408,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -449,7 +449,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property ExtraPlain: SmallInt read FExtraPlain write SetExtraPlain;
@@ -486,7 +486,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property DefaultFlags: Cardinal read FDefaultFlags write SetDefaultFlags;
@@ -514,7 +514,7 @@ type
   public
     class function GetTableType: TTableType; override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -533,7 +533,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property DefaultFlags: Cardinal read FDefaultFlags write SetDefaultFlags;
@@ -547,7 +547,7 @@ type
   public
     class function GetTableType: TTableType; override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -564,7 +564,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -582,7 +582,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -600,7 +600,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -626,7 +626,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Format: Word read FFormat write SetFormat;
@@ -645,7 +645,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Name: AnsiString read FName write FName;
@@ -657,7 +657,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Value: Word read FValue write FValue;
@@ -679,7 +679,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property KindName: TCustomPascalTypeZapfKindName read FKindName
@@ -693,7 +693,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -710,7 +710,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -750,7 +750,7 @@ begin
     FVersion := TCustomPascalTypeNamedVersionTable(Source).FVersion;
 end;
 
-procedure TCustomPascalTypeNamedVersionTable.LoadFromStream(Stream: TStream);
+procedure TCustomPascalTypeNamedVersionTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   Value32: Cardinal;
 begin
@@ -806,7 +806,7 @@ begin
   end;
 end;
 
-procedure TCustomPascalTypeBinarySearchingTable.LoadFromStream(Stream: TStream);
+procedure TCustomPascalTypeBinarySearchingTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -839,7 +839,7 @@ begin
     FPrimaryGlyphIndex := TCustomPascalTypeAccentAttachmentDescriptionTable(Source).FPrimaryGlyphIndex;
 end;
 
-procedure TCustomPascalTypeAccentAttachmentDescriptionTable.LoadFromStream(Stream: TStream);
+procedure TCustomPascalTypeAccentAttachmentDescriptionTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   Value16: Word;
 begin
@@ -891,7 +891,7 @@ begin
   Result := False;
 end;
 
-procedure TPascalTypeAccentAttachmentDescriptionFormat0Table.LoadFromStream(Stream: TStream);
+procedure TPascalTypeAccentAttachmentDescriptionFormat0Table.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -940,7 +940,7 @@ begin
   Result := True;
 end;
 
-procedure TPascalTypeAccentAttachmentDescriptionFormat1Table.LoadFromStream(Stream: TStream);
+procedure TPascalTypeAccentAttachmentDescriptionFormat1Table.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -982,7 +982,7 @@ begin
   Result := 'acnt';
 end;
 
-procedure TPascalTypeAccentAttachmentTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeAccentAttachmentTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   GlyphIndex: Cardinal;
@@ -1072,7 +1072,7 @@ begin
     FCorrespondenceArray := TPascalTypeAxisVariationSegmentTable(Source).FCorrespondenceArray;
 end;
 
-procedure TPascalTypeAxisVariationSegmentTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeAxisVariationSegmentTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   PairIndex: Integer;
 begin
@@ -1135,7 +1135,7 @@ begin
   Result := 'avar';
 end;
 
-procedure TPascalTypeAxisVariationTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeAxisVariationTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   Value32: Cardinal;
   AxisCount: Cardinal;
@@ -1189,7 +1189,7 @@ begin
     FDeltas := TPascalTypeBaselinePartFormat0Table(Source).FDeltas;
 end;
 
-procedure TPascalTypeBaselinePartFormat0Table.LoadFromStream(Stream: TStream);
+procedure TPascalTypeBaselinePartFormat0Table.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   DeltaIndex: Word;
 begin
@@ -1226,7 +1226,7 @@ begin
     ;
 end;
 
-procedure TPascalTypeBaselinePartFormat1Table.LoadFromStream(Stream: TStream);
+procedure TPascalTypeBaselinePartFormat1Table.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -1270,7 +1270,7 @@ begin
   Result := 'bsln';
 end;
 
-procedure TPascalTypeBaselineTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeBaselineTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   Value16: Word;
 begin
@@ -1366,7 +1366,7 @@ begin
   Result := 'bloc';
 end;
 
-procedure TPascalTypeBitmapLocationTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeBitmapLocationTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   Value32: Cardinal;
   BitmapSizeCount: Cardinal;
@@ -1426,7 +1426,7 @@ begin
   Result := 'bdat';
 end;
 
-procedure TPascalTypeBitmapDataTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeBitmapDataTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 end;
@@ -1448,7 +1448,7 @@ begin
     FValue := TCustomPascalTypeTaggedValueTable(Source).FValue;
 end;
 
-procedure TCustomPascalTypeTaggedValueTable.LoadFromStream(Stream: TStream);
+procedure TCustomPascalTypeTaggedValueTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   Value32: Cardinal;
 begin
@@ -1613,7 +1613,7 @@ begin
   Result := 'fdsc';
 end;
 
-procedure TPascalTypeFontDescriptionTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeFontDescriptionTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   Value32:  Cardinal;
   DescCount: Cardinal;
@@ -1699,7 +1699,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeAppleFeatureTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeAppleFeatureTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -1760,7 +1760,7 @@ begin
   Result := 'feat';
 end;
 
-procedure TPascalTypeFeatureTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeFeatureTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   FeatureNameCount: Word;
   FeatureNameIndex: Word;
@@ -1827,7 +1827,7 @@ begin
   Result := 'fvar';
 end;
 
-procedure TPascalTypeFontVariationTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeFontVariationTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos:  Int64;
   OffsetToData: Word;
@@ -1975,7 +1975,7 @@ begin
   Result := 'prop';
 end;
 
-procedure TPascalTypeGlyphPropertiesTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeGlyphPropertiesTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   Value16: Word;
 begin
@@ -2033,7 +2033,7 @@ begin
   Result := 'hsty';
 end;
 
-procedure TPascalTypeHorizontalStyleTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeHorizontalStyleTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -2277,7 +2277,7 @@ begin
   Result := Length(FFeatureArray);
 end;
 
-procedure TPascalTypeGlyphMetamorphosisChainTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeGlyphMetamorphosisChainTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPosition: Int64;
   ChainLength:  Cardinal;
@@ -2376,7 +2376,7 @@ begin
   Result := 'mort';
 end;
 
-procedure TPascalTypeGlyphMetamorphosisTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeGlyphMetamorphosisTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   Value32:  Cardinal;
   ChainIndex: Cardinal;
@@ -2457,8 +2457,7 @@ begin
   Result := Length(FFeatureArray);
 end;
 
-procedure TPascalTypeExtendedGlyphMetamorphosisChainTable.LoadFromStream
-  (Stream: TStream);
+procedure TPascalTypeExtendedGlyphMetamorphosisChainTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPosition: Int64;
   ChainLength:  Cardinal;
@@ -2553,8 +2552,7 @@ begin
   Result := 'morx';
 end;
 
-procedure TPascalTypeExtendedGlyphMetamorphosisTable.LoadFromStream(
-  Stream: TStream);
+procedure TPascalTypeExtendedGlyphMetamorphosisTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   Value32:  Cardinal;
   ChainIndex: Cardinal;
@@ -2616,7 +2614,7 @@ begin
   Result := 'opbd';
 end;
 
-procedure TPascalTypeOpticalBoundsTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeOpticalBoundsTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   Value16: Word;
 begin
@@ -2655,7 +2653,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeTrackingDataTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeTrackingDataTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   SizeTableOffset: Cardinal;
@@ -2750,7 +2748,7 @@ begin
   Result := 'trak';
 end;
 
-procedure TPascalTypeTrackingTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeTrackingTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   HorizOffset: Word;
@@ -2860,7 +2858,7 @@ begin
     FUnicodeCodePoints := TPascalTypeZapfGlyphInfoTable(Source).FUnicodeCodePoints;
 end;
 
-procedure TPascalTypeZapfGlyphInfoTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeZapfGlyphInfoTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   GroupOffset: Cardinal;
@@ -2937,7 +2935,7 @@ begin
     FName := TPascalTypeZapfKindNameString(Source).FName;
 end;
 
-procedure TPascalTypeZapfKindNameString.LoadFromStream(Stream: TStream);
+procedure TPascalTypeZapfKindNameString.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   CharCount: Byte;
 begin
@@ -2979,7 +2977,7 @@ begin
     FValue := TPascalTypeZapfKindNameBinary(Source).FValue;
 end;
 
-procedure TPascalTypeZapfKindNameBinary.LoadFromStream(Stream: TStream);
+procedure TPascalTypeZapfKindNameBinary.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -3036,7 +3034,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeZapfKindName.LoadFromStream(Stream: TStream);
+procedure TPascalTypeZapfKindName.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -3119,7 +3117,7 @@ begin
     FreeAndNil(FGlyphInfos[GlyphIndex]);
 end;
 
-procedure TPascalTypeZapfTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeZapfTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   MaxProfile: TPascalTypeMaximumProfileTable;

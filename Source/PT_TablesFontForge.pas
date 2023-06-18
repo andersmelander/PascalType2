@@ -54,7 +54,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: Word read FVersion write SetVersion;
@@ -86,7 +86,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: Cardinal read FVersion write SetVersion;
@@ -112,7 +112,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: TFixedPoint read FVersion write SetVersion;
@@ -135,7 +135,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: TFixedPoint read FVersion write SetVersion;
@@ -166,7 +166,7 @@ begin
   Result := 'BDF ';
 end;
 
-procedure TPascalTypeFontForgeX11BDFTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeFontForgeX11BDFTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -238,7 +238,7 @@ begin
   Result := 'FFTM';
 end;
 
-procedure TPascalTypeFontForgeTimeStampTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeFontForgeTimeStampTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -363,7 +363,7 @@ begin
   Result := 'PfEd';
 end;
 
-procedure TPascalTypeFontForgeExtensionTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeFontForgeExtensionTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -428,7 +428,7 @@ begin
   Result := 'TEX ';
 end;
 
-procedure TPascalTypeFontForgeTexTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeFontForgeTexTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 

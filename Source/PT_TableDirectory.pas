@@ -60,7 +60,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property DirectoryTableEntry: TDirectoryTableEntry read FDirectoryTableEntry;
@@ -98,7 +98,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     procedure ClearAndBuildRequiredEntries;
@@ -135,7 +135,7 @@ begin
     FDirectoryTableEntry := TPascalTypeDirectoryTableEntry(Source).FDirectoryTableEntry;
 end;
 
-procedure TPascalTypeDirectoryTableEntry.LoadFromStream(Stream: TStream);
+procedure TPascalTypeDirectoryTableEntry.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   Value : Cardinal;
 begin
@@ -351,7 +351,7 @@ begin
   FPostscriptDataEntry.TableType := TableType;
 end;
 
-procedure TPascalTypeDirectoryTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeDirectoryTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   TableIndex    : Integer;
   TableEntry    : TPascalTypeDirectoryTableEntry;
@@ -359,68 +359,65 @@ var
 begin
   inherited;
 
-  with Stream do
+  // make sure at least the offset subtable is contained in the file
+  if Size < 10 then
+    raise EPascalTypeError.Create(RCStrWrongFilesize);
+
+  // read version
+  FVersion := BigEndianValueReader.ReadCardinal(Stream);
+
+  // check for known scaler types (OSX and Windows)
+  case Version of
+    $00010000:;
+    $4F54544F:;
+    $74727565:;
+  else
+    raise EPascalTypeError.CreateFmt(RCStrUnknownVersion, [Version]);
+  end;
+
+  // read number of tables
+  NumTables := BigEndianValueReader.ReadWord(Stream);
+
+  Stream.Seek(6, soFromCurrent);
+
+  // read table entries from stream
+  for TableIndex := 0 to NumTables - 1 do
   begin
-    // make sure at least the offset subtable is contained in the file
-    if Size < 10 then
-      raise EPascalTypeError.Create(RCStrWrongFilesize);
+    TableEntry := TPascalTypeDirectoryTableEntry.Create;
+    TableEntry.LoadFromStream(Stream);
 
-    // read version
-    FVersion := BigEndianValueReader.ReadCardinal(Stream);
-
-    // check for known scaler types (OSX and Windows)
-    case Version of
-      $00010000:;
-      $4F54544F:;
-      $74727565:;
+    // add table entry as required table or add to directory table list
+    if CompareTableType(TableEntry.TableType, 'head') then
+      FHeaderTable := TableEntry
     else
-      raise EPascalTypeError.CreateFmt(RCStrUnknownVersion, [Version]);
-    end;
-
-    // read number of tables
-    NumTables := BigEndianValueReader.ReadWord(Stream);
-
-    Seek(6, soFromCurrent);
-
-    // read table entries from stream
-    for TableIndex := 0 to NumTables - 1 do
-    begin
-      TableEntry := TPascalTypeDirectoryTableEntry.Create;
-      TableEntry.LoadFromStream(Stream);
-
-      // add table entry as required table or add to directory table list
-      if CompareTableType(TableEntry.TableType, 'head') then
-        FHeaderTable := TableEntry
-      else
-      if CompareTableType(TableEntry.TableType, 'maxp') then
-        FMaxProfileDataEntry := TableEntry
-      else
-      if CompareTableType(TableEntry.TableType, 'hhea') then
-        FHorHeaderDataEntry := TableEntry
-      else
-      if CompareTableType(TableEntry.TableType, 'hmtx') then
-        FHorMetricsDataEntry := TableEntry
-      else
-      if CompareTableType(TableEntry.TableType, 'cmap') then
-        FCharMapDataEntry := TableEntry
-      else
-      if CompareTableType(TableEntry.TableType, 'name') then
-        FNameDataEntry := TableEntry
-      else
-      if CompareTableType(TableEntry.TableType, 'post') then
-        FPostscriptDataEntry := TableEntry
-      else
-      if CompareTableType(TableEntry.TableType, 'loca') then
-        FLocationDataEntry := TableEntry
-      else
-      if CompareTableType(TableEntry.TableType, 'glyf') then
-        FGlyphDataEntry := TableEntry
-      else
-      if CompareTableType(TableEntry.TableType, 'OS/2') then
-        FOS2TableEntry := TableEntry
-      else
-        FTableList.Add(TableEntry);
-    end;
+    if CompareTableType(TableEntry.TableType, 'maxp') then
+      FMaxProfileDataEntry := TableEntry
+    else
+    if CompareTableType(TableEntry.TableType, 'hhea') then
+      FHorHeaderDataEntry := TableEntry
+    else
+    if CompareTableType(TableEntry.TableType, 'hmtx') then
+      FHorMetricsDataEntry := TableEntry
+    else
+    if CompareTableType(TableEntry.TableType, 'cmap') then
+      FCharMapDataEntry := TableEntry
+    else
+    if CompareTableType(TableEntry.TableType, 'name') then
+      FNameDataEntry := TableEntry
+    else
+    if CompareTableType(TableEntry.TableType, 'post') then
+      FPostscriptDataEntry := TableEntry
+    else
+    if CompareTableType(TableEntry.TableType, 'loca') then
+      FLocationDataEntry := TableEntry
+    else
+    if CompareTableType(TableEntry.TableType, 'glyf') then
+      FGlyphDataEntry := TableEntry
+    else
+    if CompareTableType(TableEntry.TableType, 'OS/2') then
+      FOS2TableEntry := TableEntry
+    else
+      FTableList.Add(TableEntry);
   end;
 
   // check for required tables

@@ -81,7 +81,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
@@ -106,7 +106,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
@@ -158,7 +158,7 @@ begin
     FDeltaGlyphID := TOpenTypeSubstitutionSubTableSingleOffset(Source).DeltaGlyphID;
 end;
 
-procedure TOpenTypeSubstitutionSubTableSingleOffset.LoadFromStream(Stream: TStream);
+procedure TOpenTypeSubstitutionSubTableSingleOffset.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -205,7 +205,7 @@ begin
     FSubstituteGlyphIDs := TOpenTypeSubstitutionSubTableSingleList(Source).FSubstituteGlyphIDs;
 end;
 
-procedure TOpenTypeSubstitutionSubTableSingleList.LoadFromStream(Stream: TStream);
+procedure TOpenTypeSubstitutionSubTableSingleList.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   i: integer;
 begin

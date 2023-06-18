@@ -73,7 +73,7 @@ type
   end;
 
 
-  TCustomPascalTypeTable = class abstract(TInterfacedPersistent, IStreamPersist)
+  TCustomPascalTypeTable = class abstract(TInterfacedPersistent)
   private
     FParent: TCustomPascalTypeTable;
   protected
@@ -85,7 +85,10 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); virtual; abstract;
+    // Most tables don't need to know the size of the data being loaded, but
+    // a few do (e.g. 'cvt') so we have to pass the size along if it's known.
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); virtual; abstract;
+
     procedure SaveToStream(Stream: TStream); virtual; abstract;
 
     property Parent: TCustomPascalTypeTable read FParent;

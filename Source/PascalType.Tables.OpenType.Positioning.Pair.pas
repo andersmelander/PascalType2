@@ -95,7 +95,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
@@ -135,7 +135,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; override;
@@ -238,7 +238,7 @@ begin
   end;
 end;
 
-procedure TOpenTypePositioningSubTablePairSingle.LoadFromStream(Stream: TStream);
+procedure TOpenTypePositioningSubTablePairSingle.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   ValueFormat1: Word;
@@ -408,7 +408,7 @@ begin
   Result := True;
 end;
 
-procedure TOpenTypePositioningSubTablePairClass.LoadFromStream(Stream: TStream);
+procedure TOpenTypePositioningSubTablePairClass.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   ValueFormat1: Word;
@@ -436,8 +436,8 @@ begin
   ValueFormat1 := BigEndianValueReader.ReadWord(Stream);
   ValueFormat2 := BigEndianValueReader.ReadWord(Stream);
 
-  FirstClassDefOffset := StartPos + BigEndianValueReader.ReadWord(Stream);
-  SecondClassDefOffset := StartPos + BigEndianValueReader.ReadWord(Stream);
+  FirstClassDefOffset := BigEndianValueReader.ReadWord(Stream);
+  SecondClassDefOffset := BigEndianValueReader.ReadWord(Stream);
 
   Class1Count := BigEndianValueReader.ReadWord(Stream);
   Class2Count := BigEndianValueReader.ReadWord(Stream);
@@ -456,7 +456,7 @@ begin
 
   if (Class1Count > 0) then
   begin
-    Stream.Position := FirstClassDefOffset;
+    Stream.Position := StartPos + FirstClassDefOffset;
     ClassDefinitionFormat := TClassDefinitionFormat(BigEndianValueReader.ReadWord(Stream));
 
     ClassDefinitionTableClass := TCustomOpenTypeClassDefinitionTable.ClassByFormat(ClassDefinitionFormat);
@@ -464,14 +464,14 @@ begin
     begin
       FFirstClassDefinitions := ClassDefinitionTableClass.Create(Self);
 
-      Stream.Position := FirstClassDefOffset;
+      Stream.Position := StartPos + FirstClassDefOffset;
       FFirstClassDefinitions.LoadFromStream(Stream);
     end;
   end;
 
   if (Class2Count > 0) then
   begin
-    Stream.Position := SecondClassDefOffset;
+    Stream.Position := StartPos + SecondClassDefOffset;
     ClassDefinitionFormat := TClassDefinitionFormat(BigEndianValueReader.ReadWord(Stream));
 
     ClassDefinitionTableClass := TCustomOpenTypeClassDefinitionTable.ClassByFormat(ClassDefinitionFormat);
@@ -479,7 +479,7 @@ begin
     begin
       FSecondClassDefinitions := ClassDefinitionTableClass.Create(Self);
 
-      Stream.Position := SecondClassDefOffset;
+      Stream.Position := StartPos + SecondClassDefOffset;
       FSecondClassDefinitions.LoadFromStream(Stream);
     end;
   end;

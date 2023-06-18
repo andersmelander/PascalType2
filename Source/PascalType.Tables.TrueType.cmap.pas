@@ -60,7 +60,7 @@ type
   protected
     class function GetFormat: Word; virtual; abstract;
   public
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer; virtual; abstract;
@@ -97,7 +97,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer; virtual;
@@ -218,7 +218,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: Word read FVersion write SetVersion;
@@ -313,7 +313,7 @@ end;
 //              TCustomPascalTypeCharacterMap
 //
 //------------------------------------------------------------------------------
-procedure TCustomPascalTypeCharacterMap.LoadFromStream(Stream: TStream);
+procedure TCustomPascalTypeCharacterMap.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -386,7 +386,7 @@ begin
   Result := FCharacterMap.CharacterToGlyph(ACodePoint);
 end;
 
-procedure TCustomPascalTypeCharacterMapDirectory.LoadFromStream(Stream: TStream);
+procedure TCustomPascalTypeCharacterMapDirectory.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   MapFormat : Word;
   MapClass: TPascalTypeCharacterMapClass;
@@ -575,7 +575,7 @@ begin
   Result.AsAnsiChar := 'cmap';
 end;
 
-procedure TPascalTypeCharacterMapTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeCharacterMapTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos  : Int64;
   i: Integer;

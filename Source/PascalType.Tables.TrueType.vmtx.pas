@@ -70,7 +70,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property VerticalMetric[Index: Integer]: TVerticalMetric read GetVerticalMetric;
@@ -119,7 +119,7 @@ begin
   Result := Length(FVerticalMetrics);
 end;
 
-procedure TPascalTypeVerticalMetricsTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeVerticalMetricsTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   MtxIndex      : Integer;
   VerticalHeader: TPascalTypeVerticalHeaderTable;

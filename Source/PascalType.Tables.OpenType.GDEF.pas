@@ -69,7 +69,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property GlyphClassDefinition: TCustomOpenTypeClassDefinitionTable read FGlyphClassDef;
@@ -151,7 +151,7 @@ begin
   Result := 'GDEF';
 end;
 
-procedure TOpenTypeGlyphDefinitionTable.LoadFromStream(Stream: TStream);
+procedure TOpenTypeGlyphDefinitionTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos           : Int64;
   Value16            : Word;

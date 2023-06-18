@@ -91,6 +91,7 @@ resourcestring
   RCStrWrongFormat = 'Wrong Format';
   RCStrWrongIndexToLocFormat = 'Wrong IndexToLocFormat (%d)';
   RCStrWrongMajorVersion = 'Wrong major version (%d)';
+  RCStrInvalidLookupType = 'Invalid lookup type (%d)';
 {$IFDEF ValidateEveryReadOperation}
   RCStrStreamReadError = 'Stream read error!';
 {$ENDIF}

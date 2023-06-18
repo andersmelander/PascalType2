@@ -67,7 +67,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: TFixedPoint read FVersion write SetVersion;
@@ -96,7 +96,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property StartGlyph: Word read FStartGlyph write SetStartGlyph;
@@ -121,7 +121,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property ClassRangeRecordCount: Integer read GetClassRangeRecordCount;
@@ -143,7 +143,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property TableFormat: Word read FTableFormat write SetTableFormat;
@@ -175,19 +175,16 @@ begin
     FVersion := TCustomOpenTypeVersionedNamedTable(Source).FVersion;
 end;
 
-procedure TCustomOpenTypeVersionedNamedTable.LoadFromStream(Stream: TStream);
+procedure TCustomOpenTypeVersionedNamedTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 4 > Size then
-      raise EPascalTypeError.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 4 > Stream.Size then
+    raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-    // read version
-    FVersion.Fixed := BigEndianValueReader.ReadCardinal(Stream);
-  end;
+  // read version
+  FVersion.Fixed := BigEndianValueReader.ReadCardinal(Stream);
 end;
 
 procedure TCustomOpenTypeVersionedNamedTable.SaveToStream(Stream: TStream);
@@ -246,7 +243,7 @@ begin
   Result := Length(FClassValueArray);
 end;
 
-procedure TOpenTypeClassDefinitionFormat1Table.LoadFromStream(Stream: TStream);
+procedure TOpenTypeClassDefinitionFormat1Table.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   ArrayIndex: Integer;
 begin
@@ -328,7 +325,7 @@ begin
   Result := Length(FClassRangeRecords);
 end;
 
-procedure TOpenTypeClassDefinitionFormat2Table.LoadFromStream(Stream: TStream);
+procedure TOpenTypeClassDefinitionFormat2Table.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   ArrayIndex: Integer;
 begin
@@ -398,7 +395,7 @@ begin
   Result := Length(FCoverage);
 end;
 
-procedure TOpenTypeMarkGlyphSetTable.LoadFromStream(Stream: TStream);
+procedure TOpenTypeMarkGlyphSetTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   CoverageIndex: Integer;
 begin

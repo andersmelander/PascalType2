@@ -72,7 +72,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean; virtual; abstract;
@@ -122,7 +122,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function GetEnumerator: TEnumerator<TCustomOpenTypeLookupSubTable>;
@@ -160,7 +160,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property CoverageTable: TCustomOpenTypeCoverageTable read FCoverageTable;
@@ -187,7 +187,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property LookupTableCount: Integer read GetLookupTableCount;
@@ -257,10 +257,14 @@ begin
   end;
 end;
 
-procedure TCustomOpenTypeLookupTable.LoadFromStream(Stream: TStream);
+procedure TCustomOpenTypeLookupTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
-  StartPos       : Int64;
-  LookupIndex    : Word;
+  StartPos: Int64;
+  LookupPos: Int64;
+  IsExtension: boolean;
+  PosFormat: Word;
+  Offset: Cardinal;
+  LookupIndex: Word;
   SubTableType: Word;
   SubTableOffsets: array of Word;
   SubTable: TCustomOpenTypeLookupSubTable;
@@ -268,41 +272,54 @@ var
 begin
   StartPos := Stream.Position;
 
-  inherited;
-
-  // check (minimum) table size
-  if Stream.Position + 6 > Stream.Size then
-    raise EPascalTypeError.Create(RCStrTableIncomplete);
-
   FLookupType := BigEndianValueReader.ReadWord(Stream);
+  IsExtension := TCustomOpenTypeCommonTable(Parent.Parent).IsExtensionLookupType(FLookupType);
+
   FLookupFlags := BigEndianValueReader.ReadWord(Stream);
 
-  // read subtable count
+  // Read subtable count
   SetLength(SubTableOffsets, BigEndianValueReader.ReadWord(Stream));
 
-  // read lookup list index offsets
+  // Read lookup list index offsets
   for LookupIndex := 0 to High(SubTableOffsets) do
     SubTableOffsets[LookupIndex] := BigEndianValueReader.ReadWord(Stream);
 
-  // eventually read mark filtering set
   if (FLookupFlags and USE_MARK_FILTERING_SET <> 0) then
     FMarkFilteringSet := BigEndianValueReader.ReadWord(Stream);
 
   for LookupIndex := 0 to High(SubTableOffsets) do
   begin
-    Stream.Position := StartPos + SubTableOffsets[LookupIndex];
+    LookupPos := StartPos + SubTableOffsets[LookupIndex];
+    Stream.Position := LookupPos;
 
-    // read lookup type
+    // Lookup is a an extension.
+    // Get the actual lookuptype from the sub-table and the offset to the sub-table.
+    if (IsExtension) then
+    begin
+      PosFormat := BigEndianValueReader.ReadWord(Stream);
+      if (PosFormat <> 1) then
+        raise EPascalTypeError.CreateFmt(RCStrUnknownVersion, [PosFormat]);
+
+      FLookupType := BigEndianValueReader.ReadWord(Stream);
+      if (TCustomOpenTypeCommonTable(Parent.Parent).IsExtensionLookupType(FLookupType)) then
+        raise EPascalTypeError.CreateFmt(RCStrInvalidLookupType, [FLookupType]);
+
+      Offset := BigEndianValueReader.ReadCardinal(Stream);
+
+      Stream.Position := LookupPos + Offset;
+    end;
+
+    // Read lookup type
     SubTableType := BigEndianValueReader.ReadWord(Stream);
     SubTableClass := GetSubTableClass(SubTableType);
 
     if (SubTableClass = nil) then
       continue;
 
-    // add to subtable list
+    // Add to subtable list
     SubTable := FSubTableList.Add(SubTableClass);
 
-    // load subtable
+    // Load subtable
     Stream.Seek(-SizeOf(Word), soFromCurrent);
     SubTable.LoadFromStream(Stream);
   end;
@@ -461,14 +478,62 @@ begin
   Result := FLookupList.Count;
 end;
 
-procedure TOpenTypeLookupListTable.LoadFromStream(Stream: TStream);
+procedure TOpenTypeLookupListTable.LoadFromStream(Stream: TStream; Size: Cardinal);
+
+  function GetLookupTypeFromExtension: Word;
+  var
+    StartPos: Int64;
+    LookupFlags: Word;
+    Count: Word;
+    SubOffset: Word;
+    PosFormat: Word;
+  begin
+    StartPos := Stream.Position;
+
+    Result := 0;
+
+    // Skip LookupType and LookupFlags
+    Stream.Position := Stream.Position + SizeOf(Word);
+
+    // Read LookupFlags
+    LookupFlags := BigEndianValueReader.ReadWord(Stream);
+
+    // Read subtable count
+    Count := BigEndianValueReader.ReadWord(Stream);
+
+    // Read first lookup list index offset
+    if (Count = 0) then
+      Exit; // Invalid
+    SubOffset := BigEndianValueReader.ReadWord(Stream);
+    Stream.Position := Stream.Position + (Count-1)*SizeOf(Word);
+
+    // Skip MarkFilteringSet
+    if (LookupFlags and TCustomOpenTypeLookupTable.USE_MARK_FILTERING_SET <> 0) then
+      Stream.Position := Stream.Position + SizeOf(Word);
+
+    // Seek to sub-table
+    Stream.Position := StartPos + SubOffset;
+
+    // Read Extension Positioning Subtable Format 1
+    // - posFormat (we just verify that it has the correct value)
+    PosFormat := BigEndianValueReader.ReadWord(Stream);
+    if (PosFormat <> 1) then
+      Exit;
+
+    // - extensionLookupType
+    Result := BigEndianValueReader.ReadWord(Stream);
+
+    // Skip extensionOffset. We don't need it here.
+  end;
+
 var
-  StartPos   : Int64;
+  StartPos: Int64;
+  SavePos: Int64;
   LookupIndex: Integer;
   LookupTableOffsets: array of Word;
   LookupTable: TCustomOpenTypeLookupTable;
-  LookupTableClass: TOpenTypeLookupTableClass;
   LookupType: Word;
+  LookupTableClass: TOpenTypeLookupTableClass;
 begin
   StartPos := Stream.Position;
 
@@ -492,22 +557,38 @@ begin
     // set position to start of lookup table
     Stream.Position := StartPos + LookupTableOffsets[LookupIndex];
 
+    // We peek ahead into the stream to determine the lookup table class in order to
+    // support extension lookups. For extension lookup types the actual lookup type
+    // is stored in the lookup sub-tables.
     LookupType := BigEndianValueReader.ReadWord(Stream);
+    Stream.Seek(-SizeOf(Word), soFromCurrent);
+
+    if (TCustomOpenTypeCommonTable(Parent).IsExtensionLookupType(LookupType)) then
+    begin
+      SavePos := Stream.Position;
+      // Peek ahead into lookup table to get actual lookup type
+      LookupType := GetLookupTypeFromExtension;
+
+      // Make sure that the extension lookup didn't specify the lookup type as an extension lookup
+      if (TCustomOpenTypeCommonTable(Parent).IsExtensionLookupType(LookupType)) then
+        raise EPascalTypeError.CreateFmt(RCStrInvalidLookupType, [LookupType]);
+
+      Stream.Position := SavePos;
+    end;
 
     // Get the lookup table class from the parent.
     // The mapping from LookupType to lookup table class differs between GSUB and GPOS.
     LookupTableClass := TCustomOpenTypeCommonTable(Parent).GetLookupTableClass(LookupType);
+
     if (LookupTableClass = nil) then
       // We *must* load the table even if we have no implementation for it.
       // Otherwise the index numbers in the feature lookup list (see
       // TCustomOpenTypeFeatureTable) will not match.
       LookupTableClass := TOpenTypeLookupTableGeneric;
 
-    Stream.Seek(-SizeOf(Word), soFromCurrent);
-
     LookupTable := FLookupList.Add(LookupTableClass);
 
-    // load from stream
+    // Load lookup table
     LookupTable.LoadFromStream(Stream);
   end;
 end;
@@ -535,7 +616,7 @@ begin
   Result := TCustomOpenTypeLookupTable(Parent);
 end;
 
-procedure TCustomOpenTypeLookupSubTable.LoadFromStream(Stream: TStream);
+procedure TCustomOpenTypeLookupSubTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
   FSubFormat := BigEndianValueReader.ReadWord(Stream);
@@ -608,7 +689,7 @@ begin
   end;
 end;
 
-procedure TCustomOpenTypeLookupSubTableWithCoverage.LoadFromStream(Stream: TStream);
+procedure TCustomOpenTypeLookupSubTableWithCoverage.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   CoverageOfs: Word;

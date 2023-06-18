@@ -243,7 +243,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property AsCardinal[Index: Byte]: Cardinal read GetAsCardinal write SetAsCardinal;
@@ -468,7 +468,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property AsCardinal[Index: Byte]: Cardinal read GetAsCardinal
@@ -541,7 +541,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property XHeight: SmallInt read FXHeight write SetXHeight;
@@ -664,7 +664,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property AddendumTable: TPascalTypeOS2AddendumTable read FAddendumTable write SetAddendumTable;
@@ -732,7 +732,7 @@ begin
     FUnicodeRange := TPascalTypeUnicodeRangeTable(Source).FUnicodeRange;
 end;
 
-procedure TPascalTypeUnicodeRangeTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeUnicodeRangeTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   with Stream do
   begin
@@ -1817,7 +1817,7 @@ begin
   Result := (FCodePageRange[0] and (1 shl 7)) <> 0;
 end;
 
-procedure TPascalTypeOS2CodePageRangeTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeOS2CodePageRangeTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   // check (minimum) table size
   if Stream.Position + 2*SizeOf(Cardinal) > Stream.Size then
@@ -1863,7 +1863,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeOS2AddendumTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeOS2AddendumTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   // check (minimum) table size
   if Stream.Position + 5*SizeOf(Word) > Stream.Size then
@@ -2064,7 +2064,7 @@ end;
 {$DEFINE R_PLUS}
 {$RANGECHECKS OFF}
 {$ENDIF}
-procedure TPascalTypeOS2Table.LoadFromStream(Stream: TStream);
+procedure TPascalTypeOS2Table.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   PanoseFamilyKind : Byte;
   PanoseFamilyClass: TPascalTypePanoseClass;

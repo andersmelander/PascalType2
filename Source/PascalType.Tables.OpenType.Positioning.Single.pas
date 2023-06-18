@@ -100,7 +100,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property ValueRecord: TOpenTypeValueRecord read FValueRecord write FValueRecord;
@@ -127,7 +127,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property ValueRecords: TOpenTypeValueRecords read FValueRecords write FValueRecords;
@@ -204,7 +204,7 @@ begin
   Result := True;
 end;
 
-procedure TOpenTypePositioningSubTableSingleSingle.LoadFromStream(Stream: TStream);
+procedure TOpenTypePositioningSubTableSingleSingle.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   ValueFormat: Word;
 begin
@@ -252,7 +252,7 @@ begin
   Result := True;
 end;
 
-procedure TOpenTypePositioningSubTableSingleList.LoadFromStream(Stream: TStream);
+procedure TOpenTypePositioningSubTableSingleList.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   ValueFormat: Word;
   i: integer;

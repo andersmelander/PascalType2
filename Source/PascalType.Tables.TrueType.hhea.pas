@@ -103,7 +103,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
     property Version: TFixedPoint read FVersion write SetVersion;
   published
@@ -169,7 +169,7 @@ begin
   Result.AsAnsiChar := 'hhea';
 end;
 
-procedure TPascalTypeHorizontalHeaderTable.LoadFromStream(Stream: TStream);
+procedure TPascalTypeHorizontalHeaderTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 {$IFDEF AmbigiousExceptions}
 var
   Value32: Cardinal;

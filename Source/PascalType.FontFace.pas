@@ -84,28 +84,29 @@ end;
 
 procedure TCustomPascalTypeFontFacePersistent.LoadFromFile(FileName: TFileName);
 var
-  FileStream: TFileStream;
+  Stream: TStream;
 begin
-  FileStream := TFileStream.Create(FileName, fmOpenRead or fmShareDenyNone);
+  // TODO : TBufferedFileStream doesn't exist in older versions of Delphi
+  Stream := TBufferedFileStream.Create(FileName, fmOpenRead or fmShareDenyNone);
   try
-    LoadFromStream(FileStream);
+    LoadFromStream(Stream);
   finally
-    FileStream.Free;
+    Stream.Free;
   end;
 end;
 
 procedure TCustomPascalTypeFontFacePersistent.SaveToFile(FileName: TFileName);
 var
-  FileStream: TFileStream;
+  Stream: TStream;
 begin
   if FileExists(FileName) then
-    FileStream := TFileStream.Create(FileName, fmCreate)
+    Stream := TFileStream.Create(FileName, fmCreate)
   else
-    FileStream := TFileStream.Create(FileName, fmOpenWrite);
+    Stream := TFileStream.Create(FileName, fmOpenWrite);
   try
-    SaveToStream(FileStream);
+    SaveToStream(Stream);
   finally
-    FileStream.Free;
+    Stream.Free;
   end;
 end;
 

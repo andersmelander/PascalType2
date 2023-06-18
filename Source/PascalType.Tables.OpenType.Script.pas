@@ -69,7 +69,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function FindLanguageSystem(const ATableType: TTableType; FallbackToDefault: boolean = False): TCustomOpenTypeLanguageSystemTable;
@@ -94,7 +94,7 @@ type
   public
     class function GetTableType: TTableType; override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
   end;
 
 
@@ -115,7 +115,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function FindScript(const ATableType: TTableType; FallbackToDefault: boolean = False): TCustomOpenTypeScriptTable;
@@ -276,7 +276,7 @@ begin
   end;
 end;
 
-procedure TCustomOpenTypeScriptTable.LoadFromStream(Stream: TStream);
+procedure TCustomOpenTypeScriptTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos      : Int64;
   LangSysIndex  : Integer;
@@ -428,7 +428,7 @@ begin
   Result := 'DFLT';
 end;
 
-procedure TOpenTypeDefaultScriptTable.LoadFromStream(Stream: TStream);
+procedure TOpenTypeDefaultScriptTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -503,7 +503,7 @@ begin
     FScriptList.Assign(TOpenTypeScriptListTable(Source).FScriptList);
 end;
 
-procedure TOpenTypeScriptListTable.LoadFromStream(Stream: TStream);
+procedure TOpenTypeScriptListTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos        : Int64;
   ScriptIndex     : Integer;

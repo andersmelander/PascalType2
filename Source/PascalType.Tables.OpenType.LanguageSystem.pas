@@ -70,7 +70,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property LookupOrder: Word read FLookupOrder write SetLookupOrder;
@@ -202,7 +202,7 @@ begin
   end;
 end;
 
-procedure TCustomOpenTypeLanguageSystemTable.LoadFromStream(Stream: TStream);
+procedure TCustomOpenTypeLanguageSystemTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   FeatureIndex: Integer;
 begin

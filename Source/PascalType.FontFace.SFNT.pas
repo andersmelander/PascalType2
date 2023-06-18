@@ -253,36 +253,38 @@ asm
   {$ENDIF}
 end;
 
-function CalculateCheckSum(Stream: TStream): Cardinal; overload;
+function CalculateCheckSum(Stream: TStream; Size: Cardinal): Cardinal; overload;
 var
   I    : Integer;
-  Value: Cardinal;
 begin
-  with Stream do
+  // Ensure that at least one cardinal is in the stream
+  if Size < 4 then
+    Exit(0);
+
+  // set position to beginning of the stream
+//  Stream.Seek(0, soFromBeginning);
+
+  Assert(Size mod 4 = 0);
+
+  if Stream is TMemoryStream then
+    Result := CalculateCheckSum(TMemoryStream(Stream).Memory, Size div 4)
+  else
   begin
-    // ensure that at least one cardinal is in the stream
-    if Size < 4 then
-      Exit;
+    // read first cardinal
+    Result := BigEndianValueReader.ReadCardinal(Stream);
 
-    // set position to beginning of the stream
-    Seek(0, soFromBeginning);
-
-    Assert(Size mod 4 = 0);
-
-    if Stream is TMemoryStream then
-      Result := CalculateCheckSum(TMemoryStream(Stream).Memory, Size div 4)
-    else
+    // read subsequent cardinals
+    for I := 1 to (Size div 4) - 1 do
     begin
-      // read first cardinal
-      Read(Result, SizeOf(Cardinal));
-      Result := Swap32(Result);
-
-      // read subsequent cardinals
-      for I := 1 to (Size div 4) - 1 do
-      begin
-        Read(Value, SizeOf(Cardinal));
-        Result := Result + Swap32(Value);
-      end;
+{$IFOPT Q+}
+{$DEFINE Q_PLUS}
+{$OVERFLOWCHECKS OFF}
+{$ENDIF}
+      Result := Result + BigEndianValueReader.ReadCardinal(Stream);
+{$IFDEF Q_PLUS}
+{$OVERFLOWCHECKS ON}
+{$UNDEF Q_PLUS}
+{$ENDIF}
     end;
   end;
 end;
@@ -290,28 +292,25 @@ end;
 function CalculateHeadCheckSum(Stream: TMemoryStream): Cardinal;
 var
   I    : Integer;
-  Value: Cardinal;
 begin
   with Stream do
   begin
     // ensure that at least one cardinal is in the stream
     if Size < 4 then
-      Exit;
+      Exit(0);
 
     // set position to beginning of the stream
     Seek(0, soFromBeginning);
 
     // read first cardinal
-    Read(Result, SizeOf(Cardinal));
-    Result := Swap32(Result);
+    Result := BigEndianValueReader.ReadCardinal(Stream);
 
     // read subsequent cardinals
     for I := 1 to (Size div 4) - 1 do
     begin
       if I = 2 then
         Continue;
-      Read(Value, SizeOf(Cardinal));
-      Result := Result + Swap32(Value);
+      Result := Result + BigEndianValueReader.ReadCardinal(Stream);
     end;
   end;
 end;
@@ -327,7 +326,7 @@ type
     function GetFontFace: IPascalTypeFontFace; override;
   public
     constructor Create(const AFontFace: IPascalTypeFontFace); reintroduce;
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
 
@@ -342,7 +341,7 @@ begin
   Result := FFontFace;
 end;
 
-procedure TPascalTypeTableRoot.LoadFromStream(Stream: TStream);
+procedure TPascalTypeTableRoot.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   raise EPascalTypeError.Create(RCStrNotImplemented);
 end;
@@ -580,7 +579,7 @@ var
 begin
   DirectoryTable := TPascalTypeDirectoryTable.Create(FRootTable);
   try
-    DirectoryTable.LoadFromStream(Stream);
+    DirectoryTable.LoadFromStream(Stream, Stream.Size);
 
     // directory table has been read, notify
     DirectoryTableLoaded(DirectoryTable);
@@ -747,7 +746,7 @@ begin
     // restore original table length
     MemoryStream.Size := TableEntry.Length;
 
-    Table.LoadFromStream(MemoryStream);
+    Table.LoadFromStream(MemoryStream, TableEntry.Length);
 
   finally
     MemoryStream.Free;
@@ -1275,98 +1274,83 @@ end;
 
 procedure TPascalTypeFontFace.LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry);
 var
-  MemoryStream: TMemoryStream;
   TableClass  : TCustomPascalTypeNamedTableClass;
   CurrentTable: TCustomPascalTypeNamedTable;
 begin
-  MemoryStream := TMemoryStream.Create;
-  try
-
-    // Copy from stream and DWORD align (for checksum)
-    Stream.Position := TableEntry.Offset;
-    MemoryStream.CopyFrom(Stream, 4 * ((TableEntry.Length + 3) div 4));
+  Stream.Position := TableEntry.Offset;
 
 {$IFDEF ChecksumTest}
-    ValidateChecksum(MemoryStream, TableEntry);
+  ValidateChecksum(Stream, TableEntry.Length);
 {$ENDIF}
 
-    MemoryStream.Position := 0;
-
-    // restore original table length
-    MemoryStream.Size := TableEntry.Length;
-
-    TableClass := FindPascalTypeTableByType(TableEntry.TableType);
-    if TableClass <> nil then
-    begin
-      CurrentTable := TableClass.Create(RootTable);
+  TableClass := FindPascalTypeTableByType(TableEntry.TableType);
+  if TableClass <> nil then
+  begin
+    CurrentTable := TableClass.Create(RootTable);
+    try
+      // load table from stream
       try
-        // load table from stream
-        try
-          CurrentTable.LoadFromStream(MemoryStream);
+        CurrentTable.LoadFromStream(Stream, TableEntry.Length);
 
-          // assign tables
-          if TableClass = TPascalTypeHeaderTable then
-            HeaderTable.Assign(CurrentTable)
-          else
-          if TableClass = TPascalTypeHorizontalHeaderTable then
-            HorizontalHeader.Assign(CurrentTable)
-          else
-          if TableClass = TPascalTypeHorizontalMetricsTable then
-            HorizontalMetrics.Assign(CurrentTable)
-          else
-          if TableClass = TPascalTypePostscriptTable then
-            PostScriptTable.Assign(CurrentTable)
-          else
-          if TableClass = TPascalTypeMaximumProfileTable then
-            MaximumProfile.Assign(CurrentTable)
-          else
-          if TableClass = TPascalTypeNameTable then
-            NameTable.Assign(CurrentTable)
-          else
-          if TableClass = TPascalTypeCharacterMapTable then
-            CharacterMap.Assign(CurrentTable)
-          else
-          if TableClass = TPascalTypeOS2Table then
-          begin
-            Assert(FOS2Table = nil);
-            FOS2Table := TPascalTypeOS2Table(CurrentTable);
-            CurrentTable := nil;
-          end else
-          begin
-            FOptionalTables.Add(CurrentTable);
-            CurrentTable := nil;
-          end;
-
-        except
-{$IFDEF IgnoreIncompleteOptionalTables}
-          on E: EPascalTypeTableIncomplete do
-          begin
-            if (TableClass = TPascalTypeHeaderTable) or
-              (TableClass = TPascalTypeHorizontalHeaderTable) or
-              (TableClass = TPascalTypeHorizontalMetricsTable) or
-              (TableClass = TPascalTypePostscriptTable) or
-              (TableClass = TPascalTypeMaximumProfileTable) or
-              (TableClass = TPascalTypeNameTable) then
-              raise;
-          end;
-{$ELSE}
-          raise
-{$ENDIF}
+        // assign tables
+        if TableClass = TPascalTypeHeaderTable then
+          HeaderTable.Assign(CurrentTable)
+        else
+        if TableClass = TPascalTypeHorizontalHeaderTable then
+          HorizontalHeader.Assign(CurrentTable)
+        else
+        if TableClass = TPascalTypeHorizontalMetricsTable then
+          HorizontalMetrics.Assign(CurrentTable)
+        else
+        if TableClass = TPascalTypePostscriptTable then
+          PostScriptTable.Assign(CurrentTable)
+        else
+        if TableClass = TPascalTypeMaximumProfileTable then
+          MaximumProfile.Assign(CurrentTable)
+        else
+        if TableClass = TPascalTypeNameTable then
+          NameTable.Assign(CurrentTable)
+        else
+        if TableClass = TPascalTypeCharacterMapTable then
+          CharacterMap.Assign(CurrentTable)
+        else
+        if TableClass = TPascalTypeOS2Table then
+        begin
+          Assert(FOS2Table = nil);
+          FOS2Table := TPascalTypeOS2Table(CurrentTable);
+          CurrentTable := nil;
+        end else
+        begin
+          FOptionalTables.Add(CurrentTable);
+          CurrentTable := nil;
         end;
 
-      finally
-        // dispose temporary table
-        CurrentTable.Free;
+      except
+{$IFDEF IgnoreIncompleteOptionalTables}
+        on E: EPascalTypeTableIncomplete do
+        begin
+          if (TableClass = TPascalTypeHeaderTable) or
+            (TableClass = TPascalTypeHorizontalHeaderTable) or
+            (TableClass = TPascalTypeHorizontalMetricsTable) or
+            (TableClass = TPascalTypePostscriptTable) or
+            (TableClass = TPascalTypeMaximumProfileTable) or
+            (TableClass = TPascalTypeNameTable) then
+            raise;
+        end;
+{$ELSE}
+        raise
+{$ENDIF}
       end;
-    end else
-    begin
-      CurrentTable := TPascalTypeUnknownTable.Create(RootTable, TableEntry.TableType);
-      CurrentTable.LoadFromStream(Stream);
-      FOptionalTables.Add(CurrentTable);
-    end;
 
-  finally
-    MemoryStream.Free;
+    finally
+      // dispose temporary table
+      CurrentTable.Free;
+    end;
+  end else
+  begin
+    CurrentTable := TPascalTypeUnknownTable.Create(RootTable, TableEntry.TableType);
+    CurrentTable.LoadFromStream(Stream, TableEntry.Length);
+    FOptionalTables.Add(CurrentTable);
   end;
 end;
 
@@ -1409,12 +1393,11 @@ begin
         MemoryStream.Size := 4 * ((DirectoryTable.TableList[TableIndex].Length + 3) div 4);
 
         // calculate checksum
-        DirectoryTable.TableList[TableIndex].Checksum := CalculateCheckSum(MemoryStream);
-
-        // reset stream position
         MemoryStream.Position := 0;
+        DirectoryTable.TableList[TableIndex].Checksum := CalculateCheckSum(MemoryStream, MemoryStream.Size);
 
         // copy streams
+        MemoryStream.Position := 0;
         Stream.CopyFrom(MemoryStream, DirectoryTable.TableList[TableIndex].Length);
       finally
         MemoryStream.Free;

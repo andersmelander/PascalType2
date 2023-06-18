@@ -66,7 +66,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function IndexOfGlyph(AGlyphID: Word): integer; virtual; abstract;
@@ -102,7 +102,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function IndexOfGlyph(AGlyphID: Word): integer; override;
@@ -140,7 +140,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     function IndexOfGlyph(AGlyphID: Word): integer; override;
@@ -173,7 +173,7 @@ begin
     Assert(CoverageFormat = TCustomOpenTypeCoverageTable(Source).CoverageFormat);
 end;
 
-procedure TCustomOpenTypeCoverageTable.LoadFromStream(Stream: TStream);
+procedure TCustomOpenTypeCoverageTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
   inherited;
 
@@ -272,7 +272,7 @@ begin
     Result := -1;
 end;
 
-procedure TOpenTypeCoverageListTable.LoadFromStream(Stream: TStream);
+procedure TOpenTypeCoverageListTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   GlyphIndex: Integer;
 begin
@@ -357,7 +357,7 @@ begin
   Result := -1;
 end;
 
-procedure TOpenTypeCoverageRangeTable.LoadFromStream(Stream: TStream);
+procedure TOpenTypeCoverageRangeTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   GlyphIndex: Integer;
 begin

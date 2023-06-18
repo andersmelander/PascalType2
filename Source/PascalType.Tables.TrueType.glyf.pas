@@ -62,7 +62,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Instruction[Index: Integer]: Byte read GetInstruction;
@@ -110,7 +110,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property IsComposite: boolean read GetIsComposite;
@@ -199,7 +199,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Contour[Index: Integer]: TPascalTypeTrueTypeContour read GetContour;
@@ -259,7 +259,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property Flags: Word read FFlags write SetFlags;
@@ -296,7 +296,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property GlyphCount: Integer read GetGlyphCount;
@@ -328,7 +328,7 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
     property GlyphDataCount: Integer read GetGlyphDataCount;
@@ -373,7 +373,7 @@ begin
   Result := Length(FInstructions);
 end;
 
-procedure TTrueTypeFontGlyphInstructionTable.LoadFromStream(Stream: TStream);
+procedure TTrueTypeFontGlyphInstructionTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   Value16   : Word;
   MaxProfile: TPascalTypeMaximumProfileTable;
@@ -465,7 +465,7 @@ begin
   end;
 end;
 
-procedure TCustomTrueTypeFontGlyphData.LoadFromStream(Stream: TStream);
+procedure TCustomTrueTypeFontGlyphData.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   MaxProfile: TPascalTypeMaximumProfileTable;
 begin
@@ -741,7 +741,7 @@ begin
     Result[i] := FPath[i].Points;
 end;
 
-procedure TTrueTypeFontSimpleGlyphData.LoadFromStream(Stream: TStream);
+procedure TTrueTypeFontSimpleGlyphData.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   ContourIndex: Integer;
   PointIndex  : Integer;
@@ -915,7 +915,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeCompositeGlyph.LoadFromStream(Stream: TStream);
+procedure TPascalTypeCompositeGlyph.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   Bytes: array [0..1] of Byte;
   ShortInts: array [0..1] of ShortInt;
@@ -1226,7 +1226,7 @@ begin
   Result := True;
 end;
 
-procedure TTrueTypeFontCompositeGlyphData.LoadFromStream(Stream: TStream);
+procedure TTrueTypeFontCompositeGlyphData.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   GlyphIndex     : Integer;
   HasInstructions: Boolean;
@@ -1342,7 +1342,7 @@ begin
     FreeAndNil(FGlyphDataList[GlyphIndex]);
 end;
 
-procedure TTrueTypeFontGlyphDataTable.LoadFromStream(Stream: TStream);
+procedure TTrueTypeFontGlyphDataTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   Locations: TTrueTypeFontLocationTable;

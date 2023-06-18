@@ -69,9 +69,10 @@ type
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure LoadFromStream(Stream: TStream); override;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
+    function IsExtensionLookupType(LookupType: Word): boolean; virtual;
     function GetLookupTableClass(ALookupType: Word): TOpenTypeLookupTableClass; virtual; abstract;
     function GetSubTableClass(ASubFormat: Word): TOpenTypeLookupSubTableClass; virtual; abstract;
 
@@ -113,6 +114,11 @@ begin
   inherited;
 end;
 
+function TCustomOpenTypeCommonTable.IsExtensionLookupType(LookupType: Word): boolean;
+begin
+  Result := False;
+end;
+
 procedure TCustomOpenTypeCommonTable.Assign(Source: TPersistent);
 begin
   inherited;
@@ -125,7 +131,7 @@ begin
   end;
 end;
 
-procedure TCustomOpenTypeCommonTable.LoadFromStream(Stream: TStream);
+procedure TCustomOpenTypeCommonTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPosition : Int64;
   ScriptListPosition : Int64;
