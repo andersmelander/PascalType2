@@ -280,6 +280,8 @@ end;
 
 procedure TPascalTypeGlyph.SetOwner(AOwner: TPascalTypeGlyphString);
 begin
+  if (FGlyphString = AOwner) then
+    exit;
   if (FGlyphString <> nil) then
     FGlyphString.Extract(Self);
   FGlyphString := AOwner;
