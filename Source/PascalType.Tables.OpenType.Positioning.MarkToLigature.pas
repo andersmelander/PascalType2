@@ -308,7 +308,7 @@ begin
     Exit(False);
 
   // Scan backward for a ligature glyph
-  LigatureGlyphIndex := AGlyphIterator.Peek(-1);
+  LigatureGlyphIndex := AGlyphIterator.Index - 1;
   while (LigatureGlyphIndex >= 0) and (AGlyphIterator.GlyphString[LigatureGlyphIndex].IsMark) do
     Dec(LigatureGlyphIndex);
   if (LigatureGlyphIndex < 0) then

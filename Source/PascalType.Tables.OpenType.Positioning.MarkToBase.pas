@@ -187,7 +187,7 @@ begin
     Exit(False);
 
   // Scan backward for a base glyph
-  BaseGlyphIndex := AGlyphIterator.Peek(-1);
+  BaseGlyphIndex := AGlyphIterator.Index - 1;
   while (BaseGlyphIndex >= 0) and ((AGlyphIterator.GlyphString[BaseGlyphIndex].IsMark) or (AGlyphIterator.GlyphString[BaseGlyphIndex].LigatureComponent > 0)) do
     Dec(BaseGlyphIndex);
   if (BaseGlyphIndex < 0) then
