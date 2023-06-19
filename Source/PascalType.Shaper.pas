@@ -64,6 +64,9 @@ type
   TShaperGlyphString = class(TPascalTypeGlyphString)
   private
     FFont: TCustomPascalTypeFontFace;
+  protected
+    function GetGlyphClassID(AGlyph: TPascalTypeGlyph): integer; override;
+    function GetMarkAttachmentType(AGlyph: TPascalTypeGlyph): integer; override;
   public
     constructor Create(AFont: TCustomPascalTypeFontFace; const ACodePoints: TPascalTypeCodePoints); virtual;
 
@@ -167,7 +170,8 @@ uses
 
   PascalType.Tables.OpenType.Script,
   PascalType.Tables.OpenType.LanguageSystem,
-  PascalType.Tables.OpenType.Substitution;
+  PascalType.Tables.OpenType.Substitution,
+  PascalType.Tables.OpenType.GDEF;
 
 //------------------------------------------------------------------------------
 //
@@ -178,6 +182,28 @@ constructor TShaperGlyphString.Create(AFont: TCustomPascalTypeFontFace; const AC
 begin
   FFont := AFont;
   inherited Create(ACodePoints);
+end;
+
+function TShaperGlyphString.GetGlyphClassID(AGlyph: TPascalTypeGlyph): integer;
+var
+  GDEF: TOpenTypeGlyphDefinitionTable;
+begin
+  GDEF := Font.GetTableByTableType('GDEF') as TOpenTypeGlyphDefinitionTable;
+  if (GDEF <> nil) and (GDEF.GlyphClassDefinition <> nil) then
+    Result := GDEF.GlyphClassDefinition.GetClassID(AGlyph.GlyphID)
+  else
+    Result := inherited GetGlyphClassID(AGlyph);
+end;
+
+function TShaperGlyphString.GetMarkAttachmentType(AGlyph: TPascalTypeGlyph): integer;
+var
+  GDEF: TOpenTypeGlyphDefinitionTable;
+begin
+  GDEF := Font.GetTableByTableType('GDEF') as TOpenTypeGlyphDefinitionTable;
+  if (GDEF <> nil) and (GDEF.MarkAttachmentClassDefinition <> nil) then
+    Result := GDEF.MarkAttachmentClassDefinition.GetClassID(AGlyph.GlyphID)
+  else
+    Result := inherited GetMarkAttachmentType(AGlyph);
 end;
 
 procedure TShaperGlyphString.HideDefaultIgnorables;

@@ -77,6 +77,8 @@ type
   protected
     class function GetClassFormat: Word; virtual; abstract;
   public
+    function GetClassID(AGlyphID: Word): Word; virtual; abstract;
+
     property ClassFormat: Word read GetClassFormat;
   end;
 
@@ -98,6 +100,8 @@ type
 
     procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
+
+    function GetClassID(AGlyphID: Word): Word; override;
 
     property StartGlyph: Word read FStartGlyph write SetStartGlyph;
     property ClassValueCount: Integer read GetClassValueCount;
@@ -123,6 +127,8 @@ type
 
     procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
+
+    function GetClassID(AGlyphID: Word): Word; override;
 
     property ClassRangeRecordCount: Integer read GetClassRangeRecordCount;
     property ClassRangeRecord[Index: Integer]: TClassRangeRecord read GetClassRangeRecord;
@@ -231,6 +237,17 @@ begin
   Result := 1;
 end;
 
+function TOpenTypeClassDefinitionFormat1Table.GetClassID(AGlyphID: Word): Word;
+var
+  Index: integer;
+begin
+  Index := AGlyphID - FStartGlyph;
+  if (Index >= 0) and (Index <= High(FClassValueArray)) then
+    Result := FClassValueArray[Index]
+  else
+    Result := 0;
+end;
+
 function TOpenTypeClassDefinitionFormat1Table.GetClassValue(Index: Integer): Word;
 begin
   if (Index < 0) or (Index > High(FClassValueArray)) then
@@ -311,6 +328,18 @@ end;
 class function TOpenTypeClassDefinitionFormat2Table.GetClassFormat: Word;
 begin
   Result := 2;
+end;
+
+function TOpenTypeClassDefinitionFormat2Table.GetClassID(AGlyphID: Word): Word;
+var
+  i: integer;
+begin
+  for i := 0 to High(FClassRangeRecords) do
+  begin
+    if (AGlyphID >= FClassRangeRecords[i].StartGlyph) and (AGlyphID <= FClassRangeRecords[i].EndGlyph) then
+      Exit(FClassRangeRecords[i].GlyphClass);
+  end;
+  Result := 0;
 end;
 
 function TOpenTypeClassDefinitionFormat2Table.GetClassRangeRecord(Index: Integer): TClassRangeRecord;

@@ -309,11 +309,7 @@ begin
   BasePos := BaseAnchor.Position;
 
   XOffset := BasePos.X - MarkPos.X;
-{$ifdef Inverse_Y_axis_xxx_not_implemented_here}
-  YOffset := MarkPos.Y - BasePos.Y;
-{$else Inverse_Y_axis}
   YOffset := BasePos.Y - MarkPos.Y;
-{$endif Inverse_Y_axis}
 
   MarkAttachment := BaseIndex;
 end;

@@ -54,7 +54,7 @@
   * Default: Enabled }
 {$define FailOnCompositeGlyphTooDeep}
 
-{ Enable Inverse_Y_axis to have delta-Y values applies as if the Y-origin is
+{ Enable Inverse_Y_axis to have delta-Y values applied as if the Y-origin is
   at the top, instead of at the bottom.
   See: TPascalTypeRasterizerGraphics32.RenderShapedText
   * Default: Enabled }
