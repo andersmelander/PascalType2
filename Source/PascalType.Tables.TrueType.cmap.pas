@@ -584,6 +584,9 @@ var
   Offsets: array of Cardinal;
   Map: TCustomPascalTypeCharacterMapDirectory;
 begin
+  if (FMaps <> nil) then
+    FMaps.Clear;
+
   // store stream start position
   StartPos := Stream.Position;
 
@@ -603,53 +606,50 @@ begin
   // read subtable count
   SetLength(Offsets, BigEndianValueReader.ReadWord(Stream));
 
+  if (Length(Offsets) = 0) then
+    exit;
+
   // check (minimum) table size
   if Stream.Position + Length(Offsets) * (2 * SizeOf(Word) + SizeOf(Cardinal)) > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-  if (FMaps <> nil) then
-    FMaps.Clear;
+  if (FMaps = nil) then
+    FMaps := TObjectList<TCustomPascalTypeCharacterMapDirectory>.Create;
 
-  if (Length(Offsets) > 0) then
+  FMaps.Capacity := Length(Offsets);
+
+  // read directory entry
+  for i := 0 to High(Offsets) do
   begin
-    if (FMaps = nil) then
-      FMaps := TObjectList<TCustomPascalTypeCharacterMapDirectory>.Create;
+    // read Platform ID
+    PlatformID := BigEndianValueReader.ReadWord(Stream);
 
-    FMaps.Capacity := Length(Offsets);
+    // read encoding ID
+    EncodingID := BigEndianValueReader.ReadWord(Stream);
 
-    // read directory entry
-    for i := 0 to High(Offsets) do
-    begin
-      // read Platform ID
-      PlatformID := BigEndianValueReader.ReadWord(Stream);
-
-      // read encoding ID
-      EncodingID := BigEndianValueReader.ReadWord(Stream);
-
-      // create character map based on encoding
-      case PlatformID of
-        0:
-          Map := TPascalTypeCharacterMapUnicodeDirectory.Create(EncodingID);
-        1:
-          Map := TPascalTypeCharacterMapMacintoshDirectory.Create(EncodingID);
-        3:
-          Map := TPascalTypeCharacterMapMicrosoftDirectory.Create(EncodingID);
-      else
-        Map := TPascalTypeCharacterMapDirectoryGenericEntry.Create(EncodingID);
-      end;
-
-      FMaps.Add(Map);
-
-      // read and save offset
-      Offsets[i] := StartPos + BigEndianValueReader.ReadCardinal(Stream);
+    // create character map based on encoding
+    case PlatformID of
+      0:
+        Map := TPascalTypeCharacterMapUnicodeDirectory.Create(EncodingID);
+      1:
+        Map := TPascalTypeCharacterMapMacintoshDirectory.Create(EncodingID);
+      3:
+        Map := TPascalTypeCharacterMapMicrosoftDirectory.Create(EncodingID);
+    else
+      Map := TPascalTypeCharacterMapDirectoryGenericEntry.Create(EncodingID);
     end;
 
-    // load character map entries from stream
-    for i := 0 to High(Offsets) do
-    begin
-      Stream.Position := Offsets[i];
-      FMaps[i].LoadFromStream(Stream);
-    end;
+    FMaps.Add(Map);
+
+    // read and save offset
+    Offsets[i] := BigEndianValueReader.ReadCardinal(Stream);
+  end;
+
+  // load character map entries from stream
+  for i := 0 to High(Offsets) do
+  begin
+    Stream.Position := StartPos + Offsets[i];
+    FMaps[i].LoadFromStream(Stream);
   end;
 end;
 

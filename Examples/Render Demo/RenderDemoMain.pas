@@ -137,7 +137,7 @@ const
     (Name: 'GPOS, Pair, Class'; FontName: 'Roboto Regular'; Text: 'P, PA '#$0393'm'),
     (Name: 'GPOS, Cursive'; FontName: 'Arabic Typesetting'; Script: (AsAnsiChar: 'arab'); Direction: dirRightToLeft; Text: #$FE98#$067C#$067D), // Doesn't work or incorrect testcase
     (Name: 'GPOS, MarkToBase'; FontName: 'Segoe UI'; Text: #$1EAA#32#$1EEE),
-    (Name: 'GPOS, MarkToMark'; FontName: 'Arabic Typesetting'; Text: 'A'#$0327#$0323),//#$03BC#$03B1#$0390#$03C3#$03C4#$03C1#$03BF#$03C2), // Segoe UI appears to have a bug with this test case
+    (Name: 'GPOS, MarkToMark'; FontName: 'Arabic Typesetting'; Text: 'A'#$0327#$0323' A'#$0323#$0327),//#$03BC#$03B1#$0390#$03C3#$03C4#$03C1#$03BF#$03C2), // Segoe UI appears to have a bug with this test case
     (Name: 'GPOS, MarkToLigature'; FontName: 'Arabic Typesetting'; Script: (AsAnsiChar: 'arab'); Direction: dirRightToLeft; Text: #$FEF8#$0612'  '#$0644#$0627#$0654#$0612), // #$FEF8 is a ligature for #$0644#$0627#$0654
     (Name: 'Table: kern'; FontName: 'Verdana'; Text: 'LTAVAWA 11.LYT.'),
     (Name: 'Unicode normalization'; FontName: 'Arial'; Text: 'Ê¯Â∆ÿ≈'),

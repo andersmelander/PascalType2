@@ -71,6 +71,7 @@ type
     FCursiveAttachment: integer;
     FLigatureID: integer;
     FFeatures: TTableNames;
+    FIsMultiplied: boolean;
   protected
     procedure SetOwner(AOwner: TPascalTypeGlyphString);
     procedure SetGlyphID(const Value: TGlyphID);
@@ -104,6 +105,7 @@ type
     property CursiveAttachment: integer read FCursiveAttachment write FCursiveAttachment;
     property IsLigated: boolean read FIsLigated write FIsLigated;
     property IsSubstituted: boolean read FIsSubstituted write FIsSubstituted;
+    property IsMultiplied: boolean read FIsMultiplied write FIsMultiplied;
 
     property IsBase: boolean read FIsBase;
     property IsMark: boolean read FIsMark;
@@ -401,7 +403,7 @@ end;
 
 function TPascalTypeGlyphString.GetNextLigatureID: integer;
 begin
-  Inc(FLigatureID);
+  Inc(FLigatureID); // Increment before assign -> First ID is 1
   Result := FLigatureID;
 end;
 

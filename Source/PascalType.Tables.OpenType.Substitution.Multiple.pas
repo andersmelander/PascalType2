@@ -239,7 +239,7 @@ begin
       Glyph.IsLigated := AGlyphIterator.Glyph.IsLigated;
       Glyph.LigatureComponent := i;
       Glyph.IsSubstituted := True;
-// TODO      Glyph.IsMultiplied := True;
+      Glyph.IsMultiplied := True;
 
       AGlyphIterator.GlyphString.Insert(AGlyphIterator.Index+i, Glyph);
     end;

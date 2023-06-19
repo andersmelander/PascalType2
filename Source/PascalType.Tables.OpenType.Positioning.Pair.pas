@@ -375,15 +375,20 @@ var
   ClassValueRecord: TClassValueRecord;
   SecondGlyph: TPascalTypeGlyph;
 begin
+  Result := False;
+
   if (AGlyphIterator.Index >= AGlyphIterator.GlyphString.Count-1) then
-    Exit(False);
+    Exit;
 
   CoverageIndex := CoverageTable.IndexOfGlyph(AGlyphIterator.Glyph.GlyphID);
   if (CoverageIndex = -1) then
-    Exit(False);
+    Exit;
 
   FirstClassID := FFirstClassDefinitions.ClassByGlyphID(AGlyphIterator.Glyph.GlyphID);
+
   SecondGlyph := AGlyphIterator.PeekGlyph;
+  if (SecondGlyph = nil) then
+    Exit;
   SecondClassID := FSecondClassDefinitions.ClassByGlyphID(SecondGlyph.GlyphID);
 
   ClassValueRecord := FClassValueRecords[FirstClassID, SecondClassID];
