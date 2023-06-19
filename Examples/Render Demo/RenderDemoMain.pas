@@ -124,7 +124,7 @@ type
   end;
 
 const
-  TestCases: array[0..15] of TTestCase = (
+  TestCases: array[0..16] of TTestCase = (
     (Name: 'Default'; FontName: 'Arial'; Text: 'PascalType Render Demo'),
     (Name: 'GSUB, Single, Single/frac'; FontName: 'Cascadia Mono Regular'; Text: '123/456! ½ 8'#$2044'9'),
     (Name: 'GSUB, Single, List'; FontName: 'Candara'; Text: #$0386#$038C#$038E#$038F),
@@ -139,6 +139,7 @@ const
     (Name: 'GPOS, MarkToBase'; FontName: 'Segoe UI'; Text: #$1EAA#32#$1EEE),
     (Name: 'GPOS, MarkToMark'; FontName: 'Arabic Typesetting'; Text: 'A'#$0327#$0323),//#$03BC#$03B1#$0390#$03C3#$03C4#$03C1#$03BF#$03C2), // Segoe UI appears to have a bug with this test case
     (Name: 'GPOS, MarkToLigature'; FontName: 'Arabic Typesetting'; Script: (AsAnsiChar: 'arab'); Direction: dirRightToLeft; Text: #$FEF8#$0612'  '#$0644#$0627#$0654#$0612), // #$FEF8 is a ligature for #$0644#$0627#$0654
+    (Name: 'Table: kern'; FontName: 'Verdana'; Text: 'LTAVAWA 11.LYT.'),
     (Name: 'Unicode normalization'; FontName: 'Arial'; Text: 'זרוֶ״ֵ'),
     (Name: 'Composite glyphs'; FontName: 'Segoe UI'; Text: '½הגויע')
   );

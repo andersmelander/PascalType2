@@ -143,7 +143,10 @@ type
     class function GetShaperForScript(const Script: TTableType): TPascalTypeShaperClass;
     class procedure RegisterDefaultShaperClass(ShaperClass: TPascalTypeShaperClass);
 
-    function Shape(const AText: string): TPascalTypeGlyphString; virtual;
+    function TextToGlyphs(const AText: string): TPascalTypeGlyphString; virtual;
+
+    function Shape(const AText: string): TPascalTypeGlyphString; overload; virtual;
+    procedure Shape(AGlyphs: TPascalTypeGlyphString); overload; virtual;
 
     property Font: TCustomPascalTypeFontFace read FFont;
     property Script: TTableType read FScript write SetScript;
@@ -410,45 +413,55 @@ procedure TPascalTypeShaper.SetupPlan(APlan: TPascalTypeShapingPlan; var AGlyphs
 begin
 end;
 
-function TPascalTypeShaper.Shape(const AText: string): TPascalTypeGlyphString;
+procedure TPascalTypeShaper.Shape(AGlyphs: TPascalTypeGlyphString);
+var
+  LayoutEngine: TCustomPascalTypeLayoutEngine;
+begin
+  (*
+  ** Create a shaping plan.
+  ** The plan contains a collection of plan stages and each plan stage contains
+  ** a list of features that belong to that stage.
+  *)
+  if (FPlan = nil) then
+    FPlan := CreateShapingPlan;
+
+  SetupPlan(FPlan, AGlyphs, FFeatures);
+
+  // TODO : Create LayoutEngine once, free on reset
+  LayoutEngine := CreateLayoutEngine;
+  try
+    LayoutEngine.ZeroMarkWidths := ZeroMarkWidths;
+
+    LayoutEngine.Layout(FPlan, AGlyphs);
+  finally
+    LayoutEngine.Free;
+  end;
+end;
+
+function TPascalTypeShaper.TextToGlyphs(const AText: string): TPascalTypeGlyphString;
 var
   UTF32: TPascalTypeCodePoints;
-  LayoutEngine: TCustomPascalTypeLayoutEngine;
 begin
   (*
   ** Process UTF16 unicode string and return a normalized UCS-4/UTF32 string
   *)
   UTF32 := ProcessUnicode(AText);
 
-
   (*
   ** Convert from Unicode codepoints to glyph IDs.
-  ** From here on we are done with Unicode codepoints and are working with glyph IDs.
   *)
   Result := CreateGlyphString(UTF32);
+end;
+
+function TPascalTypeShaper.Shape(const AText: string): TPascalTypeGlyphString;
+begin
+  (*
+  ** Convert from text to Unicode codepoints to glyph IDs.
+  *)
+  Result := TextToGlyphs(AText);
   try
-    SetLength(UTF32, 0);
 
-
-    (*
-    ** Create a shaping plan.
-    ** The plan contains a collection of plan stages and each plan stage contains
-    ** a list of features that belong to that stage.
-    *)
-    if (FPlan = nil) then
-      FPlan := CreateShapingPlan;
-
-    SetupPlan(FPlan, Result, FFeatures);
-
-    // TODO : Create LayoutEngine once, free on reset
-    LayoutEngine := CreateLayoutEngine;
-    try
-      LayoutEngine.ZeroMarkWidths := ZeroMarkWidths;
-
-      LayoutEngine.Layout(FPlan, Result);
-    finally
-      LayoutEngine.Free;
-    end;
+    Shape(Result);
 
   except
     Result.Free;
