@@ -1,4 +1,4 @@
-unit PascalType.Tables.OpenType.Substitution.Context;
+unit PascalType.Tables.OpenType.Positioning.Context;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -38,31 +38,32 @@ uses
   Generics.Collections,
   Generics.Defaults,
   Classes,
-  PT_Classes,
   PT_Types,
+  PT_Classes,
   PascalType.GlyphString,
   PascalType.Tables.OpenType.Lookup,
-  PascalType.Tables.OpenType.Substitution,
+  PascalType.Tables.OpenType.Positioning,
   PascalType.Tables.OpenType.ClassDefinition,
   PascalType.Tables.OpenType.Coverage;
 
+
 //------------------------------------------------------------------------------
 //
-//              TOpenTypeSubstitutionLookupTableContext
+//              TOpenTypePositioningLookupTableContext
 //
 //------------------------------------------------------------------------------
-// LookupType 5: Contextual Substitution Subtable
+// Lookup Type 7: Contextual Positioning Subtables
 //------------------------------------------------------------------------------
-// https://learn.microsoft.com/en-us/typography/opentype/spec/gsub#lookuptype-5-contextual-substitution-subtable
+// https://learn.microsoft.com/en-us/typography/opentype/spec/gpos#lookup-type-7-contextual-positioning-subtables
 //------------------------------------------------------------------------------
 type
-  TOpenTypeSubstitutionLookupTableContext = class(TCustomOpenTypeSubstitutionLookupTable)
+  TOpenTypePositioningLookupTableContext = class(TCustomOpenTypePositioningLookupTable)
   public type
-    TGlyphContextSubstitution = (
-      gcsInvalid        = 0,
-      gcsSimple         = 1,
-      gcsClass          = 2,
-      gcsCoverage       = 3
+    TGlyphContextPositioning = (
+      gcpInvalid        = 0,
+      gcpSimple         = 1,
+      gcpClass          = 2,
+      gcpCoverage       = 3
     );
   protected
     function GetSubTableClass(ASubFormat: Word): TOpenTypeLookupSubTableClass; override;
@@ -72,16 +73,15 @@ type
 
 //------------------------------------------------------------------------------
 //
-//              TOpenTypeSubstitutionSubTableContextList
+//              TOpenTypePositioningSubTableContextSimple
 //
 //------------------------------------------------------------------------------
-// Sequence Context Format 1: simple glyph contexts
+// Context Positioning Subtable Format 1: Simple Glyph Contexts
 //------------------------------------------------------------------------------
-// https://learn.microsoft.com/en-us/typography/opentype/spec/gsub#51-context-substitution-format-1-simple-glyph-contexts
-// https://learn.microsoft.com/en-us/typography/opentype/spec/chapter2#sequence-context-format-1-simple-glyph-contexts
+// https://learn.microsoft.com/en-us/typography/opentype/spec/gpos#pair-adjustment-positioning-format-1-adjustments-for-glyph-pairs
 //------------------------------------------------------------------------------
 type
-  TOpenTypeSubstitutionSubTableContextSimple = class(TCustomOpenTypeSubstitutionSubTable)
+  TOpenTypePositioningSubTableContextSimple = class(TCustomOpenTypePositioningSubTable)
   public type
     TSequenceRule = record
       InputSequence: TGlyphString;
@@ -106,15 +106,15 @@ type
 
 //------------------------------------------------------------------------------
 //
-//              TOpenTypeSubstitutionSubTableContextClass
+//              TOpenTypePositioningSubTableContextClass
 //
 //------------------------------------------------------------------------------
-// Sequence Context Format 2: class-based glyph contexts
+// Context Positioning Subtable Format 2: Class-based Glyph Contexts
 //------------------------------------------------------------------------------
-// https://learn.microsoft.com/en-us/typography/opentype/spec/chapter2#seqctxt2
+// https://learn.microsoft.com/en-us/typography/opentype/spec/gpos#context-positioning-subtable-format-2-class-based-glyph-contexts
 //------------------------------------------------------------------------------
 type
-  TOpenTypeSubstitutionSubTableContextClass = class(TCustomOpenTypeSubstitutionSubTable)
+  TOpenTypePositioningSubTableContextClass = class(TCustomOpenTypePositioningSubTable)
   public type
     TSequenceRule = record
       InputSequence: TGlyphString;
@@ -128,9 +128,6 @@ type
   protected
     procedure SetClassDefinitions(const Value: TCustomOpenTypeClassDefinitionTable);
   public
-    constructor Create(AParent: TCustomPascalTypeTable); override;
-    destructor Destroy; override;
-
     procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
@@ -145,15 +142,15 @@ type
 
 //------------------------------------------------------------------------------
 //
-//              TOpenTypeSubstitutionSubTableContextCoverage
+//              TOpenTypePositioningSubTableContextCoverage
 //
 //------------------------------------------------------------------------------
-// Sequence Context Format 3: coverage-based glyph contexts
+// Context Positioning Subtable Format 3: Coverage-based Glyph Contexts
 //------------------------------------------------------------------------------
-// https://learn.microsoft.com/en-us/typography/opentype/spec/chapter2#sequence-context-format-3-coverage-based-glyph-contexts
+// https://learn.microsoft.com/en-us/typography/opentype/spec/gpos#context-positioning-subtable-format-3-coverage-based-glyph-contexts
 //------------------------------------------------------------------------------
 type
-  TOpenTypeSubstitutionSubTableContextCoverage = class(TCustomOpenTypeLookupSubTable)
+  TOpenTypePositioningSubTableContextCoverage = class(TCustomOpenTypeLookupSubTable)
   private type
     TCoverageTables = TList<TCustomOpenTypeCoverageTable>;
   private
@@ -190,21 +187,21 @@ uses
 
 //------------------------------------------------------------------------------
 //
-//              TOpenTypeSubstitutionLookupTableContext
+//              TOpenTypePositioningLookupTableContext
 //
 //------------------------------------------------------------------------------
-function TOpenTypeSubstitutionLookupTableContext.GetSubTableClass(ASubFormat: Word): TOpenTypeLookupSubTableClass;
+function TOpenTypePositioningLookupTableContext.GetSubTableClass(ASubFormat: Word): TOpenTypeLookupSubTableClass;
 begin
-  case TGlyphContextSubstitution(ASubFormat) of
+  case TGlyphContextPositioning(ASubFormat) of
 
-    gcsSimple:
-      Result := TOpenTypeSubstitutionSubTableContextSimple;
+    gcpSimple:
+      Result := TOpenTypePositioningSubTableContextSimple;
 
-    gcsClass:
-      Result := TOpenTypeSubstitutionSubTableContextClass;
+    gcpClass:
+      Result := TOpenTypePositioningSubTableContextClass;
 
-    gcsCoverage:
-      Result := TOpenTypeSubstitutionSubTableContextCoverage;
+    gcpCoverage:
+      Result := TOpenTypePositioningSubTableContextCoverage;
 
   else
     Result := nil;
@@ -214,19 +211,19 @@ end;
 
 //------------------------------------------------------------------------------
 //
-//              TOpenTypeSubstitutionSubTableContextSimple
+//              TOpenTypePositioningSubTableContextSimple
 //
 //------------------------------------------------------------------------------
-procedure TOpenTypeSubstitutionSubTableContextSimple.Assign(Source: TPersistent);
+procedure TOpenTypePositioningSubTableContextSimple.Assign(Source: TPersistent);
 begin
   inherited;
-  if Source is TOpenTypeSubstitutionSubTableContextSimple then
+  if Source is TOpenTypePositioningSubTableContextSimple then
   begin
-    FSequenceRules := Copy(TOpenTypeSubstitutionSubTableContextSimple(Source).FSequenceRules);
+    FSequenceRules := Copy(TOpenTypePositioningSubTableContextSimple(Source).FSequenceRules);
   end;
 end;
 
-procedure TOpenTypeSubstitutionSubTableContextSimple.LoadFromStream(Stream: TStream; Size: Cardinal);
+procedure TOpenTypePositioningSubTableContextSimple.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   SavePos: Int64;
@@ -310,12 +307,12 @@ begin
   Stream.Position := SavePos;
 end;
 
-procedure TOpenTypeSubstitutionSubTableContextSimple.SaveToStream(Stream: TStream);
+procedure TOpenTypePositioningSubTableContextSimple.SaveToStream(Stream: TStream);
 begin
   // TODO
 end;
 
-function TOpenTypeSubstitutionSubTableContextSimple.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
+function TOpenTypePositioningSubTableContextSimple.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
 var
   SequenceRuleSetIndex: integer;
   SequenceRuleSet: TSequenceRuleSet;
@@ -348,31 +345,21 @@ end;
 
 //------------------------------------------------------------------------------
 //
-//              TOpenTypeSubstitutionSubTableContextClass
+//              TOpenTypePositioningSubTableContextClass
 //
 //------------------------------------------------------------------------------
-constructor TOpenTypeSubstitutionSubTableContextClass.Create(AParent: TCustomPascalTypeTable);
+procedure TOpenTypePositioningSubTableContextClass.Assign(Source: TPersistent);
 begin
   inherited;
-end;
-
-destructor TOpenTypeSubstitutionSubTableContextClass.Destroy;
-begin
-  inherited;
-end;
-
-procedure TOpenTypeSubstitutionSubTableContextClass.Assign(Source: TPersistent);
-begin
-  inherited;
-  if Source is TOpenTypeSubstitutionSubTableContextClass then
+  if Source is TOpenTypePositioningSubTableContextClass then
   begin
-    FSequenceRules := Copy(TOpenTypeSubstitutionSubTableContextClass(Source).FSequenceRules);
+    FSequenceRules := Copy(TOpenTypePositioningSubTableContextClass(Source).FSequenceRules);
     // Assignment via property setter makes a copy
-    SetClassDefinitions(TOpenTypeSubstitutionSubTableContextClass(Source).FClassDefinitions);
+    SetClassDefinitions(TOpenTypePositioningSubTableContextClass(Source).FClassDefinitions);
   end;
 end;
 
-procedure TOpenTypeSubstitutionSubTableContextClass.LoadFromStream(Stream: TStream; Size: Cardinal);
+procedure TOpenTypePositioningSubTableContextClass.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   SavePos: Int64;
@@ -476,12 +463,12 @@ begin
   Stream.Position := SavePos;
 end;
 
-procedure TOpenTypeSubstitutionSubTableContextClass.SaveToStream(Stream: TStream);
+procedure TOpenTypePositioningSubTableContextClass.SaveToStream(Stream: TStream);
 begin
   // TODO
 end;
 
-procedure TOpenTypeSubstitutionSubTableContextClass.SetClassDefinitions(const Value: TCustomOpenTypeClassDefinitionTable);
+procedure TOpenTypePositioningSubTableContextClass.SetClassDefinitions(const Value: TCustomOpenTypeClassDefinitionTable);
 begin
   FreeAndNil(FClassDefinitions);
   if (Value <> nil) then
@@ -491,12 +478,13 @@ begin
   end;
 end;
 
-function TOpenTypeSubstitutionSubTableContextClass.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
+function TOpenTypePositioningSubTableContextClass.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
 var
   SequenceRuleSetIndex: integer;
   SequenceRuleSet: TSequenceRuleSet;
   i: integer;
 begin
+  // Test case: "MS Arial Unicode"
   Result := False;
 
   // The coverage table contains the index of the first character of the sequence.
@@ -528,35 +516,35 @@ end;
 
 //------------------------------------------------------------------------------
 //
-//              TOpenTypeSubstitutionSubTableContextCoverage
+//              TOpenTypePositioningSubTableContextCoverage
 //
 //------------------------------------------------------------------------------
-constructor TOpenTypeSubstitutionSubTableContextCoverage.Create(AParent: TCustomPascalTypeTable);
+constructor TOpenTypePositioningSubTableContextCoverage.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
 
   FCoverageTables := TObjectList<TCustomOpenTypeCoverageTable>.Create;
 end;
 
-destructor TOpenTypeSubstitutionSubTableContextCoverage.Destroy;
+destructor TOpenTypePositioningSubTableContextCoverage.Destroy;
 begin
   FCoverageTables.Free;
 
   inherited;
 end;
 
-procedure TOpenTypeSubstitutionSubTableContextCoverage.Assign(Source: TPersistent);
+procedure TOpenTypePositioningSubTableContextCoverage.Assign(Source: TPersistent);
 begin
   inherited;
-  if Source is TOpenTypeSubstitutionSubTableContextCoverage then
+  if Source is TOpenTypePositioningSubTableContextCoverage then
   begin
-    FSequenceRules := Copy(TOpenTypeSubstitutionSubTableContextCoverage(Source).FSequenceRules);
+    FSequenceRules := Copy(TOpenTypePositioningSubTableContextCoverage(Source).FSequenceRules);
     // Assignment via property setter makes a copy
-    SetCoverageTables(TOpenTypeSubstitutionSubTableContextCoverage(Source).FCoverageTables);
+    SetCoverageTables(TOpenTypePositioningSubTableContextCoverage(Source).FCoverageTables);
   end;
 end;
 
-procedure TOpenTypeSubstitutionSubTableContextCoverage.LoadFromStream(Stream: TStream; Size: Cardinal);
+procedure TOpenTypePositioningSubTableContextCoverage.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   i: integer;
@@ -600,12 +588,12 @@ begin
   end;
 end;
 
-procedure TOpenTypeSubstitutionSubTableContextCoverage.SaveToStream(Stream: TStream);
+procedure TOpenTypePositioningSubTableContextCoverage.SaveToStream(Stream: TStream);
 begin
   // TODO
 end;
 
-procedure TOpenTypeSubstitutionSubTableContextCoverage.SetCoverageTables(Value: TCoverageTables);
+procedure TOpenTypePositioningSubTableContextCoverage.SetCoverageTables(Value: TCoverageTables);
 var
   CoverageTable: TCustomOpenTypeCoverageTable;
   NewCoverageTable: TCustomOpenTypeCoverageTable;
@@ -622,7 +610,7 @@ begin
   end;
 end;
 
-function TOpenTypeSubstitutionSubTableContextCoverage.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
+function TOpenTypePositioningSubTableContextCoverage.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
 var
   CoverageIndex: integer;
   i: integer;
@@ -656,6 +644,6 @@ end;
 //------------------------------------------------------------------------------
 
 initialization
-  TCustomOpenTypeSubstitutionLookupTable.RegisterSubstitutionFormat(gsContext, TOpenTypeSubstitutionLookupTableContext);
+  TCustomOpenTypePositioningLookupTable.RegisterPositioningFormat(gpContextPositioning, TOpenTypePositioningLookupTableContext);
 end.
 
