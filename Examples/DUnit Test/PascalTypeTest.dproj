@@ -107,7 +107,6 @@
         <RcCompile Include="..\..\Resource\Default.rc">
             <Form>Default.res</Form>
         </RcCompile>
-        <DCCReference Include="TestPascalTypeInterpreter.pas"/>
         <DCCReference Include="..\..\Source\PT_ByteCodeInterpreter.pas"/>
         <DCCReference Include="..\..\Source\PT_Classes.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.CharacterMaps.pas"/>
@@ -134,8 +133,6 @@
         <DCCReference Include="..\..\Source\PT_TablesShared.pas"/>
         <DCCReference Include="..\..\Source\PT_TablesTrueType.pas"/>
         <DCCReference Include="..\..\Source\PT_Types.pas"/>
-        <DCCReference Include="..\..\Source\PT_UnicodeNames.pas"/>
-        <DCCReference Include="..\..\Source\PT_Windows.pas"/>
         <DCCReference Include="..\Render Demo\RenderDemoFontNameScanner.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.GPOS.pas"/>
@@ -169,6 +166,7 @@
         <DCCReference Include="..\..\Source\PascalType.Unicode.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.cmap.pas"/>
         <DCCReference Include="TestUnicode.pas"/>
+        <DCCReference Include="..\..\Source\Unicode\JclUnicode.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

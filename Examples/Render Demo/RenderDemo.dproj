@@ -218,6 +218,7 @@
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.kern.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Positioning.Context.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Positioning.ChainedContext.pas"/>
+        <DCCReference Include="..\..\Source\Unicode\JclUnicode.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

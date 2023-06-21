@@ -32,6 +32,10 @@ unit PascalType.Unicode;
 
 interface
 
+// Select Unicode library. One of these must be defined.
+{.$define UNICODE_PUCU}
+{$define UNICODE_JEDI}
+
 {$I PT_Compiler.inc}
 
 
@@ -46,7 +50,7 @@ type
   // A Unicode code point
   TPascalTypeCodePoint = Cardinal;
 
-  TPascalTypeCodePoints = array of TPascalTypeCodePoint;
+  TPascalTypeCodePoints = TArray<TPascalTypeCodePoint>;
 
 
 //------------------------------------------------------------------------------
@@ -79,8 +83,9 @@ type
     // UnicodeDecompose: Decomposes and normalizes.
     // UnicodeCompose: Composes. It is assumed that the input has already been normalized.
     //------------------------------------------------------------------------------
-    class function Decompose(const AString: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints; static;
-    class function Compose(const AString: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints; static;
+    class procedure Normalize(ACodePoints: TPascalTypeCodePoints; Filter: TCodePointFilter = nil); static;
+    class function Decompose(const ACodePoints: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints; static;
+    class function Compose(const ACodePoints: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints; static;
 
 
     //------------------------------------------------------------------------------
@@ -91,7 +96,7 @@ type
     // Convert between 16-bit Unicode (native char/string) and 32-bit Unicode
     //------------------------------------------------------------------------------
     class function UTF16ToUTF32(const AText: string): TPascalTypeCodePoints; static;
-    class function UTF32ToUTF16(const AText: TPascalTypeCodePoints): string; static;
+    class function UTF32ToUTF16(const ACodePoints: TPascalTypeCodePoints): string; static;
 
 
     //------------------------------------------------------------------------------
@@ -99,11 +104,12 @@ type
     //              Categorization
     //
     //------------------------------------------------------------------------------
-    class function IsDigit(const AChar: TPascalTypeCodePoint): boolean; static;
-    class function IsWhiteSpace(const AChar: TPascalTypeCodePoint): boolean; static;
-    class function IsMark(const AChar: TPascalTypeCodePoint): boolean; static;
-    class function IsDefaultIgnorable(const AChar: TPascalTypeCodePoint): boolean; static;
+    class function IsDigit(const ACodePoint: TPascalTypeCodePoint): boolean; static;
+    class function IsWhiteSpace(const ACodePoint: TPascalTypeCodePoint): boolean; static;
+    class function IsMark(const ACodePoint: TPascalTypeCodePoint): boolean; static;
+    class function IsDefaultIgnorable(const ACodePoint: TPascalTypeCodePoint): boolean; static;
 
+  private
   end;
 
 //------------------------------------------------------------------------------
@@ -113,7 +119,13 @@ type
 implementation
 
 uses
-  PUCU;
+{$if defined(UNICODE_PUCU)}
+  ..\..\Source\Externals\pucu\src\PUCU;
+{$elseif defined(UNICODE_JEDI)}
+  jclUnicode;
+{$else}
+{$message fatal 'Missing Unicode implementation'}
+{$ifend}
 
 {$ifdef WIN32_NORMALIZESTRING}
 type
@@ -157,6 +169,7 @@ begin
 end;
 {$endif WIN32_NORMALIZESTRING}
 
+{$ifdef UNICODE_PUCU}
 //------------------------------------------------------------------------------
 //
 //              PUCUNormalize32
@@ -170,7 +183,7 @@ type
   TPUCUUTF32String = TPascalTypeCodePoints;     //
   TPUCUInt32 = integer;                         // PUCU declares it as LongInt. We need it to be Integer.
 
-function PUCUNormalize32(const AString: TPUCUUTF32String; const ACompose: boolean; Filter: TCodePointFilter = nil): TPUCUUTF32String;
+function PUCUNormalize32(const ACodePoints: TPUCUUTF32String; const ACompose: boolean; Filter: TCodePointFilter = nil): TPUCUUTF32String;
 
   procedure SetCodePoint(AIndex: integer; const ACodePoint: TPUCUUTF32Char);
   begin
@@ -200,9 +213,9 @@ var
   CharacterCompositionSequence: PPUCUUnicodeCharacterCompositionSequence;
 begin
 
-  SetLength(Result, Length(AString));
+  SetLength(Result, Length(ACodePoints));
 
-  if (Length(AString) = 0) then
+  if (Length(ACodePoints) = 0) then
     Exit;
 
   Len := 0;
@@ -212,9 +225,9 @@ begin
   *)
   if not ACompose then
   begin
-    for Index := 0 to Length(AString) - 1 do
+    for Index := 0 to Length(ACodePoints) - 1 do
     begin
-      CodePoint := AString[Index];
+      CodePoint := ACodePoints[Index];
 
       // Filter codepoint
       if (Assigned(Filter)) and (not Filter(CodePoint)) then
@@ -293,7 +306,7 @@ begin
     end;
   end else
     // Assume input is already decomposed and normalized
-    Result := Copy(AString);
+    Result := Copy(ACodePoints);
 
   (*
   ** Compose
@@ -383,9 +396,9 @@ end;
 //              Decompose
 //
 //------------------------------------------------------------------------------
-class function PascalTypeUnicode.Decompose(const AString: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints;
+class function PascalTypeUnicode.Decompose(const ACodePoints: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints;
 begin
-  Result := PUCUNormalize32(AString, False, Filter);
+  Result := PUCUNormalize32(ACodePoints, False, Filter);
 end;
 
 //------------------------------------------------------------------------------
@@ -393,9 +406,9 @@ end;
 //              Compose
 //
 //------------------------------------------------------------------------------
-class function PascalTypeUnicode.Compose(const AString: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints;
+class function PascalTypeUnicode.Compose(const ACodePoints: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints;
 begin
-  Result := PUCUNormalize32(AString, True, Filter);
+  Result := PUCUNormalize32(ACodePoints, True, Filter);
 end;
 
 
@@ -426,41 +439,236 @@ end;
 //              Categorization
 //
 //------------------------------------------------------------------------------
-class function PascalTypeUnicode.IsMark(const AChar: TPascalTypeCodePoint): boolean;
+class function PascalTypeUnicode.IsMark(const ACodePoint: TPascalTypeCodePoint): boolean;
 begin
-  Result := (PUCUUnicodeGetCategoryFromTable(AChar) in [PUCUUnicodeCategoryMn, PUCUUnicodeCategoryMe, PUCUUnicodeCategoryMc]);
+  Result := (PUCUUnicodeGetCategoryFromTable(ACodePoint) in [PUCUUnicodeCategoryMn, PUCUUnicodeCategoryMe, PUCUUnicodeCategoryMc]);
 end;
 
-class function PascalTypeUnicode.IsWhiteSpace(const AChar: TPascalTypeCodePoint): boolean;
+class function PascalTypeUnicode.IsWhiteSpace(const ACodePoint: TPascalTypeCodePoint): boolean;
 begin
-  Result := PUCUUnicodeIsWhiteSpace(AChar);
+  Result := PUCUUnicodeIsWhiteSpace(ACodePoint);
 end;
 
-class function PascalTypeUnicode.IsDigit(const AChar: TPascalTypeCodePoint): boolean;
+class function PascalTypeUnicode.IsDigit(const ACodePoint: TPascalTypeCodePoint): boolean;
 begin
-  Result := (PUCUUnicodeGetCategoryFromTable(AChar) = PUCUUnicodeCategoryNd);
+  Result := (PUCUUnicodeGetCategoryFromTable(ACodePoint) = PUCUUnicodeCategoryNd);
+end;
+{$endif UNICODE_PUCU}
+
+
+{$ifdef UNICODE_JEDI}
+//------------------------------------------------------------------------------
+//
+//              Normalization
+//
+//------------------------------------------------------------------------------
+class procedure PascalTypeUnicode.Normalize(ACodePoints: TPascalTypeCodePoints; Filter: TCodePointFilter);
+var
+  StartIndex: integer;
+  EndIndex: integer;
+  Outer, Inner: integer;
+  CodePoint: UCS4;
+begin
+  StartIndex := 0;
+  while (StartIndex < Length(ACodePoints)) do
+  begin
+    // Find the start of a group. A group follows a codepoint[class=0] and contains one or more codepoint[class<>0].
+    if CanonicalCombiningClass(ACodePoints[StartIndex]) = 0 then
+    begin
+      Inc(StartIndex);
+      continue;
+    end;
+
+    // Find the end of the group
+    EndIndex := StartIndex + 1;
+    // OpenType: Do not reorder marks
+    while (EndIndex < Length(ACodePoints)) and ((not Assigned(Filter)) or (Filter(ACodePoints[EndIndex]))) and (CanonicalCombiningClass(ACodePoints[EndIndex]) <> 0) do
+      Inc(EndIndex);
+
+    // There's nothing to reorder unless group has 2 or more codepoints in it
+    if (EndIndex - StartIndex > 1) then
+    begin
+      // Bubble sort
+      for Outer := EndIndex-1 downto StartIndex do
+        for Inner := StartIndex to Outer-1 do
+          if CanonicalCombiningClass(ACodePoints[Inner]) > CanonicalCombiningClass(ACodePoints[Inner+1]) then
+          begin
+            // Swap
+            CodePoint := ACodePoints[Inner];
+            ACodePoints[Inner] := ACodePoints[Inner + 1];
+            ACodePoints[Inner + 1] := CodePoint;
+          end;
+    end;
+
+    StartIndex := EndIndex + 1;
+  end;
 end;
 
-class function PascalTypeUnicode.IsDefaultIgnorable(const AChar: TPascalTypeCodePoint): boolean;
+//------------------------------------------------------------------------------
+//
+//              Decompose
+//
+//------------------------------------------------------------------------------
+class function PascalTypeUnicode.Decompose(const ACodePoints: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints;
+begin
+  Result := UnicodeDecompose(ACodePoints, False);//, Filter);
+end;
+
+//------------------------------------------------------------------------------
+//
+//              Compose
+//
+//------------------------------------------------------------------------------
+class function PascalTypeUnicode.Compose(const ACodePoints: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints;
+begin
+  Result := UnicodeCompose(ACodePoints, False);//, Filter);
+end;
+
+
+//------------------------------------------------------------------------------
+//
+//              String conversion
+//
+//------------------------------------------------------------------------------
+class function PascalTypeUnicode.UTF16ToUTF32(const AText: string): TPascalTypeCodePoints;
+var
+  i, j: integer;
+  w: Cardinal;
+begin
+  i := 1;
+  j := 0;
+
+  SetLength(Result, Length(AText));
+
+  while i <= Length(AText) do
+  begin
+    w := Ord(AText[i]);
+    Inc(i);
+
+    if (i <= Length(AText)) and (w and $fc00 = $d800) and (Word(Ord(AText[i])) and $fc00 = $dc00) then
+    begin
+      w := (Cardinal(Cardinal(w and $3ff) shl 10) or Cardinal(Ord(AText[i]) and $3ff)) + $10000;
+      inc(i);
+    end;
+
+    Result[j] := UCS4(w);
+    inc(j);
+  end;
+
+  SetLength(Result, j);
+end;
+
+class function PascalTypeUnicode.UTF32ToUTF16(const ACodePoints: TPascalTypeCodePoints): string;
+var
+  i, j: integer;
+  w: Cardinal;
+begin
+  Result := '';
+
+  j := 0;
+  for i := 0 to High(ACodePoints) do
+  begin
+    w := ACodePoints[i];
+    if w <= $D7FF then
+      Inc(j)
+    else
+    if w <= $DFFF then
+      Inc(j)
+    else
+    if w <= $FFFD then
+      Inc(j)
+    else
+    if w <= $FFFF then
+      Inc(j)
+    else
+    if w <= $10FFFF then
+      Inc(j, 2)
+    else
+      Inc(j);
+  end;
+
+  SetLength(Result, j);
+  j := 0;
+  for i := 0 to High(ACodePoints) do
+  begin
+    w := ACodePoints[i];
+    if w <= $D7FF then
+    begin
+      Inc(j);
+      Result[j] := Char(w);
+    end else
+    if w <= $DFFF then
+    begin
+      Inc(j);
+      Result[j] := #$fffd;
+    end else
+    if w <= $FFFD then
+    begin
+      Inc(j);
+      Result[j] := Char(w);
+    end else
+    if w <= $FFFF then
+    begin
+      Inc(j);
+      Result[j] := #$fffd;
+    end else
+    if w <= $10FFFF then
+    begin
+      Dec(w, $10000);
+      Inc(j);
+      Result[j] := Char((w shr 10) or $D800);
+      Inc(j);
+      Result[j] := Char((w and $3FF) or $DC00);
+    end else
+    begin
+      Inc(j);
+      Result[j] := #$fffd;
+    end;
+  end;
+end;
+
+
+//------------------------------------------------------------------------------
+//
+//              Categorization
+//
+//------------------------------------------------------------------------------
+class function PascalTypeUnicode.IsMark(const ACodePoint: TPascalTypeCodePoint): boolean;
+begin
+  Result := UnicodeIsMark(ACodePoint);
+end;
+
+class function PascalTypeUnicode.IsWhiteSpace(const ACodePoint: TPascalTypeCodePoint): boolean;
+begin
+  Result := UnicodeIsWhiteSpace(ACodePoint);
+end;
+
+class function PascalTypeUnicode.IsDigit(const ACodePoint: TPascalTypeCodePoint): boolean;
+begin
+  Result := UnicodeIsDigit(ACodePoint);
+end;
+{$endif UNICODE_JEDI}
+
+class function PascalTypeUnicode.IsDefaultIgnorable(const ACodePoint: TPascalTypeCodePoint): boolean;
 var
   UnicodePlane: Word;
 begin
   // From DerivedCoreProperties.txt in the Unicode database,
   // minus U+115F, U+1160, U+3164 and U+FFA0, which is what
   // Harfbuzz and Uniscribe do.
-  UnicodePlane := AChar shr 16;
+  UnicodePlane := ACodePoint shr 16;
   if (UnicodePlane = 0) then
   begin
     // BMP
-    case AChar shr 8 of
-      $00: Result := (AChar = $00AD);
-      $03: Result := (AChar = $034F);
-      $06: Result := (AChar = $061C);
-      $17: Result := (AChar >= $17B4) and (AChar <= $17B5);
-      $18: Result := (AChar >= $180B) and (AChar <= $180E);
-      $20: Result := ((AChar >= $200B) and (AChar <= $200F)) or ((AChar >= $202A) and (AChar <= $202E)) or ((AChar >= $2060) and (AChar <= $206F));
-      $FE: Result := (AChar >= $FE00) and (AChar <= $FE0F) or (AChar = $FEFF);
-      $FF: Result := (AChar >= $FFF0) and (AChar <= $FFF8);
+    case ACodePoint shr 8 of
+      $00: Result := (ACodePoint = $00AD);
+      $03: Result := (ACodePoint = $034F);
+      $06: Result := (ACodePoint = $061C);
+      $17: Result := (ACodePoint >= $17B4) and (ACodePoint <= $17B5);
+      $18: Result := (ACodePoint >= $180B) and (ACodePoint <= $180E);
+      $20: Result := ((ACodePoint >= $200B) and (ACodePoint <= $200F)) or ((ACodePoint >= $202A) and (ACodePoint <= $202E)) or ((ACodePoint >= $2060) and (ACodePoint <= $206F));
+      $FE: Result := (ACodePoint >= $FE00) and (ACodePoint <= $FE0F) or (ACodePoint = $FEFF);
+      $FF: Result := (ACodePoint >= $FFF0) and (ACodePoint <= $FFF8);
     else
       Result := False;
     end;
@@ -468,8 +676,8 @@ begin
   begin
     // Other planes
     case UnicodePlane of
-      $01: Result := ((AChar >= $1BCA0) and (AChar <= $1BCA3)) or ((AChar >= $1D173) and (AChar <= $1D17A));
-      $0E: Result := (AChar >= $E0000) and (AChar <= $E0FFF);
+      $01: Result := ((ACodePoint >= $1BCA0) and (ACodePoint <= $1BCA3)) or ((ACodePoint >= $1D173) and (ACodePoint <= $1D17A));
+      $0E: Result := (ACodePoint >= $E0000) and (ACodePoint <= $E0FFF);
     else
       Result := False;
     end;

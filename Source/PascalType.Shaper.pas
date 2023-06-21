@@ -116,6 +116,7 @@ type
     class destructor Destroy;
   protected
     procedure Reset; virtual;
+    function NormalizationFilter(CodePoint: TPascalTypeCodePoint): boolean; virtual;
     function DecompositionFilter(CodePoint: TPascalTypeCodePoint): boolean; virtual;
     function CompositionFilter(CodePoint: TPascalTypeCodePoint): boolean; virtual;
     procedure ProcessCodePoints(var CodePoints: TPascalTypeCodePoints); virtual;
@@ -329,6 +330,12 @@ begin
   Result := True;
 end;
 
+function TPascalTypeShaper.NormalizationFilter(CodePoint: TPascalTypeCodePoint): boolean;
+begin
+  // Do not reorder is codepoiont is a mark
+  Result := not PascalTypeUnicode.IsMark(CodePoint);
+end;
+
 function TPascalTypeShaper.CompositionFilter(CodePoint: TPascalTypeCodePoint): boolean;
 begin
   // Lookup codepoint in font.
@@ -401,9 +408,14 @@ begin
   Result := PascalTypeUnicode.UTF16ToUTF32(AText);
 
   (*
-  ** Unicode decompose and normalization
+  ** Unicode decompose
   *)
   Result := PascalTypeUnicode.Decompose(Result, DecompositionFilter);
+
+  (*
+  ** Unicode normalization
+  *)
+  PascalTypeUnicode.Normalize(Result, NormalizationFilter);
 
   (*
   ** Process individual codepoints

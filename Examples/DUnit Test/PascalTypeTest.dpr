@@ -21,7 +21,6 @@ uses
   TestFramework,
   GUITestRunner,
   TextTestRunner,
-  TestPascalTypeInterpreter in 'TestPascalTypeInterpreter.pas',
   PT_ByteCodeInterpreter in '..\..\Source\PT_ByteCodeInterpreter.pas',
   PT_Classes in '..\..\Source\PT_Classes.pas',
   PascalType.Tables.TrueType.CharacterMaps in '..\..\Source\PascalType.Tables.TrueType.CharacterMaps.pas',
@@ -48,8 +47,6 @@ uses
   PT_TablesShared in '..\..\Source\PT_TablesShared.pas',
   PT_TablesTrueType in '..\..\Source\PT_TablesTrueType.pas',
   PT_Types in '..\..\Source\PT_Types.pas',
-  PT_UnicodeNames in '..\..\Source\PT_UnicodeNames.pas',
-  PT_Windows in '..\..\Source\PT_Windows.pas',
   RenderDemoFontNameScanner in '..\Render Demo\RenderDemoFontNameScanner.pas',
   PascalType.Tables.OpenType in '..\..\Source\PascalType.Tables.OpenType.pas',
   PascalType.Tables.OpenType.GPOS in '..\..\Source\PascalType.Tables.OpenType.GPOS.pas',
@@ -82,7 +79,8 @@ uses
   PascalType.Tables.OpenType.Substitution.Ligature in '..\..\Source\PascalType.Tables.OpenType.Substitution.Ligature.pas',
   PascalType.Unicode in '..\..\Source\PascalType.Unicode.pas',
   PascalType.Tables.TrueType.cmap in '..\..\Source\PascalType.Tables.TrueType.cmap.pas',
-  TestUnicode in 'TestUnicode.pas';
+  TestUnicode in 'TestUnicode.pas',
+  JclUnicode in '..\..\Source\Unicode\JclUnicode.pas';
 
 {$R *.RES}
 

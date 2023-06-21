@@ -149,20 +149,22 @@ begin
 
     var ThisFailed := False;
 
-    var ComposedCodePoints := PascalTypeUnicode.Compose(UnicodeTestCase.NFD);
+    var Normalized: TPascalTypeCodePoints := UnicodeTestCase.NFD;
+    PascalTypeUnicode.Normalize(Normalized);
+    var ComposedCodePoints := PascalTypeUnicode.Compose(Normalized);
 
 //    CheckEquals(Length(ComposedCodePoints), Length(UnicodeTestCase.NFC), Format('Incorrect Composed length in row %d', [UnicodeTestCase.Row]));
     if (Length(UnicodeTestCase.NFC) <> Length(ComposedCodePoints)) then
     begin
-      Status(Format('Incorrect Composed length in row %d. Expected: %d, Actual: %d', [UnicodeTestCase.Row, Length(UnicodeTestCase.NFC), Length(ComposedCodePoints)]));
+      Status(Format('Incorrect composed length in row %d. Expected: %d, Actual: %d (%s)', [UnicodeTestCase.Row, Length(UnicodeTestCase.NFC), Length(ComposedCodePoints), UnicodeTestCase.Name]));
       ThisFailed := True;
     end;
 
     for var i := 0 to High(ComposedCodePoints) do
       if (UnicodeTestCase.NFC[i] <> ComposedCodePoints[i]) then
       begin
-        Status(Format('Incorrect composed component in row %d. Decomposed: %s, Expected:%s, Actual: %s',
-          [UnicodeTestCase.Row, CodePointsToString(UnicodeTestCase.NFD), CodePointsToString(UnicodeTestCase.NFC), CodePointsToString(ComposedCodePoints)]));
+        Status(Format('Incorrect composed component in row %d. Decomposed: %s, Expected:%s, Actual: %s (%s)',
+          [UnicodeTestCase.Row, CodePointsToString(UnicodeTestCase.NFD), CodePointsToString(UnicodeTestCase.NFC), CodePointsToString(ComposedCodePoints), UnicodeTestCase.Name]));
         ThisFailed := True;
         break;
       end;
@@ -197,6 +199,7 @@ begin
   begin
 //    Status(Format('Testing row %d: %s...', [UnicodeTestCase.Row, UnicodeTestCase.Name]));
 
+(*
     // For now, skip the tests that lock up the demoposition routine
     Inc(Skipped);
     case UnicodeTestCase.Row of
@@ -210,10 +213,11 @@ begin
         continue;
     end;
     Dec(Skipped);
-
+*)
     var DecomposedCodePoints := PascalTypeUnicode.Decompose(UnicodeTestCase.Source);
+    PascalTypeUnicode.Normalize(DecomposedCodePoints);
 
-    CheckEquals(Length(DecomposedCodePoints), Length(UnicodeTestCase.NFD), Format('Incorrect decomposed length in row %d', [UnicodeTestCase.Row]));
+    CheckEquals(Length(UnicodeTestCase.NFD), Length(DecomposedCodePoints), Format('Incorrect decomposed length in row %d', [UnicodeTestCase.Row]));
 
     var ThisFailed := False;
 
