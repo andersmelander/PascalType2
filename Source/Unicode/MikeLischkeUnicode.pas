@@ -10,7 +10,7 @@
 { ANY KIND, either express or implied. See the License for the specific language governing rights  }
 { and limitations under the License.                                                               }
 {                                                                                                  }
-{ The Original Code is JclUnicode.pas.                                                             }
+{ The Original Code is Unicode.pas                                                                 }
 {                                                                                                  }
 { The Initial Developer of the Original Code is Mike Lischke (public att lischke-online dott de).  }
 { Portions created by Mike Lischke are Copyright (C) 1999-2000 Mike Lischke. All Rights Reserved.  }
@@ -36,18 +36,17 @@
 {                                                                                                  }
 {**************************************************************************************************}
 {                                                                                                  }
-{ Last modified: $Date::                                                                         $ }
-{ Revision:      $Rev::                                                                          $ }
-{ Author:        $Author::                                                                       $ }
-{                                                                                                  }
-{**************************************************************************************************}
-{                                                                                                  }
 { Modified for the PascalType project.                                                             }
-{ All dependencies on other JEDI units has been eliminated.                                        }
+{ - All dependencies on other JEDI units has been eliminated and many bugs introduced by JEDI has  }
+{   been eliminated.                                                                               }
+{ - Hangul composition and decomposition has been rewritten.                                       }
+{ - All WideString functions and Windows specific functions has been eliminated.                   }
+{ - Composition and decomposition rewritten.                                                       }
 {                                                                                                  }
+{ Note: This unit does not perform normalization.                                                  }
 {**************************************************************************************************}
 
-unit JclUnicode;
+unit MikeLischkeUnicode;
 
 
 // Copyright (c) 1999-2000 Mike Lischke (public att lischke-online dott de)
@@ -62,9 +61,9 @@ interface
 {$ENDIF UNICODE_RAW_DATA}
 
 uses
-  {$IFDEF MSWINDOWS}
+{$IFDEF MSWINDOWS}
   Winapi.Windows,
-  {$ENDIF MSWINDOWS}
+{$ENDIF MSWINDOWS}
   System.Character,
   System.SysUtils,
   System.Classes;
@@ -935,16 +934,14 @@ type
 type
   TCodePointFilter = reference to function(CodePoint: UCS4): boolean;
 
-function UnicodeCompose(const Codes: TUCS4Array; Compatible: Boolean = False; Filter: TCodePointFilter = nil): TUCS4Array; 
+function UnicodeCompose(const Codes: TUCS4Array; Compatible: Boolean = False; Filter: TCodePointFilter = nil): TUCS4Array;
 function UnicodeDecompose(const Codes: TUCS4Array; Compatible: Boolean = False; Filter: TCodePointFilter = nil): TUCS4Array;
 function GetUnicodeCategory(Code: UCS4): TCharacterCategories;
 
 // Low level character routines
-{$IFNDEF UNICODE_RTL_DATABASE}
 function UnicodeNumberLookup(Code: UCS4; var Number: TUcNumber): Boolean;
 function UnicodeCaseFold(Code: UCS4): TUCS4Array;
 function UnicodeToTitle(Code: UCS4): TUCS4Array;
-{$ENDIF ~UNICODE_RTL_DATABASE}
 function UnicodeToUpper(Code: UCS4): TUCS4Array;
 function UnicodeToLower(Code: UCS4): TUCS4Array;
 
@@ -964,9 +961,7 @@ function UnicodeIsPrintable(C: UCS4): Boolean;
 function UnicodeIsUpper(C: UCS4): Boolean;
 function UnicodeIsLower(C: UCS4): Boolean;
 function UnicodeIsTitle(C: UCS4): Boolean;
-{$IFNDEF UNICODE_RTL_DATABASE}
 function UnicodeIsHexDigit(C: UCS4): Boolean;
-{$ENDIF ~UNICODE_RTL_DATABASE}
 function UnicodeIsIsoControl(C: UCS4): Boolean;
 function UnicodeIsFormatControl(C: UCS4): Boolean;
 function UnicodeIsSymbol(C: UCS4): Boolean;
@@ -976,7 +971,6 @@ function UnicodeIsOpenPunctuation(C: UCS4): Boolean;
 function UnicodeIsClosePunctuation(C: UCS4): Boolean;
 function UnicodeIsInitialPunctuation(C: UCS4): Boolean;
 function UnicodeIsFinalPunctuation(C: UCS4): Boolean;
-{$IFNDEF UNICODE_RTL_DATABASE}
 function UnicodeIsComposed(C: UCS4): Boolean;
 function UnicodeIsQuotationMark(C: UCS4): Boolean;
 function UnicodeIsSymmetric(C: UCS4): Boolean;
@@ -994,7 +988,6 @@ function UnicodeIsSeparator(C: UCS4): Boolean;
 // Other character test functions
 function UnicodeIsMark(C: UCS4): Boolean;
 function UnicodeIsModifier(C: UCS4): Boolean;
-{$ENDIF ~UNICODE_RTL_DATABASE}
 function UnicodeIsLetterNumber(C: UCS4): Boolean;
 function UnicodeIsConnectionPunctuation(C: UCS4): Boolean;
 function UnicodeIsDash(C: UCS4): Boolean;
@@ -1019,7 +1012,6 @@ function UnicodeIsLetterOther(C: UCS4): Boolean;
 function UnicodeIsConnector(C: UCS4): Boolean;
 function UnicodeIsPunctuationOther(C: UCS4): Boolean;
 function UnicodeIsSymbolOther(C: UCS4): Boolean;
-{$IFNDEF UNICODE_RTL_DATABASE}
 function UnicodeIsLeftToRightEmbedding(C: UCS4): Boolean;
 function UnicodeIsLeftToRightOverride(C: UCS4): Boolean;
 function UnicodeIsRightToLeftArabic(C: UCS4): Boolean;
@@ -1062,20 +1054,6 @@ function UnicodeIsSTerm(C: UCS4): Boolean;
 function UnicodeIsTerminalPunctuation(C: UCS4): Boolean;
 function UnicodeIsUnifiedIdeograph(C: UCS4): Boolean;
 function UnicodeIsVariationSelector(C: UCS4): Boolean;
-{$ENDIF ~UNICODE_RTL_DATABASE}
-
-// Utility functions
-function CharSetFromLocale(Language: LCID): Byte;
-function GetCharSetFromLocale(Language: LCID; out FontCharSet: Byte): Boolean;
-function CodePageFromLocale(Language: LCID): Word;
-function CodeBlockName(const CB: TUnicodeBlock): string;
-function CodeBlockRange(const CB: TUnicodeBlock): TUnicodeBlockRange;
-function CodeBlockFromChar(const C: UCS4): TUnicodeBlock;
-function KeyboardCodePage: Word;
-function KeyUnicode(C: Char): Char;
-function StringToWideStringEx(const S: AnsiString; CodePage: Word): string;
-function TranslateString(const S: AnsiString; CP1, CP2: Word): AnsiString;
-function WideStringToStringEx(const WS: string; CodePage: Word): AnsiString;
 
 type
   EUnicodeError = class(Exception);
@@ -1112,22 +1090,18 @@ implementation
 //       the Unicode database file which can be compiled to the needed res file.
 //       This tool, including its source code, can be downloaded from www.lischke-online.de/Unicode.html.
 
-{$IFNDEF UNICODE_RTL_DATABASE}
-  {$if defined(UNICODE_RAW_DATA)}
-{$R Unicode.res}
-  {$elseif defined(UNICODE_ZLIB_DATA)}
-{$R UnicodeZLib.res}
-  {$ifend}
-{$ENDIF ~UNICODE_RTL_DATABASE}
+{$if defined(UNICODE_RAW_DATA)}
+  {$R Unicode.res}
+{$elseif defined(UNICODE_ZLIB_DATA)}
+  {$R UnicodeZLib.res}
+{$ifend}
 
 uses
   SyncObjs,
-{$IFNDEF UNICODE_RTL_DATABASE}
-  {$if defined(UNICODE_RAW_DATA)}
-  {$elseif defined(UNICODE_ZLIB_DATA)}
+{$if defined(UNICODE_RAW_DATA)}
+{$elseif defined(UNICODE_ZLIB_DATA)}
   ZLib,
-  {$ifend}
-{$ENDIF ~UNICODE_RTL_DATABASE}
+{$ifend}
 {$IFNDEF FPC}
   System.RtlConsts;
 {$ELSE FPC}
@@ -1153,6 +1127,31 @@ const
   // used to negate a set of categories
   ClassAll = [Low(TCharacterCategory)..High(TCharacterCategory)];
 
+type
+  Hangul = record
+    const
+      // constants for hangul composition and hangul-to-jamo decomposition
+      JamoLBase = $1100;             // Leading syllable
+      JamoVBase = $1161;             // Vovel
+      JamoTBase = $11A7;             // Trailing syllable
+
+      JamoLCount = 19;
+      JamoVCount = 21;
+      JamoTCount = 28;
+
+      JamoNCount = JamoVCount * JamoTCount;   // 588
+      JamoSCount = JamoLCount * JamoNCount;   // 11172
+      JamoVTCount = JamoVCount * JamoTCount;
+
+      JamoLLimit = JamoLBase + JamoLCount;
+      JamoVLimit = JamoVBase + JamoVCount;
+      JamoTLimit = JamoTBase + JamoTCount;
+
+      HangulSBase = $AC00;             // hangul syllables start code point
+      HangulCount = JamoLCount * JamoVCount * JamoTCount;
+      HangulLimit = HangulSBase + HangulCount; // $D7FF
+  end;
+
 function CharacterCategoriesToUnicodeCategory(const Categories: TCharacterCategories): TUnicodeCategory;
 var
   Category: TCharacterUnicodeCategory;
@@ -1172,37 +1171,6 @@ begin
   Include(Result, UnicodeCategoryToCharacterCategory[Category]);
 end;
 
-{$IFDEF UNICODE_RTL_DATABASE}
-procedure LoadCharacterCategories;
-begin
-  // do nothing, the RTL database is already loaded
-end;
-
-procedure LoadCaseMappingData;
-begin
-  // do nothing, the RTL database is already loaded
-end;
-
-procedure LoadDecompositionData;
-begin
-  // do nothing, the RTL database is already loaded
-end;
-
-procedure LoadCombiningClassData;
-begin
-  // do nothing, the RTL database is already loaded
-end;
-
-procedure LoadNumberData;
-begin
-  // do nothing, the RTL database is already loaded
-end;
-
-procedure LoadCompositionData;
-begin
-  // do nothing, the RTL database is already loaded
-end;
-{$ELSE ~UNICODE_RTL_DATABASE}
 var
   // As the global data can be accessed by several threads it should be guarded
   // while the data is loaded.
@@ -1486,39 +1454,25 @@ begin
   end;
 end;
 
-{$ENDIF ~UNICODE_RTL_DATABASE}
-
 function UnicodeToUpper(Code: UCS4): TUCS4Array;
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  SetLength(Result, 1);
-  Result[0] := Ord(TCharacter.ToUpper(Chr(Code)));
-{$ELSE ~UNICODE_RTL_DATABASE}
   SetLength(Result, 0);
   if not CaseLookup(Code, ctUpper, Result) then
   begin
     SetLength(Result, 1);
     Result[0] := Code;
   end;
-  {$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeToLower(Code: UCS4): TUCS4Array;
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  SetLength(Result, 1);
-  Result[0] := Ord(TCharacter.ToLower(Chr(Code)));
-{$ELSE ~UNICODE_RTL_DATABASE}
   SetLength(Result, 0);
   if not CaseLookup(Code, ctLower, Result) then
   begin
     SetLength(Result, 1);
     Result[0] := Code;
   end;
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
-
-{$IFNDEF UNICODE_RTL_DATABASE}
 
 function UnicodeToTitle(Code: UCS4): TUCS4Array;
 begin
@@ -1528,182 +1482,6 @@ begin
     SetLength(Result, 1);
     Result[0] := Code;
   end;
-end;
-
-{$ENDIF ~UNICODE_RTL_DATABASE}
-//----------------- support for decomposition ------------------------------------------------------
-
-const
-  // constants for hangul composition and hangul-to-jamo decomposition
-  SBase = $AC00;             // hangul syllables start code point
-  LBase = $1100;             // leading syllable
-  VBase = $1161;
-  TBase = $11A7;             // trailing syllable
-  LCount = 19;
-  VCount = 21;
-  TCount = 28;
-  NCount = VCount * TCount;   // 588
-  SCount = LCount * NCount;   // 11172
-
-type
-  TDecomposition = record
-    Tag: TCompatibilityFormattingTag;
-    Leaves: TUCS4Array;
-  end;
-  PDecomposition = ^TDecomposition;
-  TDecompositionArray = array of TDecomposition;
-  TDecompositions = array of TDecompositionArray;
-  TDecompositionsArray = array [Byte] of TDecompositions;
-
-var
-  // list of decompositions, organized (again) as three stage matrix
-  // Note: there are two tables, one for canonical decompositions and the other one
-  //       for compatibility decompositions.
-  DecompositionsLoaded: Boolean;
-  Decompositions: TDecompositionsArray;
-
-procedure LoadDecompositionData;
-var
-  Stream: TBinaryReader;
-  I, J, Code, Size: Integer;
-  First, Second, Third: Byte;
-begin
-  // make sure no other code is currently modifying the global data area
-  LoadInProgress.Enter;
-  try
-    if not DecompositionsLoaded then
-    begin
-      Stream := OpenResourceStream('DECOMPOSITION');
-      try
-        // determine how many decomposition entries we have
-        Stream.BaseStream.Read(Size, SizeOf(Size));
-        for I := 0 to Size - 1 do
-        begin
-          Code := StreamReadChar(Stream.BaseStream);
-
-          Assert(Code < $1000000);
-
-          First := (Code shr 16) and $FF;
-          Second := (Code shr 8) and $FF;
-          Third := Code and $FF;
-
-          // if there is no high byte entry in the first stage table then create one
-          if Decompositions[First] = nil then
-            SetLength(Decompositions[First], 256);
-          if Decompositions[First, Second] = nil then
-            SetLength(Decompositions[First, Second], 256);
-
-          Size := Stream.ReadByte;
-          if Size > 0 then
-          begin
-            Decompositions[First, Second, Third].Tag := TCompatibilityFormattingTag(Stream.ReadByte);
-            SetLength(Decompositions[First, Second, Third].Leaves, Size);
-            for J := 0 to Size - 1 do
-              Decompositions[First, Second, Third].Leaves[J] := StreamReadChar(Stream.BaseStream);
-          end;
-        end;
-        Assert(Stream.BaseStream.Position = Stream.BaseStream.Size);
-      finally
-        Stream.Free;
-        DecompositionsLoaded := True;
-      end;
-    end;
-  finally
-    LoadInProgress.Leave;
-  end;
-end;
-
-function UnicodeDecompose(const Codes: TUCS4Array; Compatible: Boolean; Filter: TCodePointFilter): TUCS4Array;
-var
-  OutputSize: integer;
-
-  procedure AddCodePoint(const ACodePoint: UCS4);
-  begin
-    if Length(Result) < (OutputSize+1) then
-      SetLength(Result, (OutputSize+1) * 2);
-    Result[OutputSize] := ACodePoint;
-    Inc(OutputSize);
-  end;
-
-  procedure AddCodePoints(const ACodePoints: TUCS4Array);
-  var
-    CodePoint: UCS4;
-  begin
-    if Length(Result) < (OutputSize+Length(ACodePoints)) then
-      SetLength(Result, (OutputSize+Length(ACodePoints)) * 2);
-    for CodePoint in ACodePoints do
-    begin
-      Result[OutputSize] := CodePoint;
-      Inc(OutputSize);
-    end;
-  end;
-
-  procedure DecomposeHangul(CodePoint: UCS4);
-  var
-    Rest: Integer;
-  begin
-    Dec(CodePoint, SBase);
-    AddCodePoint(LBase + (CodePoint div NCount));
-    AddCodePoint(VBase + ((CodePoint mod NCount) div TCount));
-    Rest := CodePoint mod TCount;
-    if Rest <> 0 then
-      AddCodePoint(TBase + Rest);
-  end;
-
-var
-  Index: integer;
-  First, Second, Third: Byte;
-  CodePoint: UCS4;
-  Level1: TDecompositions;
-  Level2: TDecompositionArray;
-  Level3: PDecomposition;
-begin
-  SetLength(Result, Length(Codes));
-
-  OutputSize := 0;
-  Index := 0;
-
-  // Load decomposition data if not already done
-  if not DecompositionsLoaded then
-    LoadDecompositionData;
-
-  while (Index <= High(Codes)) do
-  begin
-    CodePoint := Codes[Index];
-    Inc(Index);
-
-    Assert(CodePoint < $1000000);
-
-    // If the CodePoint is hangul then decomposition is performed algorithmically
-    if UnicodeIsHangul(CodePoint) then
-    begin
-      DecomposeHangul(CodePoint);
-      continue;
-    end else
-    begin
-      First := (CodePoint shr 16) and $FF;
-      Second := (CodePoint shr 8) and $FF;
-      Third := CodePoint and $FF;
-
-      Level1 := Decompositions[First];
-      if (Level1 <> nil) then
-      begin
-        Level2 := Level1[Second];
-        if (Level2 <> nil) then
-        begin
-          Level3 := @Level2[Third];
-          if (Level3.Leaves <> nil) and (Compatible or (Level3.Tag = cftCanonical)) then
-          begin
-            AddCodePoints(Level3.Leaves);
-            continue;
-          end;
-        end;
-      end;
-    end;
-    AddCodePoint(CodePoint);
-  end;
-
-  SetLength(Result, OutputSize);
 end;
 
 //----------------- support for combining classes --------------------------------------------------
@@ -1888,520 +1666,156 @@ begin
   end;
 end;
 
-//----------------- support for composition --------------------------------------------------------
-
-type
-  // maps between a pair of code points to a composite code point
-  // Note: the source pair is packed into one 4 byte value to speed up search.
-  TComposition = record
-    Code: Cardinal;
-    Tag: TCompatibilityFormattingTag;
-    First: Cardinal;
-    Next: array of Cardinal;
-  end;
-
-var
-  // list of composition mappings
-  Compositions: array of TComposition;
-
-procedure LoadCompositionData;
-var
-  Stream: TBinaryReader;
-  I, J, Size: Integer;
-begin
-  // make sure no other code is currently modifying the global data area
-  LoadInProgress.Enter;
-  try
-    if not CompositionsLoaded then
-    begin
-      Stream := OpenResourceStream('COMPOSITION');
-      try
-        // a) determine size of compositions array
-        Size := Stream.ReadInteger;
-        SetLength(Compositions, Size);
-        // b) read data
-        for I := 0 to Size - 1 do
-        begin
-          Compositions[I].Code := StreamReadChar(Stream.BaseStream);
-          Size := Stream.ReadByte;
-          if Size > MaxCompositionSize then
-            MaxCompositionSize := Size;
-          SetLength(Compositions[I].Next, Size - 1);
-          Compositions[I].Tag := TCompatibilityFormattingTag(Stream.ReadByte);
-          Compositions[I].First := StreamReadChar(Stream.BaseStream);
-          for J := 0 to Size - 2 do
-            Compositions[I].Next[J] := StreamReadChar(Stream.BaseStream);
-        end;
-        Assert(Stream.BaseStream.Position = Stream.BaseStream.Size);
-      finally
-        Stream.Free;
-        CompositionsLoaded := True;
-      end;
-    end;
-  finally
-    LoadInProgress.Leave;
-  end;
-end;
-
-function UnicodeCompose(const Codes: TUCS4Array; Compatible: Boolean; Filter: TCodePointFilter): TUCS4Array;
-var
-  OutputSize: integer;
-
-  procedure AddCodePoint(const ACodePoint: UCS4);
-  begin
-    if Length(Result) < (OutputSize+1) then
-      SetLength(Result, (OutputSize+1) * 2);
-    Result[OutputSize] := ACodePoint;
-    Inc(OutputSize);
-  end;
-
-  function Compose(Index: integer): integer;
-  var
-    L, R, M: Integer;
-    HighNext: Integer;
-    StartCodePoint: UCS4;
-    i: integer;
-  begin
-    StartCodePoint := Codes[Index];
-
-    if (Index = High(Codes)) then
-    begin
-      AddCodePoint(StartCodePoint);
-      Result := 1;
-      exit;
-    end;
-
-    L := 0;
-    R := High(Compositions);
-
-    // Binary search...
-    while L <= R do
-    begin
-      M := (L + R) shr 1;
-      if Compositions[M].First > StartCodePoint then
-      begin
-        R := M - 1;
-        continue;
-      end;
-
-      if Compositions[M].First < StartCodePoint then
-      begin
-        L := M + 1;
-        continue;
-      end;
-
-      // Match
-
-      // Scan backward to the first element where First match
-      while (M > 0) and (Compositions[M-1].First = StartCodePoint) do
-        Dec(M);
-
-      // Iterate forward through elements where First match
-      while (M <= High(Compositions)) and (Compositions[M].First = StartCodePoint) do
-      begin
-        HighNext := High(Compositions[M].Next);
-        Result := 0;
-
-        // Enough characters in buffer to be tested?
-        if (Index+HighNext < High(Codes)) and
-          (Compatible or (Compositions[M].Tag = cftCanonical)) then
-        begin
-          for i := 0 to HighNext do
-          begin
-            if Compositions[M].Next[i] = Codes[Index + i + 1] then
-              Result := i + 2 { +1 for first, +1 because of 0-based array }
-            else
-              break;
-          end;
-
-          if Result = HighNext + 2 then // all codes matched
-          begin
-            if (not Assigned(Filter)) or (Filter(Compositions[M].Code)) then
-            begin
-              AddCodePoint(Compositions[M].Code);
-              exit;
-            end;
-            break;
-          end;
-        end;
-
-        Inc(M);
-      end;
-      Break;
-    end;
-
-    AddCodePoint(StartCodePoint);
-    Result := 1;
-  end;
-
-var
-  Index: integer;
-  Consumed: integer;
-begin
-  if (Length(Codes) <= 1) then
-    Exit(Codes);
-    
-  // Load composition data if not already done
-  if not CompositionsLoaded then
-    LoadCompositionData;
-
-  SetLength(Result, Length(Codes));
-  OutputSize := 0;
-  Index := 0;
-
-  while (Index <= High(Codes)) do
-  begin
-    Consumed := Compose(Index);
-    Inc(Index, Consumed);
-  end;
-
-  SetLength(Result, OutputSize);
-end;
-
-{$IFNDEF UNICODE_RTL_DATABASE}
-
-function WideComposeHangul(const Source: string): string;
-var
-  Len: NativeInt;
-  Ch, Last: Char;
-  I: NativeInt;
-  LIndex, VIndex,
-  SIndex, TIndex: NativeInt;
-begin
-  Result := '';
-  Len := Length(Source);
-  if Len > 0 then
-  begin
-    Last := Source[1];
-    Result := Last;
-
-    for I := 2 to Len do
-    begin
-      Ch := Source[I];
-
-      // 1. check to see if two current characters are L and V
-      LIndex := Word(Last) - LBase;
-      if (0 <= LIndex) and (LIndex < LCount) then
-      begin
-        VIndex := Word(Ch) - VBase;
-        if (0 <= VIndex) and (VIndex < VCount) then
-        begin
-          // make syllable of form LV
-          Last := Char((SBase + (LIndex * VCount + VIndex) * TCount));
-          Result[Length(Result)] := Last; // reset last
-          Continue; // discard Ch
-        end;
-      end;
-
-      // 2. check to see if two current characters are LV and T
-      SIndex := Word(Last) - SBase;
-      if (0 <= SIndex) and (SIndex < SCount) and ((SIndex mod TCount) = 0) then
-      begin
-        TIndex := Word(Ch) - TBase;
-        if (0 <= TIndex) and (TIndex <= TCount) then
-        begin
-          // make syllable of form LVT
-          Inc(Word(Last), TIndex);
-          Result[Length(Result)] := Last; // reset last
-          Continue; // discard Ch
-        end;
-      end;
-
-      // if neither case was true, just add the character
-      Last := Ch;
-      Result := Result + Ch;
-    end;
-  end;
-end;
-
-{$ENDIF ~UNICODE_RTL_DATABASE}
-
 //----------------- character test routines --------------------------------------------------------
 
 function UnicodeIsAlpha(C: UCS4): Boolean; // Is the character alphabetic?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.IsLetter(Chr(C));
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, ClassLetter);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsDigit(C: UCS4): Boolean; // Is the character a digit?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.IsDigit(Chr(C));
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccNumberDecimalDigit]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsAlphaNum(C: UCS4): Boolean; // Is the character alphabetic or a number?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.IsLetterOrDigit(Chr(C));
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, ClassLetter + [ccNumberDecimalDigit]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsNumberOther(C: UCS4): Boolean;
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucOtherNumber;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccNumberOther]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsCased(C: UCS4): Boolean;
 // Is the character a "cased" character, i.e. either lower case, title case or upper case
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) in
-    [TUnicodeCategory.ucLowercaseLetter, TUnicodeCategory.ucTitlecaseLetter, TUnicodeCategory.ucUppercaseLetter];
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccLetterLowercase, ccLetterTitleCase, ccLetterUppercase]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsControl(C: UCS4): Boolean;
 // Is the character a control character?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) in
-    [TUnicodeCategory.ucControl, TUnicodeCategory.ucFormat];
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccOtherControl, ccOtherFormat]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsSpace(C: UCS4): Boolean;
 // Is the character a spacing character?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucSpaceSeparator;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, ClassSpace);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsWhiteSpace(C: UCS4): Boolean;
 // Is the character a white space character (same as UnicodeIsSpace plus
 // tabulator, new line etc.)?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.IsWhiteSpace(Chr(C));
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, ClassSpace + [ccWhiteSpace, ccSegmentSeparator]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsBlank(C: UCS4): Boolean;
 // Is the character a space separator?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucSpaceSeparator;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccSeparatorSpace]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsPunctuation(C: UCS4): Boolean;
 // Is the character a punctuation mark?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) in
-    [TUnicodeCategory.ucConnectPunctuation, TUnicodeCategory.ucDashPunctuation,
-     TUnicodeCategory.ucClosePunctuation, TUnicodeCategory.ucFinalPunctuation,
-     TUnicodeCategory.ucInitialPunctuation, TUnicodeCategory.ucOtherPunctuation,
-     TUnicodeCategory.ucOpenPunctuation];
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, ClassPunctuation);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsGraph(C: UCS4): Boolean;
 // Is the character graphical?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) in
-    [TUnicodeCategory.ucCombiningMark, TUnicodeCategory.ucEnclosingMark,
-     TUnicodeCategory.ucNonSpacingMark,
-     TUnicodeCategory.ucDecimalNumber, TUnicodeCategory.ucLetterNumber,
-     TUnicodeCategory.ucOtherNumber,
-     TUnicodeCategory.ucLowercaseLetter, TUnicodeCategory.ucModifierLetter,
-     TUnicodeCategory.ucOtherLetter, TUnicodeCategory.ucTitlecaseLetter,
-     TUnicodeCategory.ucUppercaseLetter,
-     TUnicodeCategory.ucConnectPunctuation, TUnicodeCategory.ucDashPunctuation,
-     TUnicodeCategory.ucClosePunctuation, TUnicodeCategory.ucFinalPunctuation,
-     TUnicodeCategory.ucInitialPunctuation, TUnicodeCategory.ucOtherPunctuation,
-     TUnicodeCategory.ucOpenPunctuation,
-     TUnicodeCategory.ucCurrencySymbol, TUnicodeCategory.ucModifierSymbol,
-     TUnicodeCategory.ucMathSymbol, TUnicodeCategory.ucOtherSymbol];
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, ClassMark + ClassNumber + ClassLetter + ClassPunctuation + ClassSymbol);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsPrintable(C: UCS4): Boolean;
 // Is the character printable?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) in
-    [TUnicodeCategory.ucCombiningMark, TUnicodeCategory.ucEnclosingMark,
-     TUnicodeCategory.ucNonSpacingMark,
-     TUnicodeCategory.ucDecimalNumber, TUnicodeCategory.ucLetterNumber,
-     TUnicodeCategory.ucOtherNumber,
-     TUnicodeCategory.ucLowercaseLetter, TUnicodeCategory.ucModifierLetter,
-     TUnicodeCategory.ucOtherLetter, TUnicodeCategory.ucTitlecaseLetter,
-     TUnicodeCategory.ucUppercaseLetter,
-     TUnicodeCategory.ucConnectPunctuation, TUnicodeCategory.ucDashPunctuation,
-     TUnicodeCategory.ucClosePunctuation, TUnicodeCategory.ucFinalPunctuation,
-     TUnicodeCategory.ucInitialPunctuation, TUnicodeCategory.ucOtherPunctuation,
-     TUnicodeCategory.ucOpenPunctuation,
-     TUnicodeCategory.ucCurrencySymbol, TUnicodeCategory.ucModifierSymbol,
-     TUnicodeCategory.ucMathSymbol, TUnicodeCategory.ucOtherSymbol,
-     TUnicodeCategory.ucSpaceSeparator];
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, ClassMark + ClassNumber + ClassLetter + ClassPunctuation + ClassSymbol +
     [ccSeparatorSpace]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsUpper(C: UCS4): Boolean;
 // Is the character already upper case?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucUppercaseLetter;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccLetterUppercase]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsLower(C: UCS4): Boolean;
 // Is the character already lower case?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucLowercaseLetter;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccLetterLowercase]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsTitle(C: UCS4): Boolean;
 // Is the character already title case?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucTitlecaseLetter;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccLetterTitlecase]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
-{$IFNDEF UNICODE_RTL_DATABASE}
 function UnicodeIsHexDigit(C: UCS4): Boolean;
 // Is the character a hex digit?
 begin
   Result := CategoryLookup(C, [ccHexDigit]);
 end;
-{$ENDIF ~UNICODE_RTL_DATABASE}
 
 function UnicodeIsIsoControl(C: UCS4): Boolean;
 // Is the character a C0 control character (< 32)?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucControl;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccOtherControl]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsFormatControl(C: UCS4): Boolean;
 // Is the character a format control character?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucFormat;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccOtherFormat]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsSymbol(C: UCS4): Boolean;
 // Is the character a symbol?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) in
-    [TUnicodeCategory.ucCurrencySymbol, TUnicodeCategory.ucModifierSymbol,
-     TUnicodeCategory.ucMathSymbol, TUnicodeCategory.ucOtherSymbol];
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, ClassSymbol);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsNumber(C: UCS4): Boolean;
 // Is the character a number or digit?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) in
-    [TUnicodeCategory.ucDecimalNumber, TUnicodeCategory.ucLetterNumber,
-     TUnicodeCategory.ucOtherNumber];
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, ClassNumber);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsNonSpacing(C: UCS4): Boolean;
 // Is the character non-spacing?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucNonSpacingMark;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccMarkNonSpacing]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsOpenPunctuation(C: UCS4): Boolean;
 // Is the character an open/left punctuation (e.g. '[')?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucOpenPunctuation;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccPunctuationOpen]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsClosePunctuation(C: UCS4): Boolean;
 // Is the character an close/right punctuation (e.g. ']')?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucClosePunctuation;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccPunctuationClose]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsInitialPunctuation(C: UCS4): Boolean;
 // Is the character an initial punctuation (e.g. U+2018 LEFT SINGLE QUOTATION MARK)?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucInitialPunctuation;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccPunctuationInitialQuote]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsFinalPunctuation(C: UCS4): Boolean;
 // Is the character a final punctuation (e.g. U+2019 RIGHT SINGLE QUOTATION MARK)?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucFinalPunctuation;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccPunctuationFinalQuote]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
-{$IFNDEF UNICODE_RTL_DATABASE}
 function UnicodeIsComposed(C: UCS4): Boolean;
 // Can the character be decomposed into a set of other characters?
 begin
@@ -2479,180 +1893,102 @@ function UnicodeIsModifier(C: UCS4): Boolean;
 begin
   Result := CategoryLookup(C, [ccLetterModifier]);
 end;
-{$ENDIF ~UNICODE_RTL_DATABASE}
 
 function UnicodeIsLetterNumber(C: UCS4): Boolean;
 // Is the character a number represented by a letter?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucLetterNumber;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccNumberLetter]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsConnectionPunctuation(C: UCS4): Boolean;
 // Is the character connecting punctuation?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucConnectPunctuation;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccPunctuationConnector]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsDash(C: UCS4): Boolean;
 // Is the character a dash punctuation?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucDashPunctuation;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccPunctuationDash]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsMath(C: UCS4): Boolean;
 // Is the character a math character?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucMathSymbol;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccSymbolMath]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsCurrency(C: UCS4): Boolean;
 // Is the character a currency character?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucCurrencySymbol;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccSymbolCurrency]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsModifierSymbol(C: UCS4): Boolean;
 // Is the character a modifier symbol?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucModifierSymbol;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccSymbolModifier]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsSpacingMark(C: UCS4): Boolean;
 // Is the character a spacing mark?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) in
-    [TUnicodeCategory.ucLineSeparator, TUnicodeCategory.ucParagraphSeparator,
-     TUnicodeCategory.ucSpaceSeparator];
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccMarkSpacingCombining]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsEnclosing(C: UCS4): Boolean;
 // Is the character enclosing (i.e. enclosing box)?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucEnclosingMark;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccMarkEnclosing]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsPrivate(C: UCS4): Boolean;
 // Is the character from the Private Use Area?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucPrivateUse;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccOtherPrivate]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsSurrogate(C: UCS4): Boolean;
 // Is the character one of the surrogate codes?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucSurrogate;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccOtherSurrogate]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsLineSeparator(C: UCS4): Boolean;
 // Is the character a line separator?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucLineSeparator;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccSeparatorLine]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsParagraphSeparator(C: UCS4): Boolean;
 // Is th character a paragraph separator;
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucParagraphSeparator;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccSeparatorParagraph]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsIdentifierStart(C: UCS4): Boolean;
 // Can the character begin an identifier?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) in
-    [TUnicodeCategory.ucLowercaseLetter, TUnicodeCategory.ucModifierLetter,
-     TUnicodeCategory.ucOtherLetter, TUnicodeCategory.ucTitlecaseLetter,
-     TUnicodeCategory.ucUppercaseLetter,
-     TUnicodeCategory.ucLetterNumber];
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, ClassLetter + [ccNumberLetter]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsIdentifierPart(C: UCS4): Boolean;
 // Can the character appear in an identifier?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) in
-    [TUnicodeCategory.ucLowercaseLetter, TUnicodeCategory.ucModifierLetter,
-     TUnicodeCategory.ucOtherLetter, TUnicodeCategory.ucTitlecaseLetter,
-     TUnicodeCategory.ucUppercaseLetter,
-     TUnicodeCategory.ucLetterNumber, TUnicodeCategory.ucDecimalNumber,
-     TUnicodeCategory.ucNonSpacingMark, TUnicodeCategory.ucCombiningMark,
-     TUnicodeCategory.ucConnectPunctuation,
-     TUnicodeCategory.ucFormat];
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, ClassLetter + [ccNumberLetter, ccMarkNonSpacing, ccMarkSpacingCombining,
     ccNumberDecimalDigit, ccPunctuationConnector, ccOtherFormat]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsDefined(C: UCS4): Boolean;
 // Is the character defined (appears in one of the data files)?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) <> TUnicodeCategory.ucUnassigned;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccAssigned]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsUndefined(C: UCS4): Boolean;
 // Is the character undefined (not assigned in the Unicode database)?
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucUnassigned;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := not CategoryLookup(C, [ccAssigned]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsHan(C: UCS4): Boolean;
@@ -2664,55 +2000,34 @@ end;
 function UnicodeIsHangul(C: UCS4): Boolean;
 // Is the character a pre-composed Hangul syllable?
 begin
-  Result := (C >= $AC00) and (C <= $D7FF);
+  Result := (C >= Hangul.HangulSBase) and (C < Hangul.HangulLimit);
 end;
 
 function UnicodeIsUnassigned(C: UCS4): Boolean;
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucUnassigned;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccOtherUnassigned]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsLetterOther(C: UCS4): Boolean;
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucOtherLetter;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccLetterOther]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsConnector(C: UCS4): Boolean;
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucConnectPunctuation;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccPunctuationConnector]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsPunctuationOther(C: UCS4): Boolean;
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucOtherPunctuation;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccPunctuationOther]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 function UnicodeIsSymbolOther(C: UCS4): Boolean;
 begin
-{$IFDEF UNICODE_RTL_DATABASE}
-  Result := TCharacter.GetUnicodeCategory(Chr(C)) = TUnicodeCategory.ucOtherSymbol;
-{$ELSE ~UNICODE_RTL_DATABASE}
   Result := CategoryLookup(C, [ccSymbolOther]);
-{$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
-{$IFNDEF UNICODE_RTL_DATABASE}
 function UnicodeIsLeftToRightEmbedding(C: UCS4): Boolean;
 begin
   Result := CategoryLookup(C, [ccLeftToRightEmbedding]);
@@ -2922,166 +2237,6 @@ function UnicodeIsVariationSelector(C: UCS4): Boolean;
 begin
   Result := CategoryLookup(C, [ccVariationSelector]);
 end;
-{$ENDIF ~UNICODE_RTL_DATABASE}
-
-// I need to fix a problem (introduced by MS) here. The first parameter can be a pointer
-// (and is so defined) or can be a normal DWORD, depending on the dwFlags parameter.
-// As usual, lpSrc has been translated to a var parameter. But this does not work in
-// our case, hence the redeclaration of the function with a pointer as first parameter.
-
-function TranslateCharsetInfoEx(lpSrc: NativeInt; out lpCs: TCharsetInfo; dwFlags: DWORD): BOOL; stdcall;
-  external 'gdi32.dll' name 'TranslateCharsetInfo';
-
-function GetCharSetFromLocale(Language: LCID; out FontCharSet: Byte): Boolean;
-const
-  TCI_SRCLOCALE = $1000;
-var
-  CP: Word;
-  CSI: TCharsetInfo;
-begin
-  if not CheckWin32Version(5, 0) then // Win2k required
-  begin
-    // these versions of Windows don't support TCI_SRCLOCALE
-    CP := CodePageFromLocale(Language);
-    if CP = 0 then
-      RaiseLastOSError;
-    Result := TranslateCharsetInfoEx(CP, CSI, TCI_SRCCODEPAGE);
-  end
-  else
-    Result := TranslateCharsetInfoEx(Language, CSI, TCI_SRCLOCALE);
-
-  if Result then
-    FontCharset := CSI.ciCharset;
-end;
-
-function CharSetFromLocale(Language: LCID): Byte;
-begin
-  if not GetCharSetFromLocale(Language, Result) then
-    RaiseLastOSError;
-end;
-
-function CodePageFromLocale(Language: LCID): Word;
-// determines the code page for a given locale
-var
-  Buf: array [0..6] of Char;
-begin
-  GetLocaleInfo(Language, LOCALE_IDefaultAnsiCodePage, Buf, 6);
-  Result := StrToIntDef(Buf, GetACP);
-end;
-
-function KeyboardCodePage: Word;
-begin
-  Result := CodePageFromLocale(GetKeyboardLayout(0) and $FFFF);
-end;
-
-function KeyUnicode(C: Char): Char;
-// converts the given character (as it comes with a WM_CHAR message) into its
-// corresponding Unicode character depending on the active keyboard layout
-begin
-  MultiByteToWideChar(KeyboardCodePage, MB_USEGLYPHCHARS, @C, 1, @Result, 1);
-end;
-
-function CodeBlockRange(const CB: TUnicodeBlock): TUnicodeBlockRange;
-// http://www.unicode.org/Public/5.0.0/ucd/Blocks.txt
-begin
-  Result := UnicodeBlockData[CB].Range;
-end;
-
-
-// Names taken from http://www.unicode.org/Public/5.0.0/ucd/Blocks.txt
-function CodeBlockName(const CB: TUnicodeBlock): string;
-begin
-  Result := UnicodeBlockData[CB].Name;
-end;
-
-// Returns an ID for the Unicode code block to which C belongs.
-// If C does not belong to any of the defined blocks then ubUndefined is returned.
-// Note: the code blocks listed here are based on Unicode Version 5.0.0
-function CodeBlockFromChar(const C: UCS4): TUnicodeBlock;
-// http://www.unicode.org/Public/5.0.0/ucd/Blocks.txt
-var
-  L, H, I: TUnicodeBlock;
-begin
-  Result := ubUndefined;
-  L := ubBasicLatin;
-  H := High(TUnicodeBlock);
-  while L <= H do
-  begin
-    I := TUnicodeBlock((Cardinal(L) + Cardinal(H)) shr 1);
-    if (C >= UnicodeBlockData[I].Range.RangeStart) and (C <= UnicodeBlockData[I].Range.RangeEnd) then
-    begin
-      Result := I;
-      Break;
-    end
-    else
-    if C < UnicodeBlockData[I].Range.RangeStart then
-    begin
-      Dec(I);
-      H := I;
-    end
-    else
-    begin
-      Inc(I);
-      L := I;
-    end;
-  end;
-end;
-
-
-function CompareTextWin95(const W1, W2: string; Locale: LCID): NativeInt;
-// special comparation function for Win9x since there's no system defined
-// comparation function, returns -1 if W1 < W2, 0 if W1 = W2 or 1 if W1 > W2
-var
-  S1, S2: AnsiString;
-  CP: Word;
-  L1, L2: NativeInt;
-begin
-  L1 := Length(W1);
-  L2 := Length(W2);
-  SetLength(S1, L1);
-  SetLength(S2, L2);
-  CP := CodePageFromLocale(Locale);
-  WideCharToMultiByte(CP, 0, PWideChar(W1), L1, PAnsiChar(S1), L1, nil, nil);
-  WideCharToMultiByte(CP, 0, PWideChar(W2), L2, PAnsiChar(S2), L2, nil, nil);
-  Result := CompareStringA(Locale, NORM_IGNORECASE, PAnsiChar(S1), Length(S1),
-    PAnsiChar(S2), Length(S2)) - 2;
-end;
-
-function CompareTextWinNT(const W1, W2: string; Locale: LCID): NativeInt;
-// Wrapper function for WinNT since there's no system defined comparation function
-// in Win9x and we need a central comparation function for TWideStringList.
-// Returns -1 if W1 < W2, 0 if W1 = W2 or 1 if W1 > W2
-begin
-  Result := CompareStringW(Locale, NORM_IGNORECASE, PWideChar(W1), Length(W1),
-    PWideChar(W2), Length(W2)) - 2;
-end;
-
-function StringToWideStringEx(const S: AnsiString; CodePage: Word): string;
-var
-  InputLength,
-  OutputLength: NativeInt;
-begin
-  InputLength := Length(S);
-  OutputLength := MultiByteToWideChar(CodePage, 0, PAnsiChar(S), InputLength, nil, 0);
-  SetLength(Result, OutputLength);
-  MultiByteToWideChar(CodePage, 0, PAnsiChar(S), InputLength, PWideChar(Result), OutputLength);
-end;
-
-function WideStringToStringEx(const WS: string; CodePage: Word): AnsiString;
-var
-  InputLength,
-  OutputLength: NativeInt;
-begin
-  InputLength := Length(WS);
-  OutputLength := WideCharToMultiByte(CodePage, 0, PWideChar(WS), InputLength, nil, 0, nil, nil);
-  SetLength(Result, OutputLength);
-  WideCharToMultiByte(CodePage, 0, PWideChar(WS), InputLength, PAnsiChar(Result), OutputLength, nil, nil);
-end;
-
-function TranslateString(const S: AnsiString; CP1, CP2: Word): AnsiString;
-begin
-  Result:= WideStringToStringEx(StringToWideStringEx(S, CP1), CP2);
-end;
 
 function UCS4Array(Ch: UCS4): TUCS4Array;
 begin
@@ -3172,20 +2327,443 @@ begin
     Result := [];
 end;
 
+//----------------- support for decomposition ------------------------------------------------------
+
+type
+  TDecomposition = record
+    Tag: TCompatibilityFormattingTag;
+    Leaves: TUCS4Array;
+  end;
+  PDecomposition = ^TDecomposition;
+  TDecompositionArray = array of TDecomposition;
+  TDecompositions = array of TDecompositionArray;
+  TDecompositionsArray = array [Byte] of TDecompositions;
+
+var
+  // list of decompositions, organized (again) as three stage matrix
+  // Note: there are two tables, one for canonical decompositions and the other one
+  //       for compatibility decompositions.
+  DecompositionsLoaded: Boolean;
+  Decompositions: TDecompositionsArray;
+
+procedure LoadDecompositionData;
+var
+  Stream: TBinaryReader;
+  I, J, Code, Size: Integer;
+  First, Second, Third: Byte;
+begin
+  // make sure no other code is currently modifying the global data area
+  LoadInProgress.Enter;
+  try
+    if not DecompositionsLoaded then
+    begin
+      Stream := OpenResourceStream('DECOMPOSITION');
+      try
+        // determine how many decomposition entries we have
+        Stream.BaseStream.Read(Size, SizeOf(Size));
+        for I := 0 to Size - 1 do
+        begin
+          Code := StreamReadChar(Stream.BaseStream);
+
+          Assert(Code < $1000000);
+
+          First := (Code shr 16) and $FF;
+          Second := (Code shr 8) and $FF;
+          Third := Code and $FF;
+
+          // if there is no high byte entry in the first stage table then create one
+          if Decompositions[First] = nil then
+            SetLength(Decompositions[First], 256);
+          if Decompositions[First, Second] = nil then
+            SetLength(Decompositions[First, Second], 256);
+
+          Size := Stream.ReadByte;
+          if Size > 0 then
+          begin
+            Decompositions[First, Second, Third].Tag := TCompatibilityFormattingTag(Stream.ReadByte);
+            SetLength(Decompositions[First, Second, Third].Leaves, Size);
+            for J := 0 to Size - 1 do
+              Decompositions[First, Second, Third].Leaves[J] := StreamReadChar(Stream.BaseStream);
+          end;
+        end;
+        Assert(Stream.BaseStream.Position = Stream.BaseStream.Size);
+      finally
+        Stream.Free;
+        DecompositionsLoaded := True;
+      end;
+    end;
+  finally
+    LoadInProgress.Leave;
+  end;
+end;
+
+function UnicodeDecompose(const Codes: TUCS4Array; Compatible: Boolean; Filter: TCodePointFilter): TUCS4Array;
+var
+  OutputSize: integer;
+
+  procedure AddCodePoint(const ACodePoint: UCS4);
+  begin
+    if Length(Result) < (OutputSize+1) then
+      SetLength(Result, (OutputSize+1) * 2);
+    Result[OutputSize] := ACodePoint;
+    Inc(OutputSize);
+  end;
+
+  procedure AddCodePoints(const ACodePoints: TUCS4Array);
+  var
+    CodePoint: UCS4;
+  begin
+    if Length(Result) < (OutputSize+Length(ACodePoints)) then
+      SetLength(Result, (OutputSize+Length(ACodePoints)) * 2);
+    for CodePoint in ACodePoints do
+    begin
+      Result[OutputSize] := CodePoint;
+      Inc(OutputSize);
+    end;
+  end;
+
+  procedure DecomposeHangul(CodePoint: UCS4);
+  var
+    Rest: Integer;
+  begin
+    Dec(CodePoint, Hangul.HangulSBase);
+    AddCodePoint(Hangul.JamoLBase + (CodePoint div Hangul.JamoNCount));
+    AddCodePoint(Hangul.JamoVBase + ((CodePoint mod Hangul.JamoNCount) div Hangul.JamoTCount));
+    Rest := CodePoint mod Hangul.JamoTCount;
+    if Rest <> 0 then
+      AddCodePoint(Hangul.JamoTBase + Rest);
+  end;
+
+  function UnicodeIsHangulLV(C: UCS4): boolean;
+  begin
+    Result := UnicodeIsHangul(C) and ((C-Hangul.HangulSBase) mod Hangul.JamoTCount = 0);
+  end;
+
+var
+  Index: integer;
+  First, Second, Third: Byte;
+  CodePoint: UCS4;
+  Level1: TDecompositions;
+  Level2: TDecompositionArray;
+  Level3: PDecomposition;
+begin
+  SetLength(Result, Length(Codes));
+
+  OutputSize := 0;
+  Index := 0;
+
+  // Load decomposition data if not already done
+  if not DecompositionsLoaded then
+    LoadDecompositionData;
+
+  while (Index <= High(Codes)) do
+  begin
+    CodePoint := Codes[Index];
+    Inc(Index);
+
+    Assert(CodePoint < $1000000);
+
+    // If the CodePoint is hangul then decomposition is performed algorithmically
+//  if UnicodeIsHangulLV(CodePoint) then
+    if UnicodeIsHangul(CodePoint) then
+    begin
+      // Hangul syllable: Decompose algorithmically
+      DecomposeHangul(CodePoint);
+      continue;
+    end else
+    begin
+      First := (CodePoint shr 16) and $FF;
+      Second := (CodePoint shr 8) and $FF;
+      Third := CodePoint and $FF;
+
+      Level1 := Decompositions[First];
+      if (Level1 <> nil) then
+      begin
+        Level2 := Level1[Second];
+        if (Level2 <> nil) then
+        begin
+          Level3 := @Level2[Third];
+          if (Level3.Leaves <> nil) and (Compatible or (Level3.Tag = cftCanonical)) then
+          begin
+            AddCodePoints(Level3.Leaves);
+            continue;
+          end;
+        end;
+      end;
+    end;
+    AddCodePoint(CodePoint);
+  end;
+
+  SetLength(Result, OutputSize);
+end;
+
+
+//----------------- support for composition --------------------------------------------------------
+
+type
+  // maps between a pair of code points to a composite code point
+  // Note: the source pair is packed into one 4 byte value to speed up search.
+  TComposition = record
+    Code: Cardinal;
+    Tag: TCompatibilityFormattingTag;
+    First: Cardinal;
+    Next: array of Cardinal;
+  end;
+
+var
+  // list of composition mappings
+  Compositions: array of TComposition;
+
+procedure LoadCompositionData;
+var
+  Stream: TBinaryReader;
+  I, J, Size: Integer;
+begin
+  // make sure no other code is currently modifying the global data area
+  LoadInProgress.Enter;
+  try
+    if not CompositionsLoaded then
+    begin
+      Stream := OpenResourceStream('COMPOSITION');
+      try
+        // a) determine size of compositions array
+        Size := Stream.ReadInteger;
+        SetLength(Compositions, Size);
+        // b) read data
+        for I := 0 to Size - 1 do
+        begin
+          Compositions[I].Code := StreamReadChar(Stream.BaseStream);
+          Size := Stream.ReadByte;
+          if Size > MaxCompositionSize then
+            MaxCompositionSize := Size;
+          SetLength(Compositions[I].Next, Size - 1);
+          Compositions[I].Tag := TCompatibilityFormattingTag(Stream.ReadByte);
+          Compositions[I].First := StreamReadChar(Stream.BaseStream);
+          for J := 0 to Size - 2 do
+            Compositions[I].Next[J] := StreamReadChar(Stream.BaseStream);
+        end;
+        Assert(Stream.BaseStream.Position = Stream.BaseStream.Size);
+      finally
+        Stream.Free;
+        CompositionsLoaded := True;
+      end;
+    end;
+  finally
+    LoadInProgress.Leave;
+  end;
+end;
+
+function UnicodeCompose(const Codes: TUCS4Array; Compatible: Boolean; Filter: TCodePointFilter): TUCS4Array;
+var
+  OutputSize: integer;
+
+  procedure AddCodePoint(const ACodePoint: UCS4);
+  begin
+    if Length(Result) < (OutputSize+1) then
+      SetLength(Result, (OutputSize+1) * 2);
+    Result[OutputSize] := ACodePoint;
+    Inc(OutputSize);
+  end;
+
+  function Compose(Index: integer): integer;
+  var
+    L, R, M: Integer;
+    HighNext: Integer;
+    StartCodePoint: UCS4;
+    i: integer;
+  begin
+    StartCodePoint := Codes[Index];
+
+    if (Index = High(Codes)) then
+    begin
+      AddCodePoint(StartCodePoint);
+      Result := 1;
+      exit;
+    end;
+
+    L := 0;
+    R := High(Compositions);
+
+    // Binary search...
+    while L <= R do
+    begin
+      M := (L + R) shr 1;
+      if Compositions[M].First > StartCodePoint then
+      begin
+        R := M - 1;
+        continue;
+      end;
+
+      if Compositions[M].First < StartCodePoint then
+      begin
+        L := M + 1;
+        continue;
+      end;
+
+      // Match
+
+      // Scan backward to the first element where First match
+      while (M > 0) and (Compositions[M-1].First = StartCodePoint) do
+        Dec(M);
+
+      // Iterate forward through elements where First match
+      while (M <= High(Compositions)) and (Compositions[M].First = StartCodePoint) do
+      begin
+        HighNext := High(Compositions[M].Next);
+        Result := 0;
+
+        // Enough characters in buffer to be tested?
+        if (Index+HighNext < High(Codes)) and
+          (Compatible or (Compositions[M].Tag = cftCanonical)) then
+        begin
+          for i := 0 to HighNext do
+          begin
+            if Compositions[M].Next[i] = Codes[Index + i + 1] then
+              Result := i + 2 { +1 for first, +1 because of 0-based array }
+            else
+              break;
+          end;
+
+          if Result = HighNext + 2 then // all codes matched
+          begin
+            if (not Assigned(Filter)) or (Filter(Compositions[M].Code)) then
+            begin
+              AddCodePoint(Compositions[M].Code);
+              exit;
+            end;
+            break;
+          end;
+        end;
+
+        Inc(M);
+      end;
+      Break;
+    end;
+
+    AddCodePoint(StartCodePoint);
+    Result := 1;
+  end;
+
+  function UnicodeIsJamoL(C: UCS4): Boolean;
+  begin
+    Result := (C >= Hangul.JamoLBase) and (C < Hangul.JamoLLimit);
+  end;
+
+  function UnicodeIsJamoV(C: UCS4): Boolean;
+  begin
+    Result := (C >= Hangul.JamoVBase) and (C < Hangul.JamoVLimit);
+  end;
+
+  function UnicodeIsJamoT(C: UCS4): Boolean;
+  begin
+    Result := (C >= Hangul.JamoTBase) and (C < Hangul.JamoTLimit);
+  end;
+
+  function ComposeHangul(Index: integer): integer;
+  var
+    CodePoint, NextCodePoint: UCS4;
+    LIndex, VIndex, SIndex, TIndex: integer;
+  begin
+    Result := 0;
+    // We need at least 2 codepoints, at most 3
+    if (Index >= High(Codes)) then
+      exit;
+
+    // Get first
+    CodePoint := Codes[Index];
+
+    // Get second
+    Inc(Index);
+    NextCodePoint := Codes[Index];
+
+    // 1. Check to see if two current characters are L and Vovel
+    if UnicodeIsJamoL(CodePoint) then
+    begin
+      if UnicodeIsJamoV(NextCodePoint) then
+      begin
+        // Make syllable of form LV
+        LIndex := CodePoint - Hangul.JamoLBase;
+        VIndex := NextCodePoint - Hangul.JamoVBase;
+
+        CodePoint := Hangul.HangulSBase + (LIndex * Hangul.JamoVCount + VIndex) * Hangul.JamoTCount;
+        Inc(Result);
+
+        // Get third for test below
+        Inc(Index);
+      end;
+    end;
+
+    if (Index <= High(Codes)) then
+    begin
+      // 2. Check to see if two current characters are LV and T
+      if UnicodeIsHangul(CodePoint) then
+      begin
+        SIndex := CodePoint - Hangul.HangulSBase;
+        if (SIndex mod Hangul.JamoTCount = 0) then
+        begin
+          NextCodePoint := Codes[Index];
+          if UnicodeIsJamoT(NextCodePoint) then
+          begin
+            // Make syllable of form LVT
+            TIndex := NextCodePoint - Hangul.JamoTBase;
+
+            CodePoint := CodePoint + UCS4(TIndex);
+            Inc(Result);
+          end;
+        end;
+      end;
+    end;
+
+    if (Result <> 0) then
+    begin
+      Inc(Result); // Include first
+      AddCodePoint(CodePoint);
+    end;
+  end;
+
+var
+  Index: integer;
+  Consumed: integer;
+begin
+  if (Length(Codes) <= 1) then
+    Exit(Codes);
+
+  // Load composition data if not already done
+  if not CompositionsLoaded then
+    LoadCompositionData;
+
+  SetLength(Result, Length(Codes));
+  OutputSize := 0;
+  Index := 0;
+
+  while (Index <= High(Codes)) do
+  begin
+
+    Consumed := ComposeHangul(Index);
+    if (Consumed > 0) then
+    begin
+      Inc(Index, Consumed);
+      continue;
+    end;
+
+    Consumed := Compose(Index);
+    Inc(Index, Consumed);
+
+  end;
+
+  SetLength(Result, OutputSize);
+end;
+
 procedure PrepareUnicodeData;
 // Prepares structures which are globally needed.
 begin
-  {$IFNDEF UNICODE_RTL_DATABASE}
   LoadInProgress := TCriticalSection.Create;
-  {$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 procedure FreeUnicodeData;
 // Frees all data which has been allocated and which is not automatically freed by Delphi.
 begin
-  {$IFNDEF UNICODE_RTL_DATABASE}
   FreeAndNil(LoadInProgress);
-  {$ENDIF ~UNICODE_RTL_DATABASE}
 end;
 
 initialization

@@ -32,9 +32,9 @@ unit PascalType.Unicode;
 
 interface
 
-// Select Unicode library. One of these must be defined.
+// Select Unicode library. One, and only one, of these must be defined.
 {.$define UNICODE_PUCU}
-{$define UNICODE_JEDI}
+{$define UNICODE_MIKELISCHKE}
 
 {$I PT_Compiler.inc}
 
@@ -120,11 +120,11 @@ implementation
 
 uses
 {$if defined(UNICODE_PUCU)}
-  ..\..\Source\Externals\pucu\src\PUCU;
-{$elseif defined(UNICODE_JEDI)}
-  jclUnicode;
+  PUCU;
+{$elseif defined(UNICODE_MIKELISCHKE)}
+  MikeLischkeUnicode;
 {$else}
-{$message fatal 'Missing Unicode implementation'}
+  {$message fatal 'Missing Unicode implementation'}
 {$ifend}
 
 {$ifdef WIN32_NORMALIZESTRING}
@@ -456,7 +456,7 @@ end;
 {$endif UNICODE_PUCU}
 
 
-{$ifdef UNICODE_JEDI}
+{$ifdef UNICODE_MIKELISCHKE}
 //------------------------------------------------------------------------------
 //
 //              Normalization
@@ -647,7 +647,7 @@ class function PascalTypeUnicode.IsDigit(const ACodePoint: TPascalTypeCodePoint)
 begin
   Result := UnicodeIsDigit(ACodePoint);
 end;
-{$endif UNICODE_JEDI}
+{$endif UNICODE_MIKELISCHKE}
 
 class function PascalTypeUnicode.IsDefaultIgnorable(const ACodePoint: TPascalTypeCodePoint): boolean;
 var

@@ -166,7 +166,7 @@
         <DCCReference Include="..\..\Source\PascalType.Unicode.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.cmap.pas"/>
         <DCCReference Include="TestUnicode.pas"/>
-        <DCCReference Include="..\..\Source\Unicode\JclUnicode.pas"/>
+        <DCCReference Include="..\..\Source\Unicode\MikeLischkeUnicode.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

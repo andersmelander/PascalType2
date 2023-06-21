@@ -80,7 +80,7 @@ uses
   PascalType.Unicode in '..\..\Source\PascalType.Unicode.pas',
   PascalType.Tables.TrueType.cmap in '..\..\Source\PascalType.Tables.TrueType.cmap.pas',
   TestUnicode in 'TestUnicode.pas',
-  JclUnicode in '..\..\Source\Unicode\JclUnicode.pas';
+  MikeLischkeUnicode in '..\..\Source\Unicode\MikeLischkeUnicode.pas';
 
 {$R *.RES}
 
