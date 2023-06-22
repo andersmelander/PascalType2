@@ -35,7 +35,7 @@ implementation
 { TTestPascalTypeUnicode }
 
 const
-  sUnicodeDataFolder = '..\..\..\Source\Externals\pucu\src\UnicodeData';
+  sUnicodeDataFolder = '..\..\..\Source\Unicode\UCD';
 
 procedure TTestPascalTypeUnicode.SetUp;
 
@@ -131,26 +131,12 @@ begin
   begin
 //    Status(Format('Testing row %d: %s...', [UnicodeTestCase.Row, UnicodeTestCase.Name]));
 
-(*
-    // For now, skip the tests that lock up the PUCU demoposition routine
-    Inc(Skipped);
-    case UnicodeTestCase.Row of
-      62: // LATIN CAPITAL LETTER E WITH MACRON AND GRAVE, COMBINING MACRON
-        continue;
-
-      65: // HEBREW POINT QAMATS, HEBREW POINT HOLAM, HEBREW POINT HATAF SEGOL, HEBREW ACCENT ETNAHTA, HEBREW PUNCTUATION SOF PASUQ, HEBREW POINT SHEVA, HEBREW ACCENT ILUY, HEBREW ACCENT QARNEY PARA
-        continue;
-
-      17103..18950: // Canonical Order Test - Too many to list each one individually
-        continue;
-    end;
-    Dec(Skipped);
-*)
-
     var ThisFailed := False;
 
-    var Normalized: TPascalTypeCodePoints := UnicodeTestCase.NFD;
-    PascalTypeUnicode.Normalize(Normalized);
+    var Normalized := UnicodeTestCase.NFD;
+    Normalized := PascalTypeUnicode.Decompose(Normalized);
+
+//    PascalTypeUnicode.Normalize(Normalized);
     var ComposedCodePoints := PascalTypeUnicode.Compose(Normalized);
 
 //    CheckEquals(Length(ComposedCodePoints), Length(UnicodeTestCase.NFC), Format('Incorrect Composed length in row %d', [UnicodeTestCase.Row]));
@@ -199,21 +185,6 @@ begin
   begin
 //    Status(Format('Testing row %d: %s...', [UnicodeTestCase.Row, UnicodeTestCase.Name]));
 
-(*
-    // For now, skip the tests that lock up the PUCU demoposition routine
-    Inc(Skipped);
-    case UnicodeTestCase.Row of
-      62: // LATIN CAPITAL LETTER E WITH MACRON AND GRAVE, COMBINING MACRON
-        continue;
-
-      65: // HEBREW POINT QAMATS, HEBREW POINT HOLAM, HEBREW POINT HATAF SEGOL, HEBREW ACCENT ETNAHTA, HEBREW PUNCTUATION SOF PASUQ, HEBREW POINT SHEVA, HEBREW ACCENT ILUY, HEBREW ACCENT QARNEY PARA
-        continue;
-
-      17103..18950: // Canonical Order Test - Too many to list each one individually
-        continue;
-    end;
-    Dec(Skipped);
-*)
     var DecomposedCodePoints := PascalTypeUnicode.Decompose(UnicodeTestCase.Source);
     PascalTypeUnicode.Normalize(DecomposedCodePoints);
 
@@ -224,8 +195,11 @@ begin
     for var i := 0 to High(DecomposedCodePoints) do
       if (UnicodeTestCase.NFD[i] <> DecomposedCodePoints[i]) then
       begin
-        Status(Format('Incorrect decomposed component in row %d. Source: %s, Expected:%s, Actual: %s',
-          [UnicodeTestCase.Row, CodePointsToString(UnicodeTestCase.Source), CodePointsToString(UnicodeTestCase.NFD), CodePointsToString(DecomposedCodePoints)]));
+        var Msg := '';
+        if (UnicodeTestCase.NFKD[i] = DecomposedCodePoints[i]) then
+          Msg := ' (*** matched NFKD ***)';
+        Status(Format('Incorrect decomposed component in row %d. Source: %s, Expected:%s, Actual: %s%s',
+          [UnicodeTestCase.Row, CodePointsToString(UnicodeTestCase.Source), CodePointsToString(UnicodeTestCase.NFD), CodePointsToString(DecomposedCodePoints), Msg]));
         ThisFailed := True;
         break;
       end;

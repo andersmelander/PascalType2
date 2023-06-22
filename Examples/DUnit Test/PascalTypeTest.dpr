@@ -15,6 +15,7 @@ program PascalTypeTest;
 {$ENDIF}
 
 {$R 'Default.res' '..\..\Resource\Default.rc'}
+{$R 'Unicode.res' '..\..\Source\Unicode\Unicode.rc'}
 
 uses
   Forms,
@@ -79,8 +80,7 @@ uses
   PascalType.Tables.OpenType.Substitution.Ligature in '..\..\Source\PascalType.Tables.OpenType.Substitution.Ligature.pas',
   PascalType.Unicode in '..\..\Source\PascalType.Unicode.pas',
   PascalType.Tables.TrueType.cmap in '..\..\Source\PascalType.Tables.TrueType.cmap.pas',
-  TestUnicode in 'TestUnicode.pas',
-  MikeLischkeUnicode in '..\..\Source\Unicode\MikeLischkeUnicode.pas';
+  TestUnicode in 'TestUnicode.pas';
 
 {$R *.RES}
 
