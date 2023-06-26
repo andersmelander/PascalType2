@@ -49,7 +49,7 @@
         <Icns_MainIcns>$(BDS)\bin\delphi_PROJECTICNS.icns</Icns_MainIcns>
         <DCC_ExeOutput>.\</DCC_ExeOutput>
         <DCC_DcuOutput>.\lib</DCC_DcuOutput>
-        <DCC_UnitSearchPath>D:\Projects\Library\JEDI\jcl\jcl\source\common;D:\Projects\Library\JEDI\jcl\jcl\source\include;D:\Projects\Library\JEDI\jcl\jcl\source\windows;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\..\..\..\JEDI\jcl\jcl\source\common;..\..\..\..\JEDI\jcl\jcl\source\include;..\..\..\..\JEDI\jcl\jcl\source\windows;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
         <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>

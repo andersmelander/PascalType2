@@ -399,9 +399,9 @@ function UnicodeCompose(const Codes: TPascalTypeCodePoints; Compatible: Boolean;
 implementation
 
 {$if defined(UNICODE_RAW_DATA)}
-  {$R 'Unicode.res' 'Unicode\Unicode.rc'}
+  {$R 'PascalType.Unicode.res' 'PascalType.Unicode.rc'}
 {$elseif defined(UNICODE_ZLIB_DATA)}
-  {$R 'UnicodeZLib.res' 'Unicode\UnicodeZLib.rc'}
+  {$R 'PascalType.UnicodeZLib.res' 'PascalType.UnicodeZLib.rc'}
 {$ifend}
 
 uses
