@@ -1532,6 +1532,12 @@ begin
   begin
     Assert(CodePoint < $1000000);
 
+    if (Assigned(Filter)) and (not Filter(CodePoint)) then
+    begin
+      AddCodePoint(CodePoint);
+      continue;
+    end;
+
     // If the CodePoint is hangul then decomposition is performed algorithmically
     if Hangul.IsHangul(CodePoint) then
     begin
