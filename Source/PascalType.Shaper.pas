@@ -118,7 +118,7 @@ type
     procedure Reset; virtual;
     function NormalizationFilter(CodePoint: TPascalTypeCodePoint): boolean; virtual;
     function DecompositionFilter(CodePoint: TPascalTypeCodePoint): boolean; virtual;
-    function CompositionFilter(CodePoint: TPascalTypeCodePoint): boolean; virtual;
+    function CompositionFilter(FirstCodePoint, SecondCodePoint: TPascalTypeCodePoint; var Composite: TPascalTypeCodePoint): boolean; virtual;
     procedure ProcessCodePoints(var CodePoints: TPascalTypeCodePoints); virtual;
     function ProcessUnicode(const AText: string): TPascalTypeCodePoints; virtual;
     function NeedUnicodeComposition: boolean; virtual; // TODO : Move this to the Layout Engine
@@ -336,11 +336,15 @@ begin
   Result := not PascalTypeUnicode.IsMark(CodePoint);
 end;
 
-function TPascalTypeShaper.CompositionFilter(CodePoint: TPascalTypeCodePoint): boolean;
+function TPascalTypeShaper.CompositionFilter(FirstCodePoint, SecondCodePoint: TPascalTypeCodePoint; var Composite: TPascalTypeCodePoint): boolean;
 begin
+  // Harfbuzz doesn't compose a starter with a non-mark.
+  if (not PascalTypeUnicode.IsMark(FirstCodePoint)) and (not PascalTypeUnicode.IsMark(SecondCodePoint)) then
+    Exit(False);
+
   // Lookup codepoint in font.
   // Reject if font doesn't contain a glyph for the codepoint
-  Result := Font.HasGlyphByCharacter(CodePoint);
+  Result := Font.HasGlyphByCharacter(Composite);
 end;
 
 function TPascalTypeShaper.DecompositionFilter(CodePoint: TPascalTypeCodePoint): boolean;

@@ -212,6 +212,7 @@ type
 //------------------------------------------------------------------------------
 type
   TCodePointFilter = reference to function(CodePoint: TPascalTypeCodePoint): boolean;
+  TCodePointComposeFilter = reference to function(FirstCodePoint, SecondCodePoint: TPascalTypeCodePoint; var Composite: TPascalTypeCodePoint): boolean;
 
 
 type
@@ -252,7 +253,7 @@ type
     //------------------------------------------------------------------------------
     class procedure Normalize(var ACodePoints: TPascalTypeCodePoints; Filter: TCodePointFilter = nil); static;
     class function Decompose(const ACodePoints: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints; static;
-    class function Compose(const ACodePoints: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints; static;
+    class function Compose(const ACodePoints: TPascalTypeCodePoints; Filter: TCodePointComposeFilter = nil): TPascalTypeCodePoints; static;
 
 
     //------------------------------------------------------------------------------
@@ -389,8 +390,8 @@ type
 
 //------------------------------------------------------------------------------
 
-function UnicodeDecompose(const Codes: TPascalTypeCodePoints; Compatible: Boolean; Filter: TCodePointFilter): TPascalTypeCodePoints;
-function UnicodeCompose(const Codes: TPascalTypeCodePoints; Compatible: Boolean; Filter: TCodePointFilter): TPascalTypeCodePoints;
+function UnicodeDecompose(const Codes: TPascalTypeCodePoints; Compatible: Boolean = False; Filter: TCodePointFilter =nil): TPascalTypeCodePoints;
+function UnicodeCompose(const Codes: TPascalTypeCodePoints; Compatible: Boolean = False; Filter: TCodePointComposeFilter = nil): TPascalTypeCodePoints;
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -1551,7 +1552,7 @@ begin
   SetLength(Result, OutputSize);
 end;
 
-class function PascalTypeUnicode.Decompose(const ACodePoints: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints;
+class function PascalTypeUnicode.Decompose(const ACodePoints: TPascalTypeCodePoints; Filter: TCodePointFilter): TPascalTypeCodePoints;
 begin
   Result := UnicodeDecompose(ACodePoints, False, Filter);
 end;
@@ -1637,7 +1638,7 @@ begin
   end;
 end;
 
-function UnicodeCompose(const Codes: TPascalTypeCodePoints; Compatible: Boolean; Filter: TCodePointFilter): TPascalTypeCodePoints;
+function UnicodeCompose(const Codes: TPascalTypeCodePoints; Compatible: Boolean; Filter: TCodePointComposeFilter): TPascalTypeCodePoints;
 var
   OutputSize: integer;
 
@@ -1674,6 +1675,9 @@ var
       Result := True;
     end else
       Result := False;
+
+    if (Result ) and (Assigned(Filter)) then
+      Result := Filter(FirstCodePoint, SecondCodePoint, Composite);
   end;
 
   function ComposeTwo(FirstCodePoint, SecondCodePoint: TPascalTypeCodePoint; var Composite: TPascalTypeCodePoint): boolean;
@@ -1773,8 +1777,7 @@ begin
     TestCCC := PascalTypeUnicode.CanonicalCombiningClass(Result[OutputSize-1]);
 
     if ((StarterCCC = 0) and (StarterIndex < OutputSize-1) and ((TestCCC = 0) or (TestCCC >= CCC))) or
-       (not ComposeTwo(Result[StarterIndex], CodePoint, Composite)) or
-       ((Assigned(Filter)) and (not Filter(Composite))) then
+       (not ComposeTwo(Result[StarterIndex], CodePoint, Composite)) then
     begin
       // Blocked, doesn't compose or rejected by filter.
       if (CCC = 0) then
@@ -1797,7 +1800,7 @@ begin
   SetLength(Result, OutputSize);
 end;
 
-class function PascalTypeUnicode.Compose(const ACodePoints: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints;
+class function PascalTypeUnicode.Compose(const ACodePoints: TPascalTypeCodePoints; Filter: TCodePointComposeFilter): TPascalTypeCodePoints;
 begin
   Result := UnicodeCompose(ACodePoints, False, Filter);
 end;
