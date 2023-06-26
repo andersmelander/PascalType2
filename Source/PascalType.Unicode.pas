@@ -217,6 +217,19 @@ type
 
 type
   PascalTypeUnicode = record
+    const
+      UCS4Replacement: Char     = #$FFFD;
+      UCS4ReplacementCodePoint  = $0000FFFD;
+      MaximumUCS2               = $0000FFFF;
+      MaximumUTF16              = $0010FFFF;
+      MaximumUCS4               = $7FFFFFFF;
+
+      MaxHighSurrogate          = $DBFF;
+      MaxLowSurrogate           = $DFFF;
+      MaxSurrogate              = $DFFF;
+      MinHighSurrogate          = $D800;
+      MinLowSurrogate           = $DC00;
+      MinSurrogate              = $D800;
 
     //------------------------------------------------------------------------------
     //
@@ -461,15 +474,93 @@ type
 
 //------------------------------------------------------------------------------
 //
+//              Trie data structure
+//
+//------------------------------------------------------------------------------
+type
+  TUnicodeTrie<T> = array[byte] of TArray<TArray<T>>;
+
+  TUnicodeTrieEx<T> = record
+  private
+    FLoaded: boolean;
+    function GetValue(ACodePoint: TPascalTypeCodePoint): T;
+    procedure SetValue(ACodePoint: TPascalTypeCodePoint; const Value: T);
+  public
+    Trie: TUnicodeTrie<T>;
+
+    function GetPointer(ACodePoint: TPascalTypeCodePoint; AExpand: boolean = False): pointer;
+
+    property Values[ACodePoint: TPascalTypeCodePoint]: T read GetValue write SetValue; default;
+    property Loaded: boolean read FLoaded write FLoaded;
+  end;
+
+function TUnicodeTrieEx<T>.GetPointer(ACodePoint: TPascalTypeCodePoint; AExpand: boolean): pointer;
+var
+  Plane, Page, Chr: Byte;
+begin
+  Plane := (ACodePoint shr 16) and $FF;
+  Page := (ACodePoint shr 8) and $FF;
+  Chr := ACodePoint and $FF;
+
+  if (Trie[Plane] = nil) then
+  begin
+    if (not AExpand) then
+      Exit(nil);
+    SetLength(Trie[Plane], 256);
+  end;
+
+  if (Trie[Plane, Page] = nil) then
+  begin
+    if (not AExpand) then
+      Exit(nil);
+    SetLength(Trie[Plane, Page], 256);
+  end;
+
+  Result := @Trie[Plane, Page, Chr];
+end;
+
+function TUnicodeTrieEx<T>.GetValue(ACodePoint: TPascalTypeCodePoint): T;
+var
+  Plane, Page, Chr: Byte;
+begin
+  Plane := (ACodePoint shr 16) and $FF;
+  Page := (ACodePoint shr 8) and $FF;
+  Chr := ACodePoint and $FF;
+
+  if (Trie[Plane] <> nil) and (Trie[Plane, Page] <> nil) then
+    Result := Trie[Plane, Page, Chr]
+  else
+    Result := Default(T);
+end;
+
+procedure TUnicodeTrieEx<T>.SetValue(ACodePoint: TPascalTypeCodePoint; const Value: T);
+var
+  Plane, Page, Chr: Byte;
+begin
+  Plane := (ACodePoint shr 16) and $FF;
+  Page := (ACodePoint shr 8) and $FF;
+  Chr := ACodePoint and $FF;
+
+  if (Trie[Plane] = nil) then
+    SetLength(Trie[Plane], 256);
+
+  if (Trie[Plane, Page] = nil) then
+    SetLength(Trie[Plane, Page], 256);
+
+  Trie[Plane, Page, Chr] := Value;
+end;
+
+
+//------------------------------------------------------------------------------
+//
 //              Categorization
 //
 //------------------------------------------------------------------------------
 type
-  TCategoriesArray = TArray<TArray<TCharacterCategories>>;
+  PCharacterCategories = ^TCharacterCategories;
 
 var
-  CategoriesLoaded: Boolean;
-  Categories: array[Byte] of TCategoriesArray;
+  UnicodeCategories: TUnicodeTrieEx<TCharacterCategories>;
 
 const
   // Some predefined sets to shorten parameter lists below and ease repeative usage
@@ -491,13 +582,13 @@ var
   RangeStop: TPascalTypeCodePoint;
   Size: integer;
   Category: TCharacterCategory;
-  Plane, Page, Chr: Byte;
   i: Integer;
   CodePoint: TPascalTypeCodePoint;
+  Categories: PCharacterCategories;
 begin
-  if CategoriesLoaded then
+  if UnicodeCategories.Loaded then
     exit;
-  CategoriesLoaded := True;
+  UnicodeCategories.Loaded := True;
 
   ResourceStream := TResourceStream.Create(HInstance, 'CATEGORIES', 'UNICODEDATA');
 
@@ -539,23 +630,14 @@ begin
         // 3) go through every range and add the current category to each code point
         for CodePoint := RangeStart to RangeStop do
         begin
-          Plane := (CodePoint shr 16) and $FF;
-          Page := (CodePoint shr 8) and $FF;
-          Chr := CodePoint and $FF;
-
-          // add Page step array if not yet done
-          if (Categories[Plane] = nil) then
-            SetLength(Categories[Plane], 256);
-
-          if (Categories[Plane, Page] = nil) then
-            SetLength(Categories[Plane, Page], 256);
+          Categories := UnicodeCategories.GetPointer(CodePoint, True);
 
           // The array is allocated on the exact size, but the compiler generates
           // a 32 bit "BTS" instruction that accesses memory beyond the allocated block.
-          if (Chr < 255) then
-            Include(Categories[Plane, Page, Chr], Category)
+          if (CodePoint and $FF < $FF) then
+            Include(Categories^, Category)
           else
-            Categories[Plane, Page, Chr] := Categories[Plane, Page, Chr] + [Category];
+            Categories^ := Categories^ + [Category];
         end;
       end;
     end;
@@ -566,21 +648,13 @@ begin
 end;
 
 class function PascalTypeUnicode.GetCategory(ACodePoint: TPascalTypeCodePoint): TCharacterCategories;
-var
-  Plane, Page, Chr: Byte;
 begin
   Assert(ACodePoint < $1000000);
 
-  if not CategoriesLoaded then
+  if not UnicodeCategories.Loaded then
     LoadCharacterCategories;
 
-  Plane := (ACodePoint shr 16) and $FF;
-  Page := (ACodePoint shr 8) and $FF;
-  Chr := ACodePoint and $FF;
-  if (Categories[Plane] <> nil) and (Categories[Plane, Page] <> nil) then
-    Result := Categories[Plane, Page, Chr]
-  else
-    Result := [];
+  Result := UnicodeCategories[ACodePoint];
 end;
 
 function IsInCategories(ACodePoint: TPascalTypeCodePoint; ACategories: TCharacterCategories): Boolean;
@@ -1197,12 +1271,8 @@ end;
 //              Canonical Combining Classes
 //
 //------------------------------------------------------------------------------
-type
-  TClassArray = TArray<TArray<Byte>>;
-
 var
-  CCCsLoaded: Boolean;
-  CCCs: array[Byte] of TClassArray;
+  CCCs: TUnicodeTrieEx<Byte>;
 
 procedure LoadCCCs;
 var
@@ -1215,11 +1285,10 @@ var
   RangeStop: TPascalTypeCodePoint;
   i: Integer;
   CodePoint: TPascalTypeCodePoint;
-  Plane, Page, Chr: Byte;
 begin
-  if CCCsLoaded then
+  if CCCs.Loaded then
     exit;
-  CCCsLoaded := True;
+  CCCs.Loaded := True;
 
   ResourceStream := TResourceStream.Create(HInstance, 'COMBINING', 'UNICODEDATA');
 
@@ -1261,19 +1330,7 @@ begin
 
         // 4) Put this class in every of the code points just loaded
         for CodePoint := RangeStart to RangeStop do
-        begin
-          Plane := (CodePoint shr 16) and $FF;
-          Page := (CodePoint shr 8) and $FF;
-          Chr := CodePoint and $FF;
-
-          if (CCCs[Plane] = nil) then
-            SetLength(CCCs[Plane], 256);
-
-          if (CCCs[Plane, Page] = nil) then
-            SetLength(CCCs[Plane, Page], 256);
-
-          CCCs[Plane, Page, Chr] := CCC;
-        end;
+          CCCs[CodePoint] := CCC;
       end;
     end;
     // Assert(Stream.Position = Stream.Size);
@@ -1283,22 +1340,13 @@ begin
 end;
 
 class function PascalTypeUnicode.CanonicalCombiningClass(ACodePoint: TPascalTypeCodePoint): Cardinal;
-var
-  Plane, Page, Chr: Byte;
 begin
   Assert(ACodePoint < $1000000);
 
-  if (not CCCsLoaded) then
+  if (not CCCs.Loaded) then
     LoadCCCs;
 
-  Plane := (ACodePoint shr 16) and $FF;
-  Page := (ACodePoint shr 8) and $FF;
-  Chr := ACodePoint and $FF;
-
-  if (CCCs[Plane] <> nil) and (CCCs[Plane, Page] <> nil) then
-    Result := CCCs[Plane, Page, Chr]
-  else
-    Result := 0;
+  Result := CCCs[ACodePoint];
 end;
 
 
@@ -1374,16 +1422,12 @@ type
     Leaves: TPascalTypeCodePoints;
   end;
   PDecomposition = ^TDecomposition;
-  TDecompositionArray = TArray<TDecomposition>;
-  TDecompositions = TArray<TDecompositionArray>;
-  TDecompositionsArray = array[Byte] of TDecompositions;
 
 var
   // List of decompositions, organized as three stage matrix (a trie)
-  // Note: there are two tables, one for canonical decompositions and the other one
+  // Note: There are two tables, one for canonical decompositions and the other one
   //       for compatibility decompositions.
-  DecompositionsLoaded: Boolean;
-  Decompositions: TDecompositionsArray;
+  Decompositions: TUnicodeTrieEx<TDecomposition>;
 
 procedure LoadDecompositions;
 var
@@ -1391,13 +1435,13 @@ var
   Stream: TStream;
   Reader: TBinaryReader;
   Size: Integer;
-  Value: Integer;
+  CodePoint: TPascalTypeCodePoint;
   i, j: Integer;
-  Plane, Page, Chr: Byte;
+  Decomposition: PDecomposition;
 begin
-  if (DecompositionsLoaded) then
+  if (Decompositions.Loaded) then
     exit;
-  DecompositionsLoaded := True;
+  Decompositions.Loaded := True;
 
   ResourceStream := TResourceStream.Create(HInstance, 'DECOMPOSITION', 'UNICODEDATA');
 
@@ -1416,32 +1460,24 @@ begin
 
   Reader := TBinaryReader.Create(Stream, nil, True);
   try
-    Value := 0;
+    CodePoint := 0;
     Size := Reader.ReadInteger;
+
     for i := 0 to Size - 1 do
     begin
-      Stream.ReadBuffer(Value, 3);
-      Assert(Value < $1000000);
-
-      Plane := (Value shr 16) and $FF;
-      Page := (Value shr 8) and $FF;
-      Chr := Value and $FF;
-
-      // If there is no high byte entry in the Plane stage table then create one
-      if (Decompositions[Plane] = nil) then
-        SetLength(Decompositions[Plane], 256);
-      if (Decompositions[Plane, Page] = nil) then
-        SetLength(Decompositions[Plane, Page], 256);
+      Stream.ReadBuffer(CodePoint, 3);
+      Assert(CodePoint < $1000000);
 
       Size := Reader.ReadByte;
       if Size > 0 then
       begin
-        Decompositions[Plane, Page, Chr].Canonical := (TCompatibilityFormattingTag(Reader.ReadByte) = cftCanonical);
-        SetLength(Decompositions[Plane, Page, Chr].Leaves, Size);
+        Decomposition := Decompositions.GetPointer(CodePoint, True);
+        Decomposition.Canonical := (TCompatibilityFormattingTag(Reader.ReadByte) = cftCanonical);
+        SetLength(Decomposition.Leaves, Size);
         for j := 0 to Size - 1 do
         begin
-          Stream.ReadBuffer(Value, 3);
-          Decompositions[Plane, Page, Chr].Leaves[j] := Value;
+          Stream.ReadBuffer(CodePoint, 3);
+          Decomposition.Leaves[j] := CodePoint;
         end;
       end;
     end;
@@ -1488,34 +1524,20 @@ var
       AddCodePoint(Hangul.JamoTBase + TIndex);
   end;
 
-  procedure Decompose(CodePoint: TPascalTypeCodePoint);
+  procedure Decompose(ACodePoint: TPascalTypeCodePoint);
   var
-    Plane, Page, Chr: Byte;
-    Level1: TDecompositions;
-    Level2: TDecompositionArray;
-    Level3: PDecomposition;
+    Decomposition: PDecomposition;
+    CodePoint: TPascalTypeCodePoint;
   begin
-    Plane := (CodePoint shr 16) and $FF;
-    Page := (CodePoint shr 8) and $FF;
-    Chr := CodePoint and $FF;
-
-    Level1 := Decompositions[Plane];
-    if (Level1 <> nil) then
+    Decomposition := Decompositions.GetPointer(ACodePoint);
+    if (Decomposition <> nil) and (Decomposition.Leaves <> nil) and (Compatible or Decomposition.Canonical) then
     begin
-      Level2 := Level1[Page];
-      if (Level2 <> nil) then
-      begin
-        Level3 := @Level2[Chr];
-        if (Level3.Leaves <> nil) and (Compatible or Level3.Canonical) then
-        begin
-          for CodePoint in Level3.Leaves do
-            Decompose(CodePoint);
-          exit;
-        end;
-      end;
+      for CodePoint in Decomposition.Leaves do
+        Decompose(CodePoint);
+      exit;
     end;
 
-    AddCodePoint(CodePoint);
+    AddCodePoint(ACodePoint);
   end;
 
 var
@@ -1526,7 +1548,7 @@ begin
   OutputSize := 0;
 
   // Load decomposition data if not already done
-  if not DecompositionsLoaded then
+  if not Decompositions.Loaded then
     LoadDecompositions;
 
   for CodePoint in Codes do
@@ -1826,9 +1848,9 @@ begin
     CodePoint := Ord(AText[i]);
     Inc(i);
 
-    if (i <= Length(AText)) and (CodePoint and $fc00 = $d800) and (Word(Ord(AText[i])) and $fc00 = $dc00) then
+    if (i <= Length(AText)) and (CodePoint and $FC00 = MinHighSurrogate) and (Word(Ord(AText[i])) and $FC00 = MinLowSurrogate) then
     begin
-      CodePoint := (Cardinal(Cardinal(CodePoint and $3ff) shl 10) or Cardinal(Ord(AText[i]) and $3ff)) + $10000;
+      CodePoint := (Cardinal(Cardinal(CodePoint and $03FF) shl 10) or Cardinal(Ord(AText[i]) and $03FF)) + $10000;
       inc(i);
     end;
 
@@ -1841,72 +1863,47 @@ end;
 
 class function PascalTypeUnicode.UTF32ToUTF16(const ACodePoints: TPascalTypeCodePoints): string;
 var
-  i, j: integer;
+  i: integer;
   CodePoint: TPascalTypeCodePoint;
+  Surrogate: Cardinal;
 begin
   Result := '';
 
-  i := 0;
+  i := Length(ACodePoints);
   for CodePoint in ACodePoints do
-  begin
-    if CodePoint <= $D7FF then
-      Inc(i)
-    else
-    if CodePoint <= $DFFF then
-      Inc(i)
-    else
-    if CodePoint <= $FFFD then
-      Inc(i)
-    else
-    if CodePoint <= $FFFF then
-      Inc(i)
-    else
-    if CodePoint <= $10FFFF then
-      Inc(i, 2)
-    else
+    if (CodePoint > MaximumUCS2) and (CodePoint <= MaximumUTF16) then
       Inc(i);
-  end;
 
   SetLength(Result, i);
-  i := 0;
-  for j := 0 to High(ACodePoints) do
+
+  i := 1;
+  for CodePoint in ACodePoints do
   begin
-    CodePoint := ACodePoints[j];
-    if CodePoint <= $D7FF then
-    begin
-      Inc(i);
-      Result[i] := Char(CodePoint);
-    end else
-    if CodePoint <= $DFFF then
-    begin
-      Inc(i);
-      Result[i] := #$fffd;
-    end else
+
+    if CodePoint < MinHighSurrogate then
+      Result[i] := Char(CodePoint)
+    else
+    if CodePoint <= MaxLowSurrogate then
+      Result[i] := UCS4Replacement
+    else
     if CodePoint <= $FFFD then
-    begin
-      Inc(i);
-      Result[i] := Char(CodePoint);
-    end else
+      Result[i] := Char(CodePoint)
+    else
     if CodePoint <= $FFFF then
+      Result[i] := UCS4Replacement
+    else
+    if CodePoint <= MaximumUTF16 then
     begin
+      Surrogate := CodePoint - $10000;
+      Result[i] := Char((Surrogate shr 10) or MinHighSurrogate);
       Inc(i);
-      Result[i] := #$fffd;
+      Result[i] := Char((Surrogate and $03FF) or MinLowSurrogate);
     end else
-    if CodePoint <= $10FFFF then
-    begin
-      Dec(CodePoint, $10000);
-      Inc(i);
-      Result[i] := Char((CodePoint shr 10) or $D800);
-      Inc(i);
-      Result[i] := Char((CodePoint and $3FF) or $DC00);
-    end else
-    begin
-      Inc(i);
-      Result[i] := #$fffd;
-    end;
+      Result[i] := UCS4Replacement;
+
+    Inc(i);
   end;
 end;
-
 
 //------------------------------------------------------------------------------
 //
