@@ -217,7 +217,8 @@ end;
 
 function TPascalTypeDefaultShaper.NeedUnicodeComposition: boolean;
 begin
-  // OpenType appears to work best with decomposed Unicode
+  // Most OpenType fonts appear to work best with decomposed Unicode.
+  // Also, Harfbuff by default works on decomposed Unicode.
   // TODO : This decision belongs in the Layout Engine
   Result := False;
 end;

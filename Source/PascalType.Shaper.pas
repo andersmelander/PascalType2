@@ -117,7 +117,7 @@ type
   protected
     procedure Reset; virtual;
     function NormalizationFilter(CodePoint: TPascalTypeCodePoint): boolean; virtual;
-    function DecompositionFilter(CodePoint: TPascalTypeCodePoint): boolean; virtual;
+    function DecompositionFilter(Composite: TPascalTypeCodePoint; CodePoint: TPascalTypeCodePoint): boolean; virtual;
     function CompositionFilter(FirstCodePoint, SecondCodePoint: TPascalTypeCodePoint; var Composite: TPascalTypeCodePoint): boolean; virtual;
     procedure ProcessCodePoints(var CodePoints: TPascalTypeCodePoints); virtual;
     function ProcessUnicode(const AText: string): TPascalTypeCodePoints; virtual;
@@ -327,13 +327,15 @@ end;
 function TPascalTypeShaper.NeedUnicodeComposition: boolean;
 begin
   // TODO : This decision belongs in the Layout Engine
-  Result := True;
+  // Harfbuzz by default doesn't compose
+  Result := False;
 end;
 
 function TPascalTypeShaper.NormalizationFilter(CodePoint: TPascalTypeCodePoint): boolean;
 begin
-  // Do not reorder is codepoiont is a mark
-  Result := not PascalTypeUnicode.IsMark(CodePoint);
+  // Do not reorder if codepoiont is a mark
+//  Result := not PascalTypeUnicode.IsMark(CodePoint);
+  Result := not PascalTypeUnicode.IsDiacritic(CodePoint);
 end;
 
 function TPascalTypeShaper.CompositionFilter(FirstCodePoint, SecondCodePoint: TPascalTypeCodePoint; var Composite: TPascalTypeCodePoint): boolean;
@@ -347,16 +349,23 @@ begin
   Result := Font.HasGlyphByCharacter(Composite);
 end;
 
-function TPascalTypeShaper.DecompositionFilter(CodePoint: TPascalTypeCodePoint): boolean;
+function TPascalTypeShaper.DecompositionFilter(Composite: TPascalTypeCodePoint; CodePoint: TPascalTypeCodePoint): boolean;
 begin
-  // https://graphemica.com
-  case CodePoint of
-    $0931: Result := False; // devanagari letter rra
-    $09DC: Result := False; // bengali letter rra
-    $09DD: Result := False; // bengali letter rha
-    $0B94: Result := False; // tamil letter au
-  else
-    Result := True;
+  if (CodePoint = 0) then
+  begin
+    // Prefiltering
+    case Composite of
+      $0931: Result := False; // devanagari letter rra
+      $09DC: Result := False; // bengali letter rra
+      $09DD: Result := False; // bengali letter rha
+      $0B94: Result := False; // tamil letter au
+    else
+      Result := True;
+    end;
+  end else
+  begin
+    // Decomposition filtering
+    Result := Font.HasGlyphByCharacter(CodePoint);
   end;
 end;
 
@@ -388,12 +397,12 @@ procedure TPascalTypeShaper.ProcessCodePoints(var CodePoints: TPascalTypeCodePoi
         if (Font.HasGlyphByCharacter($002D)) then
           CodePoint := $002D; // hyphen-minus
     else
-      if (PascalTypeUnicode.IsWhiteSpace(CodePoint)) then
-      begin
-        if (not Font.HasGlyphByCharacter(CodePoint)) then
-          // TODO : We need to handle the difference in width
+      // TODO : Harfbuzz stores the space type for later use. I don't know the purpose of this yet.
+      // Actually, I don't even know the purpose of replacing "blank" codepoints in the first place...
+      if (PascalTypeUnicode.IsBlank(CodePoint)) and (PascalTypeUnicode.GetSpaceType(CodePoint) <> ustNOT_SPACE) and
+        (Font.HasGlyphByCharacter($0020)) then
+          // TODO : We probably need to handle the difference in width
           CodePoint := $0020; // Regular space
-      end;
     end;
   end;
 
@@ -430,7 +439,11 @@ begin
   ** Unicode composition (optional)
   *)
   if (NeedUnicodeComposition) then
+  begin
     Result := PascalTypeUnicode.Compose(Result, CompositionFilter);
+
+    PascalTypeUnicode.Normalize(Result, NormalizationFilter);
+  end;
 end;
 
 procedure TPascalTypeShaper.SetDirection(const Value: TPascalTypeDirection);

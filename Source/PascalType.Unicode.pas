@@ -53,7 +53,15 @@ interface
 //              TPascalTypeCodePoint
 //
 //------------------------------------------------------------------------------
+// UCS4 = UTF-32
 // A Unicode 2.0 codepoint - 32 bits wide
+//------------------------------------------------------------------------------
+// The Unicode® Standard, Version 15.0 – Core Specification, Appendix C
+// Relationship to ISO/IEC 10646
+// Section C.2 Encoding Forms in ISO/IEC 10646
+// UCS-4 stands for “Universal Character Set coded in 4 octets.” It is now
+// treated simply as a synonym for UTF-32, and is considered the canonical form
+// for representation of characters in [ISO/IEC] 10646.
 //------------------------------------------------------------------------------
 type
   TPascalTypeCodePoint = Cardinal;
@@ -213,8 +221,14 @@ type
 type
   TCodePointFilter = reference to function(CodePoint: TPascalTypeCodePoint): boolean;
   TCodePointComposeFilter = reference to function(FirstCodePoint, SecondCodePoint: TPascalTypeCodePoint; var Composite: TPascalTypeCodePoint): boolean;
+  TCodePointDecomposeFilter = reference to function(Composite: TPascalTypeCodePoint; CodePoint: TPascalTypeCodePoint): boolean;
 
 
+//------------------------------------------------------------------------------
+//
+//              PascalTypeUnicode namespace
+//
+//------------------------------------------------------------------------------
 type
   PascalTypeUnicode = record
     const
@@ -238,6 +252,7 @@ type
     //------------------------------------------------------------------------------
     class function CanonicalCombiningClass(ACodePoint: TPascalTypeCodePoint): Cardinal; static;
 
+
     //------------------------------------------------------------------------------
     //
     //              Normalization
@@ -259,13 +274,13 @@ type
     // Compose:   Composes to NFC form.
     //            Implements the "Canonical Composition Algorithm" as described in
     //            The Unicode® Standard, Version 15.0 – Core Specification, Chapter
-    //            3.11, section D117
+    //            3.11, section D117.
     //            It is assumed that the input has already been normalized.
-    //            The result is not normalized. TODO : Is this correct?
+    //            The result is not normalized.
     //
     //------------------------------------------------------------------------------
     class procedure Normalize(var ACodePoints: TPascalTypeCodePoints; Filter: TCodePointFilter = nil); static;
-    class function Decompose(const ACodePoints: TPascalTypeCodePoints; Filter: TCodePointFilter = nil): TPascalTypeCodePoints; static;
+    class function Decompose(const ACodePoints: TPascalTypeCodePoints; Filter: TCodePointDecomposeFilter = nil): TPascalTypeCodePoints; static;
     class function Compose(const ACodePoints: TPascalTypeCodePoints; Filter: TCodePointComposeFilter = nil): TPascalTypeCodePoints; static;
 
 
@@ -396,14 +411,38 @@ type
     class function IsUnifiedIdeograph(ACodePoint: TPascalTypeCodePoint): boolean; static;
     class function IsVariationSelector(ACodePoint: TPascalTypeCodePoint): boolean; static;
 
+    //------------------------------------------------------------------------------
+    //
+    //              Shaping
+    //
+    //------------------------------------------------------------------------------
     class function IsDefaultIgnorable(ACodePoint: TPascalTypeCodePoint): boolean; static;
 
-  private
+    // Space estimates based on:
+    // https://unicode.org/charts/PDF/U2000.pdf
+    // https://docs.microsoft.com/en-us/typography/develop/character-design-standards/whitespace
+    type
+      TUnicodeSpaceType = (
+        ustNOT_SPACE       = 0,
+        ustSPACE_EM        = 1,
+        ustSPACE_EM_2      = 2,
+        ustSPACE_EM_3      = 3,
+        ustSPACE_EM_4      = 4,
+        ustSPACE_EM_5      = 5,
+        ustSPACE_EM_6      = 6,
+        ustSPACE_EM_16     = 16,
+        ustSPACE_4_EM_18   , // 4/18th of an EM!
+        ustSPACE           ,
+        ustSPACE_FIGURE    ,
+        ustSPACE_PUNCTUATION,
+        ustSPACE_NARROW);
+
+    class function GetSpaceType(ACodePoint: TPascalTypeCodePoint): TUnicodeSpaceType; static;
   end;
 
 //------------------------------------------------------------------------------
 
-function UnicodeDecompose(const Codes: TPascalTypeCodePoints; Compatible: Boolean = False; Filter: TCodePointFilter =nil): TPascalTypeCodePoints;
+function UnicodeDecompose(const Codes: TPascalTypeCodePoints; Compatible: Boolean = False; Filter: TCodePointDecomposeFilter = nil): TPascalTypeCodePoints;
 function UnicodeCompose(const Codes: TPascalTypeCodePoints; Compatible: Boolean = False; Filter: TCodePointComposeFilter = nil): TPascalTypeCodePoints;
 
 //------------------------------------------------------------------------------
@@ -420,16 +459,19 @@ implementation
 
 uses
   Generics.Collections,
-{$if defined(UNICODE_RAW_DATA)}
-{$elseif defined(UNICODE_ZLIB_DATA)}
+{$if defined(UNICODE_ZLIB_DATA)}
   ZLib,
 {$ifend}
   System.Classes;
+
 
 //------------------------------------------------------------------------------
 //
 //              Hangul
 //
+//------------------------------------------------------------------------------
+// Constants for support of Conjoining Jamo Behavior as described in
+// The Unicode® Standard, Version 15.0 – Core Specification, Chapter 3.12
 //------------------------------------------------------------------------------
 type
   Hangul = record
@@ -462,15 +504,31 @@ type
     class function IsHangulLV(ACodePoint: TPascalTypeCodePoint): boolean; static;
   end;
 
+class function Hangul.IsHangul(ACodePoint: TPascalTypeCodePoint): boolean;
+begin
+  Result := PascalTypeUnicode.IsHangul(ACodePoint);
+end;
 
-type
-  // Start and stop of a range of code points
-  TRange = record
-    Start: TPascalTypeCodePoint;
-    Stop: TPascalTypeCodePoint;
-  end;
+class function Hangul.IsHangulLV(ACodePoint: TPascalTypeCodePoint): boolean;
+begin
+  Result := IsHangul(ACodePoint) and ((ACodePoint-HangulSBase) mod JamoTCount = 0);
+end;
 
-  TRangeArray = TArray<TRange>;
+class function Hangul.IsJamoL(ACodePoint: TPascalTypeCodePoint): Boolean;
+begin
+  Result := (ACodePoint >= JamoLBase) and (ACodePoint < JamoLLimit);
+end;
+
+class function Hangul.IsJamoT(ACodePoint: TPascalTypeCodePoint): Boolean;
+begin
+  Result := (ACodePoint >= JamoTBase) and (ACodePoint < JamoTLimit);
+end;
+
+class function Hangul.IsJamoV(ACodePoint: TPascalTypeCodePoint): Boolean;
+begin
+  Result := (ACodePoint >= JamoVBase) and (ACodePoint < JamoVLimit);
+end;
+
 
 //------------------------------------------------------------------------------
 //
@@ -573,7 +631,7 @@ const
   ClassSymbol = [ccSymbolMath, ccSymbolCurrency, ccSymbolModifier, ccSymbolOther];
   ClassEuropeanNumber = [ccEuropeanNumber, ccEuropeanNumberSeparator, ccEuropeanNumberTerminator];
 
-procedure LoadCharacterCategories;
+procedure LoadUnicodeCategories;
 var
   ResourceStream: TStream;
   Stream: TStream;
@@ -627,7 +685,7 @@ begin
         Assert(RangeStart < $1000000);
         Assert(RangeStop < $1000000);
 
-        // 3) go through every range and add the current category to each code point
+        // 3) Go through every range and add the current category to each code point
         for CodePoint := RangeStart to RangeStop do
         begin
           Categories := UnicodeCategories.GetPointer(CodePoint, True);
@@ -652,7 +710,7 @@ begin
   Assert(ACodePoint < $1000000);
 
   if not UnicodeCategories.Loaded then
-    LoadCharacterCategories;
+    LoadUnicodeCategories;
 
   Result := UnicodeCategories[ACodePoint];
 end;
@@ -1233,15 +1291,60 @@ begin
   Result := IsInCategories(ACodePoint, [ccVariationSelector]);
 end;
 
+
+//------------------------------------------------------------------------------
+//
+//              Shaping
+//
+//------------------------------------------------------------------------------
 class function PascalTypeUnicode.IsDefaultIgnorable(ACodePoint: TPascalTypeCodePoint): boolean;
 begin
-  // From DerivedCoreProperties.txt in the Unicode database,
-  // minus U+115F, U+1160, U+3164 and U+FFA0, which is what
-  // Harfbuzz and Uniscribe do.
+  (* From HarfBuzz
+   *
+   * Default_Ignorable codepoints:
+   *
+   * Note: While U+115F, U+1160, U+3164 and U+FFA0 are Default_Ignorable,
+   * we do NOT want to hide them, as the way Uniscribe has implemented them
+   * is with regular spacing glyphs, and that's the way fonts are made to work.
+   * As such, we make exceptions for those four.
+   * Also ignoring U+1BCA0..1BCA3. https://github.com/harfbuzz/harfbuzz/issues/503
+   *
+   * Unicode 14.0:
+   * $ grep '; Default_Ignorable_Code_Point ' DerivedCoreProperties.txt | sed 's/;.*#/#/'
+   * 00AD          # Cf       SOFT HYPHEN
+   * 034F          # Mn       COMBINING GRAPHEME JOINER
+   * 061C          # Cf       ARABIC LETTER MARK
+   * 115F..1160    # Lo   [2] HANGUL CHOSEONG FILLER..HANGUL JUNGSEONG FILLER
+   * 17B4..17B5    # Mn   [2] KHMER VOWEL INHERENT AQ..KHMER VOWEL INHERENT AA
+   * 180B..180D    # Mn   [3] MONGOLIAN FREE VARIATION SELECTOR ONE..MONGOLIAN FREE VARIATION SELECTOR THREE
+   * 180E          # Cf       MONGOLIAN VOWEL SEPARATOR
+   * 180F          # Mn       MONGOLIAN FREE VARIATION SELECTOR FOUR
+   * 200B..200F    # Cf   [5] ZERO WIDTH SPACE..RIGHT-TO-LEFT MARK
+   * 202A..202E    # Cf   [5] LEFT-TO-RIGHT EMBEDDING..RIGHT-TO-LEFT OVERRIDE
+   * 2060..2064    # Cf   [5] WORD JOINER..INVISIBLE PLUS
+   * 2065          # Cn       <reserved-2065>
+   * 2066..206F    # Cf  [10] LEFT-TO-RIGHT ISOLATE..NOMINAL DIGIT SHAPES
+   * 3164          # Lo       HANGUL FILLER
+   * FE00..FE0F    # Mn  [16] VARIATION SELECTOR-1..VARIATION SELECTOR-16
+   * FEFF          # Cf       ZERO WIDTH NO-BREAK SPACE
+   * FFA0          # Lo       HALFWIDTH HANGUL FILLER
+   * FFF0..FFF8    # Cn   [9] <reserved-FFF0>..<reserved-FFF8>
+   * 1BCA0..1BCA3  # Cf   [4] SHORTHAND FORMAT LETTER OVERLAP..SHORTHAND FORMAT UP STEP
+   * 1D173..1D17A  # Cf   [8] MUSICAL SYMBOL BEGIN BEAM..MUSICAL SYMBOL END PHRASE
+   * E0000         # Cn       <reserved-E0000>
+   * E0001         # Cf       LANGUAGE TAG
+   * E0002..E001F  # Cn  [30] <reserved-E0002>..<reserved-E001F>
+   * E0020..E007F  # Cf  [96] TAG SPACE..CANCEL TAG
+   * E0080..E00FF  # Cn [128] <reserved-E0080>..<reserved-E00FF>
+   * E0100..E01EF  # Mn [240] VARIATION SELECTOR-17..VARIATION SELECTOR-256
+   * E01F0..E0FFF  # Cn [3600] <reserved-E01F0>..<reserved-E0FFF>
+   *)
 
   case (ACodePoint shr 16) and $FF of // Plane
+
     $00: // BMP
       case (ACodePoint shr 8) and $FF of // Page
+
         $00: Result := (ACodePoint = $00AD);
         $03: Result := (ACodePoint = $034F);
         $06: Result := (ACodePoint = $061C);
@@ -1250,6 +1353,7 @@ begin
         $20: Result := ((ACodePoint >= $200B) and (ACodePoint <= $200F)) or ((ACodePoint >= $202A) and (ACodePoint <= $202E)) or ((ACodePoint >= $2060) and (ACodePoint <= $206F));
         $FE: Result := (ACodePoint >= $FE00) and (ACodePoint <= $FE0F) or (ACodePoint = $FEFF);
         $FF: Result := (ACodePoint >= $FFF0) and (ACodePoint <= $FFF8);
+
       else
         Result := False;
       end;
@@ -1262,6 +1366,31 @@ begin
 
   else
     Result := False;
+  end;
+end;
+
+class function PascalTypeUnicode.GetSpaceType(ACodePoint: TPascalTypeCodePoint): TUnicodeSpaceType;
+begin
+  // All GC=Zs chars that can use a fallback.
+  case ACodePoint of
+    $0020: Result := ustSPACE;          // U+0020 SPACE
+    $00A0: Result := ustSPACE;	        // U+00A0 NO-BREAK SPACE
+    $2000: Result := ustSPACE_EM_2;	// U+2000 EN QUAD
+    $2001: Result := ustSPACE_EM;	// U+2001 EM QUAD
+    $2002: Result := ustSPACE_EM_2;	// U+2002 EN SPACE
+    $2003: Result := ustSPACE_EM;	// U+2003 EM SPACE
+    $2004: Result := ustSPACE_EM_3;	// U+2004 THREE-PER-EM SPACE
+    $2005: Result := ustSPACE_EM_4;	// U+2005 FOUR-PER-EM SPACE
+    $2006: Result := ustSPACE_EM_6;	// U+2006 SIX-PER-EM SPACE
+    $2007: Result := ustSPACE_FIGURE;	// U+2007 FIGURE SPACE
+    $2008: Result := ustSPACE_PUNCTUATION;// U+2008 PUNCTUATION SPACE
+    $2009: Result := ustSPACE_EM_5;	// U+2009 THIN SPACE
+    $200A: Result := ustSPACE_EM_16;	// U+200A HAIR SPACE
+    $202F: Result := ustSPACE_NARROW;	// U+202F NARROW NO-BREAK SPACE
+    $205F: Result := ustSPACE_4_EM_18;	// U+205F MEDIUM MATHEMATICAL SPACE
+    $3000: Result := ustSPACE_EM;	// U+3000 IDEOGRAPHIC SPACE
+  else
+    Result := ustNOT_SPACE;             // U+1680 OGHAM SPACE MARK
   end;
 end;
 
@@ -1417,17 +1546,12 @@ end;
 //
 //------------------------------------------------------------------------------
 type
-  TDecomposition = record
-    Canonical: boolean;
-    Leaves: TPascalTypeCodePoints;
-  end;
+  TDecomposition = TPascalTypeCodePoints;
   PDecomposition = ^TDecomposition;
 
 var
-  // List of decompositions, organized as three stage matrix (a trie)
-  // Note: There are two tables, one for canonical decompositions and the other one
-  //       for compatibility decompositions.
-  Decompositions: TUnicodeTrieEx<TDecomposition>;
+  CanonicalDecompositions: TUnicodeTrieEx<TDecomposition>;
+  CompatibleDecompositions: TUnicodeTrieEx<TDecomposition>;
 
 procedure LoadDecompositions;
 var
@@ -1439,9 +1563,9 @@ var
   i, j: Integer;
   Decomposition: PDecomposition;
 begin
-  if (Decompositions.Loaded) then
+  if (CanonicalDecompositions.Loaded) then
     exit;
-  Decompositions.Loaded := True;
+  CanonicalDecompositions.Loaded := True;
 
   ResourceStream := TResourceStream.Create(HInstance, 'DECOMPOSITION', 'UNICODEDATA');
 
@@ -1471,13 +1595,25 @@ begin
       Size := Reader.ReadByte;
       if Size > 0 then
       begin
-        Decomposition := Decompositions.GetPointer(CodePoint, True);
-        Decomposition.Canonical := (TCompatibilityFormattingTag(Reader.ReadByte) = cftCanonical);
-        SetLength(Decomposition.Leaves, Size);
+        if (TCompatibilityFormattingTag(Reader.ReadByte) = cftCanonical) then
+          Decomposition := CanonicalDecompositions.GetPointer(CodePoint, True)
+        else
+          Decomposition := CompatibleDecompositions.GetPointer(CodePoint, True);
+
+        // Decomposition should never have more than one canonical mapping and
+        // one composite mapping.
+        Assert(Length(Decomposition^) = 0);
+
+        SetLength(Decomposition^, Size);
+
+        // Note:
+        // Max length of a canonical decomposition is 2.
+        // Max length of a compatible decomposition is 18.
+
         for j := 0 to Size - 1 do
         begin
           Stream.ReadBuffer(CodePoint, 3);
-          Decomposition.Leaves[j] := CodePoint;
+          Decomposition^[j] := CodePoint;
         end;
       end;
     end;
@@ -1487,7 +1623,7 @@ begin
   end;
 end;
 
-function UnicodeDecompose(const Codes: TPascalTypeCodePoints; Compatible: Boolean; Filter: TCodePointFilter): TPascalTypeCodePoints;
+function UnicodeDecompose(const Codes: TPascalTypeCodePoints; Compatible: Boolean; Filter: TCodePointDecomposeFilter): TPascalTypeCodePoints;
 var
   OutputSize: integer;
 
@@ -1516,6 +1652,7 @@ var
   var
     TIndex: Integer;
   begin
+    // Note: No filtering of individual Hangul codepoints
     Dec(CodePoint, Hangul.HangulSBase);
     AddCodePoint(Hangul.JamoLBase + (CodePoint div Hangul.JamoNCount));
     AddCodePoint(Hangul.JamoVBase + ((CodePoint mod Hangul.JamoNCount) div Hangul.JamoTCount));
@@ -1524,20 +1661,102 @@ var
       AddCodePoint(Hangul.JamoTBase + TIndex);
   end;
 
-  procedure Decompose(ACodePoint: TPascalTypeCodePoint);
+  function Decompose(ACodePoint: TPascalTypeCodePoint): boolean;
   var
     Decomposition: PDecomposition;
-    CodePoint: TPascalTypeCodePoint;
+    i: integer;
   begin
-    Decomposition := Decompositions.GetPointer(ACodePoint);
-    if (Decomposition <> nil) and (Decomposition.Leaves <> nil) and (Compatible or Decomposition.Canonical) then
+    (*
+    Compatibility Decomposition
+    D65 Compatibility decomposition: The decomposition of a character or character
+        sequence that results from recursively applying *both* the compatibility mappings
+        *and* the canonical mappings found in the Unicode Character Database, and those
+        described in Section 3.12, Conjoining Jamo Behavior, until no characters can be further
+        decomposed, and then reordering nonspacing marks according to Section 3.11,
+        Normalization Forms.
+
+    Canonical Decomposition
+    D68 Canonical decomposition: The decomposition of a character or character sequence
+        that results from recursively applying the canonical mappings found in the Unicode
+        Character Database and those described in Section 3.12, Conjoining Jamo Behavior,
+        until no characters can be further decomposed, and then reordering nonspacing
+        marks according to Section 3.11, Normalization Forms.
+
+
+    Unicode® Standard Annex #44
+    5.7.3 Character Decomposition Mapping
+    In some instances a canonical mapping or a compatibility mapping may consist of a single
+    character. For a canonical mapping, this indicates that the character is a canonical
+    equivalent of another single character. For a compatibility mapping, this indicates that
+    the character is a compatibility equivalent of another single character.
+
+    A canonical mapping may also consist of a pair of characters, but is never longer than
+    two characters. When a canonical mapping consists of a pair of characters, the first
+    character may itself be a character with a decomposition mapping, but the second
+    character never has a decomposition mapping.
+
+    Compatibility mappings can be much longer than canonical mappings. For historical
+    reasons, the longest compatibility mapping is 18 characters long. Compatibility mappings
+    are guaranteed to be no longer than 18 characters, although most consist of just a few
+    characters.
+
+    *)
+
+    Result := False;
+
+    // Compatible decomposition
+    Decomposition := nil;
+    if (Compatible) then
     begin
-      for CodePoint in Decomposition.Leaves do
-        Decompose(CodePoint);
-      exit;
+      Decomposition := CompatibleDecompositions.GetPointer(ACodePoint);
+      if (Decomposition <> nil) and (Length(Decomposition^) = 0) then
+        Decomposition := nil;
     end;
 
-    AddCodePoint(ACodePoint);
+    // Canonical decomposition
+    if (Decomposition = nil) then
+    begin
+      Decomposition := CanonicalDecompositions.GetPointer(ACodePoint);
+      if (Decomposition <> nil) and (Length(Decomposition^) = 0) then
+        Decomposition := nil;
+    end;
+
+    // No decomposition; Just add character.
+    // There's no need to call the filter since there's nothing we can do
+    // about the filter rejecting it.
+    if (Decomposition = nil) then
+      Exit(False);
+
+    // Since the first character will be recursively decomposed, its final value
+    // might be different from the one we have now. Therefore we start by
+    // filtering on the second character instead. If that one is rejected, then
+    // the whole decomposition must be rejected.
+    // Note that, even though compatible decompositions may be longer than two
+    // characters, we only filter on the first two.
+    if  ((Length(Decomposition^) > 1) and (Assigned(Filter)) and (not Filter(ACodePoint, Decomposition^[1]))) then
+      Exit(False);
+
+    // Recurse to decompose first character.
+    // If that returns True then the first character has been added and
+    // we just need to add the rest.
+    // If it returns False then we filter on the first character and add
+    // everything if the filter accepts it.
+    if (not Decompose(Decomposition^[0])) then
+    begin
+      // First character could not be re-decomposed.
+
+      // Filter it to determine if we can be added.
+      if (Assigned(Filter)) and (not Filter(ACodePoint, Decomposition^[0])) then
+        Exit(False);
+
+      AddCodePoint(Decomposition^[0]);
+    end;
+
+    // Add remaining decomposed characters.
+    for i := 1 to High(Decomposition^) do
+      AddCodePoint(Decomposition^[i]);
+
+    Result := True;
   end;
 
 var
@@ -1548,14 +1767,15 @@ begin
   OutputSize := 0;
 
   // Load decomposition data if not already done
-  if not Decompositions.Loaded then
+  if not CanonicalDecompositions.Loaded then
     LoadDecompositions;
 
   for CodePoint in Codes do
   begin
     Assert(CodePoint < $1000000);
 
-    if (Assigned(Filter)) and (not Filter(CodePoint)) then
+    // Prefilter on composite only
+    if (Assigned(Filter)) and (not Filter(CodePoint, 0)) then
     begin
       AddCodePoint(CodePoint);
       continue;
@@ -1564,17 +1784,19 @@ begin
     // If the CodePoint is hangul then decomposition is performed algorithmically
     if Hangul.IsHangul(CodePoint) then
     begin
-      // Hangul syllable: Decompose algorithmically
       DecomposeHangul(CodePoint);
       continue;
     end else
-      Decompose(CodePoint);
+    begin
+      if (not Decompose(CodePoint)) then
+        AddCodePoint(CodePoint);
+    end;
   end;
 
   SetLength(Result, OutputSize);
 end;
 
-class function PascalTypeUnicode.Decompose(const ACodePoints: TPascalTypeCodePoints; Filter: TCodePointFilter): TPascalTypeCodePoints;
+class function PascalTypeUnicode.Decompose(const ACodePoints: TPascalTypeCodePoints; Filter: TCodePointDecomposeFilter): TPascalTypeCodePoints;
 begin
   Result := UnicodeDecompose(ACodePoints, False, Filter);
 end;
@@ -1905,35 +2127,6 @@ begin
   end;
 end;
 
-//------------------------------------------------------------------------------
-//
-//              Hangul
-//
-//------------------------------------------------------------------------------
-class function Hangul.IsHangul(ACodePoint: TPascalTypeCodePoint): boolean;
-begin
-  Result := PascalTypeUnicode.IsHangul(ACodePoint);
-end;
-
-class function Hangul.IsHangulLV(ACodePoint: TPascalTypeCodePoint): boolean;
-begin
-  Result := IsHangul(ACodePoint) and ((ACodePoint-HangulSBase) mod JamoTCount = 0);
-end;
-
-class function Hangul.IsJamoL(ACodePoint: TPascalTypeCodePoint): Boolean;
-begin
-  Result := (ACodePoint >= JamoLBase) and (ACodePoint < JamoLLimit);
-end;
-
-class function Hangul.IsJamoT(ACodePoint: TPascalTypeCodePoint): Boolean;
-begin
-  Result := (ACodePoint >= JamoTBase) and (ACodePoint < JamoTLimit);
-end;
-
-class function Hangul.IsJamoV(ACodePoint: TPascalTypeCodePoint): Boolean;
-begin
-  Result := (ACodePoint >= JamoVBase) and (ACodePoint < JamoVLimit);
-end;
 
 initialization
 finalization
