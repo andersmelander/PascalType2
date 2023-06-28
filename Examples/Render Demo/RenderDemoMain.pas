@@ -65,6 +65,7 @@ type
     FRasterizerGDI  : TPascalTypeFontRasterizerGDI;
     FRasterizerGraphics32: TPascalTypeRasterizerGraphics32;
     FFontScanner : TFontNameScanner;
+    FUserFontScanner : TFontNameScanner;
     FFontArray   : array of TFontNameFile;
     FText        : string;
     FFontSize    : Integer;
@@ -178,8 +179,6 @@ begin
   GridPanel1.RowCollection.EquallySplitPercentuals;
 {$endif RASTERIZER_GDI}
 
-  SetCurrentDir(GetFontDirectory);
-
   FFontFace := TPascalTypeFontFace.Create;
 
   // create rasterizers
@@ -192,12 +191,13 @@ begin
   // set initial properties
   FFontSize := StrToIntDef(ComboBoxFontSize.Text, 36);
 
-  FFontScanner := TFontNameScanner.Create(True);
-  with FFontScanner do
-  begin
-    OnFontScanned := FontScannedHandler;
-    Start;
-  end;
+  FFontScanner := TFontNameScanner.Create;
+  FFontScanner.OnFontScanned := FontScannedHandler;
+  FFontScanner.Start;
+
+  FUserFontScanner := TFontNameScanner.Create(GetUserFontDirectory+'\*.ttf');
+  FUserFontScanner.OnFontScanned := FontScannedHandler;
+  FUserFontScanner.Start;
 
   for TestCase in TestCases do
     ComboBoxTestCase.Items.Add(TestCase.Name);
@@ -209,12 +209,13 @@ begin
   FreeAndNil(FRasterizerGraphics32);
   FreeAndNil(FFontFace);
 
-  with FFontScanner do
-  begin
-    Terminate;
-    WaitFor;
-  end;
-  FreeAndNil(FFontScanner);
+  FFontScanner.Terminate;
+  FFontScanner.WaitFor;
+  FFontScanner.Free;
+
+  FUserFontScanner.Terminate;
+  FUserFontScanner.WaitFor;
+  FUserFontScanner.Free;
 end;
 
 procedure TFmRenderDemo.FormShow(Sender: TObject);

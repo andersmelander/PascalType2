@@ -38,11 +38,14 @@ uses
   Windows, SysUtils;
 
 function GetFontDirectory: string;
+function GetUserFontDirectory: string;
 
 implementation
 
 uses
-  ShlObj, ActiveX;
+  IOUtils,
+  ShlObj,
+  ActiveX;
 
 procedure StrResetLength(var S: string);
 begin
@@ -83,6 +86,20 @@ begin
   if Succeeded(SHGetSpecialFolderLocation(0, CSIDL_FONTS, lFolderPidl)) then
   begin
     Result := PidlToPath(lFolderPidl);
+    PidlFree(lFolderPidl);
+  end
+  else
+    Result := '';
+end;
+
+function GetUserFontDirectory: string;
+var
+  lFolderPidl: PItemIdList;
+begin
+  if Succeeded(SHGetSpecialFolderLocation(0, CSIDL_PROFILE, lFolderPidl)) then
+  begin
+    // There's really no documented, safe way to get this path so we'll just have to hardcode it.
+    Result := TPath.Combine(PidlToPath(lFolderPidl), 'AppData\Local\Microsoft\Windows\Fonts');
     PidlFree(lFolderPidl);
   end
   else

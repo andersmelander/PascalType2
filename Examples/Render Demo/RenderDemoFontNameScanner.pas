@@ -16,6 +16,7 @@ type
 
   TFontNameScanner = class(TThread)
   private
+    FPath: string;
     FOnFontName  : TFontScannedEvent;
     FCurrentFile : string;
     FFontFaceScan : TPascalTypeFontFaceScan;
@@ -23,50 +24,62 @@ type
   protected
     procedure Execute; override;
   public
+    constructor Create(const APath: string = '*.ttf');
     property OnFontScanned: TFontScannedEvent read FOnFontName write FOnFontName;
   end;
 
 implementation
 
+uses
+  IOUtils,
+  PascalType.Platform.Windows;
+
 { TFontNameScanner }
+
+constructor TFontNameScanner.Create(const APath: string);
+var
+  FolderFont: string;
+begin
+  inherited Create(True);
+
+  FolderFont := GetFontDirectory;
+  FPath := TPath.Combine(FolderFont, APath);
+end;
 
 procedure TFontNameScanner.Execute;
 var
-  SR: TSearchRec;
+  Filename: string;
 begin
   if (not Assigned(FOnFontName)) then
     exit;
 
-  if FindFirst('*.ttf', faAnyFile, SR) = 0 then
-  try
-    repeat
-      FFontFaceScan := TPascalTypeFontFaceScan.Create;
+  for Filename in TDirectory.GetFiles(TPath.GetDirectoryName(FPath), TPath.GetFileName(FPath)) do
+  begin
+    if (Terminated) then
+      break;
+
+    FFontFaceScan := TPascalTypeFontFaceScan.Create;
+    try
+
       try
-        with FFontFaceScan do
-          try
-            // store current file
-            FCurrentFile := SR.Name;
 
-//            if FCurrentFile = 'tahoma.ttf' then
-//              Continue;
+        // load font from file
+        FFontFaceScan.LoadFromFile(Filename);
 
-            // load font from file
-            LoadFromFile(FCurrentFile);
+        FCurrentFile := Filename;
 
-            Synchronize(FontScanned);
-          except
-            on
-              E: EPascalTypeError do Continue;
-            else
-              Continue;
-          end;
+        Synchronize(FontScanned);
 
-      finally
-        FreeAndNil(FFontFaceScan);
+      except
+        on E: EPascalTypeError do
+          continue;
+      else
+        continue;
       end;
-    until (FindNext(SR) <> 0) or Terminated;
-  finally
-    FindClose(SR);
+
+    finally
+      FreeAndNil(FFontFaceScan);
+    end;
   end;
 end;
 
