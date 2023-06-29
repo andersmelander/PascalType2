@@ -56,9 +56,10 @@ type
     procedure RasterizeGlyphPath(const GlyphPath: TPascalTypePath; Canvas: TCustomPath; X, Y: Single);
   public
     procedure RenderText(const Text: string; Canvas: TCustomPath); overload; virtual;
-    procedure RenderText(const Text: string; Canvas: TCustomPath; X, Y: Integer); overload; virtual;
+    procedure RenderText(const Text: string; Canvas: TCustomPath; var X, Y: Single); overload; virtual;
     procedure RenderShapedText(ShapedText: TPascalTypeGlyphString; Canvas: TCustomPath); overload; virtual;
-    procedure RenderShapedText(ShapedText: TPascalTypeGlyphString; Canvas: TCustomPath; X, Y: Integer); overload; virtual;
+    procedure RenderShapedText(ShapedText: TPascalTypeGlyphString; Canvas: TCustomPath; var X, Y: Single); overload; virtual;
+    procedure RenderShapedGlyph(AGlyph: TPascalTypeGlyph; Canvas: TCustomPath; var X, Y: Single); virtual;
 
     // GDI like functions
     function GetGlyphOutlineA(Character: Cardinal; Format: TGetGlyphOutlineUnion;
@@ -867,59 +868,80 @@ end;
 ////////////////////////////////////////////////////////////////////////////////
 
 procedure TPascalTypeRasterizerGraphics32.RenderText(const Text: string; Canvas: TCustomPath);
+var
+  X, Y: Single;
 begin
-  RenderText(Text, Canvas, 0, 0);
+  RenderText(Text, Canvas, X, Y);
 end;
 
 procedure TPascalTypeRasterizerGraphics32.RenderShapedText(ShapedText: TPascalTypeGlyphString; Canvas: TCustomPath);
+var
+  X, Y: Single;
 begin
-  RenderShapedText(ShapedText, Canvas, 0, 0);
+  RenderShapedText(ShapedText, Canvas, X, Y);
 end;
 
-procedure TPascalTypeRasterizerGraphics32.RenderShapedText(ShapedText: TPascalTypeGlyphString; Canvas: TCustomPath; X, Y: Integer);
+procedure TPascalTypeRasterizerGraphics32.RenderShapedGlyph(AGlyph: TPascalTypeGlyph; Canvas: TCustomPath; var X, Y: Single);
 var
-  CursorPos, Pos: TFloatPoint;
+  Pos: TFloatPoint;
   Glyph: TPascalTypeGlyph;
 begin
   Canvas.BeginUpdate;
   try
-    CursorPos.X := X;
-    CursorPos.Y := Y;
-
-    for Glyph in ShapedText do
-    begin
-      // Position glyph relative to cursor
-      Pos.X := CursorPos.X + ScalerX * Glyph.XOffset;
+    // Position glyph relative to cursor
+    Pos.X := X + ScalerX * AGlyph.XOffset;
 {$ifdef Inverse_Y_axis}
-      Pos.Y := CursorPos.Y - ScalerY * Glyph.YOffset;
+    Pos.Y := Y - ScalerY * AGlyph.YOffset;
 {$else Inverse_Y_axis}
-      Pos.Y := CursorPos.Y + ScalerY * Glyph.YOffset;
+    Pos.Y := CursorPos.Y + ScalerY * Glyph.YOffset;
 {$endif Inverse_Y_axis}
 
-      // Rasterize glyph
-      RasterizeGlyph(Glyph.GlyphID, Canvas, Pos.X, Pos.Y);
+    // Rasterize glyph
+    RasterizeGlyph(AGlyph.GlyphID, Canvas, Pos.X, Pos.Y);
 
-      // Advance cursor
-      CursorPos.X := CursorPos.X + ScalerX * Glyph.XAdvance;
-      CursorPos.Y := CursorPos.Y + ScalerY * Glyph.YAdvance;
-    end;
+    // Advance cursor
+    X := X + ScalerX * AGlyph.XAdvance;
+    Y := Y + ScalerY * AGlyph.YAdvance;
 
   finally
     Canvas.EndUpdate;
   end;
 end;
 
-procedure TPascalTypeRasterizerGraphics32.RenderText(const Text: string; Canvas: TCustomPath; X, Y: Integer);
+procedure TPascalTypeRasterizerGraphics32.RenderShapedText(ShapedText: TPascalTypeGlyphString; Canvas: TCustomPath; var X, Y: Single);
+var
+  CursorPos, Pos: TFloatPoint;
+  Glyph: TPascalTypeGlyph;
+begin
+  CursorPos.X := X;
+  CursorPos.Y := Y;
+
+  Canvas.BeginUpdate;
+  try
+
+    for Glyph in ShapedText do
+      RenderShapedGlyph(Glyph, Canvas, CursorPos.X, CursorPos.Y);
+
+  finally
+    Canvas.EndUpdate;
+  end;
+
+  X := CursorPos.X;
+  Y := CursorPos.Y;
+end;
+
+procedure TPascalTypeRasterizerGraphics32.RenderText(const Text: string; Canvas: TCustomPath; var X, Y: Single);
 var
   CharIndex: Integer;
   GlyphIndex: Integer;
   Pos: TFloatPoint;
   GlyphMetric: TGlyphMetric;
 begin
+  Pos.X := X;
+  Pos.Y := Y;
+
   Canvas.BeginUpdate;
   try
-    Pos.X := X;
-    Pos.Y := Y;
 
     for CharIndex := 1 to Length(Text) do
     begin
@@ -946,6 +968,9 @@ begin
   finally
     Canvas.EndUpdate;
   end;
+
+  X := Pos.X;
+  Y := Pos.Y;
 end;
 
 end.

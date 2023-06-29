@@ -11,6 +11,7 @@ object FmRenderDemo: TFmRenderDemo
   Font.Height = -11
   Font.Name = 'Tahoma'
   Font.Style = []
+  PopupMenu = PopupMenu
   Position = poMainFormCenter
   OnCreate = FormCreate
   OnDestroy = FormDestroy
@@ -107,7 +108,6 @@ object FmRenderDemo: TFmRenderDemo
       '96'
       '128'
       '256')
-    ExplicitLeft = 625
   end
   object GridPanel1: TGridPanel
     Left = 8
@@ -160,7 +160,6 @@ object FmRenderDemo: TFmRenderDemo
       end>
     ShowCaption = False
     TabOrder = 3
-    ExplicitWidth = 660
     object PanelGDI: TPanel
       AlignWithMargins = True
       Left = 0
@@ -176,7 +175,6 @@ object FmRenderDemo: TFmRenderDemo
       Caption = 'GDI TextOut'
       ShowCaption = False
       TabOrder = 0
-      ExplicitWidth = 660
       object PaintBox1: TPaintBox
         Left = 879
         Top = 0
@@ -215,7 +213,6 @@ object FmRenderDemo: TFmRenderDemo
       Caption = 'PascalType GDI'
       ShowCaption = False
       TabOrder = 1
-      ExplicitWidth = 660
       object PaintBox2: TPaintBox
         Left = 879
         Top = 0
@@ -253,7 +250,6 @@ object FmRenderDemo: TFmRenderDemo
       Caption = 'PascalType Graphics32'
       ShowCaption = False
       TabOrder = 2
-      ExplicitWidth = 660
       object PaintBox3: TPaintBox
         Left = 879
         Top = 0
@@ -291,7 +287,6 @@ object FmRenderDemo: TFmRenderDemo
       Caption = 'Image32'
       ShowCaption = False
       TabOrder = 3
-      ExplicitWidth = 660
       object PaintBox4: TPaintBox
         Left = 879
         Top = 0
@@ -323,5 +318,22 @@ object FmRenderDemo: TFmRenderDemo
     Anchors = [akTop, akRight]
     TabOrder = 4
     OnChange = ComboBoxTestCaseChange
+  end
+  object ActionList: TActionList
+    Left = 436
+    Top = 84
+    object ActionColor: TAction
+      AutoCheck = True
+      Caption = 'Color individual glyphs'
+      OnExecute = ActionColorExecute
+    end
+  end
+  object PopupMenu: TPopupMenu
+    Left = 452
+    Top = 224
+    object MenuItemColor: TMenuItem
+      Action = ActionColor
+      AutoCheck = True
+    end
   end
 end

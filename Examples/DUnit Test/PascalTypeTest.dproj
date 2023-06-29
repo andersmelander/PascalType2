@@ -107,9 +107,6 @@
         <RcCompile Include="..\..\Resource\Default.rc">
             <Form>Default.res</Form>
         </RcCompile>
-        <RcCompile Include="..\..\Source\Unicode\Unicode.rc">
-            <Form>Unicode.res</Form>
-        </RcCompile>
         <DCCReference Include="..\..\Source\PT_ByteCodeInterpreter.pas"/>
         <DCCReference Include="..\..\Source\PT_Classes.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.CharacterMaps.pas"/>

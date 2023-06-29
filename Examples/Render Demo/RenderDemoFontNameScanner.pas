@@ -48,12 +48,20 @@ end;
 
 procedure TFontNameScanner.Execute;
 var
+  Folder: string;
+  Mask: string;
   Filename: string;
 begin
   if (not Assigned(FOnFontName)) then
     exit;
 
-  for Filename in TDirectory.GetFiles(TPath.GetDirectoryName(FPath), TPath.GetFileName(FPath)) do
+  Folder := TPath.GetDirectoryName(FPath);
+  if (not TDirectory.Exists(Folder)) then
+    exit;
+
+  Mask := TPath.GetFileName(FPath);
+
+  for Filename in TDirectory.GetFiles(Folder, Mask) do
   begin
     if (Terminated) then
       break;

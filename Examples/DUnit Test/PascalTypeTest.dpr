@@ -15,7 +15,6 @@ program PascalTypeTest;
 {$ENDIF}
 
 {$R 'Default.res' '..\..\Resource\Default.rc'}
-{$R 'Unicode.res' '..\..\Source\Unicode\Unicode.rc'}
 
 uses
   Forms,

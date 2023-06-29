@@ -12,7 +12,7 @@ uses
   PascalType.FontFace.SFNT,
   PascalType.Rasterizer.GDI,
   PascalType.Rasterizer.Graphics32,
-  RenderDemoFontNameScanner;
+  RenderDemoFontNameScanner, Vcl.Menus, System.Actions, Vcl.ActnList;
 
 {$I ..\..\Source\PT_Compiler.inc}
 
@@ -48,6 +48,10 @@ type
     PaintBoxImage32: TPaintBox;
     ComboBoxTestCase: TComboBox;
     Label1: TLabel;
+    ActionList: TActionList;
+    ActionColor: TAction;
+    PopupMenu: TPopupMenu;
+    MenuItemColor: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -60,6 +64,7 @@ type
     procedure PaintBoxImage32Paint(Sender: TObject);
     procedure PaintBox1Paint(Sender: TObject);
     procedure ComboBoxTestCaseChange(Sender: TObject);
+    procedure ActionColorExecute(Sender: TObject);
   private
     FFontFace: TPascalTypeFontFace;
     FRasterizerGDI  : TPascalTypeFontRasterizerGDI;
@@ -145,6 +150,8 @@ const
     (Name: 'Composite glyphs'; FontName: 'Segoe UI'; Text: 'Ѕдвейт')
   );
 
+const
+  GlyphPalette: TArray<TColor> = [$233BC2, $529cc7, $52DAEA, $3CC003, $BE9A57, $D76E97];
 
 var
   OneOverDPIScale: Double;
@@ -260,6 +267,8 @@ var
   ShaperClass: TPascalTypeShaperClass;
   Shaper: TPascalTypeShaper;
   ShapedText: TPascalTypeGlyphString;
+  i: integer;
+  CursorPos: TFloatPoint;
 {$define FILL_PATH}
 {-$define STROKE_PATH}
 {$ifdef FILL_PATH}
@@ -309,7 +318,20 @@ begin
         ShapedText := Shaper.Shape(FText);
         try
 
-          FRasterizerGraphics32.RenderShapedText(ShapedText, Canvas32);
+          if (ActionColor.Checked) then
+          begin
+            CursorPos.X := 0;
+            CursorPos.Y := 0;
+
+            for i := 0 to ShapedText.Count-1 do
+            begin
+
+              BrushFill.FillColor := Color32(GlyphPalette[i mod Length(GlyphPalette)]);
+              FRasterizerGraphics32.RenderShapedGlyph(ShapedText[i], Canvas32, CursorPos.X, CursorPos.Y);
+
+            end;
+          end else
+            FRasterizerGraphics32.RenderShapedText(ShapedText, Canvas32);
 
         finally
           ShapedText.Free;
@@ -463,6 +485,11 @@ begin
    FText := Value;
    TextChanged;
   end;
+end;
+
+procedure TFmRenderDemo.ActionColorExecute(Sender: TObject);
+begin
+  Invalidate;
 end;
 
 procedure TFmRenderDemo.ComboBoxFontChange(Sender: TObject);

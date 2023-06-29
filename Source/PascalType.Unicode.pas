@@ -689,13 +689,7 @@ begin
         for CodePoint := RangeStart to RangeStop do
         begin
           Categories := UnicodeCategories.GetPointer(CodePoint, True);
-
-          // The array is allocated on the exact size, but the compiler generates
-          // a 32 bit "BTS" instruction that accesses memory beyond the allocated block.
-          if (CodePoint and $FF < $FF) then
-            Include(Categories^, Category)
-          else
-            Categories^ := Categories^ + [Category];
+          Include(Categories^, Category)
         end;
       end;
     end;
