@@ -445,6 +445,30 @@ type
 function UnicodeDecompose(const Codes: TPascalTypeCodePoints; Compatible: Boolean = False; Filter: TCodePointDecomposeFilter = nil): TPascalTypeCodePoints;
 function UnicodeCompose(const Codes: TPascalTypeCodePoints; Compatible: Boolean = False; Filter: TCodePointComposeFilter = nil): TPascalTypeCodePoints;
 
+
+//------------------------------------------------------------------------------
+//
+//              Trie data structure
+//
+//------------------------------------------------------------------------------
+type
+  TUnicodeTrie<T> = array[byte] of TArray<TArray<T>>;
+
+  TUnicodeTrieEx<T> = record
+  private
+    FLoaded: boolean;
+    function GetValue(ACodePoint: TPascalTypeCodePoint): T;
+    procedure SetValue(ACodePoint: TPascalTypeCodePoint; const Value: T);
+  public
+    Trie: TUnicodeTrie<T>;
+
+    function GetPointer(ACodePoint: TPascalTypeCodePoint; AExpand: boolean = False): pointer;
+    function TryGetValue(ACodePoint: TPascalTypeCodePoint; var Value: T): boolean;
+
+    property Values[ACodePoint: TPascalTypeCodePoint]: T read GetValue write SetValue; default;
+    property Loaded: boolean read FLoaded write FLoaded;
+  end;
+
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -535,23 +559,6 @@ end;
 //              Trie data structure
 //
 //------------------------------------------------------------------------------
-type
-  TUnicodeTrie<T> = array[byte] of TArray<TArray<T>>;
-
-  TUnicodeTrieEx<T> = record
-  private
-    FLoaded: boolean;
-    function GetValue(ACodePoint: TPascalTypeCodePoint): T;
-    procedure SetValue(ACodePoint: TPascalTypeCodePoint; const Value: T);
-  public
-    Trie: TUnicodeTrie<T>;
-
-    function GetPointer(ACodePoint: TPascalTypeCodePoint; AExpand: boolean = False): pointer;
-
-    property Values[ACodePoint: TPascalTypeCodePoint]: T read GetValue write SetValue; default;
-    property Loaded: boolean read FLoaded write FLoaded;
-  end;
-
 function TUnicodeTrieEx<T>.GetPointer(ACodePoint: TPascalTypeCodePoint; AExpand: boolean): pointer;
 var
   Plane, Page, Chr: Byte;
@@ -578,17 +585,8 @@ begin
 end;
 
 function TUnicodeTrieEx<T>.GetValue(ACodePoint: TPascalTypeCodePoint): T;
-var
-  Plane, Page, Chr: Byte;
 begin
-  Plane := (ACodePoint shr 16) and $FF;
-  Page := (ACodePoint shr 8) and $FF;
-  Chr := ACodePoint and $FF;
-
-  if (Trie[Plane] <> nil) and (Trie[Plane, Page] <> nil) then
-    Result := Trie[Plane, Page, Chr]
-  else
-    Result := Default(T);
+  TryGetValue(ACodePoint, Result);
 end;
 
 procedure TUnicodeTrieEx<T>.SetValue(ACodePoint: TPascalTypeCodePoint; const Value: T);
@@ -608,6 +606,21 @@ begin
   Trie[Plane, Page, Chr] := Value;
 end;
 
+
+function TUnicodeTrieEx<T>.TryGetValue(ACodePoint: TPascalTypeCodePoint; var Value: T): boolean;
+var
+  Plane, Page, Chr: Byte;
+begin
+  Plane := (ACodePoint shr 16) and $FF;
+  Page := (ACodePoint shr 8) and $FF;
+  Chr := ACodePoint and $FF;
+
+  Result := (Trie[Plane] <> nil) and (Trie[Plane, Page] <> nil);
+  if (Result) then
+    Value := Trie[Plane, Page, Chr]
+  else
+    Value := Default(T);
+end;
 
 //------------------------------------------------------------------------------
 //
