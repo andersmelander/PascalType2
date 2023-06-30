@@ -83,7 +83,8 @@ uses
   PascalType.Tables.TrueType.kern in '..\..\Source\PascalType.Tables.TrueType.kern.pas',
   PascalType.Tables.OpenType.Positioning.Context in '..\..\Source\PascalType.Tables.OpenType.Positioning.Context.pas',
   PascalType.Tables.OpenType.Positioning.ChainedContext in '..\..\Source\PascalType.Tables.OpenType.Positioning.ChainedContext.pas',
-  PascalType.Shaper.Script.Arabic in '..\..\Source\PascalType.Shaper.Script.Arabic.pas';
+  PascalType.Shaper.Script.Arabic in '..\..\Source\PascalType.Shaper.Script.Arabic.pas',
+  PascalType.Tables.OpenType.Substitution.Alternate in '..\..\Source\PascalType.Tables.OpenType.Substitution.Alternate.pas';
 
 {$R *.res}
 

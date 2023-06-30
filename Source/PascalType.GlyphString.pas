@@ -55,6 +55,7 @@ type
     FGlyphString: TPascalTypeGlyphString;
     FCodePoints: TPascalTypeCodePoints;
     FGlyphID: TGlyphID;
+    FAlternateIndex: integer;
     FIsSubstituted: boolean;
     FIsLigated: boolean;
     FIsBase: boolean;
@@ -97,6 +98,8 @@ type
 
     // Features to be applied by the shaper
     property Features: TTableNames read FFeatures write FFeatures;
+
+    property AlternateIndex: integer read FAlternateIndex write FAlternateIndex;
 
     // Shaper state
     property LigatureID: integer read FLigatureID write FLigatureID;
@@ -170,11 +173,13 @@ type
   private type
     TGlyphMapperDelegate = reference to function(GlyphID: TGlyphID): integer;
   private
+    FLigatureID: integer;
+  private
     FGlyphs: TList<TPascalTypeGlyph>;
     FLanguage: TTableType;
     FDirection: TPascalTypeDirection;
     FScript: TTableType;
-    FLigatureID: integer;
+    FAlternateIndex: integer;
     function GetGlyph(Index: integer): TPascalTypeGlyph;
     function GetCount: integer;
   protected
@@ -224,6 +229,7 @@ type
     property Script: TTableType read FScript write FScript;
     property Language: TTableType read FLanguage write FLanguage;
     property Direction: TPascalTypeDirection read FDirection write FDirection;
+    property AlternateIndex: integer read FAlternateIndex write FAlternateIndex;
   end;
 
 //  TPascalTypeGlyphStringClass = class of TPascalTypeGlyphString;
@@ -252,6 +258,7 @@ begin
   FLigatureComponent := -1;
   FMarkAttachment := -1;
   FCursiveAttachment := -1;
+  FAlternateIndex := -1;
 end;
 
 destructor TPascalTypeGlyph.Destroy;
@@ -356,6 +363,8 @@ begin
     Glyph.Cluster := Cluster;
     Inc(Cluster);
   end;
+
+  FAlternateIndex := -1;
 end;
 
 destructor TPascalTypeGlyphString.Destroy;

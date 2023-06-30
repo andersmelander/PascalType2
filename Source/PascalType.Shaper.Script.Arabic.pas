@@ -280,7 +280,7 @@ begin
   if (not ArabicShapingClasses.Loaded) then
     LoadArabicShapingClasses;
 
-  if (ArabicShapingClasses.TryGetValue(ACodePoint, Result)) then
+  if (ArabicShapingClasses.TryGetValue(ACodePoint, Result)) and (Result > Low(Result)) then
     Exit(Pred(Result));
 
   Category := PascalTypeUnicode.GetCategory(ACodePoint);

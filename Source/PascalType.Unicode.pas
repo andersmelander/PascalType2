@@ -1709,8 +1709,6 @@ var
 
     *)
 
-    Result := False;
-
     // Compatible decomposition
     Decomposition := nil;
     if (Compatible) then
