@@ -103,14 +103,15 @@ uses
 
 
 type
+  TState = 0..6;
   TStateEntry = record
     PreviousAction: TTableName;
     CurrentAction: TTableName;
-    NextState: integer;
+    NextState: TState;
   end;
 
   TStateEntries = array[TPascalTypeArabicShaper.TShapingClass.scNon_Joining..TPascalTypeArabicShaper.TShapingClass.scDALATH_RISH] of TStateEntry;
-  TStateMachine = array[0..6] of TStateEntries;
+  TStateMachine = array[TState] of TStateEntries;
 
 const
   // The shaping state machine was ported from Harfbuzz via FontKit.
@@ -237,19 +238,26 @@ begin
 end;
 
 procedure TPascalTypeArabicShaper.AssignLocalFeatures(var AGlyphs: TPascalTypeGlyphString);
+var
+  Actions: TArray<TTableType>;
+  State: TState;
+  PreviousIndex: integer;
+  i: integer;
+  Glyph: TPascalTypeGlyph;
+  ShapingClass: TShapingClass;
+  StateEntry: TStateEntry;
 begin
   inherited AssignLocalFeatures(AGlyphs);
 
   // Apply the state machine to map glyphs to features
-  var Actions: TArray<TTableType>;
   SetLength(Actions, AGlyphs.Count);
-  var State := 0;
-  var PreviousIndex := -1;
+  State := 0;
+  PreviousIndex := -1;
 
-  for var i := 0 to AGlyphs.Count-1 do
+  for i := 0 to AGlyphs.Count-1 do
   begin
-    var Glyph := AGlyphs[i];
-    var ShapingClass := GetShapingClass(Glyph.CodePoints[0]);
+    Glyph := AGlyphs[i];
+    ShapingClass := GetShapingClass(Glyph.CodePoints[0]);
 
     if (ShapingClass = scTransparent) then
     begin
@@ -257,7 +265,7 @@ begin
       continue;
     end;
 
-    var StateEntry := StateMachine[State, ShapingClass];
+    StateEntry := StateMachine[State, ShapingClass];
     State := StateEntry.NextState;
 
     if (TTableType(StateEntry.PreviousAction) <> 0) and (PreviousIndex <> -1) then
@@ -268,7 +276,7 @@ begin
   end;
 
   // Apply the chosen features to their respective glyphs
-  for var i := 0 to AGlyphs.Count-1 do
+  for i := 0 to AGlyphs.Count-1 do
     if (Actions[i] <> 0) then
       AGlyphs[i].Features.Add(Actions[i]);
 end;
