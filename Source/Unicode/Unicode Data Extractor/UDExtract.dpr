@@ -208,6 +208,7 @@ const
 var
   SourceFileName,
   SpecialCasingFileName,
+  ArabicShapingFileName,
   CaseFoldingFileName,
   DerivedNormalizationPropsFileName,
   PropListFileName,
@@ -232,6 +233,9 @@ var
   Compositions: TList<PDecomposition>;
   // array of composition exception ranges
   CompositionExceptions: TCharacterSet;
+
+  // Arabic shaping classes
+  ArabicShapingClasses: array[Byte] of TCharacterSet;
 
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -413,6 +417,12 @@ begin
   // hence we don't need to store them
   if CCClass > 0 then
     SetCharacter(CCCs[CCClass], Code);
+end;
+
+procedure AddArabicShapingClass(Code, AClass: Cardinal);
+begin
+  if AClass > 0 then
+    SetCharacter(ArabicShapingClasses[AClass], Code);
 end;
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -1053,6 +1063,118 @@ end;
 
 //----------------------------------------------------------------------------------------------------------------------
 
+procedure ParseArabicShaping;
+(*
+# Each line contains four fields, separated by a semicolon.
+#
+# Field 0: the code point, in 4-digit hexadecimal
+#   form, of a character.
+#
+# Field 1: gives a short schematic name for that character.
+#   The schematic name is descriptive of the shape, based as
+#   consistently as possible on a name for the skeleton and
+#   then the diacritic marks applied to the skeleton, if any.
+#   Note that this schematic name is considered a comment,
+#   and does not constitute a formal property value.
+#
+# Field 2: defines the joining type (property name: Joining_Type)
+#   R Right_Joining
+#   L Left_Joining
+#   D Dual_Joining
+#   C Join_Causing
+#   U Non_Joining
+#   T Transparent
+#
+# See Section 9.2, Arabic for more information on these joining types.
+# Note that for cursive joining scripts which are typically rendered
+# top-to-bottom, rather than right-to-left, Joining_Type=L conventionally
+# refers to bottom joining, and Joining_Type=R conventionally refers
+# to top joining. See Section 14.4, Phags-pa for more information on the
+# interpretation of joining types in vertical layout.
+#
+# Field 3: defines the joining group (property name: Joining_Group)
+#
+# The values of the joining group are based schematically on character
+# names. Where a schematic character name consists of two or more parts
+# separated by spaces, the formal Joining_Group property value, as specified in
+# PropertyValueAliases.txt, consists of the same name parts joined by
+# underscores. Hence, the entry:
+#
+#   0629; TEH MARBUTA; R; TEH MARBUTA
+#
+# corresponds to [Joining_Group = Teh_Marbuta].
+*)
+var
+  Reader: TStreamReader;
+  Line: string;
+  Columns: TArray<string>;
+  Code: Cardinal;
+  ShapingClassValue: Byte;
+  JoiningType: Char;
+  JoiningGroup: string;
+ I: Integer;
+
+ AMapping: TUCS4Array;
+begin
+  Reader := TStreamReader.Create(ArabicShapingFileName);
+  try
+
+    while (not Reader.EndOfStream) do
+    begin
+      // # Unicode; Schematic Name; Joining Type; Joining Group
+
+      Line := Reader.ReadLine.Trim;
+      if (Line = '') or (Line.StartsWith('#')) then
+        continue;
+
+      Columns := Line.Split([';']);
+
+      if (Length(Columns) < 4) then
+        continue;
+
+      Code := StrToInt('$'+Columns[0].Trim);
+
+      JoiningType := Columns[2].Trim[1];
+
+      ShapingClassValue := 0;
+
+      if (JoiningType = 'R') then
+      begin
+        JoiningGroup := Columns[3].Trim;
+        if (JoiningGroup = 'ALAPH') then
+          ShapingClassValue := 5
+        else
+        if (JoiningGroup = 'DALATH RISH') then
+          ShapingClassValue := 6;
+      end;
+
+      if (ShapingClassValue = 0) then
+        case JoiningType of
+          'U': ShapingClassValue := 1; // Non_Joining
+          'L': ShapingClassValue := 2; // Left_Joining
+          'R': ShapingClassValue := 3; // Right_Joining
+          'D': ShapingClassValue := 4; // Dual_Joining
+          'C': ShapingClassValue := 4; // Join_Causing
+          'T': ShapingClassValue := 7; // Transparent
+        end;
+
+      if (ShapingClassValue <> 0) then
+        AddArabicShapingClass(Code, ShapingClassValue);
+
+      if not Verbose then
+        Write(Format(#13'  %d%% done', [Round(100 * Reader.BaseStream.Position / Reader.BaseStream.Size)]));
+
+    end;
+
+  finally
+    Reader.Free;
+  end;
+  if not Verbose then
+    Writeln;
+end;
+
+//----------------------------------------------------------------------------------------------------------------------
+
 procedure ParseDerivedNormalizationProps;
 
 // parse DerivedNormalizationProps looking for composition exclusions
@@ -1589,6 +1711,33 @@ begin
     WriteTextLine;
     WriteTextLine;
 
+    // 5a) ArabicShapingClasses[
+    WriteTextLine('LANGUAGE 0,0 ARABSHAPING UNICODEDATA LOADONCALL MOVEABLE DISCARDABLE');
+    WriteTextLine('{');
+    CreateResource;
+    for I := 0 to 255 do
+    begin
+      Ranges := FindCharacterRanges(ArabicShapingClasses[I]);
+      if Length(Ranges) > 0 then
+      begin
+        // a) record which class is stored here
+        WriteResourceByte(I);
+        // b) tell how many ranges are assigned
+        WriteResourceByte(Length(Ranges));
+        // c) write start and stop code of each range
+        for J := Low(Ranges) to High(Ranges) do
+        begin
+          WriteResourceChar(Ranges[J].Start);
+          WriteResourceChar(Ranges[J].Stop);
+        end;
+      end;
+    end;
+
+    FlushResource;
+    WriteTextLine('}');
+    WriteTextLine;
+    WriteTextLine;
+
     // 6) number data, this is actually two arrays, one which contains the numbers
     //    and the second containing the mapping between a code and a number
     WriteTextLine('LANGUAGE 0,0 NUMBERS UNICODEDATA LOADONCALL MOVEABLE DISCARDABLE');
@@ -1712,6 +1861,17 @@ begin
       CheckExtension(SpecialCasingFileName, '.txt');
     end
     else
+    if SameText(Copy(S, 1, 3), '/a=') then
+    begin
+      ArabicShapingFileName := Trim(Copy(S, 4, MaxInt));
+      if (ArabicShapingFileName[1] = '''') or (ArabicShapingFileName[1] = '"') then
+      begin
+        Run := PChar(ArabicShapingFileName);
+        ArabicShapingFileName := Trim(AnsiExtractQuotedStr(Run, ArabicShapingFileName[1]));
+      end;
+      CheckExtension(ArabicShapingFileName, '.txt');
+    end
+    else
     if SameText(Copy(S, 1, 3), '/f=') then
     begin
       CaseFoldingFileName := Trim(Copy(S, 4, MaxInt));
@@ -1810,6 +1970,24 @@ begin
       ParseData;
 
       // optional parsing parts
+      if Length(ArabicShapingFileName) > 0 then
+      begin
+        if not FileExists(ArabicShapingFileName) then
+        begin
+          Writeln;
+          Warning(ArabicShapingFileName + ' not found, ignoring arabic shaping');
+        end
+        else
+        begin
+          if not Verbose then
+          begin
+            Writeln;
+            Writeln('Reading arabic shaping data from ' + ArabicShapingFileName + ':');
+          end;
+          ParseArabicShaping;
+        end;
+      end;
+
       if Length(SpecialCasingFileName) > 0 then
       begin
         if not FileExists(SpecialCasingFileName) then
