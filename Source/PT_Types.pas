@@ -84,6 +84,7 @@ type
     class operator Explicit(const Value: TTableType): string; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
     class operator Explicit(const Value: TTableType): AnsiString; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
     class operator Explicit(const Value: TTableType): Integer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+    class operator Explicit(const Value: TTableType): TTableName; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {$ENDIF}
   case Integer of
     0: (AsCardinal : Cardinal);
@@ -1396,6 +1397,11 @@ end;
 class operator TTableType.Explicit(const Value: TTableType): Integer;
 begin
   Result := Value.AsInteger;
+end;
+
+class operator TTableType.Explicit(const Value: TTableType): TTableName;
+begin
+  Result := Value.AsAnsiChar;
 end;
 
 class operator TTableType.NotEqual(const Lhs, Rhs: TTableType): Boolean;

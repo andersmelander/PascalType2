@@ -27,10 +27,10 @@ unit PascalType.Shaper;
 //                                                                            //
 //  The code is part of the PascalType Project                                //
 //                                                                            //
-//  The initial developer of this code is Christian-W. Budde                  //
+//  The initial developer of this code is Anders Melander.                    //
 //                                                                            //
-//  Portions created by Christian-W. Budde are Copyright (C) 2010-2017        //
-//  by Christian-W. Budde. All Rights Reserved.                               //
+//  Portions created by Anders Melander are Copyright (C) 2023                //
+//  by Anders Melander. All Rights Reserved.                                  //
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -144,6 +144,7 @@ type
     constructor Create(AFont: TCustomPascalTypeFontFace);
     destructor Destroy; override;
 
+    class procedure RegisterShaperForScript(const Script: TTableType; AShaperClass: TPascalTypeShaperClass);
     class function GetShaperForScript(const Script: TTableType): TPascalTypeShaperClass;
     class procedure RegisterDefaultShaperClass(ShaperClass: TPascalTypeShaperClass);
 
@@ -271,6 +272,11 @@ end;
 class procedure TPascalTypeShaper.RegisterDefaultShaperClass(ShaperClass: TPascalTypeShaperClass);
 begin
   FDefaultShaperClass := ShaperClass;
+end;
+
+class procedure TPascalTypeShaper.RegisterShaperForScript(const Script: TTableType; AShaperClass: TPascalTypeShaperClass);
+begin
+  FShaperClasses.AddOrSetValue(Script.AsCardinal, AShaperClass);
 end;
 
 class function TPascalTypeShaper.GetShaperForScript(const Script: TTableType): TPascalTypeShaperClass;

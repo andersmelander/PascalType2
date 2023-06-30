@@ -2,6 +2,12 @@ unit PascalType.Shaper.Script.Default;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
+//      Default shaper.                                                       //
+//                                                                            //
+//      Handles non-comples scripts.                                          //
+//                                                                            //
+////////////////////////////////////////////////////////////////////////////////
+//                                                                            //
 //  Version: MPL 1.1 or LGPL 2.1 with linking exception                       //
 //                                                                            //
 //  The contents of this file are subject to the Mozilla Public License       //
@@ -23,10 +29,10 @@ unit PascalType.Shaper.Script.Default;
 //                                                                            //
 //  The code is part of the PascalType Project                                //
 //                                                                            //
-//  The initial developer of this code is Christian-W. Budde                  //
+//  The initial developer of this code is Anders Melander.                    //
 //                                                                            //
-//  Portions created by Christian-W. Budde are Copyright (C) 2010-2017        //
-//  by Christian-W. Budde. All Rights Reserved.                               //
+//  Portions created by Anders Melander are Copyright (C) 2023                //
+//  by Anders Melander. All Rights Reserved.                                  //
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -35,7 +41,7 @@ interface
 uses
   PT_Types,
   PascalType.GlyphString,
-  PascalType.Shaper, // ShapeShifter
+  PascalType.Shaper,
   PascalType.Shaper.Plan,
   PascalType.Shaper.Layout;
 
@@ -45,8 +51,6 @@ uses
 //              TPascalTypeDefaultShaper
 //
 //------------------------------------------------------------------------------
-// The default shaper. Handles non-complex scripts.
-//------------------------------------------------------------------------------
 type
   TPascalTypeDefaultShaper = class(TPascalTypeShaper)
   protected
@@ -55,7 +59,7 @@ type
     procedure PlanPreprocessing(AStage: TPascalTypeShapingPlanStage);
     procedure PlanFeatures(AStage: TPascalTypeShapingPlanStage); virtual;
     procedure PlanPostprocessing(AStage: TPascalTypeShapingPlanStage);
-    procedure AssignLocalFeatures(var AGlyphs: TPascalTypeGlyphString);
+    procedure AssignLocalFeatures(var AGlyphs: TPascalTypeGlyphString); virtual;
   end;
 
 

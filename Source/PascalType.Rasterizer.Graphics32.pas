@@ -884,7 +884,6 @@ end;
 procedure TPascalTypeRasterizerGraphics32.RenderShapedGlyph(AGlyph: TPascalTypeGlyph; Canvas: TCustomPath; var X, Y: Single);
 var
   Pos: TFloatPoint;
-  Glyph: TPascalTypeGlyph;
 begin
   Canvas.BeginUpdate;
   try
@@ -910,7 +909,7 @@ end;
 
 procedure TPascalTypeRasterizerGraphics32.RenderShapedText(ShapedText: TPascalTypeGlyphString; Canvas: TCustomPath; var X, Y: Single);
 var
-  CursorPos, Pos: TFloatPoint;
+  CursorPos: TFloatPoint;
   Glyph: TPascalTypeGlyph;
 begin
   CursorPos.X := X;
