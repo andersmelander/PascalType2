@@ -588,7 +588,7 @@ procedure TPascalTypeGlyphString.Reverse;
 var
   i: integer;
 begin
-  for i := 0 to FGlyphs.Count div 2 do
+  for i := 0 to FGlyphs.Count div 2 - 1 do
     FGlyphs.Exchange(i, FGlyphs.Count-i-1);
 end;
 
