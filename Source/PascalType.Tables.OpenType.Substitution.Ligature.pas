@@ -239,18 +239,24 @@ end;
 
 function TOpenTypeSubstitutionSubTableLigatureList.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
 
-  procedure UpdateLigatureState(Glyph: TPascalTypeGlyph);
+  procedure UpdateLigatureState(Glyph: TPascalTypeGlyph; const MatchedIndices: TArray<integer>);
   var
+    IsBaseLigature: boolean;
     IsMarkLigature: boolean;
+    IsLigature: boolean;
     i: integer;
+    NewLigatureID: integer;
     LastLigatureID: integer;
     LastComponentCount: integer;
     ComponentCount: integer;
-    Index: integer;
     MatchIndex: integer;
     GlyphLigatureComponent: integer;
     LigatureComponent: integer;
   begin
+    // Note: This is based on the corresponding code in Harfbuzz. The code in
+    // FontKit is a bit different, and slightly less complex, but buggy.
+
+
     // From Harfbuzz:
     // - If it *is* a mark ligature, we don't allocate a new ligature id, and leave
     //   the ligature to keep its old ligature id.  This will allow it to attach to
@@ -276,23 +282,28 @@ function TOpenTypeSubstitutionSubTableLigatureList.Apply(var AGlyphIterator: TPa
     //
     //   This in fact happened to a font...  See https://bugzilla.gnome.org/show_bug.cgi?id=437633
 
-    IsMarkLigature := Glyph.IsMark;
-    i := 1;
-    while (IsMarkLigature) and (i < Length(Glyph.CodePoints)) do
+    IsBaseLigature := AGlyphIterator.GlyphString[MatchedIndices[0]].IsMark;
+    IsMarkLigature := True;
+    for MatchIndex in MatchedIndices do
     begin
-      IsMarkLigature := AGlyphIterator.GlyphString[AGlyphIterator.Index + i].IsMark;
-      Inc(i);
+      IsMarkLigature := AGlyphIterator.GlyphString[MatchIndex].IsMark;
+      if (not IsMarkLigature) then
+      begin
+        IsBaseLigature := False;
+        break;
+      end;
     end;
 
-    if (IsMarkLigature) then
-      Glyph.LigatureID := -1
+    IsLigature := (not IsBaseLigature) and (not IsMarkLigature);
+
+    if (IsLigature) then
+      NewLigatureID := -1
     else
-      Glyph.LigatureID := AGlyphIterator.GlyphString.GetNextLigatureID;
+      NewLigatureID := AGlyphIterator.GlyphString.GetNextLigatureID;
 
     LastLigatureID := Glyph.LigatureID;
     LastComponentCount := Length(Glyph.CodePoints);
     ComponentCount := LastComponentCount;
-    Index := AGlyphIterator.Index + 1;
 
     // Note: The following code assumes that we are using an iterator that skips certain glyphs
     // (which is what Harfbuzz and FontKit does). I'm not doing that (yet) so the operation
@@ -302,40 +313,48 @@ function TOpenTypeSubstitutionSubTableLigatureList.Apply(var AGlyphIterator: TPa
 
     // Set ligatureID and LigatureComponent on glyphs that were skipped in the matched sequence.
     // This allows GPOS to attach marks to the correct ligature components.
-    for MatchIndex := AGlyphIterator.Index to AGlyphIterator.Index+Length(Glyph.CodePoints)-1 do
+    var Iterator := AGlyphIterator.Clone;
+
+    for i := 1 to High(MatchedIndices) do
     begin
-      // Don't assign new ligature components for mark ligatures (see above)
-      if (IsMarkLigature) then
-        Index := MatchIndex
-      else
+      MatchIndex := MatchedIndices[i];
+
+      while (Iterator.Index < MatchIndex) and (not Iterator.EOF) do
       begin
-        while (Index < MatchIndex) do
+        // Don't assign new ligature components for mark ligatures (see above)
+        if (IsMarkLigature) then
         begin
-          GlyphLigatureComponent := Max(1, AGlyphIterator.GlyphString[Index].LigatureComponent);
+          GlyphLigatureComponent := Max(1, Iterator.Glyph.LigatureComponent);
           LigatureComponent := ComponentCount - LastComponentCount + Min(GlyphLigatureComponent, LastComponentCount);
-          AGlyphIterator.GlyphString[Index].LigatureID := Glyph.LigatureID;
-          AGlyphIterator.GlyphString[Index].LigatureComponent := LigatureComponent;
-          Inc(Index);
+          Iterator.Glyph.LigatureID := NewLigatureID;
+          Iterator.Glyph.LigatureComponent := LigatureComponent;
         end;
+
+        Iterator.Next;
       end;
 
-      LastLigatureID := AGlyphIterator.GlyphString[Index].LigatureID;
-      LastComponentCount := Length(AGlyphIterator.GlyphString[Index].CodePoints);
+      LastLigatureID := Iterator.Glyph.LigatureID;
+      LastComponentCount := Length(Iterator.Glyph.CodePoints);
       ComponentCount := ComponentCount + LastComponentCount;
-      Inc(Index); // skip base glyph
+
+      Iterator.Step; // skip base glyph
     end;
 
     // Adjust ligature components for any marks following
     if (LastLigatureID <> -1) and (not IsMarkLigature) then
-      for i := Index to AGlyphIterator.GlyphString.Count-1 do
+      while (not Iterator.EOF) do
       begin
-        if (AGlyphIterator.GlyphString[i].LigatureID <> LastLigatureID) then
+        if (Iterator.Glyph.LigatureID <> LastLigatureID) then
           break;
 
-        GlyphLigatureComponent := Max(1, AGlyphIterator.GlyphString[i].LigatureComponent);
+        GlyphLigatureComponent := Max(1, Iterator.Glyph.LigatureComponent);
         LigatureComponent := ComponentCount - LastComponentCount + Min(GlyphLigatureComponent, LastComponentCount);
-        AGlyphIterator.GlyphString[i].LigatureComponent := LigatureComponent;
+        Iterator.Glyph.LigatureComponent := LigatureComponent;
+
+        Iterator.Step;
       end;
+
+    Glyph.LigatureID := NewLigatureID;
   end;
 
 var
@@ -346,6 +365,7 @@ var
   LastSameStartCharIndex: integer;
   CodePoints: TPascalTypeCodePoints;
   Iterator: TPascalTypeGlyphGlyphIterator;
+  MatchedIndices: TArray<integer>;
 begin
   // Test with :
   // - Segoe Script: ffl
@@ -381,13 +401,17 @@ begin
     // Compare each character in the ligature string to the source string
     Match := True;
     Iterator := AGlyphIterator.Clone; // It's too costly to repeatedly call Peek with increasing increment. Clone is cheaper.
+    SetLength(MatchedIndices, Length(FLigatures[i].Components));
     for j := 0 to High(FLigatures[i].Components) do
       if (Iterator.Glyph.GlyphID <> FLigatures[i].Components[j]) then
       begin
         Match := False;
         break;
       end else
+      begin
+        MatchedIndices[j] := Iterator.Index;
         Iterator.Next;
+      end;
 
     if (Match) then
     begin
@@ -396,21 +420,22 @@ begin
       Glyph := AGlyphIterator.Glyph;
 
       // Save a list of the codepoints we're replacing
-      SetLength(CodePoints, Length(FLigatures[i].Components));
-      for j := 0 to High(FLigatures[i].Components) do
-        CodePoints[j] := FLigatures[i].Components[j];
-      Glyph.CodePoints := CodePoints;
+      SetLength(CodePoints, Length(MatchedIndices));
+      for j := 0 to High(MatchedIndices) do
+        CodePoints[j] := AGlyphIterator.GlyphString[MatchedIndices[j]].CodePoints[0];
 
       Glyph.IsLigated := True;
       Glyph.IsSubstituted := True;
 
-      UpdateLigatureState(Glyph);
+      UpdateLigatureState(Glyph, MatchedIndices);
 
       // First entry in glyph string is reused...
       Glyph.GlyphID := FLigatures[i].Glyph;
+      Glyph.CodePoints := CodePoints;
 
       // ...Remaining are deleted
-      AGlyphIterator.GlyphString.Delete(AGlyphIterator.Index+1, Length(FLigatures[i].Components)-1);
+      for j := High(MatchedIndices) downto 1 do
+        AGlyphIterator.GlyphString.Delete(MatchedIndices[j], 1);
 
       // Advance past the character we just processed.
       // Note that we only advance one position because we have deleted the remaining characters that were processed.

@@ -148,6 +148,9 @@ type
     // Move Backward. Skip glyphs that should be ignored. Return new index.
     function Previous(AIncrement: integer = -1): integer;
 
+    // Move forward/backward. Do not skip. Return new index.
+    function Step(AIncrement: integer = 1): integer;
+
     // Simulate moving forward/backward. Skip glyphs that should be ignored. Return new index.
     function Peek(AIncrement: integer = 1): integer;
     function PeekGlyph(AIncrement: integer = 1): TPascalTypeGlyph;
@@ -779,6 +782,18 @@ begin
     ((FLookupFlags and TCustomOpenTypeLookupTable.IGNORE_LIGATURES <> 0) and (AGlyph.IsLigature)) or
     ((FLookupFlags and TCustomOpenTypeLookupTable.IGNORE_MARKS <> 0) and (AGlyph.IsMark)) or
     ((FMarkAttachmentFilter <> -1) and (AGlyph.IsMark) and (FMarkAttachmentFilter <> AGlyph.MarkAttachmentType));
+end;
+
+function TPascalTypeGlyphGlyphIterator.Step(AIncrement: integer): integer;
+begin
+  if (FIndex <> -1) then
+  begin
+    Inc(FIndex, AIncrement);
+
+    if (FIndex < 0) or (FIndex >= FGlyphString.Count) then
+      FIndex := -1;
+  end;
+  Result := FIndex;
 end;
 
 end.
