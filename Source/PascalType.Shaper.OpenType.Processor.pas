@@ -76,9 +76,9 @@ type
     FFeatureMap: TFeatureMap;
   protected
     procedure LoadFeatureMap;
-    function GetAvailableFeatures: TTableNames; virtual;
-    function GetLookupsByFeatures(AFeatures: TTableNames): TLookupItems;
-    function ApplyLookups(const ALookups: TLookupItems; var AGlyphs: TPascalTypeGlyphString): TTableNames;
+    function GetAvailableFeatures: TPascalTypeFeatures; virtual;
+    function GetLookupsByFeatures(AFeatures: TPascalTypeFeatures): TLookupItems;
+    function ApplyLookups(const ALookups: TLookupItems; var AGlyphs: TPascalTypeGlyphString): TPascalTypeFeatures;
     function ApplyLookup(var AGlyphIterator: TPascalTypeGlyphGlyphIterator; ALookupTable: TCustomOpenTypeLookupTable): boolean; virtual;
     function GetTable: TCustomOpenTypeCommonTable; virtual; abstract;
     property FeatureMap: TFeatureMap read FFeatureMap;
@@ -88,11 +88,11 @@ type
 
     // Applies the specified features, using the lookups in the table, and
     // returns a list of features applied.
-    function ApplyFeatures(const AFeatures: TTableNames; var AGlyphs: TPascalTypeGlyphString): TTableNames; virtual;
+    function ApplyFeatures(const AFeatures: TPascalTypeFeatures; var AGlyphs: TPascalTypeGlyphString): TPascalTypeFeatures; virtual;
 
     // Applies the features in the specified plan features, using the lookups in the table, and
     // returns a list of features applied.
-    function ExecutePlan(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString): TTableNames; virtual;
+    function ExecutePlan(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString): TPascalTypeFeatures; virtual;
 
     property Font: TCustomPascalTypeFontFace read FFont;
     property Script: TTableType read FScript write FScript;
@@ -100,7 +100,7 @@ type
     property Direction: TPascalTypeDirection read FDirection write FDirection;
 
     property Table: TCustomOpenTypeCommonTable read GetTable;
-    property AvailableFeatures: TTableNames read GetAvailableFeatures;
+    property AvailableFeatures: TPascalTypeFeatures read GetAvailableFeatures;
   end;
 
 implementation
@@ -138,7 +138,7 @@ begin
   inherited;
 end;
 
-function TCustomPascalTypeOpenTypeProcessor.ExecutePlan(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString): TTableNames;
+function TCustomPascalTypeOpenTypeProcessor.ExecutePlan(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString): TPascalTypeFeatures;
 var
   Stage: TPascalTypeShapingPlanStage;
 begin
@@ -156,7 +156,7 @@ begin
   end;
 end;
 
-function TCustomPascalTypeOpenTypeProcessor.ApplyFeatures(const AFeatures: TTableNames; var AGlyphs: TPascalTypeGlyphString): TTableNames;
+function TCustomPascalTypeOpenTypeProcessor.ApplyFeatures(const AFeatures: TPascalTypeFeatures; var AGlyphs: TPascalTypeGlyphString): TPascalTypeFeatures;
 var
   LookupItems: TLookupItems;
 begin
@@ -168,7 +168,7 @@ begin
   Result := ApplyLookups(LookupItems, AGlyphs);
 end;
 
-function TCustomPascalTypeOpenTypeProcessor.ApplyLookups(const ALookups: TLookupItems; var AGlyphs: TPascalTypeGlyphString): TTableNames;
+function TCustomPascalTypeOpenTypeProcessor.ApplyLookups(const ALookups: TLookupItems; var AGlyphs: TPascalTypeGlyphString): TPascalTypeFeatures;
 var
   LookupItem: TLookupItem;
   GlyphIterator: TPascalTypeGlyphGlyphIterator;
@@ -207,7 +207,7 @@ begin
         Handled := ApplyLookup(GlyphIterator, LookupItem.LookupTable);
 
       if (Handled) then
-        Result := Result + [LookupItem.FeatureTag];
+        Result.Add(LookupItem.FeatureTag);
 
 {$ifdef DEBUG}
       if (Handled) then
@@ -229,12 +229,12 @@ begin
   Result := ALookupTable.Apply(AGlyphIterator);
 end;
 
-function TCustomPascalTypeOpenTypeProcessor.GetAvailableFeatures: TTableNames;
+function TCustomPascalTypeOpenTypeProcessor.GetAvailableFeatures: TPascalTypeFeatures;
 begin
   Result := FFeatureMap.Keys.ToArray;
 end;
 
-function TCustomPascalTypeOpenTypeProcessor.GetLookupsByFeatures(AFeatures: TTableNames): TLookupItems;
+function TCustomPascalTypeOpenTypeProcessor.GetLookupsByFeatures(AFeatures: TPascalTypeFeatures): TLookupItems;
 type
   TLookupSortItem = record
     LookupIndex: integer;

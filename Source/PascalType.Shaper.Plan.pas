@@ -90,15 +90,13 @@ type
     TPascalTypeShapingPlanDelegate = function(AProcessor: TObject; var AGlyphs: TPascalTypeGlyphString): TTableNames;
   private
     FStages: TPascalTypeShapingPlanStages;
-    FFeatures: TList<TTableName>;
+    FFeatures: TPascalTypeFeatures;
     FDelegate: TPascalTypeShapingPlanDelegate;
     function GetCount: integer;
     function GetFeature(Index: integer): TTableName;
-    function GetFeatures: TTableNames;
     function GetPlan: TPascalTypeShapingPlan;
   public
     constructor Create(AStages: TPascalTypeShapingPlanStages);
-    destructor Destroy; override;
 
     procedure Add(const AFeature: TTableName; AGlobal: boolean = True); overload;
     procedure Add(const AFeatures: TTableNames; AGlobal: boolean = True); overload;
@@ -112,7 +110,7 @@ type
 
     property Count: integer read GetCount;
     property FeatureList[Index: integer]: TTableName read GetFeature; default;
-    property Features: TTableNames read GetFeatures;
+    property Features: TPascalTypeFeatures read FFeatures;
   end;
 
 
@@ -162,8 +160,7 @@ type
   TPascalTypeShapingPlan = class
   private
     FStages: TPascalTypeShapingPlanStages;
-    FGlobalFeatures: TList<TTableName>;
-    function GetGlobalFeatures: TTableNames;
+    FGlobalFeatures: TPascalTypeFeatures;
   protected
     procedure DoAddFeature(const AFeature: TTableName; AGlobal: boolean; AStage: TPascalTypeShapingPlanStage);
     procedure DoRemoveFeature(const AFeature: TTableName);
@@ -181,7 +178,7 @@ type
     function GetEnumerator: TEnumerator<TPascalTypeShapingPlanStage>;
 
     property Stages: TPascalTypeShapingPlanStages read FStages;
-    property GlobalFeatures: TTableNames read GetGlobalFeatures;
+    property GlobalFeatures: TPascalTypeFeatures read FGlobalFeatures;
   end;
 
 type
@@ -203,13 +200,6 @@ constructor TPascalTypeShapingPlanStage.Create(AStages: TPascalTypeShapingPlanSt
 begin
   inherited Create;
   FStages := AStages;
-  FFeatures := TList<TTableName>.Create;
-end;
-
-destructor TPascalTypeShapingPlanStage.Destroy;
-begin
-  FFeatures.Free;
-  inherited;
 end;
 
 procedure TPascalTypeShapingPlanStage.Add(const AFeature: TTableName; AGlobal: boolean);
@@ -244,30 +234,15 @@ begin
   Result := FFeatures[Index];
 end;
 
-function TPascalTypeShapingPlanStage.GetFeatures: TTableNames;
-var
-  i: integer;
-begin
-  SetLength(Result, FFeatures.Count);
-  for i := 0 to FFeatures.Count-1 do
-    Result[i] := FFeatures[i];
-end;
-
 function TPascalTypeShapingPlanStage.GetPlan: TPascalTypeShapingPlan;
 begin
   Result := FStages.Plan;
 end;
 
 procedure TPascalTypeShapingPlanStage.Remove(const AFeature: TTableName);
-var
-  Index: integer;
 begin
-  Index := FFeatures.IndexOf(AFeature);
-  if (Index <> -1) then
-  begin
-    FFeatures.Delete(Index);
-    FStages.DoRemoveFeature(AFeature);
-  end;
+  FFeatures.Remove(AFeature);
+  FStages.DoRemoveFeature(AFeature);
 end;
 
 
@@ -347,13 +322,11 @@ constructor TPascalTypeShapingPlan.Create;
 begin
   inherited Create;
   FStages := TPascalTypeShapingPlanStages.Create(Self);
-  FGlobalFeatures := TList<TTableName>.Create;
 end;
 
 destructor TPascalTypeShapingPlan.Destroy;
 begin
   FStages.Free;
-  FGlobalFeatures.Free;
   inherited;
 end;
 
@@ -371,15 +344,6 @@ end;
 function TPascalTypeShapingPlan.GetEnumerator: TEnumerator<TPascalTypeShapingPlanStage>;
 begin
   Result := FStages.GetEnumerator;
-end;
-
-function TPascalTypeShapingPlan.GetGlobalFeatures: TTableNames;
-var
-  i: integer;
-begin
-  SetLength(Result, FGlobalFeatures.Count);
-  for i := 0 to FGlobalFeatures.Count-1 do
-    Result[i] := FGlobalFeatures[i];
 end;
 
 procedure TPascalTypeShapingPlan.AddFeature(const AFeature: TTableName; AGlobal: boolean; AStage: TPascalTypeShapingPlanStage);

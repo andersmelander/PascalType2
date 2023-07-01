@@ -256,9 +256,6 @@ begin
   // Cache GSUB & GPOS. We'll use it a lot
   FSubstitutionTable := TOpenTypeGlyphSubstitutionTable(IPascalTypeFontFace(FFont).GetTableByTableType(TOpenTypeGlyphSubstitutionTable.GetTableType));
   FPositionTable := TOpenTypeGlyphPositionTable(IPascalTypeFontFace(FFont).GetTableByTableType(TOpenTypeGlyphPositionTable.GetTableType));
-
-  // TODO : Test only. Set up test features
-  Features['liga'] := True;
 end;
 
 destructor TPascalTypeShaper.Destroy;

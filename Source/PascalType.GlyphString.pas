@@ -71,7 +71,7 @@ type
     FLigatureComponent: integer;
     FCursiveAttachment: integer;
     FLigatureID: integer;
-    FFeatures: TTableNames;
+    FFeatures: TPascalTypeFeatures;
     FIsMultiplied: boolean;
   protected
     procedure SetOwner(AOwner: TPascalTypeGlyphString);
@@ -97,7 +97,7 @@ type
     property YOffset: integer read FYOffset write FYOffset;
 
     // Features to be applied by the shaper
-    property Features: TTableNames read FFeatures write FFeatures;
+    property Features: TPascalTypeFeatures read FFeatures write FFeatures;
 
     property AlternateIndex: integer read FAlternateIndex write FAlternateIndex;
 

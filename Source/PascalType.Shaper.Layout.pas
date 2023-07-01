@@ -69,15 +69,15 @@ type
     FZeroMarkWidths: TZeroMarkWidths;
   private
   protected
-    function GetAvailableFeatures: TTableNames; virtual;
+    function GetAvailableFeatures: TPascalTypeFeatures; virtual;
     procedure Setup(var AGlyphs: TPascalTypeGlyphString); virtual;
     procedure Reset; virtual;
     procedure ExecuteSubstitution(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString);
     procedure ExecutePositioning(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString);
-    function ApplySubstitution(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString): TTableNames; virtual; abstract;
-    function ApplyPositioning(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString): TTableNames; virtual; abstract;
+    function ApplySubstitution(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString): TPascalTypeFeatures; virtual; abstract;
+    function ApplyPositioning(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString): TPascalTypeFeatures; virtual; abstract;
     procedure PreProcessPositioning(var AGlyphs: TPascalTypeGlyphString); virtual;
-    procedure PostProcessPositioning(var AGlyphs: TPascalTypeGlyphString; var AAppliedFeatures: TTableNames); virtual;
+    procedure PostProcessPositioning(var AGlyphs: TPascalTypeGlyphString; var AAppliedFeatures: TPascalTypeFeatures); virtual;
     procedure ClearMarkAdvance(var AGlyphs: TPascalTypeGlyphString);
     procedure ApplyKerning(var AGlyphs: TPascalTypeGlyphString);
     procedure ApplyRightToLeft(var AGlyphs: TPascalTypeGlyphString);
@@ -90,7 +90,7 @@ type
     property Font: TCustomPascalTypeFontFace read FFont;
     property ZeroMarkWidths: TZeroMarkWidths read FZeroMarkWidths write FZeroMarkWidths;
 
-    property AvailableFeatures: TTableNames read GetAvailableFeatures;
+    property AvailableFeatures: TPascalTypeFeatures read GetAvailableFeatures;
   end;
 
 
@@ -243,14 +243,14 @@ begin
   ApplySubstitution(APlan, AGlyphs);
 end;
 
-function TCustomPascalTypeLayoutEngine.GetAvailableFeatures: TTableNames;
+function TCustomPascalTypeLayoutEngine.GetAvailableFeatures: TPascalTypeFeatures;
 begin
   Result := nil;
 end;
 
 procedure TCustomPascalTypeLayoutEngine.ExecutePositioning(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString);
 var
-  AppliedFeatures: TTableNames;
+  AppliedFeatures: TPascalTypeFeatures;
 begin
   PreProcessPositioning(AGlyphs);
 
@@ -268,7 +268,7 @@ begin
     Glyph.XAdvance := Font.GetAdvanceWidth(Glyph.GlyphID);
 end;
 
-procedure TCustomPascalTypeLayoutEngine.PostProcessPositioning(var AGlyphs: TPascalTypeGlyphString; var AAppliedFeatures: TTableNames);
+procedure TCustomPascalTypeLayoutEngine.PostProcessPositioning(var AGlyphs: TPascalTypeGlyphString; var AAppliedFeatures: TPascalTypeFeatures);
 begin
   // Use unicode properties to position marks if no features were applied (i.e. no GPOS table)
 (* TODO

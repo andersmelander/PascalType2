@@ -54,11 +54,11 @@ type
     FPositionTable: TOpenTypeGlyphPositionTable;
   protected
     function GetTable: TCustomOpenTypeCommonTable; override;
-    function GetAvailableFeatures: TTableNames; override;
+    function GetAvailableFeatures: TPascalTypeFeatures; override;
   public
     constructor Create(AFont: TCustomPascalTypeFontFace; AScript: TTableType; ALanguage: TTableType; ADirection: TPascalTypeDirection); override;
 
-    function ApplyFeatures(const AUserFeatures: TTableNames; var AGlyphs: TPascalTypeGlyphString): TTableNames; override;
+    function ApplyFeatures(const AUserFeatures: TPascalTypeFeatures; var AGlyphs: TPascalTypeGlyphString): TPascalTypeFeatures; override;
 
     property PositionTable: TOpenTypeGlyphPositionTable read FPositionTable;
   end;
@@ -86,7 +86,7 @@ begin
   FPositionTable := Font.GetTableByTableType(TOpenTypeGlyphPositionTable.GetTableType) as TOpenTypeGlyphPositionTable;
 end;
 
-function TPascalTypeOpenTypeProcessorGPOS.GetAvailableFeatures: TTableNames;
+function TPascalTypeOpenTypeProcessorGPOS.GetAvailableFeatures: TPascalTypeFeatures;
 begin
   Result := inherited GetAvailableFeatures;
 
@@ -101,7 +101,7 @@ begin
   Result := FPositionTable;
 end;
 
-function TPascalTypeOpenTypeProcessorGPOS.ApplyFeatures(const AUserFeatures: TTableNames; var AGlyphs: TPascalTypeGlyphString): TTableNames;
+function TPascalTypeOpenTypeProcessorGPOS.ApplyFeatures(const AUserFeatures: TPascalTypeFeatures; var AGlyphs: TPascalTypeGlyphString): TPascalTypeFeatures;
 
   procedure FixupCursiveAttachment(Glyph: TPascalTypeGlyph);
   var

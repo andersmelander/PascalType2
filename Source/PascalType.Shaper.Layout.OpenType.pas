@@ -52,13 +52,13 @@ type
     FGSUBProcessor: TCustomPascalTypeOpenTypeProcessor;
     FGPOSProcessor: TCustomPascalTypeOpenTypeProcessor;
   protected
-    function GetAvailableFeatures: TTableNames; override;
+    function GetAvailableFeatures: TPascalTypeFeatures; override;
     procedure Setup(var AGlyphs: TPascalTypeGlyphString); override;
     procedure Reset; override;
-    function ApplySubstitution(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString): TTableNames; override;
-    function ApplyPositioning(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString): TTableNames; override;
+    function ApplySubstitution(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString): TPascalTypeFeatures; override;
+    function ApplyPositioning(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString): TPascalTypeFeatures; override;
     procedure PreProcessPositioning(var AGlyphs: TPascalTypeGlyphString); override;
-    procedure PostProcessPositioning(var AGlyphs: TPascalTypeGlyphString; var AAppliedFeatures: TTableNames); override;
+    procedure PostProcessPositioning(var AGlyphs: TPascalTypeGlyphString; var AAppliedFeatures: TPascalTypeFeatures); override;
   public
     constructor Create(AFont: TCustomPascalTypeFontFace); override;
     destructor Destroy; override;
@@ -116,7 +116,7 @@ begin
   FreeAndNil(FGPOSProcessor);
 end;
 
-function TPascalTypeOpenTypeLayoutEngine.GetAvailableFeatures: TTableNames;
+function TPascalTypeOpenTypeLayoutEngine.GetAvailableFeatures: TPascalTypeFeatures;
 begin
   Result := [];
 
@@ -143,7 +143,7 @@ begin
     ClearMarkAdvance(AGlyphs);
 end;
 
-function TPascalTypeOpenTypeLayoutEngine.ApplyPositioning(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString): TTableNames;
+function TPascalTypeOpenTypeLayoutEngine.ApplyPositioning(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString): TPascalTypeFeatures;
 begin
   if (FGPOSProcessor = nil) then
     Exit(nil);
@@ -151,7 +151,7 @@ begin
   Result := FGPOSProcessor.ExecutePlan(APlan, AGlyphs);
 end;
 
-procedure TPascalTypeOpenTypeLayoutEngine.PostProcessPositioning(var AGlyphs: TPascalTypeGlyphString; var AAppliedFeatures: TTableNames);
+procedure TPascalTypeOpenTypeLayoutEngine.PostProcessPositioning(var AGlyphs: TPascalTypeGlyphString; var AAppliedFeatures: TPascalTypeFeatures);
 begin
   if (ZeroMarkWidths = zmwAfterPositioning) then
     ClearMarkAdvance(AGlyphs);
@@ -159,7 +159,7 @@ begin
   inherited;
 end;
 
-function TPascalTypeOpenTypeLayoutEngine.ApplySubstitution(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString): TTableNames;
+function TPascalTypeOpenTypeLayoutEngine.ApplySubstitution(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString): TPascalTypeFeatures;
 begin
   if (FGSUBProcessor = nil) then
     Exit(nil);

@@ -97,13 +97,32 @@ type
 type
   TTableNames = TArray<TTableName>;
 
-  TTableNamesHelper = record helper for TTableNames
-    procedure Add(const Tag: TTableType); overload;
-    procedure Add(const Tag: TTableName); overload;
-    procedure Add(const Tags: TTableNames); overload;
-    function Contains(const Tag: TTableName): boolean;
-    function IndexOf(const Tag: TTableName): integer;
-    function GetEnumerator: TEnumerator<TTableName>;
+
+  TPascalTypeFeatures = record
+  private
+    FTags: TTableNames;
+    function BinarySearch(const ATag: TTableName; var AIndex: integer; ASize: integer): boolean;
+    class function Compare(const A, B: TTableName): integer; static; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+    function GetCount: integer;
+    function GetTag(Index: integer): TTableName; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+  public
+    class operator Add(const ATag: TTableName; const AFeatures: TPascalTypeFeatures): TPascalTypeFeatures; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+    class operator Add(const ATags: TTableNames; const AFeatures: TPascalTypeFeatures): TPascalTypeFeatures; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+    class operator Add(const ATags, AFeatures: TPascalTypeFeatures): TPascalTypeFeatures;
+    class operator Implicit(const ATags: TTableNames): TPascalTypeFeatures; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+    class operator Implicit(const ATag: TTableName): TPascalTypeFeatures; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+    class operator In(const ATag: TTableName; const AFeatures: TPascalTypeFeatures): boolean; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+
+    procedure Add(const ATag: TTableType); overload; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+    procedure Add(const ATag: TTableName); overload; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+    procedure Add(const ATags: TTableNames); overload; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+    procedure Remove(const ATag: TTableName); overload; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+    function Contains(const ATag: TTableName): boolean; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+    function IndexOf(const ATag: TTableName): integer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+    function GetEnumerator: TEnumerator<TTableName>; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+  public
+    property Count: integer read GetCount;
+    property Tags[Index: integer]: TTableName read GetTag; default;
   end;
 
 
@@ -1661,47 +1680,197 @@ end;
 
 {$ENDIF}
 
-{ TTableNamesHelper }
+{ TPascalTypeFeatures }
 
-procedure TTableNamesHelper.Add(const Tags: TTableNames);
-var
-  i, Index: integer;
+class operator TPascalTypeFeatures.Implicit(const ATag: TTableName): TPascalTypeFeatures;
 begin
-  Index := Length(Self);
-  SetLength(Self, Length(Self)+Length(Tags));
-  for i := 0 to High(Tags) do
+  Result.Add(ATag);
+end;
+
+class operator TPascalTypeFeatures.Implicit(const ATags: TTableNames): TPascalTypeFeatures;
+begin
+  Result.Add(ATags);
+end;
+
+procedure TPascalTypeFeatures.Add(const ATags: TTableNames);
+var
+  i: integer;
+  Index: integer;
+  Size: integer;
+begin
+  Size := Length(FTags);
+  // Make room for all new tags to reduce reallocations
+  SetLength(FTags, Length(FTags)+Length(ATags));
+  for i := 0 to High(ATags) do
   begin
-    Self[Index] := Tags[i];
+    if (BinarySearch(ATags[i], Index, Size)) then
+      continue;
+
+    // We're not using Insert() here in order to avoid reallocating
+    // the array for each item being added.
+    // Insert(ATags[i], FTags, Index);
+    if (Index < Size) then
+      Move(FTags[Index], FTags[Index+1], (Size-Index)*SizeOf(TTablename));
+
+    FTags[Index] := ATags[i];
+    Inc(Size);
+  end;
+  // Trim to actual size
+  SetLength(FTags, Size);
+end;
+
+function TPascalTypeFeatures.BinarySearch(const ATag: TTableName; var AIndex: integer; ASize: integer): boolean;
+var
+  L, H: Integer;
+  Mid, Cmp: Integer;
+begin
+  Result := False;
+  L := 0;
+  H := ASize - 1;
+  while L <= H do
+  begin
+    Mid := L + (H - L) shr 1;
+    Cmp := Compare(ATag, FTags[Mid]);
+    if Cmp < 0 then
+      L := Mid + 1
+    else if Cmp > 0 then
+      H := Mid - 1
+    else
+    begin
+      repeat
+        Dec(Mid);
+      until (Mid < 0) or (Compare(ATag, FTags[Mid]) <> 0);
+      AIndex := Mid + 1;
+      Exit(True);
+    end;
+  end;
+  AIndex := L;
+end;
+
+class operator TPascalTypeFeatures.Add(const ATags, AFeatures: TPascalTypeFeatures): TPascalTypeFeatures;
+var
+  Index, TagIndex, FeatureIndex: integer;
+  Cmp: integer;
+begin
+  // Make room for all new FTags to reduce reallocations
+  SetLength(Result.FTags, Length(ATags.FTags)+Length(AFeatures.FTags));
+
+  Index := 0;
+  TagIndex := 0;
+  FeatureIndex := 0;
+  // Merge two sorted arrays, ignoring duplicates
+  while (TagIndex <= High(ATags.FTags)) or (FeatureIndex <= High(AFeatures.FTags)) do
+  begin
+    if (TagIndex > High(ATags.FTags)) then
+      Cmp := 1
+    else
+    if (FeatureIndex > High(AFeatures.FTags)) then
+      Cmp := -1
+    else
+      Cmp := Compare(ATags.FTags[TagIndex], AFeatures.FTags[FeatureIndex]);
+
+    if (Cmp = 0) then
+    begin
+      // Duplicate; Only add one of them
+      Result.FTags[Index] := ATags.FTags[TagIndex];
+      Inc(TagIndex);
+      Inc(FeatureIndex);
+    end else
+    if (Cmp < 0) then
+    begin
+      Result.FTags[Index] := ATags.FTags[TagIndex];
+      Inc(TagIndex);
+    end else
+    begin
+      Result.FTags[Index] := AFeatures.FTags[FeatureIndex];
+      Inc(FeatureIndex);
+    end;
+
     Inc(Index);
   end;
+
+  // Trim to actual size
+  SetLength(Result.FTags, Index);
 end;
 
-procedure TTableNamesHelper.Add(const Tag: TTableName);
+procedure TPascalTypeFeatures.Add(const ATag: TTableName);
+var
+  Index: integer;
 begin
-  SetLength(Self, Length(Self)+1);
-  Self[High(Self)] := Tag;
+  // Ignore duplicates
+  if (BinarySearch(ATag, Index, Length(FTags))) then
+    exit;
+
+  Insert(ATag, FTags, Index);
 end;
 
-procedure TTableNamesHelper.Add(const Tag: TTableType);
+procedure TPascalTypeFeatures.Add(const ATag: TTableType);
 begin
-  Add(Tag.AsAnsiChar);
+  Add(ATag.AsAnsiChar);
 end;
 
-function TTableNamesHelper.Contains(const Tag: TTableName): boolean;
+class operator TPascalTypeFeatures.Add(const ATag: TTableName; const AFeatures: TPascalTypeFeatures): TPascalTypeFeatures;
 begin
-  Result := (IndexOf(Tag) <> -1);
+  Result := AFeatures;
+  Result.Add(ATag);
 end;
 
-function TTableNamesHelper.GetEnumerator: TEnumerator<TTableName>;
+class operator TPascalTypeFeatures.Add(const ATags: TTableNames; const AFeatures: TPascalTypeFeatures): TPascalTypeFeatures;
 begin
-  Result := TArrayEnumerator<TTableName>.Create(Self);
+  Result := AFeatures;
+  Result.Add(ATags);
 end;
 
-function TTableNamesHelper.IndexOf(const Tag: TTableName): integer;
+class function TPascalTypeFeatures.Compare(const A, B: TTableName): integer;
 begin
-  Result := High(Self);
-  while (Result >= 0) and (Self[Result] <> Tag) do
-    Dec(Result);
+  if (A = B) then
+    Result := 0
+  else
+  if (A < B) then
+    Result := 1
+  else
+    Result := -1;
+end;
+
+function TPascalTypeFeatures.Contains(const ATag: TTableName): boolean;
+var
+  Index: integer;
+begin
+  Result := (Length(FTags) > 0) and BinarySearch(ATag, Index, Length(FTags));
+end;
+
+function TPascalTypeFeatures.GetCount: integer;
+begin
+  Result := Length(FTags);
+end;
+
+function TPascalTypeFeatures.GetEnumerator: TEnumerator<TTableName>;
+begin
+  Result := TArrayEnumerator<TTableName>.Create(FTags);
+end;
+
+function TPascalTypeFeatures.GetTag(Index: integer): TTableName;
+begin
+  Result := FTags[Index];
+end;
+
+class operator TPascalTypeFeatures.In(const ATag: TTableName; const AFeatures: TPascalTypeFeatures): boolean;
+begin
+  Result := AFeatures.Contains(ATag);
+end;
+
+function TPascalTypeFeatures.IndexOf(const ATag: TTableName): integer;
+begin
+  if (not BinarySearch(ATag, Result, Length(FTags))) then
+    Result := -1;
+end;
+
+procedure TPascalTypeFeatures.Remove(const ATag: TTableName);
+var
+  Index: integer;
+begin
+  if (BinarySearch(ATag, Index, Length(FTags))) then
+    Delete(FTags, Index, 1);
 end;
 
 { TArrayEnumerator<T> }

@@ -305,12 +305,14 @@ begin
       FRasterizerGraphics32.FontSize := 0; // TODO : We need to force a recalc of the scale. Changing the font doesn't notify the rasterizer.
       FRasterizerGraphics32.FontSize := _DPIAware(FFontSize);
 
-      // TODO : For now we use the default non-complex shaper (as it's the only available one)
+      // TODO : Detect script from text
       ShaperClass := TPascalTypeShaper.GetShaperForScript(FScript);
       Shaper := ShaperClass.Create(FFontFace);
       try
-        // TODO : Test only. Enable all optional features for test purpose
-        Shaper.Features.EnableAll := True;
+        // TODO : Test only. Enable 'liga' optional feature for test purpose
+        Shaper.Features['liga'] := True;
+        Shaper.Features.EnableAll := True; // TODO : This currently does nothing
+
         Shaper.Language := FLanguage;
         Shaper.Script := FScript;
         Shaper.Direction := FDirection;

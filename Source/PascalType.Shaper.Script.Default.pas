@@ -130,22 +130,24 @@ procedure TPascalTypeDefaultShaper.SetupPlan(APlan: TPascalTypeShapingPlan; var 
 
   procedure AssignGlobalFeatures;
   var
-    Features: TTableNames;
     Glyph: TPascalTypeGlyph;
   begin
-    Features := APlan.GlobalFeatures;
     for Glyph in AGlyphs do
-      Glyph.Features := Features;
+      Glyph.Features := APlan.GlobalFeatures;
   end;
 
 var
   Stage: TPascalTypeShapingPlanStage;
 begin
-  Stage := APlan.Stages.Add;
 
   // Add plan features
+  Stage := APlan.Stages.Add;
   PlanPreprocessing(Stage);
+
+  Stage := APlan.Stages.Add;
   PlanFeatures(Stage);
+
+  Stage := APlan.Stages.Add;
   PlanPostprocessing(Stage);
 
   // Add/Remove user specified features
