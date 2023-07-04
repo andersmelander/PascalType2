@@ -321,10 +321,14 @@ begin
 
   LigatureAttachment := FLigatureAttachments[LigatureIndex];
 
+  // Find out which ligature component the mark should attach to.
   if (LigatureGlyph.LigatureID <> -1) and (LigatureGlyph.LigatureID = MarkGlyph.LigatureID) and (MarkGlyph.LigatureComponent <> -1) then
     ComponentIndex := Min(MarkGlyph.LigatureComponent, Length(LigatureGlyph.CodePoints)) - 1
   else
     ComponentIndex := Length(LigatureGlyph.CodePoints) - 1;
+
+  if (ComponentIndex > High(LigatureAttachment)) then
+    Exit(False); // This is a bug. Either in the font or in the code.
 
   Mark := Marks[MarkIndex];
   LigatureAnchor := LigatureAttachment[ComponentIndex][Mark.MarkClass];

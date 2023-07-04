@@ -297,13 +297,16 @@ function TOpenTypeSubstitutionSubTableLigatureList.Apply(var AGlyphIterator: TPa
     IsLigature := (not IsBaseLigature) and (not IsMarkLigature);
 
     if (IsLigature) then
-      NewLigatureID := -1
+      NewLigatureID := AGlyphIterator.GlyphString.GetNextLigatureID
     else
-      NewLigatureID := AGlyphIterator.GlyphString.GetNextLigatureID;
+      NewLigatureID := -1;
 
     LastLigatureID := Glyph.LigatureID;
     LastComponentCount := Length(Glyph.CodePoints);
     ComponentCount := LastComponentCount;
+
+    if (IsLigature) then
+      Glyph.LigatureID := NewLigatureID;
 
     // Note: The following code assumes that we are using an iterator that skips certain glyphs
     // (which is what Harfbuzz and FontKit does). I'm not doing that (yet) so the operation
@@ -311,9 +314,10 @@ function TOpenTypeSubstitutionSubTableLigatureList.Apply(var AGlyphIterator: TPa
     // an iterator.
     // Hurray! We're now using a skipping iterator.
 
-    // Set ligatureID and LigatureComponent on glyphs that were skipped in the matched sequence.
+    // Set LigatureID and LigatureComponent on glyphs that were skipped in the matched sequence.
     // This allows GPOS to attach marks to the correct ligature components.
     var Iterator := AGlyphIterator.Clone;
+    Iterator.Step;
 
     for i := 1 to High(MatchedIndices) do
     begin
@@ -322,10 +326,14 @@ function TOpenTypeSubstitutionSubTableLigatureList.Apply(var AGlyphIterator: TPa
       while (Iterator.Index < MatchIndex) and (not Iterator.EOF) do
       begin
         // Don't assign new ligature components for mark ligatures (see above)
-        if (IsMarkLigature) then
+        if (IsLigature) then
         begin
-          GlyphLigatureComponent := Max(1, Iterator.Glyph.LigatureComponent);
+          GlyphLigatureComponent := Iterator.Glyph.LigatureComponent;
+          if (GlyphLigatureComponent = -1) then
+            GlyphLigatureComponent := LastComponentCount;
+
           LigatureComponent := ComponentCount - LastComponentCount + Min(GlyphLigatureComponent, LastComponentCount);
+
           Iterator.Glyph.LigatureID := NewLigatureID;
           Iterator.Glyph.LigatureComponent := LigatureComponent;
         end;
@@ -347,14 +355,15 @@ function TOpenTypeSubstitutionSubTableLigatureList.Apply(var AGlyphIterator: TPa
         if (Iterator.Glyph.LigatureID <> LastLigatureID) then
           break;
 
-        GlyphLigatureComponent := Max(1, Iterator.Glyph.LigatureComponent);
+        GlyphLigatureComponent := Iterator.Glyph.LigatureComponent;
+        if (GlyphLigatureComponent = -1) then
+          break;
+
         LigatureComponent := ComponentCount - LastComponentCount + Min(GlyphLigatureComponent, LastComponentCount);
         Iterator.Glyph.LigatureComponent := LigatureComponent;
 
         Iterator.Step;
       end;
-
-    Glyph.LigatureID := NewLigatureID;
   end;
 
 var
