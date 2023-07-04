@@ -97,7 +97,8 @@ type
 type
   TTableNames = TArray<TTableName>;
 
-
+  // *Unordered* list of features/tags.
+  // Internally sorted by tag so the list can be searched with a binary search.
   TPascalTypeFeatures = record
   private
     FTags: TTableNames;

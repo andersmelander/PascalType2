@@ -60,31 +60,28 @@ type
   protected type
     TLookupItem = record
       FeatureTag: TTableName;
-      LookupTable: TCustomOpenTypeLookupTable;
-{$ifdef DEBUG}
       FeatureTable: TCustomOpenTypeFeatureTable;
-      LookupListIndex: integer;
-{$endif DEBUG}
     end;
     TLookupItems = TArray<TLookupItem>;
-    TFeatureMap = TDictionary<TTableName, TCustomOpenTypeFeatureTable>;
+    TFeatureList = TArray<Word>;
   private
     FFont: TCustomPascalTypeFontFace;
     FScript: TTableType;
     FLanguage: TTableType;
     FDirection: TPascalTypeDirection;
-    FFeatureMap: TFeatureMap;
+    // Note: Don't use TPascalTypeFeatures for FFeatureList.
+    // We need to maintain the original order of the features in it.
+    FFeatureList: TFeatureList;
   protected
-    procedure LoadFeatureMap;
+    procedure LoadFeatureList;
     function GetAvailableFeatures: TPascalTypeFeatures; virtual;
-    function GetLookupsByFeatures(AFeatures: TPascalTypeFeatures): TLookupItems;
+    function GetLookupsByFeatures(const AFeatures: TPascalTypeFeatures): TLookupItems;
     function ApplyLookups(const ALookups: TLookupItems; var AGlyphs: TPascalTypeGlyphString): TPascalTypeFeatures;
     function ApplyLookup(var AGlyphIterator: TPascalTypeGlyphGlyphIterator; ALookupTable: TCustomOpenTypeLookupTable): boolean; virtual;
     function GetTable: TCustomOpenTypeCommonTable; virtual; abstract;
-    property FeatureMap: TFeatureMap read FFeatureMap;
+    property FeatureList: TFeatureList read FFeatureList; // Ordered list of features
   public
     constructor Create(AFont: TCustomPascalTypeFontFace; AScript: TTableType; ALanguage: TTableType; ADirection: TPascalTypeDirection); virtual;
-    destructor Destroy; override;
 
     // Applies the specified features, using the lookups in the table, and
     // returns a list of features applied.
@@ -127,15 +124,6 @@ begin
   FScript := AScript;
   FLanguage := ALanguage;
   FDirection := ADirection;
-
-  FFeatureMap := TFeatureMap.Create;
-end;
-
-destructor TCustomPascalTypeOpenTypeProcessor.Destroy;
-begin
-  FFeatureMap.Free;
-
-  inherited;
 end;
 
 function TCustomPascalTypeOpenTypeProcessor.ExecutePlan(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString): TPascalTypeFeatures;
@@ -144,7 +132,7 @@ var
 begin
   Result := [];
 
-  LoadFeatureMap;
+  LoadFeatureList;
 
   for Stage in APlan do
   begin
@@ -171,10 +159,16 @@ end;
 function TCustomPascalTypeOpenTypeProcessor.ApplyLookups(const ALookups: TLookupItems; var AGlyphs: TPascalTypeGlyphString): TPascalTypeFeatures;
 var
   LookupItem: TLookupItem;
+  LookupListIndex: integer;
+  LookupIndex: integer;
+  LookupTable: TCustomOpenTypeLookupTable;
   GlyphIterator: TPascalTypeGlyphGlyphIterator;
   Handled: boolean;
 begin
   Result := nil;
+
+  if (Length(ALookups) = 0) then
+    exit;
 
   // Iterate over each feature and apply it to the individual glyphs.
   // Each glyph is only processed once by a feature, but it can be
@@ -195,29 +189,38 @@ begin
   // For each feature...
   for LookupItem in ALookups do
   begin
-    GlyphIterator.Reset(LookupItem.LookupTable.LookupFlags);
-
-    // For each glyph...
-    while (not GlyphIterator.EOF) do
+    // For each lookup...
+    for LookupListIndex := 0 to LookupItem.FeatureTable.LookupListCount-1 do
     begin
-      Handled := False;
-      // If the glyph is tagged with the feature...
-      if (GlyphIterator.Glyph.Features.Contains(LookupItem.FeatureTag)) then
-        // For each lookup sub-table, apply the lookup until one of them succeeds
-        Handled := ApplyLookup(GlyphIterator, LookupItem.LookupTable);
+      // Get the index of the lookup table
+      LookupIndex := LookupItem.FeatureTable.LookupList[LookupListIndex];
+      // Get the lookup table
+      LookupTable := Table.LookupListTable.LookupTables[LookupIndex];
 
-      if (Handled) then
-        Result.Add(LookupItem.FeatureTag);
+      GlyphIterator.Reset(LookupTable.LookupFlags);
 
-{$ifdef DEBUG}
-      if (Handled) then
-        OutputDebugString(PChar(Format('%d: Applied feature %s (%s), lookup %d: %s', [GlyphIterator.Index, string(LookupItem.FeatureTag), LookupItem.FeatureTable.DisplayName, LookupItem.LookupListIndex, LookupItem.LookupTable.ClassName])));
-{$endif DEBUG}
+      // For each glyph...
+      while (not GlyphIterator.EOF) do
+      begin
+        Handled := False;
+        // If the glyph is tagged with the feature...
+        if (GlyphIterator.Glyph.Features.Contains(LookupItem.FeatureTag)) then
+          // For each lookup sub-table, apply the lookup until one of them succeeds
+          Handled := ApplyLookup(GlyphIterator, LookupTable);
 
-{$ifdef ApplyIncrements}
-      if (not Handled) then
-{$endif ApplyIncrements}
-        GlyphIterator.Next;
+        if (Handled) then
+          Result.Add(LookupItem.FeatureTag);
+
+  {$ifdef DEBUG}
+        if (Handled) then
+          OutputDebugString(PChar(Format('%d: Applied feature %s (%s), lookup %d: %s', [GlyphIterator.Index, string(LookupItem.FeatureTag), LookupItem.FeatureTable.DisplayName, LookupListIndex, LookupTable.ClassName])));
+  {$endif DEBUG}
+
+  {$ifdef ApplyIncrements}
+        if (not Handled) then
+  {$endif ApplyIncrements}
+          GlyphIterator.Next;
+      end;
     end;
 
   end;
@@ -230,71 +233,51 @@ begin
 end;
 
 function TCustomPascalTypeOpenTypeProcessor.GetAvailableFeatures: TPascalTypeFeatures;
-begin
-  Result := FFeatureMap.Keys.ToArray;
-end;
-
-function TCustomPascalTypeOpenTypeProcessor.GetLookupsByFeatures(AFeatures: TPascalTypeFeatures): TLookupItems;
-type
-  TLookupSortItem = record
-    LookupIndex: integer;
-    LookupItem: TLookupItem;
-  end;
 var
-  LookupList: TList<TLookupSortItem>;
-  Tag: TTableName;
-  FeatureListIndex: integer;
-  Item: TLookupSortItem;
+  FeatureIndex: Word;
   FeatureTable: TCustomOpenTypeFeatureTable;
-  i: integer;
 begin
-  LookupList := TList<TLookupSortItem>.Create;
-  try
-
-    for Tag in AFeatures do
-    begin
-      // Intersect the requested features with the ones that are available in the font
-      if (not FeatureMap.TryGetValue(Tag, FeatureTable)) then
-        continue;
-
-      for FeatureListIndex in FeatureTable do
-      begin
-        Item.LookupIndex := FeatureListIndex;
-        Item.LookupItem.FeatureTag := Tag;
-        Item.LookupItem.LookupTable := Table.LookupListTable[FeatureListIndex];
-{$ifdef DEBUG}
-        Item.LookupItem.FeatureTable := FeatureTable;
-        Item.LookupItem.LookupListIndex := FeatureListIndex;
-{$endif DEBUG}
-        LookupList.Add(Item);
-      end;
-    end;
-
-    // Sort lookups by index so they are applied in the correct order
-    LookupList.Sort(TComparer<TLookupSortItem>.Construct(
-      function(const A, B: TLookupSortItem): integer
-      begin
-        Result := (A.LookupIndex - B.LookupIndex);
-      end));
-
-    // List to array (and discard the field we used to sort by)
-    SetLength(Result, LookupList.Count);
-    for i := 0 to LookupList.Count-1 do
-      Result[i] := LookupList[i].LookupItem;
-
-  finally
-    LookupList.Free;
+  for FeatureIndex in FeatureList do
+  begin
+    FeatureTable := Table.FeatureListTable.Feature[FeatureIndex];
+    Result.Add(FeatureTable.TableType);
   end;
 end;
 
-procedure TCustomPascalTypeOpenTypeProcessor.LoadFeatureMap;
+function TCustomPascalTypeOpenTypeProcessor.GetLookupsByFeatures(const AFeatures: TPascalTypeFeatures): TLookupItems;
+var
+  Count: integer;
+  FeatureIndex: Word;
+  FeatureTable: TCustomOpenTypeFeatureTable;
+  Tag: TTableName;
+begin
+  SetLength(Result, Length(FeatureList));
+  Count := 0;
+
+  for FeatureIndex in FeatureList do
+  begin
+    FeatureTable := Table.FeatureListTable.Feature[FeatureIndex];
+    Tag := FeatureTable.TableType.AsAnsiChar;
+
+    // Intersect the requested features with the ones that are available in the font
+    if (AFeatures.Contains(Tag)) then
+    begin
+      Result[Count].FeatureTag := Tag;
+      Result[Count].FeatureTable := FeatureTable;
+      Inc(Count);
+    end;
+  end;
+
+  SetLength(Result, Count);
+end;
+
+procedure TCustomPascalTypeOpenTypeProcessor.LoadFeatureList;
 var
   ScriptTable: TCustomOpenTypeScriptTable;
   LanguageSystem: TCustomOpenTypeLanguageSystemTable;
   i: integer;
-  FeatureTable: TCustomOpenTypeFeatureTable;
 begin
-  FFeatureMap.Clear;
+  FFeatureList := nil;
 
   // Get script, fallback to default
   ScriptTable := Table.ScriptListTable.FindScript(Script, True);
@@ -308,14 +291,10 @@ begin
   if (LanguageSystem = nil) then
     Exit;
 
-  FFeatureMap.Capacity := LanguageSystem.FeatureIndexCount;
+  // Create an ordered list of features to be applied
+  SetLength(FFeatureList, LanguageSystem.FeatureIndexCount);
   for i := 0 to LanguageSystem.FeatureIndexCount-1 do
-  begin
-    // LanguageSystem feature list contains index numbers into the FeatureListTable
-    FeatureTable := Table.FeatureListTable.Feature[LanguageSystem.FeatureIndex[i]];
-
-    FFeatureMap.Add(FeatureTable.TableType.AsAnsiChar, FeatureTable);
-  end;
+    FFeatureList[i] := LanguageSystem.FeatureIndex[i];
 end;
 
 end.
