@@ -45,6 +45,7 @@ uses
   PT_Types,
   PT_Classes,
   PT_Tables,
+  PascalType.Unicode,
   PascalType.Tables.OpenType,
   PascalType.Tables.OpenType.LanguageSystem;
 
@@ -128,24 +129,25 @@ type
 
 //------------------------------------------------------------------------------
 //
-//      scripts
+//      OpenType scripts
 //
 //------------------------------------------------------------------------------
-const
-  // https://learn.microsoft.com/en-us/typography/opentype/spec/scripttags
-  OpenTypeDefaultScript: TTableType = (AsAnsiChar: 'DFLT');
+type
+  OpenTypeScript = record
+    const
+      // https://learn.microsoft.com/en-us/typography/opentype/spec/scripttags
+      DefaultScript: TTableType = (AsAnsiChar: 'DFLT');
 
-  OpenTypeDefaultScriptFallbacks: array[0..1] of TTableType = (
-    (AsAnsiChar: 'dflt'),       // HARFBUZZ: MS site has had typos and many fonts use 'dflt' now :(. including many versions of DejaVu Sans Mono!
-    (AsAnsiChar: 'latn')        // Latin
-    );
+      DefaultScriptFallbacks: array[0..1] of TTableType = (
+        (AsAnsiChar: 'dflt'),       // HARFBUZZ: MS site has had typos and many fonts use 'dflt' now :(. including many versions of DejaVu Sans Mono!
+        (AsAnsiChar: 'latn')        // Latin
+        );
 
-procedure RegisterScript(ScriptClass: TOpenTypeScriptTableClass);
-procedure RegisterScripts(ScriptClasses: array of TOpenTypeScriptTableClass);
-function FindScriptByType(TableType: TTableType): TOpenTypeScriptTableClass;
-
-var
-  GScriptClasses: array of TOpenTypeScriptTableClass;
+    class procedure RegisterScript(const ScriptClass: TOpenTypeScriptTableClass); static;
+    class procedure RegisterScripts(const ScriptClasses: array of TOpenTypeScriptTableClass); static;
+    class function FindScriptByTag(const TableType: TTableType): TOpenTypeScriptTableClass; static;
+    class function UnicodeScriptToOpenTypeScript(AScript: TUnicodeScript): TTableType; static;
+  end;
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -162,27 +164,30 @@ uses
 //      scripts
 //
 //------------------------------------------------------------------------------
+var
+  FScriptClasses: array of TOpenTypeScriptTableClass;
+
 function IsScriptClassRegistered(ScriptClass: TOpenTypeScriptTableClass): Boolean;
 var
   TableClassIndex: Integer;
 begin
   Result := False;
-  for TableClassIndex := 0 to High(GScriptClasses) do
-    if GScriptClasses[TableClassIndex] = ScriptClass then
+  for TableClassIndex := 0 to High(FScriptClasses) do
+    if FScriptClasses[TableClassIndex] = ScriptClass then
     begin
       Result := True;
       Exit;
     end;
 end;
 
-procedure RegisterScript(ScriptClass: TOpenTypeScriptTableClass);
+class procedure OpenTypeScript.RegisterScript(const ScriptClass: TOpenTypeScriptTableClass);
 begin
   Assert(IsScriptClassRegistered(ScriptClass) = False);
-  SetLength(GScriptClasses, Length(GScriptClasses) + 1);
-  GScriptClasses[High(GScriptClasses)] := ScriptClass;
+  SetLength(FScriptClasses, Length(FScriptClasses) + 1);
+  FScriptClasses[High(FScriptClasses)] := ScriptClass;
 end;
 
-procedure RegisterScripts(ScriptClasses: array of TOpenTypeScriptTableClass);
+class procedure OpenTypeScript.RegisterScripts(const ScriptClasses: array of TOpenTypeScriptTableClass);
 var
   ScriptIndex: Integer;
 begin
@@ -190,15 +195,23 @@ begin
     RegisterScript(ScriptClasses[ScriptIndex]);
 end;
 
-function FindScriptByType(TableType: TTableType): TOpenTypeScriptTableClass;
+class function OpenTypeScript.UnicodeScriptToOpenTypeScript(AScript: TUnicodeScript): TTableType;
+begin
+  if (AScript <> usZzzz) then
+    Result := AnsiString(PascalTypeUnicode.ScriptToISO15924(AScript).Code.ToLower)
+  else
+    Result := DefaultScript;
+end;
+
+class function OpenTypeScript.FindScriptByTag(const TableType: TTableType): TOpenTypeScriptTableClass;
 var
   ScriptIndex: Integer;
 begin
   Result := nil;
-  for ScriptIndex := 0 to High(GScriptClasses) do
-    if GScriptClasses[ScriptIndex].GetTableType = TableType then
+  for ScriptIndex := 0 to High(FScriptClasses) do
+    if FScriptClasses[ScriptIndex].GetTableType = TableType then
     begin
-      Result := GScriptClasses[ScriptIndex];
+      Result := FScriptClasses[ScriptIndex];
       Exit;
     end;
   // raise EPascalTypeError.Create('Unknown table class: ' + TableType);
@@ -210,8 +223,6 @@ end;
 //              TCustomOpenTypeScriptTable
 //
 //------------------------------------------------------------------------------
-{ TCustomOpenTypeScriptTable }
-
 constructor TCustomOpenTypeScriptTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
@@ -468,15 +479,15 @@ begin
   begin
 
     // Recurse to look for default script
-    if (ATableType <> OpenTypeDefaultScript) then
-      Result := FindScript(OpenTypeDefaultScript, False);
+    if (ATableType <> OpenTypeScript.DefaultScript) then
+      Result := FindScript(OpenTypeScript.DefaultScript, False);
 
     // Try workaround fallbacks
     if (Result = nil) then
-      for i := Low(OpenTypeDefaultScriptFallbacks) to High(OpenTypeDefaultScriptFallbacks) do
+      for i := Low(OpenTypeScript.DefaultScriptFallbacks) to High(OpenTypeScript.DefaultScriptFallbacks) do
       begin
         // Recurse to look for fallback
-        Result := FindScript(OpenTypeDefaultScriptFallbacks[i], False);
+        Result := FindScript(OpenTypeScript.DefaultScriptFallbacks[i], False);
         if (Result <> nil) then
           exit;
       end;
@@ -537,7 +548,7 @@ begin
   for ScriptIndex := 0 to High(ScriptTableTagOffsets) do
   begin
     // find script class
-    ScriptTableClass := FindScriptByType(ScriptTableTagOffsets[ScriptIndex].Tag);
+    ScriptTableClass := OpenTypeScript.FindScriptByTag(ScriptTableTagOffsets[ScriptIndex].Tag);
 
     if (ScriptTableClass <> nil) then
     begin
@@ -565,6 +576,6 @@ end;
 
 initialization
 
-  RegisterScript(TOpenTypeDefaultScriptTable);
+  OpenTypeScript.RegisterScript(TOpenTypeDefaultScriptTable);
 
 end.

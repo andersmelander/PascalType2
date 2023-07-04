@@ -1,4 +1,4 @@
-unit RenderDemoMain;
+ï»¿unit RenderDemoMain;
 
 interface
 
@@ -132,22 +132,23 @@ type
 const
   TestCases: array[0..16] of TTestCase = (
     (Name: 'Default'; FontName: 'Arial'; Text: 'PascalType Render Demo'),
-    (Name: 'GSUB, Single, Single/frac'; FontName: 'Cascadia Mono Regular'; Text: '123/456! ½ 8'#$2044'9'),
+    (Name: 'GSUB, Single, Single/frac'; FontName: 'Cascadia Mono Regular'; Text: '123/456! Â½ 8'#$2044'9'),
     (Name: 'GSUB, Single, List'; FontName: 'Candara'; Text: #$0386#$038C#$038E#$038F),
     (Name: 'GSUB, Ligature'; FontName: 'Arabic Typesetting'; Text: 'ff fi ffi ft fft'),
     (Name: 'GSUB, Multiple'; FontName: 'Microsoft Sans Serif'; Script: (AsAnsiChar: 'thai'); Text: #$0E01#$0E33#$0E44#$0E23' '#$0E19#$0E33),
-    (Name: 'GSUB, Chained, Simple'; FontName: 'Monoid Regular'; Text: ' _/¯\_/¯\_'),
-    (Name: 'GSUB, Chained, Class'; FontName: 'Segoe UI Variable'; Text: 'i¨ j¨ i´'),
+    (Name: 'GSUB, Chained, Simple'; FontName: 'Monoid Regular'; Text: ' _/Â¯\_/Â¯\_'),
+    (Name: 'GSUB, Chained, Class'; FontName: 'Segoe UI Variable'; Text: 'iÂ¨ jÂ¨ iÂ´'),
     (Name: 'GSUB, Chained, Coverage'; FontName: 'Segoe UI Variable'; Text: '1/2 3/4 123/456'),
     (Name: 'GPOS, Pair, Single'; FontName: 'Arial'; Text: 'LTAVAWA 11.Y.F'),
     (Name: 'GPOS, Pair, Class'; FontName: 'Roboto Regular'; Text: 'P, PA '#$0393'm'),
-    (Name: 'GPOS, Cursive'; FontName: 'Arabic Typesetting'; Script: (AsAnsiChar: 'arab'); Direction: dirRightToLeft; Text: #$FE98#$067C#$067D), // Doesn't work or incorrect testcase
+    (Name: 'GPOS, Cursive'; FontName: 'Arabic Typesetting'; Script: (AsAnsiChar: 'arab'); Direction: dirRightToLeft; Text: 'Ù†ÙŽØ¬Ù„Ø§Ø¡'),
+//    (Name: 'GPOS, Cursive'; FontName: 'Arabic Typesetting'; Script: (AsAnsiChar: 'arab'); Direction: dirRightToLeft; Text: #$FE98#$067C#$067D), // Incorrect testcase; No cursive attachment
     (Name: 'GPOS, MarkToBase'; FontName: 'Segoe UI'; Text: #$1EAA' '#$1EEE' '#$0041#$0304#$0301#$0020#$0141#$006F#$0304#$0067#$0069#$0304#$0301#$0020#$007A#$006F#$0328#$0304#$0301#$007A#$0065),
     (Name: 'GPOS, MarkToMark'; FontName: 'Arabic Typesetting'; Text: 'A'#$0327#$0323' A'#$0323#$0327),//#$03BC#$03B1#$0390#$03C3#$03C4#$03C1#$03BF#$03C2), // Segoe UI appears to have a bug with this test case
     (Name: 'GPOS, MarkToLigature'; FontName: 'Arabic Typesetting'; Script: (AsAnsiChar: 'arab'); Direction: dirRightToLeft; Text: #$FEF8#$0612'  '#$0644#$0627#$0654#$0612), // #$FEF8 is a ligature for #$0644#$0627#$0654
     (Name: 'Table: kern'; FontName: 'Verdana'; Text: 'LTAVAWA 11.LYT.'),
-    (Name: 'Unicode normalization'; FontName: 'Arial'; Text: 'æøåÆØÅ'),
-    (Name: 'Composite glyphs'; FontName: 'Segoe UI'; Text: '½äâåéò')
+    (Name: 'Unicode normalization'; FontName: 'Arial'; Text: 'Ã¦Ã¸Ã¥Ã†Ã˜Ã…'),
+    (Name: 'Composite glyphs'; FontName: 'Segoe UI'; Text: 'Â½Ã¤Ã¢Ã¥Ã©Ã²')
   );
 
 const

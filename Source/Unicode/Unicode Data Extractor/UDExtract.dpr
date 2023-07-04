@@ -8,18 +8,19 @@ program UDExtract;
 uses
   Generics.Collections,
   Generics.Defaults,
+  IOUtils,
   Classes,
   SysUtils,
-  JclSysUtils,
   JclCompression,
   BZip2,
   ZLibh,
   JclBase,
-  JclAnsiStrings,
   JclLogic,
   JclStrings,
-  JclUnicode,
-  JclStreams;
+  PascalType.Unicode in '..\..\PascalType.Unicode.pas';
+
+const
+  RESOURCETYPE = 'UNICODEDATA';
 
 type
   TDecompositions = array of Cardinal;
@@ -206,13 +207,16 @@ const
      '<compat>');   // cftCompat
 
 var
-  SourceFileName,
-  SpecialCasingFileName,
-  ArabicShapingFileName,
-  CaseFoldingFileName,
-  DerivedNormalizationPropsFileName,
-  PropListFileName,
-  TargetFileName: TFileName;
+  SourceFolder: string;
+  SourceFileName: string = 'UnicodeData.txt';
+  SpecialCasingFileName: string = 'SpecialCasing.txt';
+  ArabicShapingFileName: string = 'ArabicShaping.txt';
+  ScriptsFileName: string = 'Scripts.txt';
+  AliasFileName: string = 'PropertyValueAliases.txt';
+  CaseFoldingFileName: string = 'PropertyValueAliases.txt';
+  DerivedNormalizationPropsFileName: string = 'DerivedNormalizationProps.txt';
+  PropListFileName: string = 'PropList.txt';
+  TargetFileName: string = 'unicode.rc';
   Verbose: Boolean;
   ZLibCompress: Boolean;
   BZipCompress: Boolean;
@@ -237,12 +241,20 @@ var
   // Arabic shaping classes
   ArabicShapingClasses: array[Byte] of TCharacterSet;
 
+  // Scripts
+  Scripts: array[TUnicodeScript] of TCharacterSet;
+
+  // PropertyValueAliases
+type
+  TPropertyValueAliases = TDictionary<string, string>;
+var
+  PropertyValueAliases: TObjectDictionary<string, TPropertyValueAliases>;
+
 //----------------------------------------------------------------------------------------------------------------------
 
 procedure FatalError(const S: string);
-
 begin
-  if not Verbose then
+  if Verbose then
   begin
     Writeln;
     Writeln('[Fatal error] ' + S);
@@ -254,9 +266,8 @@ end;
 //----------------------------------------------------------------------------------------------------------------------
 
 procedure Warning(const S: string);
-
 begin
-  if not Verbose then
+  if Verbose then
   begin
     Writeln;
     Writeln('[Warning] ' + S);
@@ -266,7 +277,6 @@ end;
 //----------------------------------------------------------------------------------------------------------------------
 
 function IsHexDigit(C: Char): Boolean;
-
 begin
   Result := CharIsHexDigit(C);
 end;
@@ -327,11 +337,9 @@ end;
 //----------------------------------------------------------------------------------------------------------------------
 
 function FindCharacterRanges(const CharacterSet: TCharacterSet): TRangeArray;
-
 var
   Capacity, Index: Integer;
   Start, Stop: Cardinal;
-
 begin
   Capacity := 0;
   Index := 0;
@@ -365,12 +373,9 @@ end;
 //----------------------------------------------------------------------------------------------------------------------
 
 procedure AddRangeToCategories(Start, Stop: Cardinal; CategoryID: string); overload;
-
 // Adds a range of code points to the categories structure.
-
 var
   Index: Integer;
-
 begin
   // find category
   for Index := Low(CategoriesStrings) to High(CategoriesStrings) do
@@ -392,12 +397,9 @@ end;
 //----------------------------------------------------------------------------------------------------------------------
 
 procedure AddToCategories(Code: Cardinal; CategoryID: string); overload;
-
 // Adds a range of code points to the categories structure.
-
 var
   Index: Integer;
-
 begin
   // find category
   for Index := Low(CategoriesStrings) to High(CategoriesStrings) do
@@ -425,15 +427,31 @@ begin
     SetCharacter(ArabicShapingClasses[AClass], Code);
 end;
 
+function ResolveAlias(const Category, Value: string): string;
+var
+  AliasCategory: TPropertyValueAliases;
+begin
+  if (not PropertyValueAliases.TryGetValue(Category, AliasCategory)) or
+    (not AliasCategory.TryGetValue(Value, Result)) then
+    Result := Value;
+end;
+
+procedure AddScript(FirstCode, LastCode: Cardinal; AScript: TUnicodeScript);
+begin
+  if AScript <> usZzzz then
+    while (FirstCode <= LastCode) do
+    begin
+      SetCharacter(Scripts[AScript], FirstCode);
+      Inc(FirstCode);
+    end;
+end;
+
 //----------------------------------------------------------------------------------------------------------------------
 
 function MakeNumber(Num, Denom: Int64): Integer;
-
 // adds a number if it does not already exist and returns its index value
-
 var
   I: Integer;
-
 begin
   Result := -1;
   // determine if the number already exists
@@ -457,10 +475,8 @@ end;
 //----------------------------------------------------------------------------------------------------------------------
 
 procedure AddNumber(Code: Cardinal; Num, Denom: Int64);
-
 var
   I, J: Integer;
-
 begin
   // Insert the Code in order.
   I := 0;
@@ -490,9 +506,8 @@ end;
 //----------------------------------------------------------------------------------------------------------------------
 
 procedure AddDecomposition(Code: Cardinal; Tag: TCompatibilityFormattingTag; Decomposition: TDecompositions);
-
 var
-  I, J: Integer;
+  I: Integer;
   Item: TDecomposition;
 begin
   AddToCategories(Code, ccComposed);
@@ -566,13 +581,10 @@ end;
 //----------------------------------------------------------------------------------------------------------------------
 
 function FindOrAddCaseEntry(Code: Cardinal): Integer;
-
 // Used to look up the given code in the case mapping array. If no entry with the given code
 // exists then it is added implicitely.
-
 var
   J: Integer;
-
 begin
   Result := 0;
   J := Length(CaseMapping);
@@ -601,10 +613,8 @@ end;
 //----------------------------------------------------------------------------------------------------------------------
 
 procedure AddFoldCase(Code: Cardinal; FoldMapping: TUCS4Array);
-
 var
   I: Integer;
-
 begin
   I := FindOrAddCaseEntry(Code);
   if Length(CaseMapping[I].Fold) = 0 then
@@ -614,10 +624,8 @@ end;
 //----------------------------------------------------------------------------------------------------------------------
 
 procedure AddLowerCase(Code: Cardinal; Lower: TUCS4Array);
-
 var
   I: Integer;
-
 begin
   I := FindOrAddCaseEntry(Code);
   if Length(CaseMapping[I].Lower) = 0 then
@@ -627,10 +635,8 @@ end;
 //----------------------------------------------------------------------------------------------------------------------
 
 procedure AddUpperCase(Code: Cardinal; Upper: TUCS4Array);
-
 var
   I: Integer;
-
 begin
   I := FindOrAddCaseEntry(Code);
   if Length(CaseMapping[I].Upper) = 0 then
@@ -640,10 +646,8 @@ end;
 //----------------------------------------------------------------------------------------------------------------------
 
 procedure AddTitleCase(Code: Cardinal; Title: TUCS4Array);
-
 var
   I: Integer;
-
 begin
   I := FindOrAddCaseEntry(Code);
   if Length(CaseMapping[I].Title) = 0 then
@@ -653,10 +657,8 @@ end;
 //----------------------------------------------------------------------------------------------------------------------
 
 procedure SplitLine(const Line: string; Elements: TStringList);
-
 // splits the given string into parts which are separated by semicolon and fills Elements
 // with the partial strings
-
 var
   Head,
   Tail: PChar;
@@ -683,10 +685,8 @@ end;
 //----------------------------------------------------------------------------------------------------------------------
 
 procedure SplitCodes(const Line: string; var Elements: TUCS4Array);
-
 // splits S, which may contain space delimited hex strings, into single parts
 // and fills Elements
-
 var
   Head,
   Tail: PChar;
@@ -720,10 +720,8 @@ end;
 //----------------------------------------------------------------------------------------------------------------------
 
 procedure ParseData;
-
 // ParseData takes the source file and extracts all relevant data into internal structures to be
 // used when creating the resource script.
-
 var
   Lines,
   Line,
@@ -744,8 +742,23 @@ var
 
   // case mapping
   AMapping: TUCS4Array;
-  
+
 begin
+  SourceFileName := TPath.Combine(SourceFolder, SourceFileName);
+
+  if (not TFile.Exists(SourceFileName)) then
+  begin
+    if Verbose then
+      Writeln(Format('[Fatal error] ''%s'' not found', [SourceFileName]));
+    Halt(1);
+  end;
+
+  if Verbose then
+  begin
+    Writeln;
+    Writeln('Reading data from ' + SourceFileName + ':');
+  end;
+
   Lines := nil;
   SymCharacters := nil;
   Line := nil;
@@ -932,7 +945,7 @@ begin
           end;
         end;
       end;
-      if not Verbose then
+      if Verbose then
         Write(Format(#13'  %d%% done', [Round(100 * I / Lines.Count)]));
     end;
   finally
@@ -942,27 +955,38 @@ begin
     DecompositionsStr.Free;
     NumberStr.Free;
   end;
-  if not Verbose then
+  if Verbose then
     Writeln;
 end;
 
 //----------------------------------------------------------------------------------------------------------------------
 
 procedure ParseSpecialCasing;
-
 // One-to-many case mappings are given by a separate file which is in a different format
 // than the Unicode data file. This procedure parses this file and adds those extended mappings
 // to the internal array.
-
 var
   Lines,
   Line: TStringList;
   I: Integer;
   Code: Cardinal;
-
   AMapping: TUCS4Array;
-
 begin
+  SpecialCasingFileName := TPath.Combine(SourceFolder, SpecialCasingFileName);
+
+  if not TFile.Exists(SpecialCasingFileName) then
+  begin
+    Writeln;
+    Warning(SpecialCasingFileName + ' not found, ignoring special casing');
+    exit;
+  end;
+
+  if Verbose then
+  begin
+    Writeln;
+    Writeln('Reading special casing data from ' + SpecialCasingFileName + ':');
+  end;
+
   Lines := TStringList.Create;
   try
     Lines.LoadFromFile(SpecialCasingFileName);
@@ -994,7 +1018,7 @@ begin
             AddUpperCase(Code, AMapping);
           end;
         end;
-        if not Verbose then
+        if Verbose then
           Write(Format(#13'  %d%% done', [Round(100 * I / Lines.Count)]));
       end;
     finally
@@ -1003,62 +1027,78 @@ begin
   finally
     Lines.Free;
   end;
-  if not Verbose then
+  if Verbose then
     Writeln;
 end;
 
 //----------------------------------------------------------------------------------------------------------------------
 
 procedure ParseCaseFolding;
-
 // Casefolding data is given by yet another optional file. Usually case insensitive string comparisons
 // are done by converting the strings to lower case and compare them, but in some cases
 // this is not enough. We only add those special cases to our internal casing array.
-
 var
- Lines,
- Line: TStringList;
- I: Integer;
- Code: Cardinal;
-
- AMapping: TUCS4Array;
-
+  Reader: TStreamReader;
+  Line: string;
+  Values: TArray<string>;
+  Code: Cardinal;
+  AMapping: TUCS4Array;
 begin
- Lines := TStringList.Create;
- try
-   Lines.LoadFromFile(CaseFoldingFileName);
-   Line := TStringList.Create;
-   try
-     for I := 0 to Lines.Count - 1 do
-     begin
+  CaseFoldingFileName := TPath.Combine(SourceFolder, CaseFoldingFileName);
+
+  if not TFile.Exists(CaseFoldingFileName) then
+  begin
+    Writeln;
+    Warning(CaseFoldingFileName + ' not found, ignoring case folding');
+    exit;
+  end;
+
+  if Verbose then
+  begin
+    Writeln;
+    Writeln('Reading case folding data from ' + CaseFoldingFileName + ':');
+  end;
+
+  Reader := TStreamReader.Create(ArabicShapingFileName);
+  try
+
+    while (not Reader.EndOfStream) do
+    begin
+
        // Layout of one line is:
        // <code>; <status>; <mapping>; # <name>
        // where status is either "L" describing a normal lowered letter
        // and "E" for exceptions (only the second is read)
-       SplitLine(Lines[I], Line);
-       // continue only if the line is not empty
-       if (Line.Count > 0) and (Length(Line[0]) > 0) then
-       begin
-         // the code currently being under consideration
-         Code := StrToInt('$' + Line[0]);
-         // type of mapping
-         if ((Line[1] = 'C') or (Line[1] = 'F')) and (Length(Line[2]) > 0) then
-         begin
-           SplitCodes(Line[2], AMapping);
-           AddFoldCase(Code, AMapping);
-         end;
-       end;
-       if not Verbose then
-         Write(Format(#13'  %d%% done', [Round(100 * I / Lines.Count)]));
-     end;
-   finally
-     Line.Free;
-   end;
- finally
-   Lines.Free;
- end;
- if not Verbose then
-   Writeln;
+
+      Line := Reader.ReadLine.Trim;
+      if (Line = '') or (Line.StartsWith('#')) then
+        continue;
+
+      Values := Line.Split([';']);
+
+      if (Length(Values) < 3) then
+        continue;
+
+      // the code currently being under consideration
+      Code := StrToInt('$' + Values[0]);
+      // type of mapping
+      if ((Values[1] = 'C') or (Values[1] = 'F')) and (Values[2].Trim <> '') then
+      begin
+        SplitCodes(Values[2].Trim, AMapping);
+        AddFoldCase(Code, AMapping);
+      end;
+
+      if Verbose then
+        Write(Format(#13'  %d%% done', [Round(100 * Reader.BaseStream.Position / Reader.BaseStream.Size)]));
+
+    end;
+
+  finally
+    Reader.Free;
+  end;
+
+  if Verbose then
+    Writeln;
 end;
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -1112,10 +1152,22 @@ var
   ShapingClassValue: Byte;
   JoiningType: Char;
   JoiningGroup: string;
- I: Integer;
-
- AMapping: TUCS4Array;
 begin
+  ArabicShapingFileName := TPath.Combine(SourceFolder, ArabicShapingFileName);
+
+  if not FileExists(ArabicShapingFileName) then
+  begin
+    Writeln;
+    Warning(ArabicShapingFileName + ' not found, ignoring arabic shaping');
+    exit;
+  end;
+
+  if Verbose then
+  begin
+    Writeln;
+    Writeln('Reading arabic shaping data from ' + ArabicShapingFileName + ':');
+  end;
+
   Reader := TStreamReader.Create(ArabicShapingFileName);
   try
 
@@ -1161,7 +1213,7 @@ begin
       if (ShapingClassValue <> 0) then
         AddArabicShapingClass(Code, ShapingClassValue);
 
-      if not Verbose then
+      if Verbose then
         Write(Format(#13'  %d%% done', [Round(100 * Reader.BaseStream.Position / Reader.BaseStream.Size)]));
 
     end;
@@ -1169,23 +1221,236 @@ begin
   finally
     Reader.Free;
   end;
-  if not Verbose then
+  if Verbose then
+    Writeln;
+end;
+
+//----------------------------------------------------------------------------------------------------------------------
+
+procedure ParseScripts;
+(*
+The format of this file is similar to that of Blocks.txt [Blocks]. The fields are separated by semicolons. The first
+field contains either a single code point or the first and last code points in a range separated by “..”. The second
+field provides the script property value for that range. The comment (after a #) indicates the General_Category and the
+character name. For each range, it gives the character count in square brackets and uses the names for the first and
+last characters in the range. For example:
+
+    0B01;       Oriya # Mn       ORIYA SIGN CANDRABINDU
+    0B02..0B03; Oriya # Mc   [2] ORIYA SIGN ANUSVARA..ORIYA SIGN VISARGA
+
+The default value for the Script property is Unknown, given to all code points that are not explicitly mentioned in the
+data file.
+*)
+var
+  Reader: TStreamReader;
+  Line: string;
+  Columns: TArray<string>;
+  Codes: TArray<string>;
+  FirstCode, LastCode: Cardinal;
+  Script: TUnicodeScript;
+  i: integer;
+begin
+  ScriptsFileName := TPath.Combine(SourceFolder, ScriptsFileName);
+
+  if not FileExists(ScriptsFileName) then
+  begin
+    Writeln;
+    Warning(ScriptsFileName + ' not found, ignoring scripts');
+    exit;
+  end;
+
+  if Verbose then
+  begin
+    Writeln;
+    Writeln('Reading scripts data from ' + ScriptsFileName + ':');
+  end;
+
+  var ScriptMap := TDictionary<string, TUnicodeScript>.Create;
+  try
+    for Script := Low(TUnicodeScript) to High(TUnicodeScript) do
+    begin
+      var ISO15924 := PascalTypeUnicode.ScriptToISO15924(Script);
+      if (ISO15924.Alias <> '') then
+      begin
+        if (not ScriptMap.TryAdd(ISO15924.Alias, Script)) then
+          ScriptMap.Add(ISO15924.Alias+'_v2', Script); // E.g. 'Georgian'
+      end;
+    end;
+
+    (*
+    #  All code points not explicitly listed for Script
+    #  have the value Unknown (scZzzz = 999).
+    *)
+
+    Reader := TStreamReader.Create(ScriptsFileName);
+    try
+
+      while (not Reader.EndOfStream) do
+      begin
+        // 0B01;       Oriya # Mn       ORIYA SIGN CANDRABINDU
+        // 0B02..0B03; Oriya # Mc   [2] ORIYA SIGN ANUSVARA..ORIYA SIGN VISARGA
+
+        Line := Reader.ReadLine;
+        i := Pos('#', Line);
+        if (i > 0) then
+        begin
+          while (i > 1) and (Line[i-1] = ' ') do
+            Dec(i);
+          Delete(Line, i, MaxInt);
+        end;
+        if (Line = '') then
+          continue;
+
+        Columns := Line.Split([';']);
+
+        if (Length(Columns) < 2) then
+          continue;
+
+        Codes := Columns[0].Trim.Split(['..']);
+        FirstCode := StrToInt('$'+Codes[0]);
+        if (Length(Codes) > 1) then
+          LastCode := StrToInt('$'+Codes[1])
+        else
+          LastCode := FirstCode;
+
+        if (ScriptMap.TryGetValue(Columns[1].Trim, Script)) then
+          AddScript(FirstCode, LastCode, Script);
+
+        if Verbose then
+          Write(Format(#13'  %d%% done', [Round(100 * Reader.BaseStream.Position / Reader.BaseStream.Size)]));
+
+      end;
+
+    finally
+      Reader.Free;
+    end;
+  finally
+    ScriptMap.Free;
+  end;
+
+  if Verbose then
+    Writeln;
+end;
+
+//----------------------------------------------------------------------------------------------------------------------
+
+procedure ParsePropertyValueAliases;
+(*
+# Each line describes a property value name.
+# This consists of three or more fields, separated by semicolons.
+#
+# First Field: The first field describes the property for which that
+# property value name is used.
+#
+# Second Field: The second field is the short name for the property value.
+# It is typically an abbreviation, but in a number of cases it is simply
+# a duplicate of the "long name" in the third field.
+#
+# Third Field: The third field is the long name for the property value,
+# typically the formal name used in documentation about the property value.
+*)
+var
+  Reader: TStreamReader;
+  Line: string;
+  Values: TArray<string>;
+  Category, ShortName, LongName: string;
+  i: integer;
+  AliasCategory: TPropertyValueAliases;
+begin
+  AliasFileName := TPath.Combine(SourceFolder, AliasFileName);
+
+  if (not TFile.Exists(AliasFileName)) then
+  begin
+    Writeln;
+    Warning(AliasFileName + ' not found, ignoring aliases');
+    exit;
+  end;
+
+  if Verbose then
+  begin
+    Writeln;
+    Writeln('Reading aliases data from ' + AliasFileName + ':');
+  end;
+
+  Reader := TStreamReader.Create(AliasFileName);
+  try
+
+    while (not Reader.EndOfStream) do
+    begin
+      // sc ; Adlm                             ; Adlam
+
+      Line := Reader.ReadLine;
+      i := Pos('#', Line);
+      if (i > 0) then
+      begin
+        while (i > 1) and (Line[i-1] = ' ') do
+          Dec(i);
+        Delete(Line, i, MaxInt);
+      end;
+      if (Line = '') then
+        continue;
+
+      Values := Line.Split([';']);
+
+      if (Length(Values) < 3) then
+        continue;
+
+      Category := Values[0].Trim;
+      ShortName := Values[1].Trim;
+      LongName := Values[2].Trim;
+
+      if (not PropertyValueAliases.TryGetValue(Category, AliasCategory)) then
+      begin
+        AliasCategory := TPropertyValueAliases.Create;
+        PropertyValueAliases.Add(Category, AliasCategory);
+      end;
+      AliasCategory.Add(ShortName, LongName);
+
+      // Reverse
+      if (not PropertyValueAliases.TryGetValue('_'+Category, AliasCategory)) then
+      begin
+        AliasCategory := TPropertyValueAliases.Create;
+        PropertyValueAliases.Add('_'+Category, AliasCategory);
+      end;
+      AliasCategory.Add(LongName, ShortName);
+
+      if Verbose then
+        Write(Format(#13'  %d%% done', [Round(100 * Reader.BaseStream.Position / Reader.BaseStream.Size)]));
+
+    end;
+
+  finally
+    Reader.Free;
+  end;
+  if Verbose then
     Writeln;
 end;
 
 //----------------------------------------------------------------------------------------------------------------------
 
 procedure ParseDerivedNormalizationProps;
-
 // parse DerivedNormalizationProps looking for composition exclusions
-
 var
  Lines,
  Line: TStringList;
  I, SeparatorPos: Integer;
  Start, Stop: Cardinal;
-
 begin
+  DerivedNormalizationPropsFileName := TPath.Combine(SourceFolder, DerivedNormalizationPropsFileName);
+
+  if not TFile.Exists(DerivedNormalizationPropsFileName) then
+  begin
+    WriteLn;
+    Warning(DerivedNormalizationPropsFileName + ' not found, ignoring derived normalization');
+    exit;
+  end;
+
+  if Verbose then
+  begin
+    WriteLn;
+    WriteLn('Reading derived normalization props from ' + DerivedNormalizationPropsFileName + ':');
+  end;
+
   Lines := TStringList.Create;
  try
    Lines.LoadFromFile(DerivedNormalizationPropsFileName);
@@ -1215,7 +1480,7 @@ begin
          if SameText(Line[1], 'Full_Composition_Exclusion') then
            AddRangeToCompositionExclusions(Start, Stop);
        end;
-       if not Verbose then
+       if Verbose then
          Write(Format(#13'  %d%% done', [Round(100 * I / Lines.Count)]));
      end;
    finally
@@ -1224,21 +1489,34 @@ begin
  finally
    Lines.Free;
  end;
- if not Verbose then
+ if Verbose then
    Writeln;
 end;
 
 //----------------------------------------------------------------------------------------------------------------------
 
 procedure ParsePropList;
-
 var
  Lines,
  Line: TStringList;
  I, SeparatorPos: Integer;
  Start, Stop: Cardinal;
-
 begin
+  PropListFileName := TPath.Combine(SourceFolder, PropListFileName);
+
+  if not TFile.Exists(PropListFileName) then
+  begin
+    WriteLn;
+    Warning(PropListFileName + ' not found, ignoring property list');
+    exit;
+  end;
+
+  if Verbose then
+  begin
+    WriteLn;
+    WriteLn('Reading property list from ' + PropListFileName + ':');
+  end;
+
   Lines := TStringList.Create;
   try
     Lines.LoadFromFile(PropListFileName);
@@ -1266,7 +1544,7 @@ begin
             AddToCategories(Start, Line[1]);
           end;
         end;
-        if not Verbose then
+        if Verbose then
           Write(Format(#13'  %d%% done', [Round(100 * I / Lines.Count)]));
       end;
     finally
@@ -1275,37 +1553,16 @@ begin
   finally
     Lines.Free;
   end;
-  if not Verbose then
+  if Verbose then
     Writeln;
 end;
 
 //----------------------------------------------------------------------------------------------------------------------
 
 function FindDecomposition(Code: Cardinal): Integer;
-
 var
-  L, R, M: Integer;
   Item: TDecomposition;
 begin
-(*
-  Result := -1;
-  L := 0;
-  R := High(Decompositions);
-  while L <= R do
-  begin
-    M := (L + R) shr 1;
-    if Code > Decompositions[M].Code then
-      L := M + 1
-    else
-      if Code < Decompositions[M].Code then
-        R := M - 1
-      else
-      begin
-        Result := M;
-        Break;
-      end;
-  end;
-*)
   Item.Code := Code;
 
   if (Decompositions.BinarySearch(Item, Result, TComparer<TDecomposition>.Construct(
@@ -1331,10 +1588,6 @@ end;
 
 function DecomposeIt(const S: TDecompositions): TDecompositions;
 
-var
-  I, J, K: Integer;
-  Sub: TDecompositions;
-
   procedure AddResult(Code: Cardinal);
   var
     L: Integer;
@@ -1344,6 +1597,9 @@ var
     Result[L] := Code;
   end;
 
+var
+  I, J, K: Integer;
+  Sub: TDecompositions;
 begin
   for I := Low(S) to High(S) do
   begin
@@ -1362,9 +1618,7 @@ end;
 //----------------------------------------------------------------------------------------------------------------------
 
 procedure ExpandDecompositions;
-
 // Expand all decompositions by recursively decomposing each character in the decomposition.
-
 var
   I: Integer;
   S: TDecompositions;
@@ -1382,9 +1636,7 @@ end;
 //----------------------------------------------------------------------------------------------------------------------
 
 function IsCompositionExcluded(Code: Cardinal): Boolean;
-
 // checks if composition is excluded to this code (decomposition cannot be recomposed)
-
 begin
   Result := TestCharacter(CompositionExceptions, Code);
 end;
@@ -1437,11 +1689,9 @@ end;
 //----------------------------------------------------------------------------------------------------------------------
 
 procedure CreateCompositions;
-
 // create composition list from decomposition list
-
 var
-  I, J: Integer;
+  J: Integer;
 begin
   // reduce reallocations
   Compositions.Capacity := Decompositions.Count;
@@ -1453,15 +1703,12 @@ begin
       Compositions.Add(List[J].PItem);
 
   Compositions.Sort(TComparer<PDecomposition>.Construct(SortCompositions));
-//  SortDynArray(Pointer(Compositions), SizeOf(Compositions[0]), SortCompositions);
 end;
 
 //----------------------------------------------------------------------------------------------------------------------
 
 procedure CreateResourceScript;
-
 // creates the target file using the collected data
-
 var
   TextStream, ResourceStream, CompressedResourceStream: TStream;
   CurrentLine: string;
@@ -1469,7 +1716,6 @@ var
   //--------------- local functions -------------------------------------------
 
   procedure WriteTextLine(S: AnsiString = '');
-
   // writes the given string as line into the resource script
   begin
     S := S + #13#10;
@@ -1479,10 +1725,8 @@ var
   //---------------------------------------------------------------------------
 
   procedure WriteTextByte(Value: Byte);
-
   // Buffers one byte of data (conversion to two-digit hex string is performed first)
   // and flushs out the current line if there are 32 values collected.
-
   begin
     CurrentLine := CurrentLine + Format('%.2x ', [Value]);
     if Length(CurrentLine) = 32 * 3 then
@@ -1495,7 +1739,6 @@ var
   //---------------------------------------------------------------------------
 
   procedure WriteResourceByte(Value: Cardinal);
-
   begin
     if Value <= $FF then
       ResourceStream.WriteBuffer(Value, 1)
@@ -1506,7 +1749,6 @@ var
   //---------------------------------------------------------------------------
 
   procedure WriteResourceCardinal(Value: Cardinal);
-
   begin
     ResourceStream.WriteBuffer(Value, SizeOf(Value));
   end;
@@ -1514,7 +1756,6 @@ var
   //---------------------------------------------------------------------------
 
   procedure WriteResourceChar(Value: Cardinal);
-
   begin
     if Value < $1000000 then
       ResourceStream.WriteBuffer(Value, 3)
@@ -1525,12 +1766,9 @@ var
   //---------------------------------------------------------------------------
 
   procedure WriteResourceCharArray(Values: array of Cardinal);
-
   // loops through Values and writes them into the target file
-
   var
     I: Integer;
-
   begin
     for I := Low(Values) to High(Values) do
       WriteResourceChar(Values[I]);
@@ -1539,7 +1777,6 @@ var
   //---------------------------------------------------------------------------
 
   procedure CreateResource;
-
   begin
     if ZLibCompress or BZipCompress then
       CompressedResourceStream := TMemoryStream.Create;
@@ -1555,10 +1792,8 @@ var
   //---------------------------------------------------------------------------
 
   procedure FlushResource;
-
   var
     Buffer: Byte;
-
   begin
     if ZLibCompress or BZipCompress then
     begin
@@ -1587,7 +1822,6 @@ var
   I, J: Integer;
   Ranges: TRangeArray;
   Category: TCharacterCategory;
-
 begin
   CurrentLine := '';
   TextStream := TFileStream.Create(TargetFileName, fmCreate);
@@ -1599,7 +1833,10 @@ begin
     WriteTextLine(AnsiString('  ' + TargetFileName));
     WriteTextLine;
     WriteTextLine;
-    WriteTextLine('  Produced by UDExtract written by Dipl. Ing. Mike Lischke, public@lischke-online.de');
+    WriteTextLine(Format('  Generated from the Unicode Character Database on %s by UDExtract.', [DateTimeToStr(Now)]));
+    WriteTextLine('  UDExtract was written by:');
+    WriteTextLine('  - Dipl. Ing. Mike Lischke, public@lischke-online.de');
+    WriteTextLine('  - Anders Melander, anders@melander.dk');
     WriteTextLine;
     WriteTextLine;
     WriteTextLine(AnsiString(StringOfChar('*', 100) + '/'));
@@ -1607,7 +1844,7 @@ begin
     WriteTextLine;
 
     // 2) category data
-    WriteTextLine('LANGUAGE 0,0 CATEGORIES UNICODEDATA LOADONCALL MOVEABLE DISCARDABLE');
+    WriteTextLine('LANGUAGE 0,0 CATEGORIES '+RESOURCETYPE+' LOADONCALL MOVEABLE DISCARDABLE');
     WriteTextLine('{');
     CreateResource;
     // write out only used categories
@@ -1636,7 +1873,7 @@ begin
     WriteTextLine;
 
     // 3) case mapping data
-    WriteTextLine('LANGUAGE 0,0 CASE UNICODEDATA LOADONCALL MOVEABLE DISCARDABLE');
+    WriteTextLine('LANGUAGE 0,0 CASE '+RESOURCETYPE+' LOADONCALL MOVEABLE DISCARDABLE');
     WriteTextLine('{');
     CreateResource;
     // record how many case mapping entries we have
@@ -1667,7 +1904,7 @@ begin
     // 4) decomposition data
     // fully expand all decompositions before generating the output
     ExpandDecompositions;
-    WriteTextLine('LANGUAGE 0,0 DECOMPOSITION UNICODEDATA LOADONCALL MOVEABLE DISCARDABLE');
+    WriteTextLine('LANGUAGE 0,0 DECOMPOSITION '+RESOURCETYPE+' LOADONCALL MOVEABLE DISCARDABLE');
     WriteTextLine('{');
     CreateResource;
     // record how many decomposition entries we have
@@ -1685,7 +1922,7 @@ begin
     WriteTextLine;
 
     // 5) canonical combining class data
-    WriteTextLine('LANGUAGE 0,0 COMBINING UNICODEDATA LOADONCALL MOVEABLE DISCARDABLE');
+    WriteTextLine('LANGUAGE 0,0 COMBINING '+RESOURCETYPE+' LOADONCALL MOVEABLE DISCARDABLE');
     WriteTextLine('{');
     CreateResource;
     for I := 0 to 255 do
@@ -1712,7 +1949,7 @@ begin
     WriteTextLine;
 
     // 5a) ArabicShapingClasses[
-    WriteTextLine('LANGUAGE 0,0 ARABSHAPING UNICODEDATA LOADONCALL MOVEABLE DISCARDABLE');
+    WriteTextLine('LANGUAGE 0,0 ARABSHAPING '+RESOURCETYPE+' LOADONCALL MOVEABLE DISCARDABLE');
     WriteTextLine('{');
     CreateResource;
     for I := 0 to 255 do
@@ -1738,9 +1975,37 @@ begin
     WriteTextLine;
     WriteTextLine;
 
+    // 5b) Scripts
+    WriteTextLine('LANGUAGE 0,0 SCRIPTS '+RESOURCETYPE+' LOADONCALL MOVEABLE DISCARDABLE');
+    WriteTextLine('{');
+    CreateResource;
+    Assert(Ord(High(TUnicodeScript)) <= 255);
+    for var Script := Low(Scripts) to High(Scripts) do
+    begin
+      Ranges := FindCharacterRanges(Scripts[Script]);
+      if Length(Ranges) > 0 then
+      begin
+        // a) record which script is stored here
+        WriteResourceByte(Ord(Script));
+        // b) tell how many ranges are assigned
+        WriteResourceByte(Length(Ranges));
+        // c) write start and stop code of each range
+        for J := Low(Ranges) to High(Ranges) do
+        begin
+          WriteResourceChar(Ranges[J].Start);
+          WriteResourceChar(Ranges[J].Stop);
+        end;
+      end;
+    end;
+
+    FlushResource;
+    WriteTextLine('}');
+    WriteTextLine;
+    WriteTextLine;
+
     // 6) number data, this is actually two arrays, one which contains the numbers
     //    and the second containing the mapping between a code and a number
-    WriteTextLine('LANGUAGE 0,0 NUMBERS UNICODEDATA LOADONCALL MOVEABLE DISCARDABLE');
+    WriteTextLine('LANGUAGE 0,0 NUMBERS '+RESOURCETYPE+' LOADONCALL MOVEABLE DISCARDABLE');
     WriteTextLine('{');
     CreateResource;
     // first, write the number definitions (size, values)
@@ -1765,7 +2030,7 @@ begin
     // 7 ) composition data
     // create composition data from decomposition data and exclusion list before generating the output
     CreateCompositions;
-    WriteTextLine('LANGUAGE 0,0 COMPOSITION UNICODEDATA LOADONCALL MOVEABLE DISCARDABLE');
+    WriteTextLine('LANGUAGE 0,0 COMPOSITION '+RESOURCETYPE+' LOADONCALL MOVEABLE DISCARDABLE');
     WriteTextLine('{');
     CreateResource;
     // first, write the number of compositions
@@ -1788,25 +2053,26 @@ end;
 procedure PrintUsage;
 
 begin
-  Writeln('Usage: UDExtract Source[.txt] Target[.rc] options');
-  Writeln('  Path and extension are optional. Default extension for all source files');
-  Writeln('  (including optional files) is ".txt".');
-  Writeln('  Source must be a Unicode data file (e.g. UnicodeData-5.0.0.txt)');
-  Writeln('  and Target is a resource script.');
+  Writeln('Usage: UDExtract [options]');
+  Writeln;
+  Writeln('  Reads data from the Unicode Character Database (UCD) text files');
+  Writeln('  and generate a Windows resource script from the data in it.');
   Writeln;
   Writeln('  Options might have the following values (not case sensitive):');
-  Writeln('    /?'#9#9'shows this screen');
-  Writeln('    /c=filename'#9'specifies an optional file containing special casing');
-  Writeln('    '#9#9'properties (e.g. SpecialCasing-5.0.0.txt)');
-  Writeln('    /f=filename'#9'specifies an optional file containing case fold');
-  Writeln('    '#9#9'mappings (e.g. CaseFolding-5.0.0.txt)');
-  WriteLn('    /d=filename'#9'specifies an optional file containing derived normalization');
-  WriteLn('    '#9#9'props (e.g. DerivedNormalizationProps-5.0.0.txt)');
-  WriteLn('    /p=filename'#9'specifies an optional file containing the list of');
-  WriteLn('    '#9#9'character properties (e.g. PropList-5.0.0.txt)');
-  Writeln('    /v'#9#9'verbose mode; no warnings, errors etc. are shown, no user input is required');
-  WriteLn('    /z'#9#9'compress resource streams using zlib');
-  WriteLn('    /bz'#9#9'compress resource streams using bzip2');
+  Writeln('    /?'#9#9#9'shows this screen');
+  Writeln('    /source:<value>'#9'specify UCD source folder');
+  Writeln('    /target:<value>'#9'specify destination resource file (default is unicode.rc)');
+  Writeln('    /v or /verbose'#9'show warnings, errors etc., prompt at completion');
+  WriteLn('    /z or /zip'#9#9'compress resource streams using zlib');
+  WriteLn('    /bz or /bzip'#9'compress resource streams using bzip2');
+  Writeln('    /all'#9#9'include all of the following resources');
+  Writeln('    /alias'#9#9'read property value aliases text file');
+  Writeln('    /arabic'#9#9'include arabic shaping resource');
+  Writeln('    /case'#9#9'include lower/upper case resource');
+  Writeln('    /casing'#9#9'include special case folding resource');
+  WriteLn('    /derived'#9#9'include derived normalization resource');
+  WriteLn('    /proplist'#9#9'include character properties resources');
+  Writeln('    /scripts'#9#9'include scripts resource');
   Writeln;
   Writeln('Press <enter> to continue...');
   Readln;
@@ -1826,93 +2092,24 @@ end;
 //----------------------------------------------------------------------------------------------------------------------
 
 procedure ParseOptions;
-
 var
-  I: Integer;
-  S: string;
-  Run: PChar;
-
+  Value: string;
 begin
-  for I := 3 to ParamCount do
+  if FindCmdLineSwitch('h') or FindCmdLineSwitch('help') or FindCmdLineSwitch('?') then
   begin
-    S := Trim(ParamStr(I));
-    if (Length(S) = 0) or (S[1] <> '/') then
-    begin
-      Halt(2);
-    end
-    else
-    if SameText(S, '/v') then
-      Verbose := True
-    else
-    if SameText(S, '/z') then
-      ZLibCompress := True
-    else
-    if SameText(S, '/bz') then
-      BZipCompress := True
-    else
-    if SameText(Copy(S, 1, 3), '/c=') then
-    begin
-      SpecialCasingFileName := Trim(Copy(S, 4, MaxInt));
-      if (SpecialCasingFileName[1] = '''') or (SpecialCasingFileName[1] = '"') then
-      begin
-        Run := PChar(SpecialCasingFileName);
-        SpecialCasingFileName := Trim(AnsiExtractQuotedStr(Run, SpecialCasingFileName[1]));
-      end;
-      CheckExtension(SpecialCasingFileName, '.txt');
-    end
-    else
-    if SameText(Copy(S, 1, 3), '/a=') then
-    begin
-      ArabicShapingFileName := Trim(Copy(S, 4, MaxInt));
-      if (ArabicShapingFileName[1] = '''') or (ArabicShapingFileName[1] = '"') then
-      begin
-        Run := PChar(ArabicShapingFileName);
-        ArabicShapingFileName := Trim(AnsiExtractQuotedStr(Run, ArabicShapingFileName[1]));
-      end;
-      CheckExtension(ArabicShapingFileName, '.txt');
-    end
-    else
-    if SameText(Copy(S, 1, 3), '/f=') then
-    begin
-      CaseFoldingFileName := Trim(Copy(S, 4, MaxInt));
-      if (CaseFoldingFileName[1] = '''') and (CaseFoldingFileName = '"') then
-      begin
-        Run := PChar(CaseFoldingFileName);
-        CaseFoldingFileName := Trim(AnsiExtractQuotedStr(Run, CaseFoldingFileName[1]));
-      end;
-      CheckExtension(CaseFoldingFileName, '.txt');
-    end
-    else
-    if SameText(Copy(S, 1, 3), '/d=') then
-    begin
-      DerivedNormalizationPropsFileName := Trim(Copy(S, 4, MaxInt));
-      if (DerivedNormalizationPropsFileName[1] = '''') or (DerivedNormalizationPropsFileName[1] = '"') then
-      begin
-        Run := PChar(DerivedNormalizationPropsFileName);
-        DerivedNormalizationPropsFileName := Trim(AnsiExtractQuotedStr(Run, DerivedNormalizationPropsFileName[1]));
-      end;
-      CheckExtension(DerivedNormalizationPropsFileName, '.txt');
-    end
-    else
-    if SameText(Copy(S, 1, 3), '/p=') then
-    begin
-      PropListFileName := Trim(Copy(S, 4, MaxInt));
-      if (PropListFileName[1] = '''') or (PropListFileName[1] = '"') then
-      begin
-        Run := PChar(PropListFileName);
-        PropListFileName := Trim(AnsiExtractQuotedStr(Run, PropListFileName[1]));
-      end;
-      CheckExtension(PropListFileName, '.txt');
-    end
-    else
-    begin
-      PrintUsage;
-      if SameText(S, '/?') then
-        Halt(0)
-      else
-        Halt(2);
-    end;
+    PrintUsage;
+    Halt(0)
   end;
+
+  Verbose := FindCmdLineSwitch('verbose') or FindCmdLineSwitch('v');
+  ZLibCompress := FindCmdLineSwitch('zip') or FindCmdLineSwitch('z');
+  BZipCompress := FindCmdLineSwitch('bzip') or FindCmdLineSwitch('bz');
+
+  if FindCmdLineSwitch('source', Value, True, [clstValueAppended]) then
+    SourceFolder := Value;
+
+  if FindCmdLineSwitch('target', Value, True, [clstValueAppended]) then
+    TargetFileName := Value;
 end;
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -1931,17 +2128,17 @@ end;
 
 begin
   Writeln('Unicode database conversion tool');
-  Writeln(#$B8' 2000, written by Dipl. Ing. Mike Lischke [public@lischke-online.de]');
+  Writeln('(c) 2000, written by Dipl. Ing. Mike Lischke [public@lischke-online.de]');
+  Writeln('(c) 2023, updated by Anders Melander [anders@melander.dk]');
   Writeln;
 
-  if ParamCount = 0 then
-    PrintUsage
-  else
+  ParseOptions;
+
   try
     Decompositions := TList<TDecomposition>.Create;
     Compositions := TList<PDecomposition>.Create;
+    PropertyValueAliases := TObjectDictionary<string, TPropertyValueAliases>.Create([doOwnsValues]);
 
-    ParseOptions;
 
     if BZipCompress and not LoadBZip2 then
     begin
@@ -1949,131 +2146,44 @@ begin
       Halt(1);
     end;
 
-    SourceFileName := Trim(ParamStr(1));
-    CheckExtension(SourceFileName, '.txt');
-    TargetFileName := Trim(ParamStr(2));
-    CheckExtension(TargetFileName, '.rc');
+    ParseData;
 
-    if not FileExists(SourceFileName) then
+    var ParamAll := FindCmdLineSwitch('all');
+    if ParamAll or FindCmdLineSwitch('alias') then
+      ParsePropertyValueAliases;
+
+    if ParamAll or FindCmdLineSwitch('arabic') then
+      ParseArabicShaping;
+
+    if ParamAll or FindCmdLineSwitch('scripts') then
+      ParseScripts;
+
+    if ParamAll or FindCmdLineSwitch('casing') then
+      ParseSpecialCasing;
+
+    if ParamAll or FindCmdLineSwitch('case') then
+      ParseCaseFolding;
+
+    if ParamAll or FindCmdLineSwitch('derived') then
+      ParseDerivedNormalizationProps;
+
+    if ParamAll or FindCmdLineSwitch('proplist') then
+      ParsePropList;
+
+    // finally write the collected data
+    if Verbose then
     begin
-      if not Verbose then
-        Writeln(Format('[Fatal error] ''%s'' not found', [SourceFileName]));
-      Halt(1);
-    end
-    else
-    begin
-      if not Verbose then
-      begin
-        Writeln;
-        Writeln('Reading data from ' + SourceFileName + ':');
-      end;
-      ParseData;
-
-      // optional parsing parts
-      if Length(ArabicShapingFileName) > 0 then
-      begin
-        if not FileExists(ArabicShapingFileName) then
-        begin
-          Writeln;
-          Warning(ArabicShapingFileName + ' not found, ignoring arabic shaping');
-        end
-        else
-        begin
-          if not Verbose then
-          begin
-            Writeln;
-            Writeln('Reading arabic shaping data from ' + ArabicShapingFileName + ':');
-          end;
-          ParseArabicShaping;
-        end;
-      end;
-
-      if Length(SpecialCasingFileName) > 0 then
-      begin
-        if not FileExists(SpecialCasingFileName) then
-        begin
-          Writeln;
-          Warning(SpecialCasingFileName + ' not found, ignoring special casing');
-        end
-        else
-        begin
-          if not Verbose then
-          begin
-            Writeln;
-            Writeln('Reading special casing data from ' + SpecialCasingFileName + ':');
-          end;
-          ParseSpecialCasing;
-        end;
-      end;
-
-      if Length(CaseFoldingFileName) > 0 then
-      begin
-        if not FileExists(CaseFoldingFileName) then
-        begin
-          Writeln;
-          Warning(CaseFoldingFileName + ' not found, ignoring case folding');
-        end
-        else
-        begin
-          if not Verbose then
-          begin
-            Writeln;
-            Writeln('Reading case folding data from ' + CaseFoldingFileName + ':');
-          end;
-          ParseCaseFolding;
-        end;
-      end;
-
-      if Length(DerivedNormalizationPropsFileName) > 0 then
-      begin
-        if not FileExists(DerivedNormalizationPropsFileName) then
-        begin
-          WriteLn;
-          Warning(DerivedNormalizationPropsFileName + ' not found, ignoring derived normalization');
-        end
-        else
-        begin
-          if not Verbose then
-          begin
-            WriteLn;
-            WriteLn('Reading derived normalization props from ' + DerivedNormalizationPropsFileName + ':');
-          end;
-          ParseDerivedNormalizationProps;
-        end;
-      end;
-
-      if Length(PropListFileName) > 0 then
-      begin
-        if not FileExists(PropListFileName) then
-        begin
-          WriteLn;
-          Warning(PropListFileName + ' not found, ignoring property list');
-        end
-        else
-        begin
-          if not Verbose then
-          begin
-            WriteLn;
-            WriteLn('Reading property list from ' + PropListFileName + ':');
-          end;
-          ParsePropList;
-        end;
-      end;
-
-      // finally write the collected data
-      if not Verbose then
-      begin
-        Writeln;
-        Writeln;
-        Writeln('Writing resource script ' + TargetFileName + '  ');
-        CreateResourceScript;
-      end;
+      Writeln;
+      Writeln;
+      Writeln('Writing resource script ' + TargetFileName + '  ');
     end;
+    CreateResourceScript;
 
     Decompositions.Free;
     Compositions.Free;
+    PropertyValueAliases.Free;
   finally
-    if not Verbose then
+    if Verbose then
     begin
       Writeln;
       Writeln('Program finished. Press <enter> to continue...');

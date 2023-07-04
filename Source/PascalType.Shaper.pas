@@ -145,12 +145,16 @@ type
     destructor Destroy; override;
 
     class procedure RegisterShaperForScript(const Script: TTableType; AShaperClass: TPascalTypeShaperClass);
+    class function DetectScript(const UTF32: TPascalTypeCodePoints): TTableType; overload;
+    class function DetectScript(const AText: string): TTableType; overload;
     class function GetShaperForScript(const Script: TTableType): TPascalTypeShaperClass;
     class procedure RegisterDefaultShaperClass(ShaperClass: TPascalTypeShaperClass);
 
-    function TextToGlyphs(const AText: string): TPascalTypeGlyphString; virtual;
+    function TextToGlyphs(const AText: string): TPascalTypeGlyphString; overload;
+    function TextToGlyphs(const UTF32: TPascalTypeCodePoints): TPascalTypeGlyphString; overload; virtual;
 
-    function Shape(const AText: string): TPascalTypeGlyphString; overload; virtual;
+    function Shape(const AText: string): TPascalTypeGlyphString; overload;
+    function Shape(const UTF32: TPascalTypeCodePoints): TPascalTypeGlyphString; overload; virtual;
     procedure Shape(AGlyphs: TPascalTypeGlyphString); overload; virtual;
 
     property Font: TCustomPascalTypeFontFace read FFont;
@@ -246,7 +250,7 @@ begin
   inherited Create;
 
   FFont := AFont;
-  FScript := OpenTypeDefaultScript;
+  FScript := OpenTypeScript.DefaultScript;
   FLanguage := OpenTypeDefaultLanguageSystem;
   FDirection := PascalTypeDefaultDirection;
 
@@ -280,6 +284,33 @@ class function TPascalTypeShaper.GetShaperForScript(const Script: TTableType): T
 begin
   if (not FShaperClasses.TryGetValue(Script.AsCardinal, Result)) then
     Result := FDefaultShaperClass;
+end;
+
+class function TPascalTypeShaper.DetectScript(const AText: string): TTableType;
+var
+  UTF32: TPascalTypeCodePoints;
+begin
+  UTF32 := PascalTypeUnicode.UTF16ToUTF32(AText);
+  Result := DetectScript(UTF32);
+end;
+
+class function TPascalTypeShaper.DetectScript(const UTF32: TPascalTypeCodePoints): TTableType;
+var
+  CodePoint: TPascalTypeCodePoint;
+  UnicodeScript: TUnicodeScript;
+begin
+  for CodePoint in UTF32 do
+  begin
+    UnicodeScript := PascalTypeUnicode.GetScript(CodePoint);
+
+    if (UnicodeScript <> usZzzz) and (UnicodeScript <> usZyyy) and (UnicodeScript <> usZinh) then
+    begin
+      Result := OpenTypeScript.UnicodeScriptToOpenTypeScript(UnicodeScript);
+      exit;
+    end;
+  end;
+
+  Result := OpenTypeScript.DefaultScript;
 end;
 
 procedure TPascalTypeShaper.FeaturesChanged(Sender: TObject);
@@ -471,6 +502,43 @@ procedure TPascalTypeShaper.SetupPlan(APlan: TPascalTypeShapingPlan; var AGlyphs
 begin
 end;
 
+function TPascalTypeShaper.Shape(const AText: string): TPascalTypeGlyphString;
+var
+  UTF32: TPascalTypeCodePoints;
+begin
+  (*
+  ** Convert from text to Unicode codepoints.
+  *)
+  UTF32 := PascalTypeUnicode.UTF16ToUTF32(AText);
+
+  Result := Shape(UTF32);
+end;
+
+function TPascalTypeShaper.Shape(const UTF32: TPascalTypeCodePoints): TPascalTypeGlyphString;
+begin
+  (*
+  ** Detect script if it hasn't been specified.
+  *)
+  if (Script = 0) then
+    Script := DetectScript(UTF32);
+
+  (*
+  ** Convert from Unicode codepoints to glyph IDs.
+  *)
+  Result := TextToGlyphs(UTF32);
+  try
+
+    (*
+    ** Shape glyphs.
+    *)
+    Shape(Result);
+
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
 procedure TPascalTypeShaper.Shape(AGlyphs: TPascalTypeGlyphString);
 var
   LayoutEngine: TCustomPascalTypeLayoutEngine;
@@ -496,6 +564,14 @@ begin
   end;
 end;
 
+function TPascalTypeShaper.TextToGlyphs(const UTF32: TPascalTypeCodePoints): TPascalTypeGlyphString;
+begin
+  (*
+  ** Convert from Unicode codepoints to glyph IDs.
+  *)
+  Result := CreateGlyphString(UTF32);
+end;
+
 function TPascalTypeShaper.TextToGlyphs(const AText: string): TPascalTypeGlyphString;
 var
   UTF32: TPascalTypeCodePoints;
@@ -508,23 +584,7 @@ begin
   (*
   ** Convert from Unicode codepoints to glyph IDs.
   *)
-  Result := CreateGlyphString(UTF32);
-end;
-
-function TPascalTypeShaper.Shape(const AText: string): TPascalTypeGlyphString;
-begin
-  (*
-  ** Convert from text to Unicode codepoints to glyph IDs.
-  *)
-  Result := TextToGlyphs(AText);
-  try
-
-    Shape(Result);
-
-  except
-    Result.Free;
-    raise;
-  end;
+  Result := TextToGlyphs(UTF32);
 end;
 
 function TPascalTypeShaper.ZeroMarkWidths: TZeroMarkWidths;
