@@ -120,7 +120,7 @@ type
     function DecompositionFilter(Composite: TPascalTypeCodePoint; CodePoint: TPascalTypeCodePoint): boolean; virtual;
     function CompositionFilter(FirstCodePoint, SecondCodePoint: TPascalTypeCodePoint; var Composite: TPascalTypeCodePoint): boolean; virtual;
     procedure ProcessCodePoints(var CodePoints: TPascalTypeCodePoints); virtual;
-    function ProcessUnicode(const AText: string): TPascalTypeCodePoints; virtual;
+    function ProcessUnicode(const UTF32: TPascalTypeCodePoints): TPascalTypeCodePoints; virtual;
     function NeedUnicodeComposition: boolean; virtual; // TODO : Move this to the Layout Engine
     function ZeroMarkWidths: TZeroMarkWidths; virtual;
 
@@ -447,17 +447,12 @@ begin
     ProcessCodePoint(CodePoints[i]);
 end;
 
-function TPascalTypeShaper.ProcessUnicode(const AText: string): TPascalTypeCodePoints;
+function TPascalTypeShaper.ProcessUnicode(const UTF32: TPascalTypeCodePoints): TPascalTypeCodePoints;
 begin
-  (*
-  ** Convert UTF16 to UTF32
-  *)
-  Result := PascalTypeUnicode.UTF16ToUTF32(AText);
-
   (*
   ** Unicode decompose
   *)
-  Result := PascalTypeUnicode.Decompose(Result, DecompositionFilter);
+  Result := PascalTypeUnicode.Decompose(UTF32, DecompositionFilter);
 
   (*
   ** Unicode normalization
@@ -506,9 +501,6 @@ function TPascalTypeShaper.Shape(const AText: string): TPascalTypeGlyphString;
 var
   UTF32: TPascalTypeCodePoints;
 begin
-  (*
-  ** Convert from text to Unicode codepoints.
-  *)
   UTF32 := PascalTypeUnicode.UTF16ToUTF32(AText);
 
   Result := Shape(UTF32);
@@ -565,11 +557,18 @@ begin
 end;
 
 function TPascalTypeShaper.TextToGlyphs(const UTF32: TPascalTypeCodePoints): TPascalTypeGlyphString;
+var
+  Normalized: TPascalTypeCodePoints;
 begin
+  (*
+  ** Unicode normalization-
+  *)
+  Normalized := ProcessUnicode(UTF32);
+
   (*
   ** Convert from Unicode codepoints to glyph IDs.
   *)
-  Result := CreateGlyphString(UTF32);
+  Result := CreateGlyphString(Normalized);
 end;
 
 function TPascalTypeShaper.TextToGlyphs(const AText: string): TPascalTypeGlyphString;
@@ -577,12 +576,12 @@ var
   UTF32: TPascalTypeCodePoints;
 begin
   (*
-  ** Process UTF16 unicode string and return a normalized UCS-4/UTF32 string
+  ** Convert UTF16 unicode string to UCS-4/UTF32 unicode string
   *)
-  UTF32 := ProcessUnicode(AText);
+  UTF32 := PascalTypeUnicode.UTF16ToUTF32(AText);
 
   (*
-  ** Convert from Unicode codepoints to glyph IDs.
+  ** Normalize and convert from Unicode codepoints to glyph IDs.
   *)
   Result := TextToGlyphs(UTF32);
 end;
