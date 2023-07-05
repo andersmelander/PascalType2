@@ -369,10 +369,12 @@ function TOpenTypeSubstitutionSubTableLigatureList.Apply(var AGlyphIterator: TPa
 var
   SubstitutionIndex: integer;
   Glyph: TPascalTypeGlyph;
+  MatchedGlyph: TPascalTypeGlyph;
   i, j: integer;
   Match: boolean;
   LastSameStartCharIndex: integer;
   CodePoints: TPascalTypeCodePoints;
+  Count: integer;
   Iterator: TPascalTypeGlyphGlyphIterator;
   MatchedIndices: TArray<integer>;
 begin
@@ -429,9 +431,26 @@ begin
       Glyph := AGlyphIterator.Glyph;
 
       // Save a list of the codepoints we're replacing
+      Count := 0;
       SetLength(CodePoints, Length(MatchedIndices));
       for j := 0 to High(MatchedIndices) do
-        CodePoints[j] := AGlyphIterator.GlyphString[MatchedIndices[j]].CodePoints[0];
+      begin
+        MatchedGlyph := AGlyphIterator.GlyphString[MatchedIndices[j]];
+
+        // CodePoints might be empty if we are substituting an already substituted glyph.
+        // See: TOpenTypeSubstitutionSubTableMultipleList.Apply
+        if (Length(MatchedGlyph.CodePoints) > 0) then
+        begin
+          if (Count + Length(MatchedGlyph.CodePoints) > Length(CodePoints)) then
+            SetLength(CodePoints, Count + Length(MatchedGlyph.CodePoints) * 2); // * 2 = allocate more than we need in order to reduce reallocations
+
+          Move(MatchedGlyph.CodePoints[0], CodePoints[Count],
+            Length(MatchedGlyph.CodePoints) * SizeOf(TPascalTypeCodePoint));
+
+          Inc(Count, Length(MatchedGlyph.CodePoints));
+        end;
+      end;
+      SetLength(CodePoints, Count);
 
       Glyph.IsLigated := True;
       Glyph.IsSubstituted := True;
