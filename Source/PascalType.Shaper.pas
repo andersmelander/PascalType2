@@ -110,6 +110,7 @@ type
     procedure SetLanguage(const Value: TTableType);
     procedure SetScript(const Value: TTableType);
     procedure SetDirection(const Value: TPascalTypeDirection);
+    function GetDirection: TPascalTypeDirection;
     procedure FeaturesChanged(Sender: TObject);
   private
     class constructor Create;
@@ -160,7 +161,7 @@ type
     property Font: TCustomPascalTypeFontFace read FFont;
     property Script: TTableType read FScript write SetScript;
     property Language: TTableType read FLanguage write SetLanguage;
-    property Direction: TPascalTypeDirection read FDirection write SetDirection;
+    property Direction: TPascalTypeDirection read GetDirection write SetDirection;
 
     // User feature overrides
     property Features: TPascalTypeShaperFeatures read FFeatures;
@@ -343,6 +344,26 @@ begin
   Result := Font.CreateLayoutEngine as TCustomPascalTypeLayoutEngine;
 end;
 
+function TPascalTypeShaper.GetDirection: TPascalTypeDirection;
+var
+  UnicodeScript: TUnicodeScript;
+begin
+  Result := FDirection;
+
+  if (Result = dirDefault) then
+  begin
+    if (FScript.AsCardinal = 0) then
+      Exit(dirLeftToRight);
+
+    UnicodeScript := PascalTypeUnicode.ISO15924ToScript(FScript.AsAnsiChar);
+
+    if PascalTypeUnicode.IsRightToLeft(UnicodeScript) then
+      Result := dirRightToLeft
+    else
+      Result := dirLeftToRight;
+  end;
+end;
+
 function TPascalTypeShaper.GetGlyphStringClass: TShaperGlyphStringClass;
 begin
   Result := TShaperGlyphString;
@@ -508,12 +529,6 @@ end;
 
 function TPascalTypeShaper.Shape(const UTF32: TPascalTypeCodePoints): TPascalTypeGlyphString;
 begin
-  (*
-  ** Detect script if it hasn't been specified.
-  *)
-  if (Script = 0) then
-    Script := DetectScript(UTF32);
-
   (*
   ** Convert from Unicode codepoints to glyph IDs.
   *)

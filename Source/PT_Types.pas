@@ -128,7 +128,9 @@ type
 
 
 type
-  TPascalTypeDirection = (dirLeftToRight, dirRightToLeft);
+  TPascalTypeDirection = (dirDefault, dirLeftToRight, dirRightToLeft, dirTopDown);
+
+  TPascalTypeHorizontalDirection = dirLeftToRight..dirRightToLeft;
 
 const
   PascalTypeDefaultDirection: TPascalTypeDirection = dirLeftToRight;

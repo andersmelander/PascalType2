@@ -100,7 +100,7 @@ const
     'vert'      // Vertical Alternates
   ];
 
-  DirectionalFeatures: array[TPascalTypeDirection] of TTableNames = (
+  DirectionalFeatures: array[TPascalTypeHorizontalDirection] of TTableNames = (
     [
       'ltra',   // Left-to-right glyph alternates
       'ltrm'    // Left-to-right mirrored forms

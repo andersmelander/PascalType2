@@ -114,6 +114,7 @@ uses
   GR32_Polygons,
   GR32_Brushes,
   GR32_Paths,
+  PascalType.Unicode,
   PascalType.Platform.Windows,
   PascalType.Shaper,
   PascalType.Shaper.Script.Default,
@@ -265,8 +266,10 @@ var
   Canvas: TCanvas;
   Canvas32: TCanvas32;
   Bitmap32: TBitmap32;
+  Script: TTableType;
   ShaperClass: TPascalTypeShaperClass;
   Shaper: TPascalTypeShaper;
+  UTF32: TPascalTypeCodePoints;
   ShapedText: TPascalTypeGlyphString;
   i: integer;
   CursorPos: TFloatPoint;
@@ -306,8 +309,17 @@ begin
       FRasterizerGraphics32.FontSize := 0; // TODO : We need to force a recalc of the scale. Changing the font doesn't notify the rasterizer.
       FRasterizerGraphics32.FontSize := _DPIAware(FFontSize);
 
-      // TODO : Detect script from text
-      ShaperClass := TPascalTypeShaper.GetShaperForScript(FScript);
+      // Convert to UTF32 so we only do it once
+      UTF32 := PascalTypeUnicode.UTF16ToUTF32(FText);
+
+      // Detect script from inoput text if it hasn't been specified.
+      Script := FScript;
+      if (Script.AsCardinal = 0) then
+        Script := TPascalTypeShaper.DetectScript(UTF32);
+
+      // Get a shaper that can handle the script
+      ShaperClass := TPascalTypeShaper.GetShaperForScript(Script);
+
       Shaper := ShaperClass.Create(FFontFace);
       try
         // TODO : Test only. Enable 'liga' optional feature for test purpose
@@ -315,10 +327,10 @@ begin
         Shaper.Features.EnableAll := True; // TODO : This currently does nothing
 
         Shaper.Language := FLanguage;
-        Shaper.Script := FScript;
+        Shaper.Script := Script;
         Shaper.Direction := FDirection;
 
-        ShapedText := Shaper.Shape(FText);
+        ShapedText := Shaper.Shape(UTF32);
         try
 
           if (ActionColor.Checked) then

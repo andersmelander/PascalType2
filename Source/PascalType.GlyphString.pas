@@ -185,6 +185,7 @@ type
     FAlternateIndex: integer;
     function GetGlyph(Index: integer): TPascalTypeGlyph;
     function GetCount: integer;
+    function GetDirection: TPascalTypeDirection;
   protected
     function GetGlyphClassID(AGlyph: TPascalTypeGlyph): integer; virtual;
     function GetMarkAttachmentType(AGlyph: TPascalTypeGlyph): integer; virtual;
@@ -231,7 +232,7 @@ type
     // Context
     property Script: TTableType read FScript write FScript;
     property Language: TTableType read FLanguage write FLanguage;
-    property Direction: TPascalTypeDirection read FDirection write FDirection;
+    property Direction: TPascalTypeDirection read GetDirection write FDirection;
     property AlternateIndex: integer read FAlternateIndex write FAlternateIndex;
   end;
 
@@ -643,6 +644,23 @@ end;
 function TPascalTypeGlyphString.GetCount: integer;
 begin
   Result := FGlyphs.Count;
+end;
+
+function TPascalTypeGlyphString.GetDirection: TPascalTypeDirection;
+var
+  UnicodeScript: TUnicodeScript;
+begin
+  Result := FDirection;
+
+  if (Result = dirDefault) then
+  begin
+    UnicodeScript := PascalTypeUnicode.ISO15924ToScript(FScript.AsAnsiChar);
+
+    if PascalTypeUnicode.IsRightToLeft(UnicodeScript) then
+      Result := dirRightToLeft
+    else
+      Result := dirLeftToRight;
+  end;
 end;
 
 procedure TPascalTypeGlyphString.SetLength(ALen: integer);
