@@ -355,7 +355,7 @@ begin
     if (FScript.AsCardinal = 0) then
       Exit(dirLeftToRight);
 
-    UnicodeScript := PascalTypeUnicode.ISO15924ToScript(FScript.AsAnsiChar);
+    UnicodeScript := PascalTypeUnicode.ISO15924ToScript(FScript.AsString);
 
     if PascalTypeUnicode.IsRightToLeft(UnicodeScript) then
       Result := dirRightToLeft

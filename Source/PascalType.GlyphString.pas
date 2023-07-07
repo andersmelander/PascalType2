@@ -203,6 +203,7 @@ type
     function Extract(Index: integer): TPascalTypeGlyph; overload;
     function Extract(Glyph: TPascalTypeGlyph): TPascalTypeGlyph; overload;
     procedure Insert(Index: integer; Glyph: TPascalTypeGlyph);
+    procedure Move(OldIndex, NewIndex: integer);
     procedure Reverse;
 
     function AsString: TGlyphString; overload;
@@ -588,6 +589,11 @@ begin
   Result := True;
 end;
 
+procedure TPascalTypeGlyphString.Move(OldIndex, NewIndex: integer);
+begin
+  FGlyphs.Move(OldIndex, NewIndex);
+end;
+
 procedure TPascalTypeGlyphString.Reverse;
 var
   i: integer;
@@ -654,7 +660,7 @@ begin
 
   if (Result = dirDefault) then
   begin
-    UnicodeScript := PascalTypeUnicode.ISO15924ToScript(FScript.AsAnsiChar);
+    UnicodeScript := PascalTypeUnicode.ISO15924ToScript(FScript.AsString);
 
     if PascalTypeUnicode.IsRightToLeft(UnicodeScript) then
       Result := dirRightToLeft

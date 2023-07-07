@@ -72,6 +72,9 @@ type
 type
   TTableType = record
   {$IFDEF SUPPORTS_ENHANCED_RECORDS}
+  private
+    function GetAsString: string;
+  public
     constructor Create(const Value: Integer); overload;
     constructor Create(const Value: AnsiString); overload;
 
@@ -85,6 +88,8 @@ type
     class operator Explicit(const Value: TTableType): AnsiString; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
     class operator Explicit(const Value: TTableType): Integer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
     class operator Explicit(const Value: TTableType): TTableName; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+
+    property AsString: string read GetAsString;
   {$ENDIF}
   case Integer of
     0: (AsCardinal : Cardinal);
@@ -1399,6 +1404,11 @@ begin
    1..4 : Move(Value[1], Self.AsAnsiChar[0], Length(Value));
    else Move(Value[1], Self.AsAnsiChar[0], 4);
   end;
+end;
+
+function TTableType.GetAsString: string;
+begin
+  Result := string(AsAnsiChar);
 end;
 
 class operator TTableType.Equal(const Lhs, Rhs: TTableType): Boolean;

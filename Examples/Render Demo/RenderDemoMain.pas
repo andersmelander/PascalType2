@@ -131,10 +131,11 @@ type
   end;
 
 const
-  TestCases: array[0..16] of TTestCase = (
+  TestCases: array[0..19] of TTestCase = (
     (Name: 'Default'; FontName: 'Arial'; Text: 'PascalType Render Demo'),
     (Name: 'GSUB, Single, Single/frac'; FontName: 'Cascadia Mono Regular'; Text: '123/456! ½ 8'#$2044'9'),
-    (Name: 'GSUB, Single, List'; FontName: 'Candara'; Text: #$0386#$038C#$038E#$038F),
+    (Name: 'GSUB, Single, List'; FontName: 'Candara'; Script: (AsAnsiChar: 'latn'); Text: #$0386#$038C#$038E#$038F), // Script is detected as "grek" (Greek) but font appears to have problems with that
+//    (Name: 'GSUB, Single, List'; FontName: 'Candara'; Text: #$0386#$038C#$038E#$038F), // Script is detected as grek but font appears to have problems with that
     (Name: 'GSUB, Ligature'; FontName: 'Arabic Typesetting'; Text: 'ff fi ffi ft fft'),
     (Name: 'GSUB, Multiple'; FontName: 'Microsoft Sans Serif'; Script: (AsAnsiChar: 'thai'); Text: #$0E01#$0E33#$0E44#$0E23' '#$0E19#$0E33),
     (Name: 'GSUB, Chained, Simple'; FontName: 'Monoid Regular'; Text: ' _/¯\_/¯\_'),
@@ -148,6 +149,9 @@ const
     (Name: 'GPOS, MarkToMark'; FontName: 'Arabic Typesetting'; Text: 'A'#$0327#$0323' A'#$0323#$0327),//#$03BC#$03B1#$0390#$03C3#$03C4#$03C1#$03BF#$03C2), // Segoe UI appears to have a bug with this test case
     (Name: 'GPOS, MarkToLigature'; FontName: 'Arabic Typesetting'; Script: (AsAnsiChar: 'arab'); Direction: dirRightToLeft; Text: #$FEF8#$0612'  '#$0644#$0627#$0654#$0612), // #$FEF8 is a ligature for #$0644#$0627#$0654
     (Name: 'Table: kern'; FontName: 'Verdana'; Text: 'LTAVAWA 11.LYT.'),
+    (Name: 'Feature: calt'; FontName: 'Cascadia Code Regular'; Text: '⁄⁄ --> => ->> <==> <!-- |--|--| == != === !== >= <= <><|<||<|||<~> <~ www ::: ... ***'),
+    (Name: 'Script: Arabic'; FontName: 'Arabic Typesetting'; Text: 'إِنَّ ٱلَّذِينَ كَفَرُوا۟ سَوَآءٌ عَلَيْهِمْ ءَأَنذَرْتَهُمْ أَمْ لَمْ تُنذِرْهُمْ'),
+    (Name: 'Script: Hangul'; FontName: 'Arial Unicode MS'; Text: '모든 인류 구성원의 천부의 존엄성과 동등하고 양도할 수 없는 권리를 인정하는'),
     (Name: 'Unicode normalization'; FontName: 'Arial'; Text: 'æøåÆØÅ'),
     (Name: 'Composite glyphs'; FontName: 'Segoe UI'; Text: '½äâåéò')
   );
