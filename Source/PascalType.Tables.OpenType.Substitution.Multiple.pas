@@ -235,6 +235,7 @@ begin
     begin
       Glyph := AGlyphIterator.GlyphString.CreateGlyph;
       Glyph.GlyphID := Sequence[i];
+      Glyph.Features := AGlyphIterator.Glyph.Features;
       Glyph.Cluster := AGlyphIterator.Glyph.Cluster;
       Glyph.IsLigated := AGlyphIterator.Glyph.IsLigated;
       Glyph.LigatureComponent := i;
