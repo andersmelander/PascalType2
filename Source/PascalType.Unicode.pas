@@ -803,6 +803,10 @@ type
       MinLowSurrogate           = $DC00;
       MinSurrogate              = $D800;
 
+    const
+      cpDottedCircle            = $000025CC;
+
+
     //------------------------------------------------------------------------------
     //
     //              Canonical Combining Classes
@@ -873,6 +877,8 @@ type
     class function GetScript(ACodePoint: TPascalTypeCodePoint): TUnicodeScript; static;
     class function ScriptToISO15924(AScript: TUnicodeScript): TISO15924; static;
     class function ISO15924ToScript(const ACode: string): TUnicodeScript; static;
+    class function IsRightToLeft(AScript: TUnicodeScript): boolean; overload; static;
+    class function IsLeftToRight(AScript: TUnicodeScript): boolean; overload; static;
 
 
     //------------------------------------------------------------------------------
@@ -914,8 +920,8 @@ type
     class function IsNonBreaking(ACodePoint: TPascalTypeCodePoint): boolean; static;
 
     // Directionality class functions
-    class function IsRightToLeft(ACodePoint: TPascalTypeCodePoint): boolean; static;
-    class function IsLeftToRight(ACodePoint: TPascalTypeCodePoint): boolean; static;
+    class function IsRightToLeft(ACodePoint: TPascalTypeCodePoint): boolean; overload; static;
+    class function IsLeftToRight(ACodePoint: TPascalTypeCodePoint): boolean; overload; static;
     class function IsStrong(ACodePoint: TPascalTypeCodePoint): boolean; static;
     class function IsWeak(ACodePoint: TPascalTypeCodePoint): boolean; static;
     class function IsNeutral(ACodePoint: TPascalTypeCodePoint): boolean; static;
@@ -1028,6 +1034,60 @@ function UnicodeCompose(const Codes: TPascalTypeCodePoints; Compatible: Boolean 
 
 //------------------------------------------------------------------------------
 //
+//              Hangul
+//
+//------------------------------------------------------------------------------
+// Constants for support of Conjoining Jamo Behavior as described in
+// The Unicode® Standard, Version 15.0 – Core Specification, Chapter 3.12
+//------------------------------------------------------------------------------
+type
+  Hangul = record
+    const
+      // Constants for hangul composition and hangul-to-jamo decomposition
+      JamoLBase = $1100;             // Leading consonant
+      JamoVBase = $1161;             // Vovel
+      JamoTBase = $11A7;             // Trailing consonant
+
+      JamoLCount = 19;
+      JamoVCount = 21;
+      JamoTCount = 28;
+
+      JamoNCount = JamoVCount * JamoTCount;     // 588
+      JamoSCount = JamoLCount * JamoNCount;     // 11,172
+      JamoVTCount = JamoVCount * JamoTCount;    // 6,569,136
+
+      JamoLLimit = JamoLBase + JamoLCount;      // $1113
+      JamoVLimit = JamoVBase + JamoVCount;      // $1176
+      JamoTLimit = JamoTBase + JamoTCount;      // $11C3
+
+      HangulSBase = $AC00;             // Hangul syllables start code point
+      HangulCount = JamoLCount * JamoVCount * JamoTCount;
+      HangulLimit = HangulSBase + HangulCount;  // $D7A4
+
+      // Composed LVT syllable
+    class function IsHangul(ACodePoint: TPascalTypeCodePoint): boolean; static;
+      // Composed LV syllable
+    class function IsHangulLV(ACodePoint: TPascalTypeCodePoint): boolean; static;
+
+    // Combining leading consonant
+    class function IsJamoL(ACodePoint: TPascalTypeCodePoint): Boolean; static;
+    // Combining medial vowel
+    class function IsJamoV(ACodePoint: TPascalTypeCodePoint): Boolean; static;
+    // Combining trailing consonant
+    class function IsJamoT(ACodePoint: TPascalTypeCodePoint): Boolean; static;
+
+    // Leading consonant
+    class function IsL(ACodePoint: TPascalTypeCodePoint): Boolean; static;
+    // Medial vowel
+    class function IsV(ACodePoint: TPascalTypeCodePoint): Boolean; static;
+    // Trailing consonant
+    class function IsT(ACodePoint: TPascalTypeCodePoint): Boolean; static;
+    // Tone mark
+    class function IsTone(ACodePoint: TPascalTypeCodePoint): Boolean; static;
+  end;
+
+//------------------------------------------------------------------------------
+//
 //              Trie data structure
 //
 //------------------------------------------------------------------------------
@@ -1077,43 +1137,9 @@ const
 //              Hangul
 //
 //------------------------------------------------------------------------------
-// Constants for support of Conjoining Jamo Behavior as described in
-// The Unicode® Standard, Version 15.0 – Core Specification, Chapter 3.12
-//------------------------------------------------------------------------------
-type
-  Hangul = record
-    const
-      // constants for hangul composition and hangul-to-jamo decomposition
-      JamoLBase = $1100;             // Leading syllable
-      JamoVBase = $1161;             // Vovel
-      JamoTBase = $11A7;             // Trailing syllable
-
-      JamoLCount = 19;
-      JamoVCount = 21;
-      JamoTCount = 28;
-
-      JamoNCount = JamoVCount * JamoTCount;   // 588
-      JamoSCount = JamoLCount * JamoNCount;   // 11172
-      JamoVTCount = JamoVCount * JamoTCount;
-
-      JamoLLimit = JamoLBase + JamoLCount;
-      JamoVLimit = JamoVBase + JamoVCount;
-      JamoTLimit = JamoTBase + JamoTCount;
-
-      HangulSBase = $AC00;             // hangul syllables start code point
-      HangulCount = JamoLCount * JamoVCount * JamoTCount;
-      HangulLimit = HangulSBase + HangulCount; // $D7FF
-
-    class function IsHangul(ACodePoint: TPascalTypeCodePoint): boolean; static;
-    class function IsJamoL(ACodePoint: TPascalTypeCodePoint): Boolean; static;
-    class function IsJamoV(ACodePoint: TPascalTypeCodePoint): Boolean; static;
-    class function IsJamoT(ACodePoint: TPascalTypeCodePoint): Boolean; static;
-    class function IsHangulLV(ACodePoint: TPascalTypeCodePoint): boolean; static;
-  end;
-
 class function Hangul.IsHangul(ACodePoint: TPascalTypeCodePoint): boolean;
 begin
-  Result := PascalTypeUnicode.IsHangul(ACodePoint);
+  Result := (ACodePoint >= HangulSBase) and (ACodePoint < HangulLimit);
 end;
 
 class function Hangul.IsHangulLV(ACodePoint: TPascalTypeCodePoint): boolean;
@@ -1126,9 +1152,20 @@ begin
   Result := (ACodePoint >= JamoLBase) and (ACodePoint < JamoLLimit);
 end;
 
+class function Hangul.IsL(ACodePoint: TPascalTypeCodePoint): Boolean;
+begin
+  Result := ((ACodePoint >= JamoLBase) and (ACodePoint <= $115f)) or ((ACodePoint >= $a960) and (ACodePoint <= $a97c));
+end;
+
 class function Hangul.IsJamoT(ACodePoint: TPascalTypeCodePoint): Boolean;
 begin
   Result := (ACodePoint >= JamoTBase) and (ACodePoint < JamoTLimit);
+  // Note: FontKit says (ACodePoint > JamoTBase) and (ACodePoint < JamoTLimit);
+end;
+
+class function Hangul.IsT(ACodePoint: TPascalTypeCodePoint): Boolean;
+begin
+  Result := ((ACodePoint > JamoTBase) and (ACodePoint <= $11ff)) or ((ACodePoint >= $d7cb) and (ACodePoint <= $d7fb));
 end;
 
 class function Hangul.IsJamoV(ACodePoint: TPascalTypeCodePoint): Boolean;
@@ -1136,6 +1173,15 @@ begin
   Result := (ACodePoint >= JamoVBase) and (ACodePoint < JamoVLimit);
 end;
 
+class function Hangul.IsV(ACodePoint: TPascalTypeCodePoint): Boolean;
+begin
+  Result := ((ACodePoint >= JamoVBase-1) and (ACodePoint <= $11a7)) or ((ACodePoint >= $d7b0) and (ACodePoint <= $d7c6));
+end;
+
+class function Hangul.IsTone(ACodePoint: TPascalTypeCodePoint): Boolean;
+begin
+  Result := (ACodePoint >= $302E) and (ACodePoint <= $302F);
+end;
 
 //------------------------------------------------------------------------------
 //
@@ -1643,7 +1689,7 @@ end;
 class function PascalTypeUnicode.IsHangul(ACodePoint: TPascalTypeCodePoint): boolean;
 // Is the character a pre-composed Hangul syllable?
 begin
-  Result := (ACodePoint >= Hangul.HangulSBase) and (ACodePoint < Hangul.HangulLimit);
+  Result := Hangul.IsHangul(ACodePoint);
 end;
 
 class function PascalTypeUnicode.IsUnassigned(ACodePoint: TPascalTypeCodePoint): boolean;
@@ -2568,6 +2614,49 @@ begin
     Result := usZzzz;
 end;
 
+class function PascalTypeUnicode.IsLeftToRight(AScript: TUnicodeScript): boolean;
+begin
+  // TODO : There are other directions besides LTR and RTL
+  Result := not IsRightToLeft(AScript);
+end;
+
+class function PascalTypeUnicode.IsRightToLeft(AScript: TUnicodeScript): boolean;
+begin
+  // TODO : Get this data from the UCD
+  case AScript of
+    usArab,     // Arabic
+    usHebr,     // Hebrew
+    usSyrc,     // Syriac
+    usThaa,     // Thaana
+    usCprt,     // Cypriot Syllabary
+    usKhar,     // Kharosthi
+    usPhnx,     // Phoenician
+    usNkoo,     // N'Ko
+    usLydi,     // Lydian
+    usAvst,     // Avestan
+    usArmi,     // Imperial Aramaic
+    usPhli,     // Inscriptional Pahlavi
+    usPrti,     // Inscriptional Parthian
+    usSarb,     // Old South Arabian
+    usOrkh,     // Old Turkic, Orkhon Runic
+    usSamr,     // Samaritan
+    usMand,     // Mandaic, Mandaean
+    usMerc,     // Meroitic Cursive
+    usMero,     // Meroitic Hieroglyphs
+
+    // Unicode 7.0 (not listed on http://www.microsoft.com/typography/otspec/scripttags.htm)
+    usMani,     // Manichaean
+    usMend,     // Mende Kikakui
+    usNbat,     // Nabataean
+    usNarb,     // Old North Arabian
+    usPalm,     // Palmyrene
+    usPhlp:     // Psalter Pahlavi
+      Result := True;
+  else
+    Result := False;
+  end;
+end;
+
 
 
 //------------------------------------------------------------------------------
@@ -2928,15 +3017,35 @@ var
 
   procedure DecomposeHangul(CodePoint: TPascalTypeCodePoint);
   var
-    TIndex: Integer;
+    SIndex, TIndex: Integer;
+    LCodePoint, VCodePoint, TCodePoint: TPascalTypeCodePoint;
   begin
-    // Note: No filtering of individual Hangul codepoints
-    Dec(CodePoint, Hangul.HangulSBase);
-    AddCodePoint(Hangul.JamoLBase + (CodePoint div Hangul.JamoNCount));
-    AddCodePoint(Hangul.JamoVBase + ((CodePoint mod Hangul.JamoNCount) div Hangul.JamoTCount));
-    TIndex := CodePoint mod Hangul.JamoTCount;
+    SIndex := CodePoint - Hangul.HangulSBase;
+
+    LCodePoint := Hangul.JamoLBase + (SIndex div Hangul.JamoNCount);
+    VCodePoint := Hangul.JamoVBase + ((SIndex mod Hangul.JamoNCount) div Hangul.JamoTCount);
+    TIndex := SIndex mod Hangul.JamoTCount;
     if TIndex <> 0 then
-      AddCodePoint(Hangul.JamoTBase + TIndex);
+      TCodePoint := Hangul.JamoTBase + TIndex
+    else
+      TCodePoint := 0;
+
+    if (Assigned(Filter)) then
+    begin
+      if (not Filter(CodePoint, LCodePoint)) or
+        (not Filter(CodePoint, VCodePoint)) or
+        ((TCodePoint <> 0) and (not Filter(CodePoint, TCodePoint))) then
+      begin
+        // Filter rejected one of components. Add original.
+        AddCodePoint(CodePoint);
+        exit;
+      end;
+    end;
+
+    AddCodePoint(LCodePoint);
+    AddCodePoint(VCodePoint);
+    if TCodePoint <> 0 then
+      AddCodePoint(TCodePoint);
   end;
 
   function Decompose(ACodePoint: TPascalTypeCodePoint): boolean;
@@ -3021,7 +3130,7 @@ var
     begin
       // First character could not be re-decomposed.
 
-      // Filter it to determine if we can be added.
+      // Filter it to determine if it can be added.
       if (Assigned(Filter)) and (not Filter(ACodePoint, Decomposition^[0])) then
         Exit(False);
 
