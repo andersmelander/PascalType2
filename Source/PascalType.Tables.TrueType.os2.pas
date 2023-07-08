@@ -2161,7 +2161,7 @@ can still read the parts we support. The format is forward compatible.
   FUnicodeRangeTable.LoadFromStream(Stream);
 
   // read font vendor identification
-  Stream.Read(FFontVendorID, 4);
+  Stream.Read(FFontVendorID, SizeOf(FFontVendorID));
 
   // read font selection flags
   (*

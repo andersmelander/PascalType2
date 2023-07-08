@@ -890,13 +890,20 @@ begin
             // a Unicode encoding. In legacy usage, some applications would represent the symbol characters
             // in text using a single-byte encoding, and then map 0x20 to the OS/2.usFirstCharIndex value in
             // the font.
-            //
-            // This works with "Symbol" but not with "Marlett", small letter "a"
-            if (OS2Table <> nil) then
-              ACodePoint := Word(Integer(ACodePoint) - Ord(' ') + OS2Table.UnicodeFirstCharacterIndex)
-            else
-              ACodePoint := Word(Integer(ACodePoint) - Ord(' ') + $F020);
             Result := CharacterMapDirectory.CharacterToGlyph(ACodePoint);
+
+            if (Result = 0) and (ACodePoint < $F000) then
+            begin
+              if (OS2Table <> nil) and
+                ((OS2Table.CodePageRange = nil) or (OS2Table.CodePageRange.SupportsSymbolCharacterSet) or
+                 ((OS2Table.CodePageRange.AsCardinal[0] = 0) and (OS2Table.CodePageRange.AsCardinal[1] = 0))) then
+                // Using the offset in OS2Table.UnicodeFirstCharacterIndex, as the documentation suggests,
+                // works for very few symbols fonts. Using a hardcoded value of $F020 works for most.
+                // ACodePoint := Word(Integer(ACodePoint) - Ord(' ') + OS2Table.UnicodeFirstCharacterIndex)
+                ACodePoint := Word(Integer(ACodePoint) - Ord(' ') + $F020);
+
+              Result := CharacterMapDirectory.CharacterToGlyph(ACodePoint);
+            end;
             // TODO : Only break if result<>0?
             break;
           end;

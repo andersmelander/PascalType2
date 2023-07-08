@@ -53,7 +53,7 @@ uses
 type
   TCustomPascalTypePanoseTable = class abstract(TCustomPascalTypeTable)
   private type
-    TPanoseArray = array[0..8] of Byte;
+    TPanoseArray = array[0..9] of Byte;
   private
     function GetData(Index: Byte): Byte;
     procedure SetData(Index: Byte; const Value: Byte);
