@@ -159,6 +159,10 @@ type
     class function ReadSmallInt(AStream: TStream): SmallInt; overload;
     class procedure ReadSmallInt(AStream: TStream; var Buffer; Count: integer = 1); overload;
 
+    // 24 bit
+    class function ReadUInt24(AStream: TStream): Cardinal; overload; virtual;
+    class procedure ReadUInt24(AStream: TStream; var Buffer; Count: integer = 1); overload; virtual;
+
     // 32 bit
     class function ReadCardinal(AStream: TStream): Cardinal; overload;
     class procedure ReadCardinal(AStream: TStream; var Buffer; Count: integer = 1); overload;
@@ -179,6 +183,9 @@ type
   protected
     class procedure PostProcess(var ABuffer; ASize, AElementSize: integer); override;
   public
+    // 24 bit
+    class function ReadUInt24(AStream: TStream): Cardinal; overload; override;
+    class procedure ReadUInt24(AStream: TStream; var Buffer; Count: integer = 1); overload; override;
   end;
 
 // big-endian stream I/O
@@ -455,6 +462,31 @@ begin
   Read(AStream, Result);
 end;
 
+type
+  UInt24 = array[0..2] of Byte;
+  PUInt24 = ^UInt24;
+
+class procedure ValueReader.ReadUInt24(AStream: TStream; var Buffer; Count: integer);
+var
+  p: PUInt24;
+begin
+  p := @Buffer;
+  while (Count > 0) do
+  begin
+    AStream.Read(p^, SizeOf(UInt24));
+    Inc(p);
+    Dec(Count);
+  end;
+end;
+
+class function ValueReader.ReadUInt24(AStream: TStream): Cardinal;
+var
+  Value: UInt24;
+begin
+  ReadUInt24(AStream, Value);
+  Result := Value[0] or (Value[1] shl 8) or (Value[2] shl 16);
+end;
+
 class procedure ValueReader.ReadCardinal(AStream: TStream; var Buffer; Count: integer);
 begin
   Read<Cardinal>(AStream, Buffer, Count);
@@ -545,6 +577,31 @@ begin
     Inc(p, AElementSize);
     Dec(ASize, AElementSize);
   end;
+end;
+
+class procedure BigEndianValueReader.ReadUInt24(AStream: TStream; var Buffer; Count: integer);
+var
+  p: PUInt24;
+  Temp: Byte;
+begin
+  p := @Buffer;
+  while (Count > 0) do
+  begin
+    AStream.Read(p^, SizeOf(UInt24));
+    Temp := p^[2];
+    p^[2] := p^[0];
+    p^[0] := Temp;
+    Inc(p);
+    Dec(Count);
+  end;
+end;
+
+class function BigEndianValueReader.ReadUInt24(AStream: TStream): Cardinal;
+var
+  Value: UInt24;
+begin
+  ReadUInt24(AStream, Value);
+  Result := Value[2] or (Value[1] shl 8) or (Value[0] shl 16);
 end;
 
 end.

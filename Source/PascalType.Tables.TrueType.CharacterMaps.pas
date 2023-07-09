@@ -190,6 +190,49 @@ type
     function CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer; override;
   end;
 
+
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeFormat14CharacterMap
+//
+//------------------------------------------------------------------------------
+// Format 14: Unicode Variation Sequences
+//------------------------------------------------------------------------------
+// https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#format-14-unicode-variation-sequences
+//------------------------------------------------------------------------------
+type
+  TPascalTypeFormat14CharacterMap = class(TCustomPascalTypeCharacterMap)
+  private type
+    TUnicodeRange = record
+      StartUnicodeValue: TPascalTypeCodePoint;  // First value in this range, 24-bit
+      AdditionalCount: Byte;                    // Number of additional values in this range
+    end;
+
+    TUVSMapping = record
+      UnicodeValue: TPascalTypeCodePoint;       // Base Unicode value of the UVS, 24-bit
+      GlyphID: Word;                            // Glyph ID of the UVS
+    end;
+
+    TVariationSelector = record
+      VariationSelector: Cardinal;
+      DefaultUVS: TArray<TUnicodeRange>;
+      NonDefaultUVS: TArray<TUVSMapping>;
+    end;
+
+    TVariationSelectors = TArray<TVariationSelector>;
+  private
+    FVariationSelectors: TVariationSelectors;
+  protected
+    class function GetFormat: Word; override;
+  public
+    procedure Assign(Source: TPersistent); override;
+
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
+    procedure SaveToStream(Stream: TStream); override;
+
+    function CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer; override;
+  end;
+
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -644,17 +687,11 @@ begin
   SetLength(FCoverageArray, BigEndianValueReader.ReadCardinal(Stream));
 
   for GroupIndex := 0 to High(FCoverageArray) do
-    with FCoverageArray[GroupIndex] do
-    begin
-      // read start character code
-      StartCharCode := BigEndianValueReader.ReadCardinal(Stream);
-
-      // read end character code
-      EndCharCode := BigEndianValueReader.ReadCardinal(Stream);
-
-      // read start glyph ID
-      StartGlyphID := BigEndianValueReader.ReadCardinal(Stream);
-    end;
+  begin
+    FCoverageArray[GroupIndex].StartCharCode := BigEndianValueReader.ReadCardinal(Stream);
+    FCoverageArray[GroupIndex].EndCharCode := BigEndianValueReader.ReadCardinal(Stream);
+    FCoverageArray[GroupIndex].StartGlyphID := BigEndianValueReader.ReadCardinal(Stream);
+  end;
 
   // seek end of this table
   // TODO : Why?
@@ -666,10 +703,95 @@ begin
   raise EPascalTypeNotImplemented.Create(RCStrNotImplemented);
 end;
 
+
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeFormat14CharacterMap
+//
+//------------------------------------------------------------------------------
+procedure TPascalTypeFormat14CharacterMap.Assign(Source: TPersistent);
+begin
+  inherited;
+  if Source is TPascalTypeFormat14CharacterMap then
+  begin
+    FVariationSelectors := Copy(TPascalTypeFormat14CharacterMap(Source).FVariationSelectors);
+  end;
+end;
+
+function TPascalTypeFormat14CharacterMap.CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer;
+begin
+  raise EPascalTypeNotImplemented.Create(RCStrNotImplemented);
+end;
+
+class function TPascalTypeFormat14CharacterMap.GetFormat: Word;
+begin
+  Result := 14;
+end;
+
+procedure TPascalTypeFormat14CharacterMap.LoadFromStream(Stream: TStream; Size: Cardinal);
+var
+  StartPos: Int64;
+  TableLength: Cardinal;
+  i, j: integer;
+  Offsets: array of record
+    DefaultUVSOffset: Cardinal;
+    NonDefaultUVSOffset: Cardinal;
+  end;
+begin
+  StartPos := Stream.Position;
+
+  inherited;
+
+  TableLength := BigEndianValueReader.ReadCardinal(Stream);
+
+  SetLength(FVariationSelectors, BigEndianValueReader.ReadCardinal(Stream));
+  SetLength(Offsets, Length(FVariationSelectors));
+
+  for i := 0 to High(FVariationSelectors) do
+  begin
+    FVariationSelectors[i].VariationSelector := BigEndianValueReader.ReadUInt24(Stream);
+
+    Offsets[i].DefaultUVSOffset := BigEndianValueReader.ReadCardinal(Stream);
+    Offsets[i].NonDefaultUVSOffset := BigEndianValueReader.ReadCardinal(Stream);
+  end;
+
+  for i := 0 to High(FVariationSelectors) do
+  begin
+    if (Offsets[i].DefaultUVSOffset <> 0) then
+    begin
+      Stream.Position := StartPos + Offsets[i].DefaultUVSOffset;
+
+      SetLength(FVariationSelectors[i].DefaultUVS, BigEndianValueReader.ReadCardinal(Stream));
+      for j := 0 to High(FVariationSelectors[i].DefaultUVS) do
+      begin
+        FVariationSelectors[i].DefaultUVS[j].StartUnicodeValue := BigEndianValueReader.ReadUInt24(Stream);
+        FVariationSelectors[i].DefaultUVS[j].AdditionalCount := BigEndianValueReader.ReadByte(Stream);
+      end;
+    end;
+
+    if (Offsets[i].NonDefaultUVSOffset <> 0) then
+    begin
+      Stream.Position := StartPos + Offsets[i].NonDefaultUVSOffset;
+
+      SetLength(FVariationSelectors[i].NonDefaultUVS, BigEndianValueReader.ReadCardinal(Stream));
+      for j := 0 to High(FVariationSelectors[i].NonDefaultUVS) do
+      begin
+        FVariationSelectors[i].NonDefaultUVS[j].UnicodeValue := BigEndianValueReader.ReadUInt24(Stream);
+        FVariationSelectors[i].NonDefaultUVS[j].GlyphID := BigEndianValueReader.ReadWord(Stream);
+      end;
+    end;
+  end;
+end;
+
+procedure TPascalTypeFormat14CharacterMap.SaveToStream(Stream: TStream);
+begin
+  raise EPascalTypeNotImplemented.Create(RCStrNotImplemented);
+end;
+
 initialization
 
-  RegisterPascalTypeCharacterMaps([TPascalTypeFormat0CharacterMap,
-    TPascalTypeFormat2CharacterMap, TPascalTypeFormat4CharacterMap,
-    TPascalTypeFormat6CharacterMap, TPascalTypeFormat12CharacterMap]);
+  PascalTypeCharacterMaps.RegisterCharacterMaps([
+    TPascalTypeFormat0CharacterMap, TPascalTypeFormat2CharacterMap, TPascalTypeFormat4CharacterMap,
+    TPascalTypeFormat6CharacterMap, TPascalTypeFormat12CharacterMap, TPascalTypeFormat14CharacterMap]);
 
 end.

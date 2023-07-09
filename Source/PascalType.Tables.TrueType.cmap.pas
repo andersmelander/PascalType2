@@ -85,14 +85,12 @@ type
   private
     FCharacterMap: TCustomPascalTypeCharacterMap;
     FEncodingID  : Word;
-    function GetEncodingIDAsWord: Word;
-    procedure SetEncodingIDAsWord(const Value: Word);
   protected
     function GetPlatformID: TPlatformID; virtual; abstract;
+    procedure SetEncodingID(const Value: Word);
     procedure EncodingIDChanged; virtual;
-    property PlatformSpecificID: Word read GetEncodingIDAsWord write SetEncodingIDAsWord;
   public
-    constructor Create(EncodingID: Word); reintroduce; virtual;
+    constructor Create(AParent: TCustomPascalTypeTable; AEncodingID: Word); reintroduce; virtual;
     destructor Destroy; override;
 
     procedure Assign(Source: TPersistent); override;
@@ -103,7 +101,7 @@ type
     function CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer; virtual;
 
     property PlatformID: TPlatformID read GetPlatformID;
-    property EncodingID: Word read GetEncodingIDAsWord;
+    property EncodingID: Word read FEncodingID;// write SetEncodingID;
     property CharacterMap: TCustomPascalTypeCharacterMap read FCharacterMap;
   end;
 
@@ -115,7 +113,7 @@ type
 //              TPascalTypeCharacterMapUnicodeDirectory
 //
 //------------------------------------------------------------------------------
-// Character to Glyph Index Mapping Table - Unicode platform
+// Character to Glyph Index Mapping Table - Unicode platform (platform ID = 0)
 //------------------------------------------------------------------------------
 // https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#unicode-platform-platform-id--0
 //------------------------------------------------------------------------------
@@ -136,10 +134,11 @@ type
 //              TPascalTypeCharacterMapMacintoshDirectory
 //
 //------------------------------------------------------------------------------
-// Character to Glyph Index Mapping Table - Macintosh platform
+// Character to Glyph Index Mapping Table - Macintosh platform (platform ID = 1)
 //------------------------------------------------------------------------------
 // https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#macintosh-platform-platform-id--1
 //------------------------------------------------------------------------------
+// TODO : Do we even need to support this mapping? I think Apple uses Unicode now and it's obsolete
 type
   TPascalTypeCharacterMapMacintoshDirectory = class(TCustomPascalTypeCharacterMapDirectory)
   private
@@ -157,7 +156,7 @@ type
 //              TPascalTypeCharacterMapMicrosoftDirectory
 //
 //------------------------------------------------------------------------------
-// Character to Glyph Index Mapping Table - Windows platform
+// Character to Glyph Index Mapping Table - Windows platform (platform ID = 3)
 //------------------------------------------------------------------------------
 // https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#windows-platform-platform-id--3
 //------------------------------------------------------------------------------
@@ -169,6 +168,8 @@ type
   protected
     function GetPlatformID: TPlatformID; override;
   public
+    function CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer; override;
+
     property PlatformSpecificID: TMicrosoftEncodingID read GetEncodingID write SetEncodingID;
   end;
 
@@ -178,8 +179,8 @@ type
 //              TPascalTypeCharacterMapDirectoryGenericEntry
 //
 //------------------------------------------------------------------------------
-// Character to Glyph Index Mapping Table - Custom platform and OTF Windows NT
-// compatibility mapping
+// Character to Glyph Index Mapping Table - Custom platform (platform ID = 4)
+// and OTF Windows NT compatibility mapping
 //------------------------------------------------------------------------------
 // https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#custom-platform-platform-id--4-and-otf-windows-nt-compatibility-mapping
 //------------------------------------------------------------------------------
@@ -188,7 +189,6 @@ type
   protected
     function GetPlatformID: TPlatformID; override;
   public
-    property PlatformSpecificID;
   end;
 
 
@@ -209,6 +209,8 @@ type
     function GetCharacterMapSubtableCount: Word;
     function GetCharacterMapSubtable(Index: Integer): TCustomPascalTypeCharacterMapDirectory;
     procedure SetVersion(const Value: Word);
+  private
+    FBestCharacterMap: TCustomPascalTypeCharacterMapDirectory;
   protected
     procedure CharacterMapDirectoryChanged; virtual;
   public
@@ -221,9 +223,11 @@ type
     procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
+    function GetGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): Integer;
+
     property Version: Word read FVersion write SetVersion;
     property CharacterMapSubtableCount: Word read GetCharacterMapSubtableCount;
-    property CharacterMapSubtable[Index: Integer]: TCustomPascalTypeCharacterMapDirectory read GetCharacterMapSubtable;
+    property CharacterMapSubtable[Index: Integer]: TCustomPascalTypeCharacterMapDirectory read GetCharacterMapSubtable; default;
   end;
 
 
@@ -232,9 +236,12 @@ type
 //              Character map registration
 //
 //------------------------------------------------------------------------------
-procedure RegisterPascalTypeCharacterMap(CharacterMapClass: TPascalTypeCharacterMapClass);
-procedure RegisterPascalTypeCharacterMaps(CharacterMapClasses: array of TPascalTypeCharacterMapClass);
-function FindPascalTypeCharacterMapByFormat(Format: Word): TPascalTypeCharacterMapClass;
+type
+  PascalTypeCharacterMaps = record
+    class procedure RegisterCharacterMap(CharacterMapClass: TPascalTypeCharacterMapClass); static;
+    class procedure RegisterCharacterMaps(CharacterMapClasses: array of TPascalTypeCharacterMapClass); static;
+    class function FindCharacterMapByFormat(Format: Word): TPascalTypeCharacterMapClass; static;
+  end;
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -245,6 +252,8 @@ implementation
 uses
   SysUtils,
   PT_Tables,
+  PascalType.FontFace.SFNT,
+  PascalType.Tables.TrueType.os2,
   PT_ResourceStrings;
 
 var
@@ -276,14 +285,14 @@ begin
         Exit(False);
 end;
 
-procedure RegisterPascalTypeCharacterMap(CharacterMapClass: TPascalTypeCharacterMapClass);
+class procedure PascalTypeCharacterMaps.RegisterCharacterMap(CharacterMapClass: TPascalTypeCharacterMapClass);
 begin
   Assert(IsPascalTypeCharacterMapRegistered(CharacterMapClass) = False);
   SetLength(GCharacterMapClasses, Length(GCharacterMapClasses) + 1);
   GCharacterMapClasses[High(GCharacterMapClasses)] := CharacterMapClass;
 end;
 
-procedure RegisterPascalTypeCharacterMaps(CharacterMapClasses: array of TPascalTypeCharacterMapClass);
+class procedure PascalTypeCharacterMaps.RegisterCharacterMaps(CharacterMapClasses: array of TPascalTypeCharacterMapClass);
 var
   CharacterMapClassIndex: Integer;
 begin
@@ -294,7 +303,7 @@ begin
   Assert(CheckCharacterMapClassesValid);
 end;
 
-function FindPascalTypeCharacterMapByFormat(Format: Word): TPascalTypeCharacterMapClass;
+class function PascalTypeCharacterMaps.FindCharacterMapByFormat(Format: Word): TPascalTypeCharacterMapClass;
 var
   CharacterMapClassIndex: Integer;
 begin
@@ -318,7 +327,7 @@ begin
   inherited;
 
   if (BigEndianValueReader.ReadWord(Stream) <> Format) then
-    raise Exception.Create('CharacterMap format mismatch');
+    raise EPascalTypeError.Create('CharacterMap format mismatch');
 end;
 
 procedure TCustomPascalTypeCharacterMap.SaveToStream(Stream: TStream);
@@ -334,10 +343,10 @@ end;
 //              TCustomPascalTypeCharacterMapDirectory
 //
 //------------------------------------------------------------------------------
-constructor TCustomPascalTypeCharacterMapDirectory.Create(EncodingID: Word);
+constructor TCustomPascalTypeCharacterMapDirectory.Create(AParent: TCustomPascalTypeTable; AEncodingID: Word);
 begin
-  inherited Create;
-  FEncodingID := EncodingID;
+  inherited Create(AParent);
+  FEncodingID := AEncodingID;
 end;
 
 destructor TCustomPascalTypeCharacterMapDirectory.Destroy;
@@ -374,11 +383,6 @@ begin
   Changed;
 end;
 
-function TCustomPascalTypeCharacterMapDirectory.GetEncodingIDAsWord: Word;
-begin
-  Result := FEncodingID;
-end;
-
 function TCustomPascalTypeCharacterMapDirectory.CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer;
 begin
   if (FCharacterMap = nil) then
@@ -400,7 +404,7 @@ begin
 
   // read format
   MapFormat := BigEndianValueReader.ReadWord(Stream);
-  MapClass := FindPascalTypeCharacterMapByFormat(MapFormat);
+  MapClass := PascalTypeCharacterMaps.FindCharacterMapByFormat(MapFormat);
 
   if (MapClass = nil) then
     raise EPascalTypeError.CreateFmt(RCStrUnknownCharacterMap, [MapFormat]);
@@ -422,8 +426,7 @@ begin
     FCharacterMap.SaveToStream(Stream);
 end;
 
-procedure TCustomPascalTypeCharacterMapDirectory.SetEncodingIDAsWord
-  (const Value: Word);
+procedure TCustomPascalTypeCharacterMapDirectory.SetEncodingID(const Value: Word);
 begin
   if Value <> FEncodingID then
   begin
@@ -440,7 +443,7 @@ end;
 //------------------------------------------------------------------------------
 function TPascalTypeCharacterMapUnicodeDirectory.GetEncodingID: TUnicodeEncodingID;
 begin
-  Result := TUnicodeEncodingID(FEncodingID);
+  Result := TUnicodeEncodingID(EncodingID);
 end;
 
 function TPascalTypeCharacterMapUnicodeDirectory.GetPlatformID: TPlatformID;
@@ -448,10 +451,9 @@ begin
   Result := piUnicode;
 end;
 
-procedure TPascalTypeCharacterMapUnicodeDirectory.SetEncodingID
-  (const Value: TUnicodeEncodingID);
+procedure TPascalTypeCharacterMapUnicodeDirectory.SetEncodingID(const Value: TUnicodeEncodingID);
 begin
-  SetEncodingIDAsWord(Word(Value));
+  inherited SetEncodingID(Ord(Value));
 end;
 
 
@@ -462,7 +464,7 @@ end;
 //------------------------------------------------------------------------------
 function TPascalTypeCharacterMapMacintoshDirectory.GetEncodingID: TAppleEncodingID;
 begin
-  Result := TAppleEncodingID(FEncodingID);
+  Result := TAppleEncodingID(EncodingID);
 end;
 
 function TPascalTypeCharacterMapMacintoshDirectory.GetPlatformID: TPlatformID;
@@ -472,7 +474,7 @@ end;
 
 procedure TPascalTypeCharacterMapMacintoshDirectory.SetEncodingID(const Value: TAppleEncodingID);
 begin
-  SetEncodingIDAsWord(Word(Value));
+  inherited SetEncodingID(Ord(Value));
 end;
 
 
@@ -481,9 +483,52 @@ end;
 //              TPascalTypeCharacterMapMicrosoftDirectory
 //
 //------------------------------------------------------------------------------
+function TPascalTypeCharacterMapMicrosoftDirectory.CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer;
+var
+  OS2Table: TPascalTypeOS2Table;
+begin
+  case PlatformSpecificID of
+    meUnicodeBMP:
+        Result := inherited CharacterToGlyph(ACodePoint);
+
+    // meSymbol included. How else are we going to use symbol fonts?
+    // Seen with: "Symbol"
+    meSymbol:
+      begin
+        // https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#windows-platform-platform-id--3
+        //
+        // The symbol encoding was created to support fonts with arbitrary ornaments or symbols
+        // not supported in Unicode or other standard encodings. A format 4 subtable would be used,
+        // typically with up to 224 graphic characters assigned at code positions beginning with 0xF020.
+        // This corresponds to a sub-range within the Unicode Private-Use Area (PUA), though this is not
+        // a Unicode encoding. In legacy usage, some applications would represent the symbol characters
+        // in text using a single-byte encoding, and then map 0x20 to the OS/2.usFirstCharIndex value in
+        // the font.
+        Result := inherited CharacterToGlyph(ACodePoint);
+
+        if (Result = 0) and (ACodePoint < $F000) then
+        begin
+          OS2Table := TPascalTypeFontFace(FontFace).OS2Table;
+
+          if (OS2Table <> nil) and
+            ((OS2Table.CodePageRange = nil) or (OS2Table.CodePageRange.SupportsSymbolCharacterSet) or
+             ((OS2Table.CodePageRange.AsCardinal[0] = 0) and (OS2Table.CodePageRange.AsCardinal[1] = 0))) then
+            // Using the offset in OS2Table.UnicodeFirstCharacterIndex, as the documentation suggests,
+            // works for very few symbols fonts. Using a hardcoded value of $F020 works for most.
+            // ACodePoint := Word(Integer(ACodePoint) - Ord(' ') + OS2Table.UnicodeFirstCharacterIndex)
+            ACodePoint := Word(Integer(ACodePoint) - Ord(' ') + $F020);
+
+          Result := inherited CharacterToGlyph(ACodePoint);
+        end;
+      end;
+  else
+    Result := inherited CharacterToGlyph(ACodePoint);
+  end;
+end;
+
 function TPascalTypeCharacterMapMicrosoftDirectory.GetEncodingID: TMicrosoftEncodingID;
 begin
-  Result := TMicrosoftEncodingID(FEncodingID);
+  Result := TMicrosoftEncodingID(EncodingID);
 end;
 
 function TPascalTypeCharacterMapMicrosoftDirectory.GetPlatformID: TPlatformID;
@@ -493,7 +538,7 @@ end;
 
 procedure TPascalTypeCharacterMapMicrosoftDirectory.SetEncodingID(const Value: TMicrosoftEncodingID);
 begin
-  SetEncodingIDAsWord(Word(Value));
+  inherited SetEncodingID(Ord(Value));
 end;
 
 
@@ -529,6 +574,8 @@ begin
   inherited;
   if Source is TPascalTypeCharacterMapTable then
   begin
+    FBestCharacterMap := nil;
+
     FVersion := TPascalTypeCharacterMapTable(Source).FVersion;
 
     if (FMaps <> nil) then
@@ -546,7 +593,7 @@ begin
         SourceMap := TPascalTypeCharacterMapTable(Source).CharacterMapSubtable[i];
         MapClass := TPascalTypeCharacterMapDirectoryClass(SourceMap.ClassType);
 
-        Map := MapClass.Create(SourceMap.EncodingID);
+        Map := MapClass.Create(Self, SourceMap.EncodingID);
         FMaps.Add(Map);
 
         Map.Assign(SourceMap);
@@ -570,6 +617,53 @@ begin
     Result := 0;
 end;
 
+function TPascalTypeCharacterMapTable.GetGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): Integer;
+
+  function FindPlatformMap(PlatformID: TPlatformID): TCustomPascalTypeCharacterMapDirectory;
+  begin
+    for Result in FMaps do
+      if (Result.PlatformID = PlatformID) and (Result.CharacterMap.Format in [0,2,4,6,12]) then
+        exit;
+    Result := nil;
+  end;
+
+var
+  i: integer;
+//  Map: TCustomPascalTypeCharacterMapDirectory;
+begin
+  if (FBestCharacterMap = nil) then
+  begin
+    if (FMaps = nil) then
+      Exit(0);
+
+    // Prefer Unicode
+    FBestCharacterMap := FindPlatformMap(piUnicode);
+
+    // Fall back to Windows
+    if (FBestCharacterMap = nil) then
+      FBestCharacterMap := FindPlatformMap(piMicrosoft);
+
+    // If everything fails, just get one that we can handle
+// TODO : Handle encoding
+(*
+    if (FBestCharacterMap = nil) then
+    begin
+      for Map in FMaps do
+      begin
+        var Encoding := GetEncoding(Map.PlatformID, Map.EncodingID, 0); // TODO : How do we get Language here? Pass as parameter?
+        FBestCharacterMap := GetEncodingMap(Encoding);
+        if (FBestCharacterMap <> nil) then
+          break;
+      end;
+    end;
+*)
+    if (FBestCharacterMap = nil) then
+      raise EPascalTypeError.Create(RCStrCharacterMapNotSet);
+  end;
+
+  Result := FBestCharacterMap.CharacterToGlyph(ACodePoint);
+end;
+
 class function TPascalTypeCharacterMapTable.GetTableType: TTableType;
 begin
   Result.AsAnsiChar := 'cmap';
@@ -584,6 +678,8 @@ var
   Offsets: array of Cardinal;
   Map: TCustomPascalTypeCharacterMapDirectory;
 begin
+  FBestCharacterMap := nil;
+
   if (FMaps <> nil) then
     FMaps.Clear;
 
@@ -628,15 +724,18 @@ begin
     EncodingID := BigEndianValueReader.ReadWord(Stream);
 
     // create character map based on encoding
-    case PlatformID of
-      0:
-        Map := TPascalTypeCharacterMapUnicodeDirectory.Create(EncodingID);
-      1:
-        Map := TPascalTypeCharacterMapMacintoshDirectory.Create(EncodingID);
-      3:
-        Map := TPascalTypeCharacterMapMicrosoftDirectory.Create(EncodingID);
+    case TPlatformID(PlatformID) of
+      piUnicode:
+        Map := TPascalTypeCharacterMapUnicodeDirectory.Create(Self, EncodingID);
+
+      piApple:
+        Map := TPascalTypeCharacterMapMacintoshDirectory.Create(Self, EncodingID);
+
+      piMicrosoft:
+        Map := TPascalTypeCharacterMapMicrosoftDirectory.Create(Self, EncodingID);
     else
-      Map := TPascalTypeCharacterMapDirectoryGenericEntry.Create(EncodingID);
+      // TODO : PlatformID should be stored in map so it isn't lost
+      Map := TPascalTypeCharacterMapDirectoryGenericEntry.Create(Self, EncodingID);
     end;
 
     FMaps.Add(Map);
