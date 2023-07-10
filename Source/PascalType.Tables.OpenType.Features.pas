@@ -35,6 +35,7 @@ interface
 {$I PT_Compiler.inc}
 
 uses
+  Classes,
   PT_Types,
   PascalType.Tables.OpenType.Feature;
 
@@ -192,8 +193,17 @@ type
   end;
 
 (*
+  TODO
   Tag: 'cv01' - 'cv99'
   Friendly name: Character Variant 1 – Character Variant 99
+  See: https://learn.microsoft.com/en-us/typography/opentype/spec/features_ae#tag-cv01--cv99
+*)
+
+(*
+  TODO
+  Tag: 'ss01' - 'ss20'
+  Friendly name: Stylistic Set 1 - Stylistic Set 20
+  See: https://learn.microsoft.com/en-us/typography/opentype/spec/features_pt#ssxx
 *)
 
   // see: http://www.microsoft.com/typography/otspec/features_ae.htm#c2pc
@@ -756,10 +766,16 @@ type
     class function GetTableType: TTableType; override;
   end;
 
+  // Tag: 'size'
+  // Friendly name: Optical size
   // see: http://www.microsoft.com/typography/otspec/features_pt.htm#size
   TOpenTypeOpticalSizeFeatureTable = class(TCustomOpenTypeFeatureTable)
   protected
     class function GetDisplayName: string; override;
+  protected
+    // TODO:
+    // procedure ReadFeatureParams(Stream: TStream); override;
+    // procedure WriteFeatureParams(Stream: TStream); override;
   public
     class function GetTableType: TTableType; override;
   end;

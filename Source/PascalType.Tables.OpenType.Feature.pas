@@ -55,13 +55,12 @@ uses
 type
   TCustomOpenTypeFeatureTable = class abstract(TCustomOpenTypeNamedTable)
   private
-    FFeatureParams   : Word;          // = NULL (reserved for offset to FeatureParams)
     FLookupListIndex : TArray<Word>; // Array of LookupList indices for this feature -zero-based (first lookup is LookupListIndex = 0)
     function GetLookupList(Index: Integer): Word;
     function GetLookupListCount: Integer;
-    procedure SetFeatureParams(const Value: Word);
   protected
-    procedure FeatureParamsChanged; virtual;
+    procedure ReadFeatureParams(Stream: TStream); virtual;
+    procedure WriteFeatureParams(Stream: TStream); virtual;
   public
     constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
@@ -73,7 +72,7 @@ type
 
     function GetEnumerator: TEnumerator<Word>;
 
-    property FeatureParams: Word read FFeatureParams write SetFeatureParams;
+//    property FeatureParams: Word read FFeatureParams write SetFeatureParams;
     // https://learn.microsoft.com/en-us/typography/opentype/spec/images/gsub_fig3g.png
     property LookupListCount: Integer read GetLookupListCount;
     property LookupList[Index: Integer]: Word read GetLookupList; default;
@@ -127,7 +126,7 @@ type
     function FindFeature(const ATableType: TTableType): TCustomOpenTypeFeatureTable;
 
     property FeatureCount: Integer read GetFeatureCount;
-    property Feature[Index: Integer]: TCustomOpenTypeFeatureTable read GetFeature;
+    property Feature[Index: Integer]: TCustomOpenTypeFeatureTable read GetFeature; default;
   end;
 
 
@@ -243,7 +242,6 @@ begin
 
   if Source is TCustomOpenTypeFeatureTable then
   begin
-    FFeatureParams := TCustomOpenTypeFeatureTable(Source).FFeatureParams;
     FLookupListIndex := TCustomOpenTypeFeatureTable(Source).FLookupListIndex;
   end;
 end;
@@ -265,56 +263,96 @@ begin
   Result := Length(FLookupListIndex);
 end;
 
+procedure TCustomOpenTypeFeatureTable.ReadFeatureParams(Stream: TStream);
+begin
+  // Nothing by default.
+
+  (*
+  Feature Parameters tables can only be used for certain features. The format
+  of the Feature Parameters table is specific to a particular feature, and
+  must be specified in the feature’s entry in the Feature Tags section of the
+  OpenType Layout Tag Registry. Currently, Feature Parameter tables are
+  defined only for the following features:
+
+    'cv01' – 'cv99'
+    'size'
+    'ss01' – 'ss20'
+
+  A Features Parameters table may be required or optional, according to the
+  specifications for a given feature. The length of the Feature Parameters
+  table must be implicitly or explicitly specified in the Feature Parameters
+  table itself. The featureParamsOffset field in the Feature Table gives the
+  offset relative to the beginning of the Feature Table. If a Feature
+  Parameters table is not defined for a given feature, or if a Feature
+  Parameters table is defined but not used in a given font, the
+  featureParamsOffset field must be set to NULL.
+  *)
+end;
+
+procedure TCustomOpenTypeFeatureTable.WriteFeatureParams(Stream: TStream);
+begin
+  // See: ReadFeatureParams
+end;
+
 procedure TCustomOpenTypeFeatureTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
-  LookupIndex: integer;
+  StartPos: Int64;
+  FeatureOffset: Word;
+  i: integer;
 begin
+  StartPos := Stream.Position;
+
   inherited;
 
   // check (minimum) table size
-  if Stream.Position + 4 > Stream.Size then
+  if Stream.Position + 2 * SizeOf(Word) > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  // read feature parameter offset
-  FFeatureParams := BigEndianValueReader.ReadWord(Stream);
+  FeatureOffset := BigEndianValueReader.ReadWord(Stream);
 
-  // read lookup count
   SetLength(FLookupListIndex, BigEndianValueReader.ReadWord(Stream));
 
   // read lookup list index offsets
-  for LookupIndex := 0 to High(FLookupListIndex) do
-    FLookupListIndex[LookupIndex] := BigEndianValueReader.ReadWord(Stream);
+  for i := 0 to High(FLookupListIndex) do
+    FLookupListIndex[i] := BigEndianValueReader.ReadWord(Stream);
+
+  if (FeatureOffset <> 0) then
+  begin
+    Stream.Position := StartPos + FeatureOffset;
+    ReadFeatureParams(Stream);
+  end;
 end;
 
 procedure TCustomOpenTypeFeatureTable.SaveToStream(Stream: TStream);
 var
+  StartPos: Int64;
+  SavePos: Int64;
   LookupIndex: Word;
+  FeatureOffsetOffset: Int64;
+  FeatureOffset: Word;
 begin
+  StartPos := Stream.Position;
+
   inherited;
 
-  // read feature parameter offset
-  FFeatureParams := BigEndianValueReader.ReadWord(Stream);
+  FeatureOffsetOffset := Stream.Position;
+  Stream.Seek(SizeOf(Word), soFromCurrent);
 
-  // read lookup count
-  SetLength(FLookupListIndex, BigEndianValueReader.ReadWord(Stream));
+  WriteSwappedWord(Stream, Length(FLookupListIndex));
 
-  // read lookup list index offsets
   for LookupIndex := 0 to High(FLookupListIndex) do
-    FLookupListIndex[LookupIndex] := BigEndianValueReader.ReadWord(Stream);
-end;
+    WriteSwappedWord(Stream, FLookupListIndex[LookupIndex]);
 
-procedure TCustomOpenTypeFeatureTable.SetFeatureParams(const Value: Word);
-begin
-  if FFeatureParams <> Value then
+  FeatureOffset := Stream.Position - StartPos;
+  WriteFeatureParams(Stream);
+
+  if (FeatureOffset < Stream.Position - StartPos) then
   begin
-    FFeatureParams := Value;
-    FeatureParamsChanged;
+    SavePos := Stream.Position;
+    Stream.Position := FeatureOffsetOffset;
+    WriteSwappedWord(Stream, FeatureOffset);
+    Stream.Position := SavePos;
   end;
-end;
-
-procedure TCustomOpenTypeFeatureTable.FeatureParamsChanged;
-begin
-  Changed;
 end;
 
 
