@@ -121,7 +121,8 @@ type
     class procedure RegisterShaperForScript(const Script: TTableType; AShaperClass: TPascalTypeShaperClass);
     class function DetectScript(const UTF32: TPascalTypeCodePoints): TTableType; overload;
     class function DetectScript(const AText: string): TTableType; overload;
-    class function GetShaperForScript(const Script: TTableType): TPascalTypeShaperClass;
+    class function GetShaperClass(const Script: TTableType): TPascalTypeShaperClass;
+    class function CreateShaper(AFont: TCustomPascalTypeFontFace; const Script: TTableType): TPascalTypeShaper;
     class procedure RegisterDefaultShaperClass(ShaperClass: TPascalTypeShaperClass);
 
     function TextToGlyphs(const AText: string): TPascalTypeGlyphString; overload;
@@ -205,10 +206,21 @@ begin
   FShaperClasses.AddOrSetValue(Script.AsCardinal, AShaperClass);
 end;
 
-class function TPascalTypeShaper.GetShaperForScript(const Script: TTableType): TPascalTypeShaperClass;
+class function TPascalTypeShaper.GetShaperClass(const Script: TTableType): TPascalTypeShaperClass;
 begin
   if (not FShaperClasses.TryGetValue(Script.AsCardinal, Result)) then
     Result := FDefaultShaperClass;
+end;
+
+class function TPascalTypeShaper.CreateShaper(AFont: TCustomPascalTypeFontFace; const Script: TTableType): TPascalTypeShaper;
+var
+  ShaperClass: TPascalTypeShaperClass;
+begin
+  ShaperClass := GetShaperClass(Script);
+  if (ShaperClass = nil) then
+    raise EPascalTypeError.CreateFmt('No shaper available for "%s"', [Script.AsString]);
+
+  Result := ShaperClass.Create(AFont);
 end;
 
 class function TPascalTypeShaper.DetectScript(const AText: string): TTableType;

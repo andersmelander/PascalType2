@@ -316,15 +316,13 @@ begin
       // Convert to UTF32 so we only do it once
       UTF32 := PascalTypeUnicode.UTF16ToUTF32(FText);
 
-      // Detect script from inoput text if it hasn't been specified.
+      // Detect script from input text if it hasn't been explicitly specified.
       Script := FScript;
       if (Script.AsCardinal = 0) then
         Script := TPascalTypeShaper.DetectScript(UTF32);
 
       // Get a shaper that can handle the script
-      ShaperClass := TPascalTypeShaper.GetShaperForScript(Script);
-
-      Shaper := ShaperClass.Create(FFontFace);
+      Shaper := TPascalTypeShaper.CreateShaper(FFontFace, Script);
       try
         // TODO : Test only. Enable 'liga' optional feature for test purpose
         Shaper.Features['liga'] := True;
