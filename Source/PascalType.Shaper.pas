@@ -55,31 +55,6 @@ uses
 
 //------------------------------------------------------------------------------
 //
-//              TShaperGlyphString
-//
-//------------------------------------------------------------------------------
-// A glyph string with knowledge about the font
-//------------------------------------------------------------------------------
-type
-  TShaperGlyphString = class(TPascalTypeGlyphString)
-  private
-    FFont: TCustomPascalTypeFontFace;
-  protected
-    function GetGlyphClassID(AGlyph: TPascalTypeGlyph): integer; override;
-    function GetMarkAttachmentType(AGlyph: TPascalTypeGlyph): integer; override;
-  public
-    constructor Create(AFont: TCustomPascalTypeFontFace; const ACodePoints: TPascalTypeCodePoints); virtual;
-
-    procedure HideDefaultIgnorables; override;
-
-    property Font: TCustomPascalTypeFontFace read FFont;
-  end;
-
-  TShaperGlyphStringClass = class of TShaperGlyphString;
-
-
-//------------------------------------------------------------------------------
-//
 //              TPascalTypeShaper
 //
 //------------------------------------------------------------------------------
@@ -125,9 +100,7 @@ type
     function NeedUnicodeComposition: boolean; virtual; // TODO : Move this to the Layout Engine
     function ZeroMarkWidths: TZeroMarkWidths; virtual;
 
-    // TODO : This probably belongs in the font or in the layout engine
-    function GetGlyphStringClass: TShaperGlyphStringClass; virtual;
-    function CreateGlyphString(const ACodePoints: TPascalTypeCodePoints): TShaperGlyphString; virtual;
+    function CreateGlyphString(const ACodePoints: TPascalTypeCodePoints): TFontGlyphString;
 
     function GetShapingPlanClass: TPascalTypeShapingPlanClass; virtual;
     function CreateShapingPlan: TPascalTypeShapingPlan; virtual;
@@ -177,56 +150,7 @@ uses
 
   PascalType.Tables.OpenType.Script,
   PascalType.Tables.OpenType.LanguageSystem,
-  PascalType.Tables.OpenType.Substitution,
-  PascalType.Tables.OpenType.GDEF;
-
-//------------------------------------------------------------------------------
-//
-//              TShaperGlyphString
-//
-//------------------------------------------------------------------------------
-constructor TShaperGlyphString.Create(AFont: TCustomPascalTypeFontFace; const ACodePoints: TPascalTypeCodePoints);
-begin
-  FFont := AFont;
-  inherited Create(ACodePoints);
-end;
-
-function TShaperGlyphString.GetGlyphClassID(AGlyph: TPascalTypeGlyph): integer;
-var
-  GDEF: TOpenTypeGlyphDefinitionTable;
-begin
-  GDEF := Font.GetTableByTableType('GDEF') as TOpenTypeGlyphDefinitionTable;
-  if (GDEF <> nil) and (GDEF.GlyphClassDefinition <> nil) then
-    Result := GDEF.GlyphClassDefinition.GetClassID(AGlyph.GlyphID)
-  else
-    Result := inherited GetGlyphClassID(AGlyph);
-end;
-
-function TShaperGlyphString.GetMarkAttachmentType(AGlyph: TPascalTypeGlyph): integer;
-var
-  GDEF: TOpenTypeGlyphDefinitionTable;
-begin
-  GDEF := Font.GetTableByTableType('GDEF') as TOpenTypeGlyphDefinitionTable;
-  if (GDEF <> nil) and (GDEF.MarkAttachmentClassDefinition <> nil) then
-    Result := GDEF.MarkAttachmentClassDefinition.GetClassID(AGlyph.GlyphID)
-  else
-    Result := inherited GetMarkAttachmentType(AGlyph);
-end;
-
-procedure TShaperGlyphString.HideDefaultIgnorables;
-var
-  SpaceGlyph: Word;
-  Glyph: TPascalTypeGlyph;
-begin
-  SpaceGlyph := Font.GetGlyphByCharacter(32);
-  for Glyph in Self do
-    if (Length(Glyph.CodePoints) > 0) and (PascalTypeUnicode.IsDefaultIgnorable(Glyph.CodePoints[0])) then
-    begin
-      Glyph.GlyphID := SpaceGlyph;
-      Glyph.XAdvance := 0;
-      Glyph.YAdvance := 0;
-    end;
-end;
+  PascalType.Tables.OpenType.Substitution;
 
 //------------------------------------------------------------------------------
 //
@@ -324,19 +248,13 @@ begin
   FreeAndNil(FPlan);
 end;
 
-function TPascalTypeShaper.CreateGlyphString(const ACodePoints: TPascalTypeCodePoints): TShaperGlyphString;
-var
-  Glyph: TPascalTypeGlyph;
+function TPascalTypeShaper.CreateGlyphString(const ACodePoints: TPascalTypeCodePoints): TFontGlyphString;
 begin
-  Result := GetGlyphStringClass.Create(Font, ACodePoints);
+  Result := Font.CreateGlyphString(ACodePoints);
 
   Result.Script := Script;
   Result.Language := Language;
   Result.Direction := Direction;
-
-  // Map Unicode CodePoints to Glyph IDs
-  for Glyph in Result do
-    Glyph.GlyphID := Font.GetGlyphByCharacter(Glyph.CodePoints[0]);
 end;
 
 function TPascalTypeShaper.CreateLayoutEngine: TCustomPascalTypeLayoutEngine;
@@ -362,11 +280,6 @@ begin
     else
       Result := dirLeftToRight;
   end;
-end;
-
-function TPascalTypeShaper.GetGlyphStringClass: TShaperGlyphStringClass;
-begin
-  Result := TShaperGlyphString;
 end;
 
 function TPascalTypeShaper.CreateShapingPlan: TPascalTypeShapingPlan;

@@ -44,6 +44,7 @@ uses
   PT_Types,
   PT_Classes,
   PascalType.Unicode,
+  PascalType.GlyphString,
   PascalType.FontFace,
   PT_Tables,
   PT_TableDirectory,
@@ -61,6 +62,39 @@ type
   end;
 
 type
+  TCustomPascalTypeFontFace = class;
+
+//------------------------------------------------------------------------------
+//
+//              TShaperGlyphString
+//
+//------------------------------------------------------------------------------
+// A glyph string with knowledge about the font
+//------------------------------------------------------------------------------
+  TFontGlyphString = class(TPascalTypeGlyphString)
+  private
+    FFont: TCustomPascalTypeFontFace;
+  protected
+    function GetGlyphClassID(AGlyph: TPascalTypeGlyph): integer; override;
+    function GetMarkAttachmentType(AGlyph: TPascalTypeGlyph): integer; override;
+  public
+    constructor Create(AFont: TCustomPascalTypeFontFace; const ACodePoints: TPascalTypeCodePoints); virtual;
+
+    procedure HideDefaultIgnorables; override;
+
+    property Font: TCustomPascalTypeFontFace read FFont;
+  end;
+
+  TFontGlyphStringClass = class of TFontGlyphString;
+
+
+//------------------------------------------------------------------------------
+//
+//              TCustomPascalTypeFontFace
+//
+//------------------------------------------------------------------------------
+// A TrueType/OpenType font
+//------------------------------------------------------------------------------
   TCustomPascalTypeFontFace = class abstract(TCustomPascalTypeFontFacePersistent, IPascalTypeFontFace)
   strict private
     FRootTable: TCustomPascalTypeTable;
@@ -80,6 +114,7 @@ type
   protected
     procedure DirectoryTableLoaded(DirectoryTable: TPascalTypeDirectoryTable); virtual;
     procedure LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry); virtual; abstract;
+    function GetGlyphStringClass: TFontGlyphStringClass; virtual;
 
     property RootTable: TCustomPascalTypeTable read FRootTable;
 
@@ -91,6 +126,8 @@ type
     destructor Destroy; override;
 
     procedure LoadFromStream(Stream: TStream); override;
+
+    function CreateGlyphString(const ACodePoints: TPascalTypeCodePoints): TFontGlyphString; virtual;
 
     // IPascalTypeFontFaceTable
     function GetTableByTableName(const ATableName: TTableName): TCustomPascalTypeNamedTable; virtual;
@@ -203,6 +240,7 @@ uses
   PT_Math,
   PT_TablesTrueType,
   PascalType.Tables.TrueType.glyf,
+  PascalType.Tables.OpenType.GDEF,
   PascalType.Shaper.Layout.OpenType,
   PT_ResourceStrings;
 
@@ -316,8 +354,60 @@ begin
 end;
 
 
-{ TCustomPascalTypeFontFace }
+//------------------------------------------------------------------------------
+//
+//              TFontGlyphString
+//
+//------------------------------------------------------------------------------
+constructor TFontGlyphString.Create(AFont: TCustomPascalTypeFontFace; const ACodePoints: TPascalTypeCodePoints);
+begin
+  FFont := AFont;
+  inherited Create(ACodePoints);
+end;
 
+function TFontGlyphString.GetGlyphClassID(AGlyph: TPascalTypeGlyph): integer;
+var
+  GDEF: TOpenTypeGlyphDefinitionTable;
+begin
+  GDEF := Font.GetTableByTableType('GDEF') as TOpenTypeGlyphDefinitionTable;
+  if (GDEF <> nil) and (GDEF.GlyphClassDefinition <> nil) then
+    Result := GDEF.GlyphClassDefinition.GetClassID(AGlyph.GlyphID)
+  else
+    Result := inherited GetGlyphClassID(AGlyph);
+end;
+
+function TFontGlyphString.GetMarkAttachmentType(AGlyph: TPascalTypeGlyph): integer;
+var
+  GDEF: TOpenTypeGlyphDefinitionTable;
+begin
+  GDEF := Font.GetTableByTableType('GDEF') as TOpenTypeGlyphDefinitionTable;
+  if (GDEF <> nil) and (GDEF.MarkAttachmentClassDefinition <> nil) then
+    Result := GDEF.MarkAttachmentClassDefinition.GetClassID(AGlyph.GlyphID)
+  else
+    Result := inherited GetMarkAttachmentType(AGlyph);
+end;
+
+procedure TFontGlyphString.HideDefaultIgnorables;
+var
+  SpaceGlyph: Word;
+  Glyph: TPascalTypeGlyph;
+begin
+  SpaceGlyph := Font.GetGlyphByCharacter(32);
+  for Glyph in Self do
+    if (Length(Glyph.CodePoints) > 0) and (PascalTypeUnicode.IsDefaultIgnorable(Glyph.CodePoints[0])) then
+    begin
+      Glyph.GlyphID := SpaceGlyph;
+      Glyph.XAdvance := 0;
+      Glyph.YAdvance := 0;
+    end;
+end;
+
+
+//------------------------------------------------------------------------------
+//
+//              TCustomPascalTypeFontFace
+//
+//------------------------------------------------------------------------------
 type
   TPascalTypeTableRoot = class(TCustomPascalTypeTable)
   private
@@ -682,6 +772,23 @@ begin
       [string(TableEntry.TableType)]);
 end;
 {$ENDIF}
+
+function TCustomPascalTypeFontFace.GetGlyphStringClass: TFontGlyphStringClass;
+begin
+  Result := TFontGlyphString;
+end;
+
+function TCustomPascalTypeFontFace.CreateGlyphString(const ACodePoints: TPascalTypeCodePoints): TFontGlyphString;
+var
+  Glyph: TPascalTypeGlyph;
+begin
+  Result := GetGlyphStringClass.Create(Self, ACodePoints);
+
+  // Map Unicode CodePoints to Glyph IDs
+  for Glyph in Result do
+    Glyph.GlyphID := GetGlyphByCharacter(Glyph.CodePoints[0]);
+end;
+
 
 function TCustomPascalTypeFontFace.GetGlyphByCharacter(ACodePoint: Word): Integer;
 begin

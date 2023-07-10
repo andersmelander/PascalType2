@@ -237,8 +237,6 @@ type
     property AlternateIndex: integer read FAlternateIndex write FAlternateIndex;
   end;
 
-//  TPascalTypeGlyphStringClass = class of TPascalTypeGlyphString;
-
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------

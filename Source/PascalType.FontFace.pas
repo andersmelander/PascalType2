@@ -35,7 +35,9 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, SysUtils, Types,
+  Classes,
+  SysUtils,
+  Types,
   PT_Types,
   PT_Classes,
   PT_TableDirectory,
@@ -60,9 +62,9 @@ type
     procedure LoadFromFile(FileName: TFileName);
     procedure SaveToFile(FileName: TFileName);
 
-    // CreateLayoutEngine creates a layout engine spcific to the font technology
+    // CreateLayoutEngine creates a layout engine specific to the font technology
     // handled by this font class.
-    // it really should return a TCustomPascalTypeLayoutEngine but due to unit
+    // It really should return a TCustomPascalTypeLayoutEngine but due to unit
     // and class dependencies that isn't feasible.
     // Instead it returns the layout engine as a TObject and the caller must then
     // case that to TCustomPascalTypeLayoutEngine.
