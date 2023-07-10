@@ -332,12 +332,21 @@ end;
 
 function TOpenTypeClassDefinitionFormat2Table.GetClassID(AGlyphID: Word): Word;
 var
-  i: integer;
+  Lo, Hi: Integer;
 begin
-  for i := 0 to High(FClassRangeRecords) do
+  // Binary search
+  Lo := Low(FClassRangeRecords);
+  Hi := High(FClassRangeRecords);
+  while (Lo <= Hi) do
   begin
-    if (AGlyphID >= FClassRangeRecords[i].StartGlyph) and (AGlyphID <= FClassRangeRecords[i].EndGlyph) then
-      Exit(FClassRangeRecords[i].GlyphClass);
+    Result := (Lo + Hi) div 2;
+    if (AGlyphID > FClassRangeRecords[Result].EndGlyph) then
+      Lo := Succ(Result)
+    else
+    if (AGlyphID < FClassRangeRecords[Result].StartGlyph) then
+      Hi := Pred(Result)
+    else
+      Exit(FClassRangeRecords[Result].GlyphClass);
   end;
   Result := 0;
 end;

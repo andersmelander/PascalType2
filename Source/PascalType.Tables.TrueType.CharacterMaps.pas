@@ -109,11 +109,15 @@ type
 //------------------------------------------------------------------------------
 type
   TPascalTypeFormat4CharacterMap = class(TCustomPascalTypeCharacterMap)
+  private type
+    TSegment = record
+      StartCode: Word;
+      EndCode: Word;
+    end;
   private
     FLength: Word;                    // This is the length in bytes of the subtable.
     FLanguage: Word;                  // Please see 'Note on the language field in 'cmap' subtables' in this document.
-    FEndCode: array of Word;          // End characterCode for each segment, last=0xFFFF.
-    FStartCode: array of Word;        // Start character code for each segment.
+    FSegments: TArray<TSegment>;      // Start and End characterCode for each segment, last=0xFFFF.
     FIdDelta: array of SmallInt;      // Delta for all character codes in segment.
     FIdRangeOffset: array of Word;    // Offsets into glyphIdArray or 0
     FGlyphIdArray: TGlyphString;     // Glyph index array (arbitrary length)
@@ -379,8 +383,7 @@ begin
   begin
     FLength := TPascalTypeFormat4CharacterMap(Source).FLength;
     FLanguage := TPascalTypeFormat4CharacterMap(Source).FLanguage;
-    FEndCode := TPascalTypeFormat4CharacterMap(Source).FEndCode;
-    FStartCode := TPascalTypeFormat4CharacterMap(Source).FStartCode;
+    FSegments := TPascalTypeFormat4CharacterMap(Source).FSegments;
     FIdDelta := TPascalTypeFormat4CharacterMap(Source).FIdDelta;
     FIdRangeOffset := TPascalTypeFormat4CharacterMap(Source).FIdRangeOffset;
     FGlyphIdArray := TPascalTypeFormat4CharacterMap(Source).FGlyphIdArray;
@@ -391,36 +394,30 @@ function TPascalTypeFormat4CharacterMap.CharacterToGlyph(ACodePoint: TPascalType
 var
   SegmentIndex: Word;
   GlyphIndex: integer;
-  Left, Right: Word;
+  Lo, Hi: Integer;
 begin
-  // We can't use TArray.BinarySearch because FPC's implementation of it can only do exact matches :-(
-  Left := 0;
-  Right := Length(FEndCode);
-  SegmentIndex := Right div 2;
-  while (Left < Right) do
-  begin
-    if (FEndCode[SegmentIndex] < ACodePoint) then
-      Left := SegmentIndex + 1
-    else
-      Right := SegmentIndex;
-    SegmentIndex := (Left + Right) div 2;
-  end;
+  if (ACodePoint > High(Word)) then
+    Exit(0);
 
-  (* Sequential scan
+  // Binary search
+  Lo := Low(FSegments);
+  Hi := High(FSegments);
   SegmentIndex := 0;
-  while (SegmentIndex < Length(FEndCode)) do
-    if (ACodePoint <= FEndCode[SegmentIndex]) then
-      Break
-    else
-      Inc(SegmentIndex);
-  *)
-
-  if (SegmentIndex > High(FStartCode)) or (ACodePoint < FStartCode[SegmentIndex]) then
+  while (Lo <= Hi) do
   begin
-    // missing glyph
-    Result := 0;
-    Exit;
+    SegmentIndex := (Lo + Hi) div 2;
+    if (ACodePoint > FSegments[SegmentIndex].EndCode) then
+      Lo := Succ(SegmentIndex)
+    else
+    if (ACodePoint < FSegments[SegmentIndex].StartCode) then
+      Hi := Pred(SegmentIndex)
+    else
+      break;
   end;
+
+  if (Lo > Hi) then
+    // Missing glyph
+    Exit(0);
 
   var RangeOffset := FIdRangeOffset[SegmentIndex];
   if RangeOffset <> 0 then
@@ -429,7 +426,7 @@ begin
     // of this value.
     GlyphIndex := (
         (RangeOffset div 2 - Length(FIdRangeOffset)) +
-        integer(SegmentIndex + ACodePoint - FStartCode[SegmentIndex])
+        integer(SegmentIndex + ACodePoint - FSegments[SegmentIndex].StartCode)
       ) and $0000FFFF;
 
     Result := FGlyphIdArray[GlyphIndex];
@@ -471,18 +468,17 @@ begin
   Count := BigEndianValueReader.ReadWord(Stream) div 2;
   Stream.Seek(3*SizeOf(Word), soFromCurrent);
 
-  SetLength(FEndCode, Count);
-  SetLength(FStartCode, Count);
+  SetLength(FSegments, Count);
   SetLength(FIdDelta, Count);
   SetLength(FIdRangeOffset, Count);
 
   // read end count
-  for SegIndex := 0 to High(FEndCode) do
-    FEndCode[SegIndex] := BigEndianValueReader.ReadWord(Stream);
+  for SegIndex := 0 to High(FSegments) do
+    FSegments[SegIndex].EndCode := BigEndianValueReader.ReadWord(Stream);
 
   // confirm end code is valid (required for binary search)
-  if FEndCode[High(FEndCode)] <> $FFFF then
-    raise EPascalTypeError.CreateFmt(RCStrCharMapErrorEndCount, [FEndCode[High(FEndCode)]]);
+  if FSegments[High(FSegments)].EndCode <> $FFFF then
+    raise EPascalTypeError.CreateFmt(RCStrCharMapErrorEndCount, [FSegments[High(FSegments)].EndCode]);
 
 {$IFDEF AmbigiousExceptions}
   // read reserved
@@ -497,14 +493,14 @@ begin
 {$ENDIF}
 
   // read start count
-  for SegIndex := 0 to High(FStartCode) do
+  for SegIndex := 0 to High(FSegments) do
   begin
-    FStartCode[SegIndex] := BigEndianValueReader.ReadWord(Stream);
+    FSegments[SegIndex].StartCode := BigEndianValueReader.ReadWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
     // confirm start count is valid
-    if FStartCode[SegIndex] > FEndCode[SegIndex] then
-      raise EPascalTypeError.CreateFmt(RCStrCharMapErrorStartCount, [FStartCode[SegIndex]]);
+    if FSegments[SegIndex].StartCode > FSegments[SegIndex].EndCode then
+      raise EPascalTypeError.CreateFmt(RCStrCharMapErrorStartCount, [FSegments[SegIndex].StartCode]);
 {$ENDIF}
   end;
 
@@ -642,18 +638,24 @@ end;
 
 function TPascalTypeFormat12CharacterMap.CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer;
 var
-  GroupIndex: Integer;
+  Lo, Hi, Mid: Integer;
 begin
+  // Binary search
+  Lo := Low(FCoverageArray);
+  Hi := High(FCoverageArray);
+  while (Lo <= Hi) do
+  begin
+    Mid := (Lo + Hi) div 2;
+    if (ACodePoint > FCoverageArray[Mid].EndCharCode) then
+      Lo := Succ(Mid)
+    else
+    if (ACodePoint < FCoverageArray[Mid].StartCharCode) then
+      Hi := Pred(Mid)
+    else
+      Exit(FCoverageArray[Mid].StartGlyphID + (ACodePoint - FCoverageArray[Mid].StartCharCode));
+  end;
+
   Result := 0;
-
-  for GroupIndex := 0 to High(FCoverageArray) do
-    if (ACodePoint >= FCoverageArray[GroupIndex].StartCharCode) then
-    begin
-      if (ACodePoint < FCoverageArray[GroupIndex].EndCharCode) then
-        Result := FCoverageArray[GroupIndex].StartGlyphID + (ACodePoint - FCoverageArray[GroupIndex].StartCharCode);
-
-      Exit;
-    end;
 end;
 
 class function TPascalTypeFormat12CharacterMap.GetFormat: Word;
@@ -731,7 +733,7 @@ end;
 procedure TPascalTypeFormat14CharacterMap.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
-  TableLength: Cardinal;
+//  TableLength: Cardinal;
   i, j: integer;
   Offsets: array of record
     DefaultUVSOffset: Cardinal;
@@ -742,7 +744,7 @@ begin
 
   inherited;
 
-  TableLength := BigEndianValueReader.ReadCardinal(Stream);
+  {TableLength := }BigEndianValueReader.ReadCardinal(Stream);
 
   SetLength(FVariationSelectors, BigEndianValueReader.ReadCardinal(Stream));
   SetLength(Offsets, Length(FVariationSelectors));

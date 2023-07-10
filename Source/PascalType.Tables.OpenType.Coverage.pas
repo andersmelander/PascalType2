@@ -70,7 +70,6 @@ type
     procedure SaveToStream(Stream: TStream); override;
 
     function IndexOfGlyph(AGlyphID: Word): integer; virtual; abstract;
-    function GlyphByIndex(AIndex: Word): integer; virtual; abstract;
 
     function Clone(AParent: TCustomPascalTypeTable = nil): TCustomOpenTypeCoverageTable;
 
@@ -106,7 +105,6 @@ type
     procedure SaveToStream(Stream: TStream); override;
 
     function IndexOfGlyph(AGlyphID: Word): integer; override;
-    function GlyphByIndex(AIndex: Word): integer; override;
 
     property GlyphCount: Integer read GetGlyphCount;
     property Glyph[Index: Integer]: Word read GetGlyph;
@@ -144,7 +142,6 @@ type
     procedure SaveToStream(Stream: TStream); override;
 
     function IndexOfGlyph(AGlyphID: Word): integer; override;
-    function GlyphByIndex(AIndex: Word): integer; override;
 
     property RangeCount: Integer read GetRangeCount;
     property Range[Index: Integer]: TCoverageRangeRecord read GetRange;
@@ -261,11 +258,6 @@ begin
   Result := Length(FGlyphArray);
 end;
 
-function TOpenTypeCoverageListTable.GlyphByIndex(AIndex: Word): integer;
-begin
-  Result := FGlyphArray[AIndex];
-end;
-
 function TOpenTypeCoverageListTable.IndexOfGlyph(AGlyphID: Word): integer;
 begin
   if (not TArray.BinarySearch<Word>(FGlyphArray, AGlyphID, Result)) then
@@ -330,29 +322,23 @@ begin
   Result := Length(FRangeArray);
 end;
 
-function TOpenTypeCoverageRangeTable.GlyphByIndex(AIndex: Word): integer;
-var
-  i: integer;
-begin
-  // TODO : A binary search is possible here
-  for i := 0 to High(FRangeArray) do
-    if (AIndex >= FRangeArray[i].StartCoverageIndex) and (AIndex <= FRangeArray[i].StartCoverageIndex + FRangeArray[i].EndGlyph - FRangeArray[i].StartGlyph) then
-      Exit(FRangeArray[i].StartGlyph + AIndex - FRangeArray[i].StartCoverageIndex);
-
-  Result := -1;
-end;
-
 function TOpenTypeCoverageRangeTable.IndexOfGlyph(AGlyphID: Word): integer;
 var
-  i: integer;
+  Lo, Hi, Mid: Integer;
 begin
-  // TODO : A binary search is possible here
-  i := 0;
-  while (i <= High(FRangeArray)) and (AGlyphID >= FRangeArray[i].StartGlyph) do
+  // Binary search
+  Lo := Low(FRangeArray);
+  Hi := High(FRangeArray);
+  while (Lo <= Hi) do
   begin
-    if (AGlyphID <= FRangeArray[i].EndGlyph) then
-      Exit(FRangeArray[i].StartCoverageIndex + AGlyphID - FRangeArray[i].StartGlyph);
-    Inc(i);
+    Mid := (Lo + Hi) div 2;
+    if (AGlyphID > FRangeArray[Mid].EndGlyph) then
+      Lo := Succ(Mid)
+    else
+    if (AGlyphID < FRangeArray[Mid].StartGlyph) then
+      Hi := Pred(Mid)
+    else
+      Exit(FRangeArray[Mid].StartCoverageIndex + AGlyphID - FRangeArray[Mid].StartGlyph);
   end;
   Result := -1;
 end;

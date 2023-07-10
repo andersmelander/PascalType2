@@ -233,7 +233,6 @@ var
   i, j, k: integer;
   SequenceRuleSetOffsets: array of Word;
   SequenceRuleOffsets: array of Word;
-  StartGlyph: Word;
   Sequence: TGlyphString;
   SequenceLookupRecords: TSequenceLookupRecords;
 begin
@@ -270,8 +269,6 @@ begin
     for j := 0 to High(SequenceRuleOffsets) do
       SequenceRuleOffsets[j] := BigEndianValueReader.ReadWord(Stream);
 
-    StartGlyph := CoverageTable.GlyphByIndex(i);
-
     // Read a Sequence Rule Set
     SetLength(FSequenceRules[i], Length(SequenceRuleOffsets));
     for j := 0 to High(SequenceRuleOffsets) do
@@ -289,8 +286,8 @@ begin
       Sequence := FSequenceRules[i][j].InputSequence;
       if (Length(Sequence) > 0) then
       begin
-        // Set first component from coverage table
-        Sequence[0] := StartGlyph;
+        // First component isn't used
+        Sequence[0] := 0;
 
         // Read remaining from input sequence list
         for k := 1 to High(Sequence) do

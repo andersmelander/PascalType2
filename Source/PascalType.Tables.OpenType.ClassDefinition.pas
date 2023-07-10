@@ -302,17 +302,24 @@ end;
 
 function TOpenTypeClassDefinitionRangeTable.ClassByGlyphID(AGlyphID: Word): integer;
 var
-  i: integer;
+  Lo, Hi, Mid: Integer;
 begin
-  // TODO : A binary search is possible here
-  Result := 0; // Glyphs not in table belong to class #0
-  i := 0;
-  while (i <= High(FRangeArray)) and (AGlyphID >= FRangeArray[i].StartGlyphID) do
+  // Binary search
+  Lo := Low(FRangeArray);
+  Hi := High(FRangeArray);
+  while (Lo <= Hi) do
   begin
-    if (AGlyphID <= FRangeArray[i].EndGlyphID) then
-      Exit(FRangeArray[i].ClassID);
-    Inc(i);
+    Mid := (Lo + Hi) div 2;
+    if (AGlyphID > FRangeArray[Mid].EndGlyphID) then
+      Lo := Succ(Mid)
+    else
+    if (AGlyphID < FRangeArray[Mid].StartGlyphID) then
+      Hi := Pred(Mid)
+    else
+      Exit(FRangeArray[Mid].ClassID);
   end;
+
+  Result := 0; // Glyphs not in table belong to class #0
 end;
 
 procedure TOpenTypeClassDefinitionRangeTable.LoadFromStream(Stream: TStream; Size: Cardinal);

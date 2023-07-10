@@ -217,8 +217,8 @@ begin
         // This shouldn't happen
         continue;
 
-      // Set first component from coverage table
-      Ligature.Components[0] := CoverageTable.GlyphByIndex(i);
+      // First component isn't used
+      Ligature.Components[0] := 0;
 
       // Read remaining from ligature component list
       for k := 1 to High(Ligature.Components) do
@@ -413,7 +413,14 @@ begin
     Match := True;
     Iterator := AGlyphIterator.Clone; // It's too costly to repeatedly call Peek with increasing increment. Clone is cheaper.
     SetLength(MatchedIndices, Length(FLigatures[i].Components));
-    for j := 0 to High(FLigatures[i].Components) do
+
+    // We have already matched the first character via the coverage table so skip that
+    MatchedIndices[0] := Iterator.Index;
+    Iterator.Next;
+
+    j := 1;
+    while (not Iterator.EOF) and (j <= High(FLigatures[i].Components)) do
+    begin
       if (Iterator.Glyph.GlyphID <> FLigatures[i].Components[j]) then
       begin
         Match := False;
@@ -423,6 +430,8 @@ begin
         MatchedIndices[j] := Iterator.Index;
         Iterator.Next;
       end;
+      Inc(j);
+    end;
 
     if (Match) then
     begin
