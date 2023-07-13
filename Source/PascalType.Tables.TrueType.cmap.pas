@@ -627,8 +627,7 @@ function TPascalTypeCharacterMapTable.GetGlyphByCharacter(ACodePoint: TPascalTyp
     Result := nil;
   end;
 
-var
-  i: integer;
+// var
 //  Map: TCustomPascalTypeCharacterMapDirectory;
 begin
   if (FBestCharacterMap = nil) then

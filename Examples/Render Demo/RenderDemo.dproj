@@ -148,7 +148,7 @@
         <DCCReference Include="..\..\Source\PT_ResourceStrings.pas"/>
         <DCCReference Include="..\..\Source\PascalType.FontFace.pas"/>
         <DCCReference Include="..\..\Source\PascalType.FontFace.SFNT.pas"/>
-        <DCCReference Include="..\..\Source\PT_TableDirectory.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.Directory.pas"/>
         <DCCReference Include="..\..\Source\PT_Tables.pas"/>
         <DCCReference Include="..\..\Source\PT_TablesApple.pas"/>
         <DCCReference Include="..\..\Source\PT_TablesBitmap.pas"/>

@@ -13,7 +13,7 @@ uses
   PT_ResourceStrings in '..\..\Source\PT_ResourceStrings.pas',
   PascalType.FontFace in '..\..\Source\PascalType.FontFace.pas',
   PascalType.FontFace.SFNT in '..\..\Source\PascalType.FontFace.SFNT.pas',
-  PT_TableDirectory in '..\..\Source\PT_TableDirectory.pas',
+  PascalType.Tables.TrueType.Directory in '..\..\Source\PascalType.Tables.TrueType.Directory.pas',
   PT_Tables in '..\..\Source\PT_Tables.pas',
   PT_TablesApple in '..\..\Source\PT_TablesApple.pas',
   PT_TablesBitmap in '..\..\Source\PT_TablesBitmap.pas',

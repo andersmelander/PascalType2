@@ -40,7 +40,7 @@ uses
   Types,
   PT_Types,
   PT_Classes,
-  PT_TableDirectory,
+  PascalType.Tables.TrueType.Directory,
   PT_Tables;
 
 type

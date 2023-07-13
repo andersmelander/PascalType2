@@ -63,7 +63,7 @@ type
   IPascalTypeFontFace = interface(IUnknown)
     ['{A990D67B-BC60-4DA4-9D90-3C1D30AEC003}']
     function GetTableByTableName(const TableName: TTableName): TCustomPascalTypeNamedTable;
-    function GetTableByTableType(TableType: TTableType): TCustomPascalTypeNamedTable;
+    function GetTableByTableType(const TableType: TTableType): TCustomPascalTypeNamedTable;
     function GetTableByTableClass(TableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable;
   end;
 

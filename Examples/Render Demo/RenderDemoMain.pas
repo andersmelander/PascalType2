@@ -271,7 +271,6 @@ var
   Canvas32: TCanvas32;
   Bitmap32: TBitmap32;
   Script: TTableType;
-  ShaperClass: TPascalTypeShaperClass;
   Shaper: TPascalTypeShaper;
   UTF32: TPascalTypeCodePoints;
   ShapedText: TPascalTypeGlyphString;

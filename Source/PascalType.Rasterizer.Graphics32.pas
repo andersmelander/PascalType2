@@ -724,6 +724,9 @@ var
   StateTransition: TStateTransition;
   i: integer;
 begin
+  if (Length(GlyphPath) = 0) then
+    exit;
+
   Ascent := Max(TPascalTypeHeaderTable(TPascalTypeFontFace(FontFace).HeaderTable).YMax,
     TPascalTypeHorizontalHeaderTable(TPascalTypeFontFace(FontFace).HorizontalHeader).Ascent);
   Origin.X := X;

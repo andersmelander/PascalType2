@@ -47,7 +47,8 @@ uses
   PascalType.GlyphString,
   PascalType.FontFace,
   PT_Tables,
-  PT_TableDirectory,
+  PascalType.Tables.TrueType.Directory,
+  PascalType.Tables.TrueType.glyf,
   PascalType.Tables.TrueType.cmap,
   PascalType.Tables.TrueType.hmtx,
   PascalType.Tables.TrueType.hhea,
@@ -66,7 +67,7 @@ type
 
 //------------------------------------------------------------------------------
 //
-//              TShaperGlyphString
+//              TFontGlyphString
 //
 //------------------------------------------------------------------------------
 // A glyph string with knowledge about the font
@@ -96,30 +97,53 @@ type
 // A TrueType/OpenType font
 //------------------------------------------------------------------------------
   TCustomPascalTypeFontFace = class abstract(TCustomPascalTypeFontFacePersistent, IPascalTypeFontFace)
+  strict protected const
+{$IFDEF MSWINDOWS}
+    PreferredPlatform = piMicrosoft; // This is strange. Why wouldn't we always prefer Unicode?
+{$ELSE}
+    PreferredPlatform = piUnicode;
+{$ENDIF}
+  strict protected type
+    TTableList = TObjectList<TCustomPascalTypeNamedTable>;
+    TTableLookup = TDictionary<TTableType, TCustomPascalTypeNamedTable>;
   strict private
+    FVersion: Cardinal;
     FRootTable: TCustomPascalTypeTable;
-    // required tables
+
+    // We keep the tables in two lists in order to avoid going through
+    // TDictionary.Values.ToArray when we just need a list of tables.
+    FTables: TTableList;
+    FTableLookup: TTableLookup;
+
+    // Required table shortcuts
     FHeaderTable: TPascalTypeHeaderTable;
     FHorizontalHeader: TPascalTypeHorizontalHeaderTable;
     FMaximumProfile: TPascalTypeMaximumProfileTable;
     FNameTable: TPascalTypeNameTable;
     FPostScriptTable: TPascalTypePostscriptTable;
   private
-    function GetFontName: WideString;
+    function GetFontName: WideString; // TODO : Get rid of WideString
     function GetFontStyle: TFontStyles;
     function GetFontFamilyName: WideString;
     function GetFontSubFamilyName: WideString;
     function GetFontVersion: WideString;
     function GetUniqueIdentifier: WideString;
+    function GetTable(Index: integer): TCustomPascalTypeNamedTable;
+    function GetTableCount: Integer;
   protected
+    procedure Loaded; virtual;
+    procedure Clear; virtual;
     procedure DirectoryTableLoaded(DirectoryTable: TPascalTypeDirectoryTable); virtual;
-    procedure LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry); virtual; abstract;
+    procedure LoadTablesFromStream(Stream: TStream; const TableList: TPascalTypeDirectoryTableList); virtual;
+    function LoadTableFromStream(Stream: TStream; const TableEntry: TDirectoryTableEntry): TCustomPascalTypeNamedTable; virtual;
     function GetGlyphStringClass: TFontGlyphStringClass; virtual;
 
     property RootTable: TCustomPascalTypeTable read FRootTable;
+    property AllTables: TTableList read FTables;
+    property TableLookup: TTableLookup read FTableLookup;
 
 {$IFDEF ChecksumTest}
-    procedure ValidateChecksum(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry); virtual;
+    procedure ValidateChecksum(Stream: TStream; TableEntry: TDirectoryTableEntry); virtual;
 {$ENDIF}
   public
     constructor Create; virtual;
@@ -131,8 +155,10 @@ type
 
     // IPascalTypeFontFaceTable
     function GetTableByTableName(const ATableName: TTableName): TCustomPascalTypeNamedTable; virtual;
-    function GetTableByTableType(ATableType: TTableType): TCustomPascalTypeNamedTable; virtual;
+    function GetTableByTableType(const ATableType: TTableType): TCustomPascalTypeNamedTable; virtual;
     function GetTableByTableClass(ATableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable; virtual;
+
+    function ContainsTable(const ATableType: TTableType): Boolean;
 
     function GetGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): Integer; overload; virtual; abstract;
     function GetGlyphByCharacter(ACodePoint: Word): Integer; overload;
@@ -142,14 +168,20 @@ type
 
     function GetAdvanceWidth(GlyphIndex: Word): Word; virtual;
 
-    // required tables
+    // Font file version/type
+    property Version: Cardinal read FVersion;
+
+    property Tables[Index: integer]: TCustomPascalTypeNamedTable read GetTable;
+    property TableCount: integer read GetTableCount;
+
+    // Required tables
     property HeaderTable: TPascalTypeHeaderTable read FHeaderTable;
     property HorizontalHeader: TPascalTypeHorizontalHeaderTable read FHorizontalHeader;
     property MaximumProfile: TPascalTypeMaximumProfileTable read FMaximumProfile;
     property NameTable: TPascalTypeNameTable read FNameTable;
     property PostScriptTable: TPascalTypePostscriptTable read FPostScriptTable;
 
-    // basic properties
+    // Basic font properties
     property FontFamilyName: WideString read GetFontFamilyName;
     property FontName: WideString read GetFontName;
     property FontStyle: TFontStyles read GetFontStyle;
@@ -158,50 +190,40 @@ type
     property UniqueIdentifier: WideString read GetUniqueIdentifier;
   end;
 
-  TPascalTypeFontFaceScan = class(TCustomPascalTypeFontFace)
-  protected
-    procedure LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry); override;
-  public
-    function GetGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): Integer; override;
-    procedure SaveToStream(Stream: TStream); override;
-    function CreateLayoutEngine: TObject; override;
-  end;
 
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeFontFace
+//
+//------------------------------------------------------------------------------
+// Complete font reader (maybe someday also a writer)
+//------------------------------------------------------------------------------
   TPascalTypeFontFace = class(TCustomPascalTypeFontFace)
   public
     const MaxCompositeGlyphDepth = 8; // Max recursion depth when resolving composite glyphs
   strict private
-    // required tables
+    // Shortcuts to required tables
     FHorizontalMetrics: TPascalTypeHorizontalMetricsTable;
     FCharacterMap: TPascalTypeCharacterMapTable;
     FOS2Table: TPascalTypeOS2Table;
 
-    FOptionalTables: TObjectList<TCustomPascalTypeNamedTable>;
+    // Not required, but pretty important
+    FGlyphData: TTrueTypeFontGlyphDataTable;
   private
-    function GetTableCount: Integer;
-    function GetOptionalTableCount: Integer;
-    function GetOptionalTable(Index: Integer): TCustomPascalTypeNamedTable;
     function GetGlyphData(Index: Integer): TCustomPascalTypeGlyphDataTable;
     function GetPanose: TCustomPascalTypePanoseTable;
     function GetBoundingBox: TRect;
     function GetGlyphCount: Word;
   protected
     function DoGetGlyphPath(GlyphIndex: Word; Depth: integer): TPascalTypePath;
-    procedure DirectoryTableLoaded(DirectoryTable : TPascalTypeDirectoryTable); override;
-    procedure LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry); override;
+    procedure Loaded; override;
+    procedure Clear; override;
+    function LoadTableFromStream(Stream: TStream; const TableEntry: TDirectoryTableEntry): TCustomPascalTypeNamedTable; override;
   public
-    constructor Create; override;
-    destructor Destroy; override;
-
-    // IPascalTypeFontFaceTable
-    function GetTableByTableName(const TableName: TTableName): TCustomPascalTypeNamedTable; override;
-    function GetTableByTableType(ATableType: TTableType): TCustomPascalTypeNamedTable; override;
-    function GetTableByTableClass(TableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable; override;
-
     function CreateLayoutEngine: TObject; override;
 
     procedure SaveToStream(Stream: TStream); override;
-    function ContainsTable(TableType: TTableType): Boolean;
+
     function GetGlyphMetric(GlyphIndex: Word): TTrueTypeGlyphMetric;
     function GetAdvanceWidth(GlyphIndex: Word): Word; override;
     function GetKerning(Last, Next: Word): Word;
@@ -212,26 +234,46 @@ type
 
     property GlyphData[Index: Integer]: TCustomPascalTypeGlyphDataTable read GetGlyphData;
 
-    property OptionalTable[Index: Integer]: TCustomPascalTypeNamedTable read GetOptionalTable;
-    property OptionalTableCount: Integer read GetOptionalTableCount;
-
-    // redirected properties
+    // Redirected sub properties
     property Panose: TCustomPascalTypePanoseTable read GetPanose;
     property BoundingBox: TRect read GetBoundingBox;
     property GlyphCount: Word read GetGlyphCount;
 
-    // required tables
+    // Required tables
     property HeaderTable;
     property HorizontalHeader;
     property MaximumProfile;
     property NameTable;
     property PostScriptTable;
+    property GlyphTable: TTrueTypeFontGlyphDataTable read FGlyphData;
     property HorizontalMetrics: TPascalTypeHorizontalMetricsTable read FHorizontalMetrics;
     property CharacterMap: TPascalTypeCharacterMapTable read FCharacterMap;
     property OS2Table: TPascalTypeOS2Table read FOS2Table;
-
-    property TableCount: Integer read GetTableCount;
   end;
+
+
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeFontFaceScan
+//
+//------------------------------------------------------------------------------
+// Basic font reader used to extract basic properties from a font file
+//------------------------------------------------------------------------------
+type
+  TPascalTypeFontFaceScan = class(TCustomPascalTypeFontFace)
+  protected
+    function LoadTableFromStream(Stream: TStream; const TableEntry: TDirectoryTableEntry): TCustomPascalTypeNamedTable; override;
+    procedure Loaded; override;
+  public
+    function GetGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): Integer; override;
+    procedure SaveToStream(Stream: TStream); override;
+    function CreateLayoutEngine: TObject; override;
+  end;
+
+
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 
 implementation
 
@@ -239,7 +281,6 @@ uses
   Math,
   PT_Math,
   PT_TablesTrueType,
-  PascalType.Tables.TrueType.glyf,
   PascalType.Tables.OpenType.GDEF,
   PascalType.Shaper.Layout.OpenType,
   PT_ResourceStrings;
@@ -255,15 +296,9 @@ begin
   // read subsequent cardinals
   for I := 1 to Size - 1 do
   begin
-{$IFOPT Q+}
-{$DEFINE Q_PLUS}
-{$OVERFLOWCHECKS OFF}
-{$ENDIF}
+{$IFOPT Q+}{$DEFINE Q_PLUS}{$OVERFLOWCHECKS OFF}{$ENDIF}
     Result := Result + Swap32(PCardinal(Data)^);
-{$IFDEF Q_PLUS}
-{$OVERFLOWCHECKS ON}
-{$UNDEF Q_PLUS}
-{$ENDIF}
+{$IFDEF Q_PLUS}{$OVERFLOWCHECKS ON}{$UNDEF Q_PLUS}{$ENDIF}
     Inc(PCardinal(Data));
   end;
 {$ELSE}
@@ -314,15 +349,9 @@ begin
     // read subsequent cardinals
     for I := 1 to (Size div 4) - 1 do
     begin
-{$IFOPT Q+}
-{$DEFINE Q_PLUS}
-{$OVERFLOWCHECKS OFF}
-{$ENDIF}
+{$IFOPT Q+}{$DEFINE Q_PLUS}{$OVERFLOWCHECKS OFF}{$ENDIF}
       Result := Result + BigEndianValueReader.ReadCardinal(Stream);
-{$IFDEF Q_PLUS}
-{$OVERFLOWCHECKS ON}
-{$UNDEF Q_PLUS}
-{$ENDIF}
+{$IFDEF Q_PLUS}{$OVERFLOWCHECKS ON}{$UNDEF Q_PLUS}{$ENDIF}
     end;
   end;
 end;
@@ -405,8 +434,10 @@ end;
 
 //------------------------------------------------------------------------------
 //
-//              TCustomPascalTypeFontFace
+//              TPascalTypeTableRoot
 //
+//------------------------------------------------------------------------------
+// Root table. Just used to provide access to the font from the tables.
 //------------------------------------------------------------------------------
 type
   TPascalTypeTableRoot = class(TCustomPascalTypeTable)
@@ -441,308 +472,344 @@ begin
   raise EPascalTypeError.Create(RCStrNotImplemented);
 end;
 
+
+//------------------------------------------------------------------------------
+//
+//              TCustomPascalTypeFontFace
+//
+//------------------------------------------------------------------------------
 constructor TCustomPascalTypeFontFace.Create;
 begin
   inherited;
   FRootTable := TPascalTypeTableRoot.Create(Self);
-
-  // create required tables
-  FHeaderTable := TPascalTypeHeaderTable.Create(FRootTable);
-  FHorizontalHeader := TPascalTypeHorizontalHeaderTable.Create(FRootTable);
-  FMaximumProfile := TPascalTypeMaximumProfileTable.Create(FRootTable);
-  FNameTable := TPascalTypeNameTable.Create(FRootTable);
-  FPostScriptTable := TPascalTypePostscriptTable.Create(FRootTable);
+  FTables := TTableList.Create;
+  FTableLookup := TTableLookup.Create;
 end;
 
 destructor TCustomPascalTypeFontFace.Destroy;
 begin
-  FreeAndNil(FHeaderTable);
-  FreeAndNil(FHorizontalHeader);
-  FreeAndNil(FMaximumProfile);
-  FreeAndNil(FNameTable);
-  FreeAndNil(FPostScriptTable);
+  FTableLookup.Free;
+  FTables.Free;
+  FRootTable.Free;
   inherited;
+end;
+
+function TCustomPascalTypeFontFace.GetTable(Index: integer): TCustomPascalTypeNamedTable;
+begin
+  Result := FTables[Index];
+end;
+
+function TCustomPascalTypeFontFace.GetTableCount: Integer;
+begin
+  Result := FTables.Count;
 end;
 
 procedure TCustomPascalTypeFontFace.DirectoryTableLoaded(DirectoryTable: TPascalTypeDirectoryTable);
 begin
-  // optimize table read order
-  DirectoryTable.TableList.Sort;
+  if (Version = sfntVersionAppleTT) then
+  begin
+    if (not DirectoryTable.Contains(ttLoca)) then
+      raise EPascalTypeError.Create(RCStrNoIndexToLocationTable);
+
+    if (not DirectoryTable.Contains(ttGlyf)) then
+      raise EPascalTypeError.Create(RCStrNoGlyphDataTable);
+  end;
+end;
+
+function TCustomPascalTypeFontFace.LoadTableFromStream(Stream: TStream; const TableEntry: TDirectoryTableEntry): TCustomPascalTypeNamedTable;
+var
+  TableClass: TCustomPascalTypeNamedTableClass;
+  Table: TCustomPascalTypeNamedTable;
+  UnknownTableType: boolean;
+begin
+  Result := nil;
+
+  Stream.Position := TableEntry.Offset;
+
+{$IFDEF ChecksumTest}
+  ValidateChecksum(Stream, TableEntry.Length);
+{$ENDIF}
+
+  TableClass := FindPascalTypeTableByType(TableEntry.TableType);
+
+  UnknownTableType := (TableClass = nil);
+  if (UnknownTableType) then
+    TableClass := TPascalTypeUnknownTable;
+
+  Table := TableClass.Create(RootTable);
+  try
+    if (UnknownTableType) then
+      TPascalTypeUnknownTable(Table).TableType := TableEntry.TableType;
+
+    try
+
+      Table.LoadFromStream(Stream, TableEntry.Length);
+
+    except
+{$IFDEF IgnoreIncompleteOptionalTables}
+      on E: EPascalTypeTableIncomplete do
+      begin
+        if (TableClass = TPascalTypeHeaderTable) or
+          (TableClass = TPascalTypeHorizontalHeaderTable) or
+          (TableClass = TPascalTypeHorizontalMetricsTable) or
+          (TableClass = TPascalTypePostscriptTable) or
+          (TableClass = TPascalTypeMaximumProfileTable) or
+          (TableClass = TPascalTypeNameTable) then
+          raise;
+
+        exit;
+      end;
+{$ELSE}
+      raise
+{$ENDIF}
+    end;
+
+    // Add to lookup first in case there's a duplicate table type
+    TableLookup.Add(Table.TableType, Table);
+
+    // Transfer ownership to FTables
+    Result := Table;
+    Table := nil;
+    AllTables.Add(Result);
+
+
+    case Result.TableType.AsCardinal of
+      ttHead:
+        FHeaderTable := Result as TPascalTypeHeaderTable;
+
+      ttMaxp:
+        FMaximumProfile := Result as TPascalTypeMaximumProfileTable;
+
+      ttHhea:
+        FHorizontalHeader := Result as TPascalTypeHorizontalHeaderTable;
+
+      ttName:
+        FNameTable := Result as TPascalTypeNameTable;
+
+      ttPost:
+        FPostScriptTable := Result as TPascalTypePostscriptTable;
+    end;
+
+  finally
+    // Free table unless it is now owned by FTables
+    Table.Free;
+  end;
 end;
 
 function TCustomPascalTypeFontFace.GetFontFamilyName: WideString;
 var
-  NameSubTableIndex: Integer;
+  i: Integer;
 begin
-  with FNameTable do
-    for NameSubTableIndex := 0 to NameSubTableCount - 1 do
-      with NameSubTable[NameSubTableIndex] do
-{$IFDEF MSWINDOWS}
-        if PlatformID = piMicrosoft then
-{$ELSE}
-        if PlatformID = piUnicode then
-{$ENDIF}
-          if NameID = niFamily then
-          begin
-            Result := Name;
-            Exit;
-          end;
+  for i := 0 to FNameTable.NameSubTableCount - 1 do
+    if (FNameTable.NameSubTable[i].PlatformID = PreferredPlatform) and (FNameTable.NameSubTable[i].NameID = niFamily) then
+    begin
+      Result := FNameTable.NameSubTable[i].Name;
+      Exit;
+    end;
+
+  Result := '';
 end;
 
 function TCustomPascalTypeFontFace.GetFontSubFamilyName: WideString;
 var
-  NameSubTableIndex: Integer;
+  i: Integer;
 begin
-  with FNameTable do
-    for NameSubTableIndex := 0 to NameSubTableCount - 1 do
-      with NameSubTable[NameSubTableIndex] do
+  for i := 0 to FNameTable.NameSubTableCount - 1 do
+    if (FNameTable.NameSubTable[i].PlatformID = PreferredPlatform) and (FNameTable.NameSubTable[i].NameID = niSubfamily) then
+    begin
+      Result := FNameTable.NameSubTable[i].Name;
 {$IFDEF MSWINDOWS}
-        if PlatformID = piMicrosoft then
+      if FNameTable.NameSubTable[i].LanguageID = 1033 then
+        Exit;
 {$ELSE}
-        if PlatformID = piUnicode then
+      Exit;
 {$ENDIF}
-          if NameID = niSubfamily then
-          begin
-            Result := Name;
-{$IFDEF MSWINDOWS}
-            if LanguageID = 1033 then
-              Exit;
-{$ELSE}
-            Exit;
-{$ENDIF}
-          end;
+    end;
+
+  Result := '';
 end;
 
 function TCustomPascalTypeFontFace.GetFontVersion: WideString;
 var
-  NameSubTableIndex: Integer;
+  i: Integer;
 begin
-  with FNameTable do
-    for NameSubTableIndex := 0 to NameSubTableCount - 1 do
-      with NameSubTable[NameSubTableIndex] do
+  for i := 0 to FNameTable.NameSubTableCount - 1 do
+    if (FNameTable.NameSubTable[i].PlatformID = PreferredPlatform) and (FNameTable.NameSubTable[i].NameID = niVersion) then
+    begin
+      Result := FNameTable.NameSubTable[i].Name;
 {$IFDEF MSWINDOWS}
-        if PlatformID = piMicrosoft then
+      if FNameTable.NameSubTable[i].LanguageID = 1033 then
+        Exit;
 {$ELSE}
-        if PlatformID = piUnicode then
+      Exit;
 {$ENDIF}
-          if NameID = niVersion then
-          begin
-            Result := Name;
-{$IFDEF MSWINDOWS}
-            if LanguageID = 1033 then
-              Exit;
-{$ELSE}
-            Exit;
-{$ENDIF}
-          end;
+    end;
+
+  Result := '';
 end;
 
 function TCustomPascalTypeFontFace.GetUniqueIdentifier: WideString;
 var
-  NameSubTableIndex: Integer;
+  i: Integer;
 begin
-  with FNameTable do
-    for NameSubTableIndex := 0 to NameSubTableCount - 1 do
-      with NameSubTable[NameSubTableIndex] do
+  for i := 0 to FNameTable.NameSubTableCount - 1 do
+    if (FNameTable.NameSubTable[i].PlatformID = PreferredPlatform) and (FNameTable.NameSubTable[i].NameID = niUniqueIdentifier) then
+    begin
+      Result := FNameTable.NameSubTable[i].Name;
 {$IFDEF MSWINDOWS}
-        if PlatformID = piMicrosoft then
+      if FNameTable.NameSubTable[i].LanguageID = 1033 then
+        Exit;
 {$ELSE}
-        if PlatformID = piUnicode then
+      Exit;
 {$ENDIF}
-          if NameID = niUniqueIdentifier then
-          begin
-            Result := Name;
-{$IFDEF MSWINDOWS}
-            if LanguageID = 1033 then
-              Exit;
-{$ELSE}
-            Exit;
-{$ENDIF}
-          end;
+    end;
+
+  Result := '';
 end;
 
 function TCustomPascalTypeFontFace.GetFontName: WideString;
 var
-  NameSubTableIndex: Integer;
+  i: Integer;
 begin
-  with FNameTable do
-    for NameSubTableIndex := 0 to NameSubTableCount - 1 do
-      with NameSubTable[NameSubTableIndex] do
+  for i := 0 to FNameTable.NameSubTableCount - 1 do
+    if (FNameTable.NameSubTable[i].PlatformID = PreferredPlatform) and (FNameTable.NameSubTable[i].NameID = niFullName) then
+    begin
+      Result := FNameTable.NameSubTable[i].Name;
 {$IFDEF MSWINDOWS}
-        if PlatformID = piMicrosoft then
+      if FNameTable.NameSubTable[i].LanguageID = 1033 then
+        Exit;
 {$ELSE}
-        if PlatformID = piUnicode then
+      Exit;
 {$ENDIF}
-          if NameID = niFullName then
-          begin
-            Result := Name;
-{$IFDEF MSWINDOWS}
-            if LanguageID = 1033 then
-              Exit;
-{$ELSE}
-            Exit;
-{$ENDIF}
-          end;
+    end;
+
+  Result := '';
 end;
 
 function TCustomPascalTypeFontFace.GetFontStyle: TFontStyles;
 begin
+  Result := [];
   if msItalic in FHeaderTable.MacStyle then
-    Result := [fsItalic]
-  else
-    Result := [];
+    Include(Result, fsItalic);
+
   if msBold in FHeaderTable.MacStyle then
-    Result := Result + [fsBold];
+    Include(Result, fsBold);
+
   if msUnderline in FHeaderTable.MacStyle then
-    Result := Result + [fsUnderline];
+    Include(Result, fsUnderline);
+end;
+
+function TCustomPascalTypeFontFace.ContainsTable(const ATableType: TTableType): Boolean;
+begin
+  Result := FTableLookup.ContainsKey(ATableType);
 end;
 
 function TCustomPascalTypeFontFace.GetTableByTableClass(ATableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable;
 begin
-  // return nil if the table hasn't been found
-
-  if ATableClass = HeaderTable.ClassType then
-    Result := HeaderTable
-  else
-  if ATableClass = HorizontalHeader.ClassType then
-    Result := HorizontalHeader
-  else
-  if ATableClass = MaximumProfile.ClassType then
-    Result := MaximumProfile
-  else
-  if ATableClass = NameTable.ClassType then
-    Result := NameTable
-  else
-  if ATableClass = PostScriptTable.ClassType then
-    Result := PostScriptTable
-  else
-    Result := nil;
+  for Result in FTables do
+    if (Result.ClassType = ATableClass) then
+      exit;
+  Result := nil;
 end;
 
 function TCustomPascalTypeFontFace.GetTableByTableName(const ATableName: TTableName): TCustomPascalTypeNamedTable;
 begin
-  // return nil if the table hasn't been found
-
-  if CompareTableType(HeaderTable.TableType, ATableName) then
-    Result := HeaderTable
-  else
-  if CompareTableType(HorizontalHeader.TableType, ATableName) then
-    Result := HorizontalHeader
-  else
-  if CompareTableType(MaximumProfile.TableType, ATableName) then
-    Result := MaximumProfile
-  else
-  if CompareTableType(NameTable.TableType, ATableName) then
-    Result := NameTable
-  else
-  if CompareTableType(PostScriptTable.TableType, ATableName) then
-    Result := PostScriptTable
-  else
+  if (not FTableLookup.TryGetValue(ATableName, Result)) then
     Result := nil;
 end;
 
-function TCustomPascalTypeFontFace.GetTableByTableType(ATableType: TTableType): TCustomPascalTypeNamedTable;
+function TCustomPascalTypeFontFace.GetTableByTableType(const ATableType: TTableType): TCustomPascalTypeNamedTable;
 begin
-  // return nil if the table hasn't been found
-  if ATableType.AsCardinal = HeaderTable.TableType.AsCardinal then
-    Result := HeaderTable
-  else
-  if ATableType.AsCardinal = HorizontalHeader.TableType.AsCardinal then
-    Result := HorizontalHeader
-  else
-  if ATableType.AsCardinal = MaximumProfile.TableType.AsCardinal then
-    Result := MaximumProfile
-  else
-  if ATableType.AsCardinal = NameTable.TableType.AsCardinal then
-    Result := NameTable
-  else
-  if ATableType.AsCardinal = PostScriptTable.TableType.AsCardinal then
-    Result := PostScriptTable
-  else
+  if (not FTableLookup.TryGetValue(ATableType, Result)) then
     Result := nil;
+end;
+
+procedure TCustomPascalTypeFontFace.Clear;
+begin
+  FTableLookup.Clear;
+  FTables.Clear;
+
+  FHeaderTable := nil;
+  FHorizontalHeader := nil;
+  FMaximumProfile := nil;
+  FNameTable := nil;
+  FPostScriptTable := nil;
+end;
+
+procedure TCustomPascalTypeFontFace.Loaded;
+begin
+  // Verify that required tables are present
+  if (HeaderTable = nil) then
+    raise EPascalTypeError.Create(RCStrNoHeaderTable);
+
+  if (HorizontalHeader = nil) then
+    raise EPascalTypeError.Create(RCStrNoHorizontalHeaderTable);
+
+  if (MaximumProfile = nil) then
+    raise EPascalTypeError.Create(RCStrNoMaximumProfileTable);
+
+  if (NameTable = nil) then
+    raise EPascalTypeError.Create(RCStrNoNameTable);
+
+  if (PostScriptTable = nil) then
+    raise EPascalTypeError.Create(RCStrNoPostscriptTable);
+end;
+
+procedure TCustomPascalTypeFontFace.LoadTablesFromStream(Stream: TStream; const TableList: TPascalTypeDirectoryTableList);
+var
+  i: integer;
+begin
+  // Load tables
+  for i := 0 to High(TableList) do
+  begin
+    if (TableLookup.ContainsKey(TableList[i].TableType)) then
+      continue;
+
+    LoadTableFromStream(Stream, TableList[i]);
+  end;
 end;
 
 procedure TCustomPascalTypeFontFace.LoadFromStream(Stream: TStream);
 var
   DirectoryTable: TPascalTypeDirectoryTable;
-  TableIndex    : Integer;
+  i: integer;
+  Index: integer;
+const
+  Preload: array of TTableName = ['head', 'maxp', 'loca'];
 begin
+  Clear;
+
   DirectoryTable := TPascalTypeDirectoryTable.Create(FRootTable);
   try
     DirectoryTable.LoadFromStream(Stream, Stream.Size);
 
-    // directory table has been read, notify
+    FVersion := DirectoryTable.Version;
+
+    // Directory table has been read, notify
     DirectoryTableLoaded(DirectoryTable);
 
-    // read header table
-    if (HeaderTable = nil) then
-      raise EPascalTypeError.Create(RCStrNoHeaderTable);
-    LoadTableFromStream(Stream, DirectoryTable.HeaderTable);
+    // Preload tables that other tables depend on
+    for i := 0 to High(Preload) do
+    begin
+      Index := DirectoryTable.IndexOfTableEntry(Preload[i]);
+      if (Index <> -1) then
+        LoadTableFromStream(Stream, DirectoryTable.TableList[Index]);
+    end;
 
-    // read horizontal header table
-    if (DirectoryTable.HorizontalHeaderDataEntry = nil) then
-      raise EPascalTypeError.Create(RCStrNoHorizontalHeaderTable);
-    LoadTableFromStream(Stream, DirectoryTable.HorizontalHeaderDataEntry);
+    LoadTablesFromStream(Stream, DirectoryTable.TableList);
 
-    // read maximum profile table
-    if (DirectoryTable.MaximumProfileDataEntry = nil) then
-      raise EPascalTypeError.Create(RCStrNoMaximumProfileTable);
-    LoadTableFromStream(Stream, DirectoryTable.MaximumProfileDataEntry);
-
-    // eventually read OS/2 table or eventually raise an exception
-    if (DirectoryTable.OS2TableEntry <> nil) then
-      LoadTableFromStream(Stream, DirectoryTable.OS2TableEntry)
-    else
-    if (DirectoryTable.Version = $00010000) then
-      raise EPascalTypeError.Create(RCStrNoOS2Table);
-
-    // read horizontal metrics table
-    if (DirectoryTable.HorizontalMetricsDataEntry = nil) then
-      raise EPascalTypeError.Create(RCStrNoHorizontalMetricsTable);
-    LoadTableFromStream(Stream, DirectoryTable.HorizontalMetricsDataEntry);
-
-    // read character map table
-    if (DirectoryTable.CharacterMapDataEntry = nil) then
-      raise EPascalTypeError.Create(RCStrNoCharacterMapTable);
-    LoadTableFromStream(Stream, DirectoryTable.CharacterMapDataEntry);
-
-    // TODO: check if these are required by tables already read!!!
-    // read index to location table
-    if (DirectoryTable.LocationDataEntry <> nil) then
-      LoadTableFromStream(Stream, DirectoryTable.LocationDataEntry)
-    else
-    if (DirectoryTable.Version = $74727565) then
-      raise EPascalTypeError.Create(RCStrNoIndexToLocationTable);
-
-    // read glyph data table
-    if (DirectoryTable.GlyphDataEntry <> nil) then
-      LoadTableFromStream(Stream, DirectoryTable.GlyphDataEntry)
-    else
-    if (DirectoryTable.Version = $74727565) then
-      raise EPascalTypeError.Create(RCStrNoGlyphDataTable);
-
-    // read name table
-    if (DirectoryTable.NameDataEntry = nil) then
-      raise EPascalTypeError.Create(RCStrNoNameTable);
-    LoadTableFromStream(Stream, DirectoryTable.NameDataEntry);
-
-    // read postscript table
-    if (DirectoryTable.PostscriptDataEntry = nil) then
-      raise EPascalTypeError.Create(RCStrNoPostscriptTable);
-    LoadTableFromStream(Stream, DirectoryTable.PostscriptDataEntry);
-
-    // read other table entries from stream
-    for TableIndex := 0 to DirectoryTable.TableList.Count - 1 do
-      LoadTableFromStream(Stream, DirectoryTable.TableList[TableIndex]);
   finally
     DirectoryTable.Free;
   end;
+
+  // Verify required tables and map table shortcuts
+  Loaded;
 end;
 
 {$IFDEF ChecksumTest}
 
 procedure TCustomPascalTypeFontFace.ValidateChecksum(Stream: TStream;
-  TableEntry: TPascalTypeDirectoryTableEntry);
+  TableEntry: TDirectoryTableEntry);
 var
   Checksum: Cardinal;
 begin
@@ -755,15 +822,9 @@ begin
   begin
     // ignore checksum adjustment
     Stream.Position := 8;
-{$IFOPT Q+}
-{$DEFINE Q_PLUS}
-{$OVERFLOWCHECKS OFF}
-{$ENDIF}
+{$IFOPT Q+}{$DEFINE Q_PLUS}{$OVERFLOWCHECKS OFF}{$ENDIF}
     Checksum := Checksum - BigEndianValueReader.ReadCardinal(Stream);
-{$IFDEF Q_PLUS}
-{$OVERFLOWCHECKS ON}
-{$UNDEF Q_PLUS}
-{$ENDIF}
+{$IFDEF Q_PLUS}{$OVERFLOWCHECKS ON}{$UNDEF Q_PLUS}{$ENDIF}
   end;
 
   // check checksum
@@ -815,8 +876,12 @@ begin
   Result := HorizontalHeader.AdvanceWidthMax; // Better than nothing :-(
 end;
 
-{ TPascalTypeFontFaceScan }
 
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeFontFaceScan
+//
+//------------------------------------------------------------------------------
 function TPascalTypeFontFaceScan.CreateLayoutEngine: TObject;
 begin
   Result := nil;
@@ -827,36 +892,26 @@ begin
   Result := 0;
 end;
 
-procedure TPascalTypeFontFaceScan.LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry);
-var
-  MemoryStream: TMemoryStream;
-  Table: TCustomPascalTypeNamedTable;
+procedure TPascalTypeFontFaceScan.Loaded;
 begin
-  Table := GetTableByTableType(TableEntry.TableType);
-  if (Table = nil) then
-    exit;
+  // Verify that required tables are present
+  if (HeaderTable = nil) then
+    raise EPascalTypeError.Create(RCStrNoHeaderTable);
 
-  MemoryStream := TMemoryStream.Create;
-  try
-    // set stream position
-    Stream.Position := TableEntry.Offset;
+  if (NameTable = nil) then
+    raise EPascalTypeError.Create(RCStrNoNameTable);
+end;
 
-    // copy from stream
-    MemoryStream.CopyFrom(Stream, 4 * ((TableEntry.Length + 3) div 4));
+function TPascalTypeFontFaceScan.LoadTableFromStream(Stream: TStream; const TableEntry: TDirectoryTableEntry): TCustomPascalTypeNamedTable;
+begin
+  // We only need to load a very few tables
+  case TableEntry.TableType.AsCardinal of
+    ttName,
+    ttHead:
+      Result := inherited;
 
-{$IFDEF ChecksumTest}
-    ValidateChecksum(MemoryStream, TableEntry);
-{$ENDIF}
-    // reset memory stream position
-    MemoryStream.Position := 0;
-
-    // restore original table length
-    MemoryStream.Size := TableEntry.Length;
-
-    Table.LoadFromStream(MemoryStream, TableEntry.Length);
-
-  finally
-    MemoryStream.Free;
+  else
+    Result := nil;
   end;
 end;
 
@@ -866,51 +921,26 @@ begin
 end;
 
 
-{ TPascalTypeFontFace }
-
-constructor TPascalTypeFontFace.Create;
-begin
-  inherited;
-
-  // create required tables
-  FHorizontalMetrics := TPascalTypeHorizontalMetricsTable.Create(RootTable);
-  FCharacterMap := TPascalTypeCharacterMapTable.Create(RootTable);
-
-  // create optional table list
-  FOptionalTables := TObjectList<TCustomPascalTypeNamedTable>.Create;
-end;
-
-destructor TPascalTypeFontFace.Destroy;
-begin
-  FreeAndNil(FHorizontalMetrics);
-  FreeAndNil(FCharacterMap);
-  FreeAndNil(FOptionalTables);
-  FreeAndNil(FOS2Table);
-  inherited;
-end;
-
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeFontFace
+//
+//------------------------------------------------------------------------------
 function TPascalTypeFontFace.CreateLayoutEngine: TObject;
 begin
   Result := TPascalTypeOpenTypeLayoutEngine.Create(Self);
 end;
 
-procedure TPascalTypeFontFace.DirectoryTableLoaded(DirectoryTable: TPascalTypeDirectoryTable);
-begin
-  inherited;
-
-  // clear optional tables
-  FOptionalTables.Clear;
-
-  // eventually free OS/2 table
-  FreeAndNil(FOS2Table);
-end;
-
 function TPascalTypeFontFace.GetAdvanceWidth(GlyphIndex: Word): Word;
 begin
-  if (GlyphIndex < FHorizontalMetrics.HorizontalMetricCount) then
-    Result := FHorizontalMetrics.HorizontalMetric[GlyphIndex].AdvanceWidth
-  else
-    Result := FHorizontalMetrics.HorizontalMetric[0].AdvanceWidth;
+  if (FHorizontalMetrics <> nil) then
+  begin
+    if (GlyphIndex < FHorizontalMetrics.HorizontalMetricCount) then
+      Result := FHorizontalMetrics.HorizontalMetric[GlyphIndex].AdvanceWidth
+    else
+      Result := FHorizontalMetrics.HorizontalMetric[0].AdvanceWidth;
+  end else
+    Result := 0; // Font hasn't been loaded
 end;
 
 function TPascalTypeFontFace.GetBoundingBox: TRect;
@@ -927,25 +957,23 @@ begin
 end;
 
 function TPascalTypeFontFace.GetGlyphData(Index: Integer): TCustomPascalTypeGlyphDataTable;
-var
-  GlyphDataTable: TTrueTypeFontGlyphDataTable;
 begin
   Result := nil;
 
-  GlyphDataTable := TTrueTypeFontGlyphDataTable(GetTableByTableName('glyf'));
-  if (GlyphDataTable <> nil) then
-    if (Index >= 0) and (Index < GlyphDataTable.GlyphDataCount) then
-      Result := GlyphDataTable.GlyphData[Index];
+  if (GlyphTable <> nil) then
+    if (Index >= 0) and (Index < GlyphTable.GlyphDataCount) then
+      Result := GlyphTable.GlyphData[Index];
 end;
 
 function TPascalTypeFontFace.GetGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): Integer;
 begin
-  Result := CharacterMap.GetGlyphByCharacter(ACodePoint);
+  if (CharacterMap <> nil) then
+    Result := CharacterMap.GetGlyphByCharacter(ACodePoint)
+  else
+    Result := 0; // Font hasn't been loaded
 end;
 
 function TPascalTypeFontFace.GetGlyphMetric(GlyphIndex: Word): TTrueTypeGlyphMetric;
-var
-  GlyphDataTable: TTrueTypeFontGlyphDataTable;
 
   procedure DoGetGlyphMetric(GlyphIndex: Word; var MetricIndex: Word; Depth: integer);
   var
@@ -960,7 +988,7 @@ var
       exit;
 {$endif FailOnCompositeGlyphTooDeep}
 
-    Glyph := GlyphDataTable.GlyphData[GlyphIndex];
+    Glyph := GlyphTable.GlyphData[GlyphIndex];
 
     // If glyph is a simple glyph then we will just use its index as the metric index.
     if (Glyph is TTrueTypeFontSimpleGlyphData) then
@@ -995,8 +1023,7 @@ var
   VerticalMetricsTable: TPascalTypeVerticalMetricsTable;
 begin
   Result := Default(TTrueTypeGlyphMetric);
-  GlyphDataTable := TTrueTypeFontGlyphDataTable(GetTableByTableName('glyf'));
-  if (GlyphDataTable = nil) then
+  if (GlyphTable = nil) then
     exit;
 
   MetricIndex := GlyphIndex;
@@ -1206,186 +1233,78 @@ begin
   // GetTableByTableType()
 end;
 
-function TPascalTypeFontFace.GetOptionalTable(Index: Integer): TCustomPascalTypeNamedTable;
-begin
-  if (Index < 0) or (Index >= FOptionalTables.Count) then
-    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
-  Result := FOptionalTables[Index];
-end;
-
-function TPascalTypeFontFace.GetOptionalTableCount: Integer;
-begin
-  Result := FOptionalTables.Count;
-end;
-
 function TPascalTypeFontFace.GetPanose: TCustomPascalTypePanoseTable;
 begin
-  // default result
-  Result := nil;
-
   if (FOS2Table <> nil) then
     Result := FOS2Table.Panose
+  else
+    Result := nil;
 end;
 
-function TPascalTypeFontFace.GetTableByTableType(ATableType: TTableType): TCustomPascalTypeNamedTable;
-var
-  TableIndex: Integer;
+procedure TPascalTypeFontFace.Clear;
 begin
-  Result := inherited GetTableByTableType(ATableType);
+  inherited;
+
+  FGlyphData := nil;
+  FHorizontalMetrics := nil;
+  FCharacterMap := nil;
+  FOS2Table := nil;
+end;
+
+procedure TPascalTypeFontFace.Loaded;
+begin
+  inherited;
+
+  if (Version = sfntVersionTrueType) and (OS2Table = nil) then
+    raise EPascalTypeError.Create(RCStrNoOS2Table);
+
+  if (HorizontalMetrics = nil) then
+    raise EPascalTypeError.Create(RCStrNoHorizontalMetricsTable);
+
+  if (CharacterMap = nil) then
+    raise EPascalTypeError.Create(RCStrNoCharacterMapTable);
+
+  // Strangely, the glyf table is optional
+  (*
+  if (GlyphTable = nil) then
+    raise EPascalTypeError.Create(RCStrNoGlyphDataTable);
+  *)
+end;
+
+function TPascalTypeFontFace.LoadTableFromStream(Stream: TStream; const TableEntry: TDirectoryTableEntry): TCustomPascalTypeNamedTable;
+begin
+  Result := inherited;
 
   if (Result = nil) then
-  begin
-    if ATableType.AsCardinal = HorizontalMetrics.TableType.AsCardinal then
-      Result := HorizontalMetrics
-    else
-    if ATableType.AsCardinal = CharacterMap.TableType.AsCardinal then
-      Result := CharacterMap
-    else
-      for TableIndex := 0 to FOptionalTables.Count - 1 do
-        if ATableType.AsCardinal = FOptionalTables[TableIndex].TableType.AsCardinal then
-          Exit(FOptionalTables[TableIndex]);
-  end;
-end;
+    exit;
 
-function TPascalTypeFontFace.GetTableByTableClass(TableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable;
-var
-  TableIndex: Integer;
-begin
-  Result := inherited GetTableByTableClass(TableClass);
+  case Result.TableType.AsCardinal of
+    ttHmtx:
+      FHorizontalMetrics := Result as TPascalTypeHorizontalMetricsTable;
 
-  if (Result = nil) then
-  begin
-    if TableClass = HorizontalMetrics.ClassType then
-      Result := HorizontalMetrics
-    else
-    if TableClass = CharacterMap.ClassType then
-      Result := CharacterMap
-    else
-      for TableIndex := 0 to FOptionalTables.Count - 1 do
-        if FOptionalTables[TableIndex].ClassType = TableClass then
-          Exit(FOptionalTables[TableIndex]);
-  end;
-end;
+    ttCmap:
+      FCharacterMap := Result as TPascalTypeCharacterMapTable;
 
-function TPascalTypeFontFace.GetTableByTableName(const TableName: TTableName): TCustomPascalTypeNamedTable;
-var
-  TableIndex: Integer;
-begin
-  Result := inherited GetTableByTableName(TableName);
+    ttGlyf:
+      FGlyphData := Result as TTrueTypeFontGlyphDataTable;
 
-  if (Result = nil) then
-  begin
-    if CompareTableType(HorizontalMetrics.TableType, TableName) then
-      Result := HorizontalMetrics
-    else
-    if CompareTableType(CharacterMap.TableType, TableName) then
-      Result := CharacterMap
-    else
-      for TableIndex := 0 to FOptionalTables.Count - 1 do
-        if CompareTableType(FOptionalTables[TableIndex].TableType, TableName) then
-          Exit(FOptionalTables[TableIndex]);
-  end;
-end;
-
-function TPascalTypeFontFace.ContainsTable(TableType: TTableType): Boolean;
-begin
-  Result := GetTableByTableType(TableType) <> nil;
-end;
-
-function TPascalTypeFontFace.GetTableCount: Integer;
-begin
-  Result := 7 + FOptionalTables.Count;
-end;
-
-procedure TPascalTypeFontFace.LoadTableFromStream(Stream: TStream; TableEntry: TPascalTypeDirectoryTableEntry);
-var
-  TableClass  : TCustomPascalTypeNamedTableClass;
-  CurrentTable: TCustomPascalTypeNamedTable;
-begin
-  Stream.Position := TableEntry.Offset;
-
-{$IFDEF ChecksumTest}
-  ValidateChecksum(Stream, TableEntry.Length);
-{$ENDIF}
-
-  TableClass := FindPascalTypeTableByType(TableEntry.TableType);
-  if TableClass <> nil then
-  begin
-    CurrentTable := TableClass.Create(RootTable);
-    try
-      // load table from stream
-      try
-        CurrentTable.LoadFromStream(Stream, TableEntry.Length);
-
-        // assign tables
-        if TableClass = TPascalTypeHeaderTable then
-          HeaderTable.Assign(CurrentTable)
-        else
-        if TableClass = TPascalTypeHorizontalHeaderTable then
-          HorizontalHeader.Assign(CurrentTable)
-        else
-        if TableClass = TPascalTypeHorizontalMetricsTable then
-          HorizontalMetrics.Assign(CurrentTable)
-        else
-        if TableClass = TPascalTypePostscriptTable then
-          PostScriptTable.Assign(CurrentTable)
-        else
-        if TableClass = TPascalTypeMaximumProfileTable then
-          MaximumProfile.Assign(CurrentTable)
-        else
-        if TableClass = TPascalTypeNameTable then
-          NameTable.Assign(CurrentTable)
-        else
-        if TableClass = TPascalTypeCharacterMapTable then
-          CharacterMap.Assign(CurrentTable)
-        else
-        if TableClass = TPascalTypeOS2Table then
-        begin
-          Assert(FOS2Table = nil);
-          FOS2Table := TPascalTypeOS2Table(CurrentTable);
-          CurrentTable := nil;
-        end else
-        begin
-          FOptionalTables.Add(CurrentTable);
-          CurrentTable := nil;
-        end;
-
-      except
-{$IFDEF IgnoreIncompleteOptionalTables}
-        on E: EPascalTypeTableIncomplete do
-        begin
-          if (TableClass = TPascalTypeHeaderTable) or
-            (TableClass = TPascalTypeHorizontalHeaderTable) or
-            (TableClass = TPascalTypeHorizontalMetricsTable) or
-            (TableClass = TPascalTypePostscriptTable) or
-            (TableClass = TPascalTypeMaximumProfileTable) or
-            (TableClass = TPascalTypeNameTable) then
-            raise;
-        end;
-{$ELSE}
-        raise
-{$ENDIF}
-      end;
-
-    finally
-      // dispose temporary table
-      CurrentTable.Free;
-    end;
-  end else
-  begin
-    CurrentTable := TPascalTypeUnknownTable.Create(RootTable, TableEntry.TableType);
-    CurrentTable.LoadFromStream(Stream, TableEntry.Length);
-    FOptionalTables.Add(CurrentTable);
+    ttOS2:
+      FOS2Table := Result as TPascalTypeOS2Table;
   end;
 end;
 
 procedure TPascalTypeFontFace.SaveToStream(Stream: TStream);
+(*
 var
+  StartPos: Int64;
   DirectoryTable: TPascalTypeDirectoryTable;
   TableIndex    : Integer;
   NamedTable    : TCustomPascalTypeNamedTable;
   MemoryStream  : TMemoryStream;
+*)
 begin
+(* TODO
+  StartPos := Stream.Position;
   // create directory table
   DirectoryTable := TPascalTypeDirectoryTable.Create(RootTable);
 
@@ -1393,14 +1312,14 @@ begin
     DirectoryTable.ClearAndBuildRequiredEntries;
 
     // build directory table
-    for TableIndex := 0 to FOptionalTables.Count - 1 do
-      DirectoryTable.AddTableEntry(FOptionalTables[TableIndex].TableType);
+    for TableIndex := 0 to AllTables.Count-1 do
+      DirectoryTable.AddTableEntry(AllTables[TableIndex].TableType);
 
     // write temporary directory to determine its size
-    SaveToStream(Stream);
+    DirectoryTable.SaveToStream(Stream);
 
     // build directory table
-    for TableIndex := 0 to TableCount - 1 do
+    for TableIndex := 0 to AllTables.Count-1 do
     begin
       NamedTable := GetTableByTableType(DirectoryTable.TableList[TableIndex].TableType);
       Assert(NamedTable <> nil);
@@ -1430,13 +1349,14 @@ begin
     end;
 
     // reset stream position
-    Stream.Position := 0;
+    Stream.Position := StartPos;
 
     // write final directory
-    SaveToStream(Stream);
+    DirectoryTable.SaveToStream(Stream);
   finally
     DirectoryTable.Free;
   end;
+*)
 end;
 
 end.

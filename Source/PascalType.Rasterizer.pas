@@ -323,14 +323,20 @@ end;
 procedure TCustomPascalTypeRasterizer.CalculateScalerX;
 begin
 {$IFDEF UseFloatingPoint}
-  FScalerX := Abs(FFontHeight / FFontFace.HeaderTable.UnitsPerEm);
+  if (FFontFace.HeaderTable <> nil) then // We might get called before font has been loaded
+    FScalerX := Abs(FFontHeight / FFontFace.HeaderTable.UnitsPerEm)
+  else
+    FScalerX := 1.0;
 {$ENDIF}
 end;
 
 procedure TCustomPascalTypeRasterizer.CalculateScalerY;
 begin
 {$IFDEF UseFloatingPoint}
-  FScalerY := Abs(FFontHeight / FFontFace.HeaderTable.UnitsPerEm);
+  if (FFontFace.HeaderTable <> nil) then // We might get called before font has been loaded
+    FScalerY := Abs(FFontHeight / FFontFace.HeaderTable.UnitsPerEm)
+  else
+    FScalerY := 1.0;
 {$ENDIF}
 end;
 

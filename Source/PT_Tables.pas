@@ -49,7 +49,7 @@ type
   protected
     function GetInternalTableType: TTableType; override;
   public
-    constructor Create(AParent: TCustomPascalTypeTable; TableType: TTableType); reintroduce; virtual;
+    constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
 
     class function GetTableType: TTableType; override;
@@ -60,6 +60,7 @@ type
     procedure SaveToStream(Stream: TStream); override;
 
     property Stream: TMemoryStream read FStream;
+    property TableType: TTableType read GetInternalTableType write FTableType;
   end;
 
   // glyph data prototype table
@@ -439,10 +440,9 @@ var
 
 { TPascalTypeUnknownTable }
 
-constructor TPascalTypeUnknownTable.Create(AParent: TCustomPascalTypeTable; TableType: TTableType);
+constructor TPascalTypeUnknownTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited Create(AParent);
-  FTableType := TableType;
   FStream := TMemoryStream.Create;
 end;
 
@@ -459,7 +459,6 @@ begin
   begin
     FTableType := TPascalTypeUnknownTable(Source).FTableType;
 
-    // assign streams
     FStream.Seek(0, soFromBeginning);
     TPascalTypeUnknownTable(Source).FStream.Seek(0, soFromBeginning);
     FStream.CopyFrom(TPascalTypeUnknownTable(Source).FStream, 0);

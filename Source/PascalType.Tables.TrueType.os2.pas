@@ -2211,30 +2211,36 @@ can still read the parts we support. The format is forward compatible.
 
 {$IFDEF AmbigiousExceptions}
   HorizontalHeader := TPascalTypeHorizontalHeaderTable(FontFace.GetTableByTableName('hhea'));
-  Assert(HorizontalHeader <> nil);
-
-  if fsfUseTypoMetrics in FontSelectionFlags then
+  // hhea might not have been loaded yet due to the table load order
+  // so don't do this test unless it has been loaded
+  // Assert(HorizontalHeader <> nil);
+  if (HorizontalHeader <> nil) then
   begin
-    if Abs(HorizontalHeader.Ascent) <> Abs(FTypographicAscent) then
-      raise EPascalTypeError.Create(RCStrErrorAscender);
 
-    if Abs(HorizontalHeader.Descent) <> Abs(FTypographicDescent) then
-      raise EPascalTypeError.Create(RCStrErrorDescender);
+    if fsfUseTypoMetrics in FontSelectionFlags then
+    begin
+      if Abs(HorizontalHeader.Ascent) <> Abs(FTypographicAscent) then
+        raise EPascalTypeError.Create(RCStrErrorAscender);
 
-    if Abs(HorizontalHeader.LineGap) <> Abs(FTypographicLineGap) then
-      raise EPascalTypeError.Create(RCStrErrorLineGap);
-  end
-  else
-  begin
-    // TODO : Handle WindowsAscender/Descender errors as warnings
-    // These errors are very commons so the checks has been disabled for now
-    if Abs(HorizontalHeader.Ascent) <> Abs(FWindowsAscent) then
-      ; //raise EPascalTypeError.Create(RCStrErrorWindowsAscender);
+      if Abs(HorizontalHeader.Descent) <> Abs(FTypographicDescent) then
+        raise EPascalTypeError.Create(RCStrErrorDescender);
 
-    if Abs(HorizontalHeader.Descent) <> Abs(FWindowsDescent) then
-      ; // raise EPascalTypeError.Create(RCStrErrorWindowsDescender);
+      if Abs(HorizontalHeader.LineGap) <> Abs(FTypographicLineGap) then
+        raise EPascalTypeError.Create(RCStrErrorLineGap);
+    end
+    else
+    begin
+      // TODO : Handle WindowsAscender/Descender errors as warnings
+      // These errors are very commons so the checks has been disabled for now
+      if Abs(HorizontalHeader.Ascent) <> Abs(FWindowsAscent) then
+        ; //raise EPascalTypeError.Create(RCStrErrorWindowsAscender);
+
+      if Abs(HorizontalHeader.Descent) <> Abs(FWindowsDescent) then
+        ; // raise EPascalTypeError.Create(RCStrErrorWindowsDescender);
+    end;
   end;
 {$ENDIF}
+
   // eventually load further tables
   if Version > 0 then
   begin
