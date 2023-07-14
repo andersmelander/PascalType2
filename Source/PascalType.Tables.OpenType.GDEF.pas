@@ -44,7 +44,7 @@ uses
   Classes,
   PT_Types,
   PT_Classes,
-  PT_Tables,
+  PascalType.Tables,
   PascalType.Tables.OpenType,
   PascalType.Tables.OpenType.Common;
 
@@ -325,6 +325,6 @@ end;
 
 initialization
 
-  RegisterPascalTypeTable(TOpenTypeGlyphDefinitionTable);
+  PascalTypeTableClasses.RegisterTable(TOpenTypeGlyphDefinitionTable);
 
 end.

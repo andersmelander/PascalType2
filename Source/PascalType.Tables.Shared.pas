@@ -1,4 +1,4 @@
-unit PT_TablesShared;
+unit PascalType.Tables.Shared;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -35,7 +35,11 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, SysUtils, PT_Types, PT_Classes, PT_Tables;
+  Classes,
+  SysUtils,
+  PT_Types,
+  PT_Classes,
+  PascalType.Tables;
 
 type
   TPascalTypeBitmapLineMetrics = class(TCustomPascalTypeTable)

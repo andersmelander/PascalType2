@@ -42,7 +42,7 @@ uses
   Classes,
   PT_Types,
   PT_Classes,
-  PT_Tables;
+  PascalType.Tables;
 
 //------------------------------------------------------------------------------
 //
@@ -89,7 +89,8 @@ implementation
 uses
   SysUtils,
   PT_ResourceStrings,
-  PascalType.Tables.TrueType.hhea;
+  PascalType.Tables.TrueType.hhea,
+  PascalType.Tables.TrueType.maxp;
 
 //------------------------------------------------------------------------------
 //
@@ -121,14 +122,12 @@ var
   MaxProf  : TPascalTypeMaximumProfileTable;
   LastWidth: Word;
   MtxIndex : Integer;
-const
-  CMaxProfTableType: TTableType = (AsAnsiChar: 'maxp');
 begin
   inherited;
 
   HorHead := TPascalTypeHorizontalHeaderTable(FontFace.GetTableByTableName('hhea'));
   Assert(HorHead <> nil);
-  MaxProf := TPascalTypeMaximumProfileTable(FontFace.GetTableByTableType(CMaxProfTableType));
+  MaxProf := TPascalTypeMaximumProfileTable(FontFace.GetTableByTableType('maxp'));
   Assert(MaxProf <> nil);
 
   // check if vertical metrics header is available
@@ -207,6 +206,6 @@ end;
 
 initialization
 
-  RegisterPascalTypeTable(TPascalTypeHorizontalMetricsTable);
+  PascalTypeTableClasses.RegisterTable(TPascalTypeHorizontalMetricsTable);
 
 end.

@@ -44,7 +44,7 @@ uses
   Classes,
   PT_Types,
   PT_Classes,
-  PT_Tables,
+  PascalType.Tables,
   PascalType.Tables.OpenType,
   PascalType.Tables.OpenType.Common,
   PascalType.Tables.OpenType.Lookup;
@@ -111,6 +111,6 @@ end;
 
 initialization
 
-  RegisterPascalTypeTable(TOpenTypeGlyphPositionTable);
+  PascalTypeTableClasses.RegisterTable(TOpenTypeGlyphPositionTable);
 
 end.

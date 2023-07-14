@@ -35,7 +35,7 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, SysUtils, Types, Contnrs, PT_Types, PT_TableDirectory, PT_Tables,
+  Classes, SysUtils, Types, Contnrs, PT_Types, PT_TableDirectory, PascalType.Tables,
   PT_Storage, PT_StorageSFNT;
 
 type

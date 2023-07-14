@@ -40,9 +40,9 @@ uses
   PT_Types,
   PascalType.FontFace,
   PascalType.FontFace.SFNT,
-  PT_Tables,
+  PascalType.Tables,
   PascalType.Tables.TrueType.CharacterMaps,
-  PT_TablesOptional;
+  PascalType.Tables.Optional;
 
 type
   TFontPoint = packed record

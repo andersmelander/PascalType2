@@ -262,8 +262,7 @@ type
   );
 
   {$Z2}
-  TMacStyle = (msBold, msItalic, msUnderline, msOutline, msShadow,
-    msCondensed, msExtended);
+  TMacStyle = (msBold, msItalic, msUnderline, msOutline, msShadow, msCondensed, msExtended);
   TMacStyles = set of TMacStyle;
   PMacStyles = ^TMacStyles;
 
@@ -691,212 +690,195 @@ end;
 
 function VersionToString(Value: TFixedPoint): string;
 begin
- Result := IntToStr(Round(100 * Value.Fract / (1 shl 16)));
- if Length(Result) < 2 then Result := '0' + Result;
- if Length(Result) < 3 then Result := '0' + Result;
- Result := IntToStr(Value.Value) + '.' + Result;
+  // TODO : Use Format() instead
+  Result := IntToStr(Round(100 * Value.Fract / (1 shl 16)));
+  if Length(Result) < 2 then
+    Result := '0' + Result;
+  if Length(Result) < 3 then
+    Result := '0' + Result;
+  Result := IntToStr(Value.Value) + '.' + Result;
 end;
 
 
 function FontHeaderTableFlagsToWord(Value: TFontHeaderTableFlags): Word;
+var
+  Flag: TFontHeaderTableFlag;
 begin
- if htfZeroSpecBaseline in Value then Result := 1 else Result := 0;
- if htfXPosLSB in Value then Result := Result + (1 shl 1);
- if htfScaledSizeDiffers in Value then Result := Result + (1 shl 2);
- if htfIntegerScaling in Value then Result := Result + (1 shl 3);
- if htfAdvanceWidth in Value then Result := Result + (1 shl 4);
- if htfVertical in Value then Result := Result + (1 shl 5);
- if htfZero in Value then Result := Result + (1 shl 6);
- if htfLinguistic in Value then Result := Result + (1 shl 7);
- if htfMetamorphosis in Value then Result := Result + (1 shl 8);
- if htfRightToLeft in Value then Result := Result + (1 shl 9);
- if htfRearrangement in Value then Result := Result + (1 shl 10);
- if htfLossless in Value then Result := Result + (1 shl 11);
- if htfFontConverted in Value then Result := Result + (1 shl 12);
- if htfClearType in Value then Result := Result + (1 shl 13);
+  Result := 0;
+  for Flag in Value do
+    Result := Result or (1 shl Ord(Flag));
 end;
 
 function WordToFontHeaderTableFlags(Value: Word): TFontHeaderTableFlags;
+var
+  Flag: TFontHeaderTableFlag;
 begin
- if (Value and 1) <> 0 then Result := [htfZeroSpecBaseline] else Result := [];
- if (Value and (1 shl  1)) <> 0 then Result := Result + [htfXPosLSB];
- if (Value and (1 shl  2)) <> 0 then Result := Result + [htfScaledSizeDiffers];
- if (Value and (1 shl  3)) <> 0 then Result := Result + [htfIntegerScaling];
- if (Value and (1 shl  4)) <> 0 then Result := Result + [htfAdvanceWidth];
- if (Value and (1 shl  5)) <> 0 then Result := Result + [htfVertical];
- if (Value and (1 shl  6)) <> 0 then Result := Result + [htfZero];
- if (Value and (1 shl  7)) <> 0 then Result := Result + [htfLinguistic];
- if (Value and (1 shl  8)) <> 0 then Result := Result + [htfMetamorphosis];
- if (Value and (1 shl  9)) <> 0 then Result := Result + [htfRightToLeft];
- if (Value and (1 shl 10)) <> 0 then Result := Result + [htfRearrangement];
- if (Value and (1 shl 11)) <> 0 then Result := Result + [htfLossless];
- if (Value and (1 shl 12)) <> 0 then Result := Result + [htfFontConverted];
- if (Value and (1 shl 13)) <> 0 then Result := Result + [htfClearType];
+  Result := [];
+  for Flag in TFontHeaderTableFlags(Value) do
+    Include(Result, Flag);
 end;
 
 function MacStylesToWord(Value: TMacStyles): Word;
+var
+  Style: TMacStyle;
 begin
- if msBold in Value then Result := 1 else Result := 0;
- if msItalic in Value then Result := Result + (1 shl 1);
- if msUnderline in Value then Result := Result + (1 shl 2);
- if msOutline in Value then Result := Result + (1 shl 3);
- if msShadow in Value then Result := Result + (1 shl 4);
- if msCondensed in Value then Result := Result + (1 shl 5);
- if msExtended in Value then Result := Result + (1 shl 6);
+  Result := 0;
+  for Style in Value do
+    Result := Result or (1 shl Ord(Style));
 end;
 
 function WordToMacStyles(Value: Word): TMacStyles;
+var
+  Style: TMacStyle;
 begin
- if (Value and 1) <> 0 then Result := [msBold] else Result := [];
- if (Value and (1 shl  1)) <> 0 then Result := Result + [msItalic];
- if (Value and (1 shl  2)) <> 0 then Result := Result + [msUnderline];
- if (Value and (1 shl  3)) <> 0 then Result := Result + [msOutline];
- if (Value and (1 shl  4)) <> 0 then Result := Result + [msShadow];
- if (Value and (1 shl  5)) <> 0 then Result := Result + [msCondensed];
- if (Value and (1 shl  6)) <> 0 then Result := Result + [msExtended];
+  Result := [];
+  for Style in TMacStyles(Byte(Value)) do
+    Include(Result, Style);
 end;
 
 function MacStylesToString(Value: TMacStyles): String;
 begin
- if msBold in Value then Result := 'Bold, ' else Result := '';
- if msItalic in Value then Result := Result + 'Italic, ';
- if msUnderline in Value then Result := Result + 'Underline, ';
- if msOutline in Value then Result := Result + 'Outline, ';
- if msShadow in Value then Result := Result + 'Shadow, ';
- if msCondensed in Value then Result := Result + 'Condensed, ';
- if msExtended in Value then Result := Result + 'Extended, ';
+  if msBold in Value then Result := 'Bold, ' else Result := '';
+  if msItalic in Value then Result := Result + 'Italic, ';
+  if msUnderline in Value then Result := Result + 'Underline, ';
+  if msOutline in Value then Result := Result + 'Outline, ';
+  if msShadow in Value then Result := Result + 'Shadow, ';
+  if msCondensed in Value then Result := Result + 'Condensed, ';
+  if msExtended in Value then Result := Result + 'Extended, ';
 
- // eventually remove last comma
- if Length(Result) > 2 then SetLength(Result, Length(Result) - 2);
+  // eventually remove last comma
+  if Length(Result) > 2 then
+    SetLength(Result, Length(Result) - 2);
 end;
 
 function InstructionByteToString(Value: Byte): string;
 begin
- case Value of
-  $00..$01 : Result := 'SVTCA[a]';
-  $02..$03 : Result := 'SPVTCA[a]';
-  $04..$05 : Result := 'SFVTCA[a]';
-  $06..$07 : Result := 'SPVTL[a]';
-  $08..$09 : Result := 'SFVTL[a]';
-  $0A      : Result := 'SPVFS';
-  $0B      : Result := 'SFVFS';
-  $0C      : Result := 'GPV';
-  $0D      : Result := 'GFV';
-  $0E      : Result := 'SFVTPV';
-  $0F      : Result := 'ISECT';
-  $10      : Result := 'SRP0';
-  $11      : Result := 'SRP1';
-  $12      : Result := 'SRP2';
-  $13      : Result := 'SZP0';
-  $14      : Result := 'SZP1';
-  $15      : Result := 'SZP2';
-  $16      : Result := 'SZPS';
-  $17      : Result := 'SLOOP';
-  $18      : Result := 'RTG';
-  $19      : Result := 'RTHG';
-  $1A      : Result := 'SMD';
-  $1B      : Result := 'ELSE';
-  $1C      : Result := 'JMPR';
-  $1D      : Result := 'SCVTCI';
-  $1E      : Result := 'SSWCI';
-  $1F      : Result := 'SSW';
-  $20      : Result := 'DUP';
-  $21      : Result := 'POP';
-  $22      : Result := 'CLEAR';
-  $23      : Result := 'SWAP';
-  $24      : Result := 'DEPTH';
-  $25      : Result := 'CINDEX';
-  $26      : Result := 'MINDEX';
-  $27      : Result := 'ALIGNPTS';
-  $29      : Result := 'UTP';
-  $2A      : Result := 'LOOPCALL';
-  $2B      : Result := 'CALL';
-  $2C      : Result := 'FDEF';
-  $2D      : Result := 'ENDF';
-  $2E..$2F : Result := 'MDAP[ a ]';
-  $30..$31 : Result := 'IUP[a]';
-  $32..$33 : Result := 'SHP[a]';
-  $34..$35 : Result := 'SHC[a]';
-  $36..$37 : Result := 'SHZ[a]';
-  $38      : Result := 'SHPIX';
-  $39      : Result := 'IP';
-  $3A..$3B : Result := 'MSIRP[a]';
-  $3C      : Result := 'ALIGNRP';
-  $3D      : Result := 'RTDG';
-  $3E..$3F : Result := 'MIAP[a]';
-  $40      : Result := 'NPUSHB';
-  $41      : Result := 'NPUSHW';
-  $42      : Result := 'WS';
-  $43      : Result := 'RS';
-  $44      : Result := 'WCVTP';
-  $45      : Result := 'RCVT';
-  $46..$47 : Result := 'GC[a]';
-  $48      : Result := 'SCFS';
-  $49..$4A : Result := 'MD[a]';
-  $4B      : Result := 'MPPEM';
-  $4C      : Result := 'MPS';
-  $4D      : Result := 'FLIPON';
-  $4E      : Result := 'FLIPOFF';
-  $4F      : Result := 'DEBUG';
-  $50      : Result := 'LT';
-  $51      : Result := 'LTEQ';
-  $52      : Result := 'GT';
-  $53      : Result := 'GTEQ';
-  $54      : Result := 'EQ';
-  $55      : Result := 'NEQ';
-  $56      : Result := 'ODD';
-  $57      : Result := 'EVEN';
-  $58      : Result := 'IF';
-  $59      : Result := 'EIF';
-  $5A      : Result := 'AND';
-  $5B      : Result := 'OR';
-  $5C      : Result := 'NOT';
-  $5D      : Result := 'DELTAP1';
-  $5E      : Result := 'SDB';
-  $5F      : Result := 'SDS';
-  $60      : Result := 'ADD';
-  $61      : Result := 'SUB';
-  $62      : Result := 'DIV';
-  $63      : Result := 'MUL';
-  $64      : Result := 'ABS';
-  $65      : Result := 'NEG';
-  $66      : Result := 'FLOOR';
-  $67      : Result := 'CEILING';
-  $68..$6B : Result := 'ROUND[ab]';
-  $6C..$6F : Result := 'NROUND[ab]';
-  $70      : Result := 'WCVTF';
-  $71      : Result := 'DELTAP2';
-  $72      : Result := 'DELTAP3';
-  $73      : Result := 'DELTAC1,';
-  $74      : Result := 'DELTAC2';
-  $75      : Result := 'DELTAC3';
-  $76      : Result := 'SROUND';
-  $77      : Result := 'S45ROUND';
-  $78      : Result := 'JROT';
-  $79      : Result := 'JROF';
-  $7A      : Result := 'ROFF';
-  $7C      : Result := 'RUTG';
-  $7D      : Result := 'RDTG';
-  $7E      : Result := 'SANGW';
-  $7F      : Result := 'AA';
-  $80      : Result := 'FLIPPT';
-  $81      : Result := 'FLIPRGON';
-  $82      : Result := 'FLIPRGOFF';
-  $85      : Result := 'SCANCTRL';
-  $86..$87 : Result := 'SDPVTL[a]';
-  $88      : Result := 'GETINFO';
-  $89      : Result := 'IDEF';
-  $8a      : Result := 'ROLL';
-  $8B      : Result := 'MAX';
-  $8C      : Result := 'MIN';
-  $8D      : Result := 'SCANTYPE';
-  $8E      : Result := 'INSTCTRL';
-  $B0..$B7 : Result := 'PUSHB';
-  $B8..$BF : Result := 'PUSHW';
-  $C0..$DF : Result := 'MDRP[abcde]';
-  $E0..$FF : Result := 'MIRP[abcde]';
-  else Result := 'opcode undefined'
- end;
+  case Value of
+    $00..$01 : Result := 'SVTCA[a]';
+    $02..$03 : Result := 'SPVTCA[a]';
+    $04..$05 : Result := 'SFVTCA[a]';
+    $06..$07 : Result := 'SPVTL[a]';
+    $08..$09 : Result := 'SFVTL[a]';
+    $0A      : Result := 'SPVFS';
+    $0B      : Result := 'SFVFS';
+    $0C      : Result := 'GPV';
+    $0D      : Result := 'GFV';
+    $0E      : Result := 'SFVTPV';
+    $0F      : Result := 'ISECT';
+    $10      : Result := 'SRP0';
+    $11      : Result := 'SRP1';
+    $12      : Result := 'SRP2';
+    $13      : Result := 'SZP0';
+    $14      : Result := 'SZP1';
+    $15      : Result := 'SZP2';
+    $16      : Result := 'SZPS';
+    $17      : Result := 'SLOOP';
+    $18      : Result := 'RTG';
+    $19      : Result := 'RTHG';
+    $1A      : Result := 'SMD';
+    $1B      : Result := 'ELSE';
+    $1C      : Result := 'JMPR';
+    $1D      : Result := 'SCVTCI';
+    $1E      : Result := 'SSWCI';
+    $1F      : Result := 'SSW';
+    $20      : Result := 'DUP';
+    $21      : Result := 'POP';
+    $22      : Result := 'CLEAR';
+    $23      : Result := 'SWAP';
+    $24      : Result := 'DEPTH';
+    $25      : Result := 'CINDEX';
+    $26      : Result := 'MINDEX';
+    $27      : Result := 'ALIGNPTS';
+    $29      : Result := 'UTP';
+    $2A      : Result := 'LOOPCALL';
+    $2B      : Result := 'CALL';
+    $2C      : Result := 'FDEF';
+    $2D      : Result := 'ENDF';
+    $2E..$2F : Result := 'MDAP[ a ]';
+    $30..$31 : Result := 'IUP[a]';
+    $32..$33 : Result := 'SHP[a]';
+    $34..$35 : Result := 'SHC[a]';
+    $36..$37 : Result := 'SHZ[a]';
+    $38      : Result := 'SHPIX';
+    $39      : Result := 'IP';
+    $3A..$3B : Result := 'MSIRP[a]';
+    $3C      : Result := 'ALIGNRP';
+    $3D      : Result := 'RTDG';
+    $3E..$3F : Result := 'MIAP[a]';
+    $40      : Result := 'NPUSHB';
+    $41      : Result := 'NPUSHW';
+    $42      : Result := 'WS';
+    $43      : Result := 'RS';
+    $44      : Result := 'WCVTP';
+    $45      : Result := 'RCVT';
+    $46..$47 : Result := 'GC[a]';
+    $48      : Result := 'SCFS';
+    $49..$4A : Result := 'MD[a]';
+    $4B      : Result := 'MPPEM';
+    $4C      : Result := 'MPS';
+    $4D      : Result := 'FLIPON';
+    $4E      : Result := 'FLIPOFF';
+    $4F      : Result := 'DEBUG';
+    $50      : Result := 'LT';
+    $51      : Result := 'LTEQ';
+    $52      : Result := 'GT';
+    $53      : Result := 'GTEQ';
+    $54      : Result := 'EQ';
+    $55      : Result := 'NEQ';
+    $56      : Result := 'ODD';
+    $57      : Result := 'EVEN';
+    $58      : Result := 'IF';
+    $59      : Result := 'EIF';
+    $5A      : Result := 'AND';
+    $5B      : Result := 'OR';
+    $5C      : Result := 'NOT';
+    $5D      : Result := 'DELTAP1';
+    $5E      : Result := 'SDB';
+    $5F      : Result := 'SDS';
+    $60      : Result := 'ADD';
+    $61      : Result := 'SUB';
+    $62      : Result := 'DIV';
+    $63      : Result := 'MUL';
+    $64      : Result := 'ABS';
+    $65      : Result := 'NEG';
+    $66      : Result := 'FLOOR';
+    $67      : Result := 'CEILING';
+    $68..$6B : Result := 'ROUND[ab]';
+    $6C..$6F : Result := 'NROUND[ab]';
+    $70      : Result := 'WCVTF';
+    $71      : Result := 'DELTAP2';
+    $72      : Result := 'DELTAP3';
+    $73      : Result := 'DELTAC1,';
+    $74      : Result := 'DELTAC2';
+    $75      : Result := 'DELTAC3';
+    $76      : Result := 'SROUND';
+    $77      : Result := 'S45ROUND';
+    $78      : Result := 'JROT';
+    $79      : Result := 'JROF';
+    $7A      : Result := 'ROFF';
+    $7C      : Result := 'RUTG';
+    $7D      : Result := 'RDTG';
+    $7E      : Result := 'SANGW';
+    $7F      : Result := 'AA';
+    $80      : Result := 'FLIPPT';
+    $81      : Result := 'FLIPRGON';
+    $82      : Result := 'FLIPRGOFF';
+    $85      : Result := 'SCANCTRL';
+    $86..$87 : Result := 'SDPVTL[a]';
+    $88      : Result := 'GETINFO';
+    $89      : Result := 'IDEF';
+    $8a      : Result := 'ROLL';
+    $8B      : Result := 'MAX';
+    $8C      : Result := 'MIN';
+    $8D      : Result := 'SCANTYPE';
+    $8E      : Result := 'INSTCTRL';
+    $B0..$B7 : Result := 'PUSHB';
+    $B8..$BF : Result := 'PUSHW';
+    $C0..$DF : Result := 'MDRP[abcde]';
+    $E0..$FF : Result := 'MIRP[abcde]';
+  else
+    Result := 'opcode undefined'
+  end;
 end;
 
 function WordToDigitalSignatureFlags(Value: Word): TDigitalSignatureFlags;

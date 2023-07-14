@@ -35,7 +35,7 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, SysUtils, PT_Types, PT_Tables;
+  Classes, SysUtils, PT_Types, PascalType.Tables;
 
 procedure ByteCodeToStrings(ByteCodeStream: TStream; Strings: TStrings);
 function ByteCodeToString(ByteCode: array of Byte): string;

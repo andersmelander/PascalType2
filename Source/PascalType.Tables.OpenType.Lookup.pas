@@ -40,7 +40,7 @@ uses
   System.Classes,
   PT_Types,
   PT_Classes,
-  PT_Tables,
+  PascalType.Tables,
   PascalType.GlyphString,
   PascalType.Tables.OpenType.Coverage;
 

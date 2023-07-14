@@ -4,15 +4,15 @@ interface
 
 uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  StdCtrls, ExtCtrls,
+  StdCtrls, ExtCtrls, Vcl.Menus, System.Actions, Vcl.ActnList,
   PT_Types,
   PT_Classes,
-  PT_Tables,
+  PascalType.Tables,
   PascalType.FontFace,
   PascalType.FontFace.SFNT,
   PascalType.Rasterizer.GDI,
   PascalType.Rasterizer.Graphics32,
-  RenderDemoFontNameScanner, Vcl.Menus, System.Actions, Vcl.ActnList;
+  RenderDemoFontNameScanner;
 
 {$I ..\..\Source\PT_Compiler.inc}
 

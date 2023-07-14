@@ -1,4 +1,4 @@
-unit PT_TablesPostscriptOperands;
+unit PascalType.Tables.Postscript.Operands;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -35,8 +35,12 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, SysUtils, PT_Types, PT_Classes, PT_Tables,
-  PT_TablesPostscript;
+  Classes,
+  SysUtils,
+  PT_Types,
+  PT_Classes,
+  PascalType.Tables,
+  PascalType.Tables.Postscript;
 
 type
   TPascalTypePostscriptOperandShortInt = class(TCustomPascalTypePostscriptDictOperand)

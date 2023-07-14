@@ -251,7 +251,7 @@ implementation
 
 uses
   SysUtils,
-  PT_Tables,
+  PascalType.Tables,
   PascalType.FontFace.SFNT,
   PascalType.Tables.TrueType.os2,
   PT_ResourceStrings;
@@ -816,6 +816,6 @@ end;
 
 initialization
 
-  RegisterPascalTypeTable(TPascalTypeCharacterMapTable);
+  PascalTypeTableClasses.RegisterTable(TPascalTypeCharacterMapTable);
 
 end.

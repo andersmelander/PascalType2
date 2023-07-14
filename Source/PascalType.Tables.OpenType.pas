@@ -40,7 +40,7 @@ uses
   Classes,
   PT_Types,
   PT_Classes,
-  PT_Tables;
+  PascalType.Tables;
 
 type
   TTagOffsetRecord = packed record

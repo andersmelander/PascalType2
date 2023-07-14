@@ -42,7 +42,7 @@ uses
   Classes,
   PT_Types,
   PT_Classes,
-  PT_Tables;
+  PascalType.Tables;
 
 //------------------------------------------------------------------------------
 //
@@ -88,7 +88,8 @@ implementation
 uses
   SysUtils,
   PT_ResourceStrings,
-  PascalType.Tables.TrueType.vhea;
+  PascalType.Tables.TrueType.vhea,
+  PascalType.Tables.TrueType.maxp;
 
 //------------------------------------------------------------------------------
 //
@@ -188,6 +189,6 @@ end;
 
 initialization
 
-  RegisterPascalTypeTable(TPascalTypeVerticalMetricsTable);
+  PascalTypeTableClasses.RegisterTable(TPascalTypeVerticalMetricsTable);
 
 end.

@@ -1,4 +1,4 @@
-unit PT_TablesFontForge;
+unit PascalType.Tables.FontForge;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -35,7 +35,11 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, PT_Types, PT_Classes, PT_Tables, PT_TablesShared;
+  Classes,
+  PT_Types,
+  PT_Classes,
+  PascalType.Tables,
+  PascalType.Tables.Shared;
 
 type
   // 'BDF '
@@ -473,7 +477,7 @@ end;
 
 initialization
 
-RegisterPascalTypeTables([TPascalTypeFontForgeTimeStampTable,
+PascalTypeTableClasses.RegisterTables([TPascalTypeFontForgeTimeStampTable,
   TPascalTypeFontForgeExtensionTable, TPascalTypeFontForgeTexTable,
   TPascalTypeFontForgeX11BDFTable]);
 

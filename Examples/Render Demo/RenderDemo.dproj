@@ -149,20 +149,20 @@
         <DCCReference Include="..\..\Source\PascalType.FontFace.pas"/>
         <DCCReference Include="..\..\Source\PascalType.FontFace.SFNT.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.Directory.pas"/>
-        <DCCReference Include="..\..\Source\PT_Tables.pas"/>
-        <DCCReference Include="..\..\Source\PT_TablesApple.pas"/>
-        <DCCReference Include="..\..\Source\PT_TablesBitmap.pas"/>
-        <DCCReference Include="..\..\Source\PT_TablesFontForge.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.Apple.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.Bitmap.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.FontForge.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.GSUB.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Features.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Languages.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Scripts.pas"/>
-        <DCCReference Include="..\..\Source\PT_TablesOptional.pas"/>
-        <DCCReference Include="..\..\Source\PT_TablesPostscript.pas"/>
-        <DCCReference Include="..\..\Source\PT_TablesPostscriptOperators.pas"/>
-        <DCCReference Include="..\..\Source\PT_TablesPostscriptOperands.pas"/>
-        <DCCReference Include="..\..\Source\PT_TablesShared.pas"/>
-        <DCCReference Include="..\..\Source\PT_TablesTrueType.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.Optional.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.Postscript.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.Postscript.Operators.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.Postscript.Operands.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.Shared.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.pas"/>
         <DCCReference Include="..\..\Source\PT_Types.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Unicode.Names.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Platform.Windows.pas"/>
@@ -221,6 +221,10 @@
         <DCCReference Include="..\..\Source\PascalType.Shaper.Script.Arabic.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Substitution.Alternate.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Shaper.Script.Hangul.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.head.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.name.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.maxp.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.post.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

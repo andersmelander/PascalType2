@@ -1,4 +1,4 @@
-unit PT_TablesPostscript;
+unit PascalType.Tables.Postscript;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -35,7 +35,11 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, SysUtils, PT_Types, PT_Classes, PT_Tables;
+  Classes,
+  SysUtils,
+  PT_Types,
+  PT_Classes,
+  PascalType.Tables;
 
 type
   TCustomPascalTypePostscriptIndexTable = class(TCustomPascalTypeTable)
@@ -235,7 +239,9 @@ function FindOperatorByEncoding(Encoding: Byte): TPascalTypePostscriptDictOperat
 implementation
 
 uses
-  PT_ResourceStrings, PT_TablesPostscriptOperators, PT_TablesPostscriptOperands;
+  PT_ResourceStrings,
+  PascalType.Tables.Postscript.Operators,
+  PascalType.Tables.Postscript.Operands;
 
 var
   GOperatorClasses: array of TPascalTypePostscriptDictOperatorClass;
@@ -2051,7 +2057,7 @@ end;
 
 initialization
 
-RegisterPascalTypeTables([TPascalTypeCompactFontFormatTable,
+PascalTypeTableClasses.RegisterTables([TPascalTypeCompactFontFormatTable,
   TPascalTypeVerticalOriginTable]);
 
 end.

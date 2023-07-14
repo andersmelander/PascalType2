@@ -46,14 +46,18 @@ uses
   PascalType.Unicode,
   PascalType.GlyphString,
   PascalType.FontFace,
-  PT_Tables,
+  PascalType.Tables,
   PascalType.Tables.TrueType.Directory,
+  PascalType.Tables.TrueType.head,
+  PascalType.Tables.TrueType.name,
   PascalType.Tables.TrueType.glyf,
   PascalType.Tables.TrueType.cmap,
+  PascalType.Tables.TrueType.maxp,
   PascalType.Tables.TrueType.hmtx,
   PascalType.Tables.TrueType.hhea,
   PascalType.Tables.TrueType.vmtx,
   PascalType.Tables.TrueType.os2,
+  PascalType.Tables.TrueType.post,
   PascalType.Tables.TrueType.Panose;
 
 type
@@ -210,7 +214,7 @@ type
     // Not required, but pretty important
     FGlyphData: TTrueTypeFontGlyphDataTable;
   private
-    function GetGlyphData(Index: Integer): TCustomPascalTypeGlyphDataTable;
+    function GetGlyphData(Index: Integer): TCustomTrueTypeFontGlyphData;
     function GetPanose: TCustomPascalTypePanoseTable;
     function GetBoundingBox: TRect;
     function GetGlyphCount: Word;
@@ -232,7 +236,7 @@ type
 
     function GetGlyphPath(GlyphIndex: Word): TPascalTypePath; // TODO : Use TFloatPoint
 
-    property GlyphData[Index: Integer]: TCustomPascalTypeGlyphDataTable read GetGlyphData;
+    property GlyphData[Index: Integer]: TCustomTrueTypeFontGlyphData read GetGlyphData;
 
     // Redirected sub properties
     property Panose: TCustomPascalTypePanoseTable read GetPanose;
@@ -280,7 +284,7 @@ implementation
 uses
   Math,
   PT_Math,
-  PT_TablesTrueType,
+  PascalType.Tables.TrueType,
   PascalType.Tables.OpenType.GDEF,
   PascalType.Shaper.Layout.OpenType,
   PT_ResourceStrings;
@@ -530,7 +534,7 @@ begin
   ValidateChecksum(Stream, TableEntry.Length);
 {$ENDIF}
 
-  TableClass := FindPascalTypeTableByType(TableEntry.TableType);
+  TableClass := PascalTypeTableClasses.FindTableByType(TableEntry.TableType);
 
   UnknownTableType := (TableClass = nil);
   if (UnknownTableType) then
@@ -956,7 +960,7 @@ begin
   Result := MaximumProfile.NumGlyphs;
 end;
 
-function TPascalTypeFontFace.GetGlyphData(Index: Integer): TCustomPascalTypeGlyphDataTable;
+function TPascalTypeFontFace.GetGlyphData(Index: Integer): TCustomTrueTypeFontGlyphData;
 begin
   Result := nil;
 

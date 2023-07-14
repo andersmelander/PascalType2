@@ -1,4 +1,4 @@
-unit PT_TablesBitmap;
+unit PascalType.Tables.Bitmap;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -35,7 +35,12 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, SysUtils, PT_Types, PT_Classes, PT_Tables, PT_TablesShared;
+  Classes,
+  SysUtils,
+  PT_Types,
+  PT_Classes,
+  PascalType.Tables,
+  PascalType.Tables.Shared;
 
 type
   TCustomPascalTypeEmbeddedBitmapTable = class(TCustomPascalTypeNamedTable)
@@ -581,7 +586,7 @@ end;
 
 initialization
 
-RegisterPascalTypeTables([TPascalTypeEmbeddedBitmapDataTable,
+PascalTypeTableClasses.RegisterTables([TPascalTypeEmbeddedBitmapDataTable,
   TPascalTypeEmbeddedBitmapLocationTable,
   TPascalTypeEmbeddedBitmapScalingTable]);
 

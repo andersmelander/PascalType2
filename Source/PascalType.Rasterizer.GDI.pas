@@ -40,8 +40,8 @@ uses
   PT_Types,
   PascalType.FontFace,
   PascalType.Rasterizer,
-  PT_Tables,
-  PT_TablesTrueType,
+  PascalType.Tables,
+  PascalType.Tables.TrueType,
   PascalType.Tables.TrueType.glyf;
 
 type
@@ -681,8 +681,7 @@ var
   WasOnCurve: Boolean;
   IsOnCurve: Boolean;
 begin
-  Ascent := Max(TPascalTypeHeaderTable(TPascalTypeFontFace(FontFace).HeaderTable).YMax,
-    TPascalTypeHorizontalHeaderTable(TPascalTypeFontFace(FontFace).HorizontalHeader).Ascent);
+  Ascent := Max(TPascalTypeFontFace(FontFace).HeaderTable.YMax, TPascalTypeFontFace(FontFace).HorizontalHeader.Ascent);
   Y := Y + Round(Ascent * ScalerY);
 
   with Canvas, Glyph do

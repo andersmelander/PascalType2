@@ -100,7 +100,7 @@ procedure Register;
 implementation
 
 uses
-  Types, PT_Tables;
+  Types, PascalType.Tables;
 
 resourcestring
   RCStrFontIDNotFound = 'Font ID not found';

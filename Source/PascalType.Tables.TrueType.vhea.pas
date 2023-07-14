@@ -42,7 +42,7 @@ uses
   Classes,
   PT_Types,
   PT_Classes,
-  PT_Tables;
+  PascalType.Tables;
 
 //------------------------------------------------------------------------------
 //
@@ -487,6 +487,6 @@ end;
 
 initialization
 
-  RegisterPascalTypeTable(TPascalTypeVerticalHeaderTable);
+  PascalTypeTableClasses.RegisterTable(TPascalTypeVerticalHeaderTable);
 
 end.

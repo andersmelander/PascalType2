@@ -1,4 +1,4 @@
-unit PT_TablesApple;
+unit PascalType.Tables.Apple;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -35,7 +35,12 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, PT_Types, PT_Classes, PT_Tables, PT_TablesShared;
+  Classes,
+  PT_Types,
+  PT_Classes,
+  PascalType.Tables,
+  PascalType.Tables.Shared,
+  PascalType.Tables.TrueType.head;
 
 type
   TCustomPascalTypeNamedVersionTable = class(TCustomPascalTypeNamedTable)
@@ -721,7 +726,10 @@ function FindDescriptionTagByType(TableType: TTableType): TPascalTypeTaggedValue
 implementation
 
 uses
-  SysUtils, PT_Math, PT_ResourceStrings;
+  SysUtils,
+  PT_Math,
+  PT_ResourceStrings,
+  PascalType.Tables.TrueType.maxp;
 
 resourcestring
   RCStrGlyphIndexOrderError = 'Last glyph index is smaller than first!';
@@ -3248,7 +3256,7 @@ initialization
     TPascalTypeSlantValueTable, TPascalTypeOpticalSizeValueTable,
     TPascalTypeNonAlphabeticValueTable]);
 
-  RegisterPascalTypeTables([TPascalTypeAccentAttachmentTable,
+  PascalTypeTableClasses.RegisterTables([TPascalTypeAccentAttachmentTable,
     TPascalTypeAxisVariationTable, TPascalTypeBaselineTable,
     TPascalTypeBitmapDataTable, TPascalTypeBitmapHeaderTable,
     TPascalTypeBitmapLocationTable, TPascalTypeFontDescriptionTable,

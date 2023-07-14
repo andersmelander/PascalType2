@@ -42,7 +42,7 @@ uses
   Classes,
   PT_Types,
   PT_Classes,
-  PT_Tables;
+  PascalType.Tables;
 
 //------------------------------------------------------------------------------
 //
@@ -79,7 +79,7 @@ type
 // Base class for simple and composite glyphs
 //------------------------------------------------------------------------------
 type
-  TCustomTrueTypeFontGlyphData = class abstract(TCustomPascalTypeGlyphDataTable)
+  TCustomTrueTypeFontGlyphData = class abstract(TCustomPascalTypeTable)
   private
     procedure SetNumberOfContours(const Value: SmallInt);
     procedure SetXMax(const Value: SmallInt);
@@ -345,7 +345,8 @@ implementation
 uses
   SysUtils,
   PT_ResourceStrings,
-  PT_TablesTrueType;
+  PascalType.Tables.TrueType,
+  PascalType.Tables.TrueType.maxp;
 
 
 //------------------------------------------------------------------------------
@@ -1419,6 +1420,6 @@ end;
 
 initialization
 
-  RegisterPascalTypeTables([TTrueTypeFontGlyphDataTable]);
+  PascalTypeTableClasses.RegisterTables([TTrueTypeFontGlyphDataTable]);
 
 end.

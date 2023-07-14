@@ -40,7 +40,7 @@ uses
   Classes,
   PT_Types,
   PT_Classes,
-  PT_Tables,
+  PascalType.Tables,
   PascalType.Tables.OpenType,
   PascalType.Tables.OpenType.Feature,
   PascalType.Tables.OpenType.Script,

@@ -6,7 +6,7 @@ uses
   Windows, Classes, SysUtils,
   PT_Types,
   PT_Classes,
-  PT_Tables,
+  PascalType.Tables,
   PascalType.FontFace,
   PascalType.FontFace.SFNT;
 

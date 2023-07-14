@@ -38,7 +38,7 @@ uses
   Classes,
   PT_Types,
   PT_Classes,
-  PT_Tables;
+  PascalType.Tables;
 
 
 //------------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-unit PT_TablesTrueType;
+unit PascalType.Tables.TrueType;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -38,7 +38,7 @@ uses
   Classes, SysUtils,
   PT_Types,
   PT_Classes,
-  PT_Tables;
+  PascalType.Tables;
 
 type
   // table 'cvt '
@@ -123,7 +123,10 @@ type
 implementation
 
 uses
-  PT_Math, PT_ResourceStrings;
+  PT_Math,
+  PT_ResourceStrings,
+  PascalType.Tables.TrueType.head,
+  PascalType.Tables.TrueType.maxp;
 
 
 { TTrueTypeFontControlValueTable }
@@ -360,7 +363,7 @@ end;
 
 initialization
 
-  RegisterPascalTypeTables([TTrueTypeFontControlValueTable,
+  PascalTypeTableClasses.RegisterTables([TTrueTypeFontControlValueTable,
     TTrueTypeFontFontProgramTable,
     TTrueTypeFontLocationTable, TTrueTypeFontControlValueProgramTable]);
 

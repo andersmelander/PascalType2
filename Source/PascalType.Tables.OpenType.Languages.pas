@@ -37,7 +37,7 @@ interface
 uses
   Classes,
   PT_Types,
-  PT_Tables,
+  PascalType.Tables,
   PascalType.Tables.OpenType,
   PascalType.Tables.OpenType.LanguageSystem;
 

@@ -42,7 +42,7 @@ uses
   Classes,
   PT_Types,
   PT_Classes,
-  PT_Tables,
+  PascalType.Tables,
   PascalType.Tables.TrueType.Panose;
 
 //------------------------------------------------------------------------------
@@ -721,6 +721,11 @@ resourcestring
   RCStrErrorAscender = 'Error: Typographic ascender should be equal to the ascender defined in the horizontal header table';
   RCStrErrorDescender = 'Error: Typographic descender should be equal to the descender defined in the horizontal header table';
   RCStrErrorLineGap = 'Error: Typographic line gap should be equal to the line gap defined in the horizontal header table';
+
+resourcestring
+  RCStrErrorWindowsAscender = 'Error: Windows ascender should be equal to the ascender defined in the horizontal header table';
+  RCStrErrorWindowsDescender = 'Error: Windows descender should be equal to the descender defined in the horizontal header table';
+
 
 //------------------------------------------------------------------------------
 //              TPascalTypeUnicodeRangeTable
@@ -2902,6 +2907,6 @@ end;
 
 initialization
 
-  RegisterPascalTypeTable(TPascalTypeOS2Table);
+  PascalTypeTableClasses.RegisterTable(TPascalTypeOS2Table);
 
 end.

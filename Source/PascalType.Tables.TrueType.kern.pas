@@ -42,7 +42,7 @@ uses
   System.Classes,
   PT_Types,
   PT_Classes,
-  PT_Tables;
+  PascalType.Tables;
 
 //------------------------------------------------------------------------------
 // TCustomPascalTypeKerningFormatSubTable
@@ -628,6 +628,6 @@ end;
 
 initialization
 
-  RegisterPascalTypeTable(TPascalTypeKerningTable);
+  PascalTypeTableClasses.RegisterTable(TPascalTypeKerningTable);
 
 end.

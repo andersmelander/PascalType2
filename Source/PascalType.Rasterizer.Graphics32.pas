@@ -47,7 +47,7 @@ uses
   PascalType.FontFace,
   PascalType.Rasterizer,
   PascalType.GlyphString,
-  PT_TablesTrueType;
+  PascalType.Tables.TrueType;
 
 type
   TPascalTypeRasterizerGraphics32 = class(TCustomPascalTypeRasterizer)
@@ -84,7 +84,7 @@ implementation
 uses
   Math,
   GR32,
-  PT_Tables,
+  PascalType.Tables,
   PascalType.FontFace.SFNT,
   PascalType.Tables.TrueType.glyf,
   PascalType.Tables.TrueType.hhea;
@@ -727,8 +727,7 @@ begin
   if (Length(GlyphPath) = 0) then
     exit;
 
-  Ascent := Max(TPascalTypeHeaderTable(TPascalTypeFontFace(FontFace).HeaderTable).YMax,
-    TPascalTypeHorizontalHeaderTable(TPascalTypeFontFace(FontFace).HorizontalHeader).Ascent);
+  Ascent := Max(TPascalTypeFontFace(FontFace).HeaderTable.YMax, TPascalTypeFontFace(FontFace).HorizontalHeader.Ascent);
   Origin.X := X;
   Origin.Y := Y + Ascent * ScalerY;
 

@@ -1,4 +1,4 @@
-unit PT_TablesOptional;
+unit PascalType.Tables.Optional;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -35,7 +35,7 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, PT_Types, PT_Classes, PT_Tables;
+  Classes, PT_Types, PT_Classes, PascalType.Tables;
 
 type
   // table 'DSIG'
@@ -351,7 +351,11 @@ type
 implementation
 
 uses
-  Math, SysUtils, PT_Math, PT_ResourceStrings;
+  Math,
+  SysUtils,
+  PT_Math,
+  PT_ResourceStrings,
+  PascalType.Tables.TrueType.maxp;
 
 
 { TPascalTypeDigitalSignatureBlock }
@@ -1631,7 +1635,7 @@ end;
 
 initialization
 
-  RegisterPascalTypeTables([TPascalTypeDigitalSignatureTable,
+  PascalTypeTableClasses.RegisterTables([TPascalTypeDigitalSignatureTable,
     TPascalTypeGridFittingAndScanConversionProcedureTable,
     TPascalTypeHorizontalDeviceMetricsTable,
     TPascalTypeLinearThresholdTable, TPascalTypePCL5Table,

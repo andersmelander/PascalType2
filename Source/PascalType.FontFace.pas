@@ -41,7 +41,7 @@ uses
   PT_Types,
   PT_Classes,
   PascalType.Tables.TrueType.Directory,
-  PT_Tables;
+  PascalType.Tables;
 
 type
   // TODO : This class can most likely be rolled into the derived class

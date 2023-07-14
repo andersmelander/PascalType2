@@ -44,7 +44,7 @@ uses
   Classes,
   PT_Types,
   PT_Classes,
-  PT_Tables,
+  PascalType.Tables,
   PascalType.Tables.OpenType,
   PascalType.Tables.OpenType.Common;
 
@@ -769,6 +769,6 @@ end;
 
 initialization
 
-  RegisterPascalTypeTables([TOpenTypeJustificationTable]);
+  PascalTypeTableClasses.RegisterTables([TOpenTypeJustificationTable]);
 
 end.

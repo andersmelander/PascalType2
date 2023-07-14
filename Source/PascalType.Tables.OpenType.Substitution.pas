@@ -39,7 +39,7 @@ uses
   Generics.Defaults,
   Classes,
   PT_Types,
-  PT_Tables,
+  PascalType.Tables,
   PascalType.GlyphString,
   PascalType.Tables.OpenType.Coverage,
   PascalType.Tables.OpenType.Lookup;

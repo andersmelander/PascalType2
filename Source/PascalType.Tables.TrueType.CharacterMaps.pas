@@ -38,7 +38,7 @@ uses
   Classes, SysUtils,
   PT_Types,
   PT_Classes,
-  PT_Tables,
+  PascalType.Tables,
   PascalType.Unicode,
   PascalType.Tables.TrueType.cmap;
 
