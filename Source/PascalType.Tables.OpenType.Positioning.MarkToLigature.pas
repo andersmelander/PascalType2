@@ -198,9 +198,9 @@ begin
   StartPos := Stream.Position;
 
   // LigatureArray table
-  SetLength(LigatureAttachOffsets, BigEndianValueReader.ReadWord(Stream));
+  SetLength(LigatureAttachOffsets, BigEndianValue.ReadWord(Stream));
   for i := 0 to High(LigatureAttachOffsets) do
-    LigatureAttachOffsets[i] := BigEndianValueReader.ReadWord(Stream);
+    LigatureAttachOffsets[i] := BigEndianValue.ReadWord(Stream);
 
   // LigatureArray table
   SetLength(FLigatureAttachments, Length(LigatureAttachOffsets));
@@ -209,14 +209,14 @@ begin
     Stream.Position := StartPos + LigatureAttachOffsets[i];
 
     // LigatureAttach table
-    SetLength(LigatureAnchorOffsets, BigEndianValueReader.ReadWord(Stream));
+    SetLength(LigatureAnchorOffsets, BigEndianValue.ReadWord(Stream));
     SetLength(FLigatureAttachments[i], Length(LigatureAnchorOffsets));
     for j := 0 to High(LigatureAnchorOffsets) do
     begin
       // ComponentRecord
       SetLength(LigatureAnchorOffsets[j], MarkClassCount);
       for k := 0 to MarkClassCount-1 do
-        LigatureAnchorOffsets[j, k] := BigEndianValueReader.ReadWord(Stream);
+        LigatureAnchorOffsets[j, k] := BigEndianValue.ReadWord(Stream);
 
     end;
 
@@ -248,7 +248,7 @@ var
 begin
   StartPos := Stream.Position;
 
-  WriteSwappedWord(Stream, Length(FLigatureAttachments));
+  BigEndianValue.WriteWord(Stream, Length(FLigatureAttachments));
 
   TableSize := 0;
   for i := 0 to High(FLigatureAttachments) do
@@ -262,7 +262,7 @@ begin
   Stream.Position := Stream.Position + TableSize;
   for i := 0 to High(FLigatureAttachments) do
   begin
-    WriteSwappedWord(Stream, Length(FLigatureAttachments[i]));
+    BigEndianValue.WriteWord(Stream, Length(FLigatureAttachments[i]));
     for j := 0 to High(FLigatureAttachments[i]) do
       for k := 0 to High(FLigatureAttachments[i, j]) do
       begin
@@ -279,7 +279,7 @@ begin
   for i := 0 to High(FLigatureAttachments) do
     for j := 0 to High(FLigatureAttachments[i]) do
       for k := 0 to High(FLigatureAttachments[i, j]) do
-        WriteSwappedWord(Stream, Offsets[i, j, k]);
+        BigEndianValue.WriteWord(Stream, Offsets[i, j, k]);
 end;
 
 function TOpenTypePositioningSubTableMarkToLigatureAttachment.GetLigatureCoverage: TCustomOpenTypeCoverageTable;

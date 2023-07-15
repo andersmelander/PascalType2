@@ -162,7 +162,6 @@ implementation
 
 uses
   Math, SysUtils,
-  PT_Math,
   PT_ResourceStrings;
 
 
@@ -190,7 +189,7 @@ begin
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // read version
-  FVersion.Fixed := BigEndianValueReader.ReadCardinal(Stream);
+  FVersion.Fixed := BigEndianValue.ReadCardinal(Stream);
 end;
 
 procedure TCustomOpenTypeVersionedNamedTable.SaveToStream(Stream: TStream);
@@ -198,7 +197,7 @@ begin
   inherited;
 
   // write version
-  WriteSwappedCardinal(Stream, Cardinal(Version));
+  BigEndianValue.WriteCardinal(Stream, Cardinal(Version));
 end;
 
 procedure TCustomOpenTypeVersionedNamedTable.SetVersion
@@ -273,14 +272,14 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read start glyph
-    FStartGlyph := BigEndianValueReader.ReadWord(Stream);
+    FStartGlyph := BigEndianValue.ReadWord(Stream);
 
     // read ClassValueArray length
-    SetLength(FClassValueArray, BigEndianValueReader.ReadWord(Stream));
+    SetLength(FClassValueArray, BigEndianValue.ReadWord(Stream));
 
     // read ClassValueArray
     for ArrayIndex := 0 to High(FClassValueArray) do
-      FClassValueArray[ArrayIndex] := BigEndianValueReader.ReadWord(Stream);
+      FClassValueArray[ArrayIndex] := BigEndianValue.ReadWord(Stream);
   end;
 end;
 
@@ -291,14 +290,14 @@ begin
   inherited;
 
   // write start glyph
-  WriteSwappedWord(Stream, FStartGlyph);
+  BigEndianValue.WriteWord(Stream, FStartGlyph);
 
   // write ClassValueArray length
-  WriteSwappedWord(Stream, Length(FClassValueArray));
+  BigEndianValue.WriteWord(Stream, Length(FClassValueArray));
 
   // write ClassValueArray
   for ArrayIndex := 0 to High(FClassValueArray) do
-    WriteSwappedWord(Stream, FClassValueArray[ArrayIndex]);
+    BigEndianValue.WriteWord(Stream, FClassValueArray[ArrayIndex]);
 end;
 
 procedure TOpenTypeClassDefinitionFormat1Table.SetStartGlyph(const Value: Word);
@@ -376,20 +375,20 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read ClassRangeRecords length
-    SetLength(FClassRangeRecords, BigEndianValueReader.ReadWord(Stream));
+    SetLength(FClassRangeRecords, BigEndianValue.ReadWord(Stream));
 
     // read ClassRangeRecords
     for ArrayIndex := 0 to High(FClassRangeRecords) do
       with FClassRangeRecords[ArrayIndex] do
       begin
         // read start glyph
-        StartGlyph := BigEndianValueReader.ReadWord(Stream);
+        StartGlyph := BigEndianValue.ReadWord(Stream);
 
         // read end glyph
-        EndGlyph := BigEndianValueReader.ReadWord(Stream);
+        EndGlyph := BigEndianValue.ReadWord(Stream);
 
         // read glyph class
-        GlyphClass := BigEndianValueReader.ReadWord(Stream);
+        GlyphClass := BigEndianValue.ReadWord(Stream);
       end;
   end;
 end;
@@ -399,7 +398,7 @@ begin
   inherited;
 
   // write ClassRangeRecords length
-  WriteSwappedWord(Stream, Length(FClassRangeRecords));
+  BigEndianValue.WriteWord(Stream, Length(FClassRangeRecords));
 end;
 
 
@@ -444,13 +443,13 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read format
-  FTableFormat := BigEndianValueReader.ReadWord(Stream);
+  FTableFormat := BigEndianValue.ReadWord(Stream);
 
   if FTableFormat > 1 then
     raise EPascalTypeError.Create(RCStrUnknownFormat);
 
   // read coverage length
-  SetLength(FCoverage, BigEndianValueReader.ReadWord(Stream));
+  SetLength(FCoverage, BigEndianValue.ReadWord(Stream));
 
   // check (minimum) table size
   if Stream.Position + Length(FCoverage) * SizeOf(Cardinal) > Stream.Size then
@@ -458,7 +457,7 @@ begin
 
   // read coverage data
   for CoverageIndex := 0 to High(FCoverage) do
-    FCoverage[CoverageIndex] := BigEndianValueReader.ReadCardinal(Stream);
+    FCoverage[CoverageIndex] := BigEndianValue.ReadCardinal(Stream);
 end;
 
 procedure TOpenTypeMarkGlyphSetTable.SaveToStream(Stream: TStream);
@@ -468,14 +467,14 @@ begin
   inherited;
 
   // write table format
-  WriteSwappedWord(Stream, FTableFormat);
+  BigEndianValue.WriteWord(Stream, FTableFormat);
 
   // write coverage length
-  WriteSwappedWord(Stream, Length(FCoverage));
+  BigEndianValue.WriteWord(Stream, Length(FCoverage));
 
   // write coverage data
   for CoverageIndex := 0 to High(FCoverage) do
-    WriteSwappedCardinal(Stream, FCoverage[CoverageIndex]);
+    BigEndianValue.WriteCardinal(Stream, FCoverage[CoverageIndex]);
 end;
 
 procedure TOpenTypeMarkGlyphSetTable.SetTableFormat(const Value: Word);

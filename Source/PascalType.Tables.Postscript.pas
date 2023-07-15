@@ -1432,7 +1432,7 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read count
-  Value16 := BigEndianValueReader.ReadWord(Stream);
+  Value16 := BigEndianValue.ReadWord(Stream);
 
   // check if index file is empty
   if Value16 = 0 then
@@ -1916,25 +1916,25 @@ begin
   with Stream do
   begin
     // read major version
-    FMajorVersion := BigEndianValueReader.ReadWord(Stream);
+    FMajorVersion := BigEndianValue.ReadWord(Stream);
 
     // read minor version
-    FMinorVersion := BigEndianValueReader.ReadWord(Stream);
+    FMinorVersion := BigEndianValue.ReadWord(Stream);
 
     // read default vertical origin
-    FDefaultVertOriginY := BigEndianValueReader.ReadWord(Stream);
+    FDefaultVertOriginY := BigEndianValue.ReadWord(Stream);
 
     // read vertical origin y-metrics
-    SetLength(FVertOriginYMetrics, BigEndianValueReader.ReadWord(Stream));
+    SetLength(FVertOriginYMetrics, BigEndianValue.ReadWord(Stream));
 
     for Index := 0 to High(FVertOriginYMetrics) do
       with FVertOriginYMetrics[Index] do
       begin
         // read glyph index
-        GlyphIndex := BigEndianValueReader.ReadWord(Stream);
+        GlyphIndex := BigEndianValue.ReadWord(Stream);
 
         // read vertical y origin
-        VertOriginY := BigEndianValueReader.ReadWord(Stream);
+        VertOriginY := BigEndianValue.ReadWord(Stream);
       end;
   end;
 end;
@@ -1948,25 +1948,25 @@ begin
   with Stream do
   begin
     // write major version
-    WriteSwappedWord(Stream, FMajorVersion);
+    BigEndianValue.WriteWord(Stream, FMajorVersion);
 
     // write minor version
-    WriteSwappedWord(Stream, FMinorVersion);
+    BigEndianValue.WriteWord(Stream, FMinorVersion);
 
     // write default vertical origin
-    WriteSwappedWord(Stream, FDefaultVertOriginY);
+    BigEndianValue.WriteWord(Stream, FDefaultVertOriginY);
 
     // write vertical origin y-metrics
-    WriteSwappedWord(Stream, Length(FVertOriginYMetrics));
+    BigEndianValue.WriteWord(Stream, Length(FVertOriginYMetrics));
 
     for Index := 0 to High(FVertOriginYMetrics) do
       with FVertOriginYMetrics[Index] do
       begin
         // write glyph index
-        WriteSwappedWord(Stream, GlyphIndex);
+        BigEndianValue.WriteWord(Stream, GlyphIndex);
 
         // write vertical y origin
-        WriteSwappedWord(Stream, VertOriginY);
+        BigEndianValue.WriteWord(Stream, VertOriginY);
       end;
   end;
 end;

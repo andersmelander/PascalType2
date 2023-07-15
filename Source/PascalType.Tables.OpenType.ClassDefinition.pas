@@ -173,7 +173,7 @@ procedure TCustomOpenTypeClassDefinitionTable.LoadFromStream(Stream: TStream; Si
 begin
   inherited;
 
-  if (TClassDefinitionFormat(BigEndianValueReader.ReadWord(Stream)) <> FClassFormat) then
+  if (TClassDefinitionFormat(BigEndianValue.ReadWord(Stream)) <> FClassFormat) then
     raise EPascalTypeError.Create('Class definition format mismatch');
 end;
 
@@ -181,7 +181,7 @@ procedure TCustomOpenTypeClassDefinitionTable.SaveToStream(Stream: TStream);
 begin
   inherited;
 
-  WriteSwappedWord(Stream, Ord(FClassFormat));
+  BigEndianValue.WriteWord(Stream, Ord(FClassFormat));
 end;
 
 class function TCustomOpenTypeClassDefinitionTable.ClassByFormat(AClassFormat: TClassDefinitionFormat): TOpenTypeClassDefinitionTableClass;
@@ -248,12 +248,12 @@ begin
   if Stream.Position + 4 > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  FStartGlyphID := BigEndianValueReader.ReadWord(Stream);
+  FStartGlyphID := BigEndianValue.ReadWord(Stream);
 
-  SetLength(FClassIDArray, BigEndianValueReader.ReadWord(Stream));
+  SetLength(FClassIDArray, BigEndianValue.ReadWord(Stream));
 
   for i := 0 to High(FClassIDArray) do
-    FClassIDArray[i] := BigEndianValueReader.ReadWord(Stream);
+    FClassIDArray[i] := BigEndianValue.ReadWord(Stream);
 end;
 
 procedure TOpenTypeClassDefinitionListTable.SaveToStream(Stream: TStream);
@@ -262,11 +262,11 @@ var
 begin
   inherited;
 
-  WriteSwappedWord(Stream, FStartGlyphID);
-  WriteSwappedWord(Stream, Length(FClassIDArray));
+  BigEndianValue.WriteWord(Stream, FStartGlyphID);
+  BigEndianValue.WriteWord(Stream, Length(FClassIDArray));
 
   for i := 0 to High(FClassIDArray) do
-    WriteSwappedWord(Stream, FClassIDArray[i]);
+    BigEndianValue.WriteWord(Stream, FClassIDArray[i]);
 end;
 
 
@@ -331,13 +331,13 @@ begin
   if Stream.Position + SizeOf(Word) > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  SetLength(FRangeArray, BigEndianValueReader.ReadWord(Stream));
+  SetLength(FRangeArray, BigEndianValue.ReadWord(Stream));
 
   for i := 0 to High(FRangeArray) do
   begin
-    FRangeArray[i].StartGlyphID := BigEndianValueReader.ReadWord(Stream);
-    FRangeArray[i].EndGlyphID := BigEndianValueReader.ReadWord(Stream);
-    FRangeArray[i].ClassID := BigEndianValueReader.ReadWord(Stream);
+    FRangeArray[i].StartGlyphID := BigEndianValue.ReadWord(Stream);
+    FRangeArray[i].EndGlyphID := BigEndianValue.ReadWord(Stream);
+    FRangeArray[i].ClassID := BigEndianValue.ReadWord(Stream);
   end;
 end;
 
@@ -347,13 +347,13 @@ var
 begin
   inherited;
 
-  WriteSwappedWord(Stream, Length(FRangeArray));
+  BigEndianValue.WriteWord(Stream, Length(FRangeArray));
 
   for GlyphIndex := 0 to High(FRangeArray) do
   begin
-    WriteSwappedWord(Stream, FRangeArray[GlyphIndex].StartGlyphID);
-    WriteSwappedWord(Stream, FRangeArray[GlyphIndex].EndGlyphID);
-    WriteSwappedWord(Stream, FRangeArray[GlyphIndex].ClassID);
+    BigEndianValue.WriteWord(Stream, FRangeArray[GlyphIndex].StartGlyphID);
+    BigEndianValue.WriteWord(Stream, FRangeArray[GlyphIndex].EndGlyphID);
+    BigEndianValue.WriteWord(Stream, FRangeArray[GlyphIndex].ClassID);
   end;
 end;
 

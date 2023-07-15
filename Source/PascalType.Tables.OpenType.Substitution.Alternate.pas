@@ -145,18 +145,18 @@ begin
   if Stream.Position + SizeOf(Word) > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  SetLength(Offsets, BigEndianValueReader.ReadWord(Stream));
+  SetLength(Offsets, BigEndianValue.ReadWord(Stream));
   for i := 0 to High(Offsets) do
-    Offsets[i] := BigEndianValueReader.ReadWord(Stream);
+    Offsets[i] := BigEndianValue.ReadWord(Stream);
 
   SetLength(FAlternateGlyphIDs, Length(Offsets));
   for i := 0 to High(Offsets) do
   begin
     Stream.Position := StartPos + Offsets[i];
 
-    SetLength(FAlternateGlyphIDs[i], BigEndianValueReader.ReadWord(Stream));
+    SetLength(FAlternateGlyphIDs[i], BigEndianValue.ReadWord(Stream));
     for j := 0 to High(FAlternateGlyphIDs[i]) do
-      FAlternateGlyphIDs[i, j] := BigEndianValueReader.ReadWord(Stream);
+      FAlternateGlyphIDs[i, j] := BigEndianValue.ReadWord(Stream);
   end;
 end;
 
@@ -173,7 +173,7 @@ begin
   inherited;
 
   SetLength(Offsets, Length(FAlternateGlyphIDs));
-  WriteSwappedWord(Stream, Length(Offsets));
+  BigEndianValue.WriteWord(Stream, Length(Offsets));
 
   OffsetPos := Stream.Position;
   Stream.Position := Stream.Position + SizeOf(Word)*Length(Offsets);
@@ -182,15 +182,15 @@ begin
   begin
     Offsets[i] := Stream.Position - StartPos;
 
-    WriteSwappedWord(Stream, Length(FAlternateGlyphIDs[i]));
+    BigEndianValue.WriteWord(Stream, Length(FAlternateGlyphIDs[i]));
     for j := 0 to High(FAlternateGlyphIDs[i]) do
-      WriteSwappedWord(Stream, FAlternateGlyphIDs[i, j]);
+      BigEndianValue.WriteWord(Stream, FAlternateGlyphIDs[i, j]);
   end;
 
   SavePos := Stream.Position;
   Stream.Position := OffsetPos;
   for i := 0 to High(Offsets) do
-    WriteSwappedWord(Stream, Offsets[i]);
+    BigEndianValue.WriteWord(Stream, Offsets[i]);
 
   Stream.Position := SavePos;
 end;

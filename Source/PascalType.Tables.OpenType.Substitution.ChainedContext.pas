@@ -274,9 +274,9 @@ begin
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // Read list of sequence rule set offsets
-  SetLength(SequenceRuleSetOffsets, BigEndianValueReader.ReadWord(Stream));
+  SetLength(SequenceRuleSetOffsets, BigEndianValue.ReadWord(Stream));
   for i := 0 to High(SequenceRuleSetOffsets) do
-    SequenceRuleSetOffsets[i] := BigEndianValueReader.ReadWord(Stream);
+    SequenceRuleSetOffsets[i] := BigEndianValue.ReadWord(Stream);
 
   SavePos := Stream.Position;
 
@@ -290,9 +290,9 @@ begin
 
     // Read list of offsets to Sequence Rule Sets
     // Offsets are from beginning of the Sequence Rule Set table
-    SetLength(SequenceRuleOffsets, BigEndianValueReader.ReadWord(Stream));
+    SetLength(SequenceRuleOffsets, BigEndianValue.ReadWord(Stream));
     for j := 0 to High(SequenceRuleOffsets) do
-      SequenceRuleOffsets[j] := BigEndianValueReader.ReadWord(Stream);
+      SequenceRuleOffsets[j] := BigEndianValue.ReadWord(Stream);
 
     // Read a Sequence Rule Set
     SetLength(FSequenceRules[i], length(SequenceRuleOffsets));
@@ -304,13 +304,13 @@ begin
       Stream.Position := StartPos + SequenceRuleSetOffsets[i] + SequenceRuleOffsets[j];
 
       // Read BacktrackSequence
-      SetLength(FSequenceRules[i][j].BacktrackSequence, BigEndianValueReader.ReadWord(Stream));
+      SetLength(FSequenceRules[i][j].BacktrackSequence, BigEndianValue.ReadWord(Stream));
       Sequence := FSequenceRules[i][j].BacktrackSequence;
       for k := 0 to High(Sequence) do
-        Sequence[k] := BigEndianValueReader.ReadWord(Stream);
+        Sequence[k] := BigEndianValue.ReadWord(Stream);
 
       // Read InputSequence
-      SetLength(FSequenceRules[i][j].InputSequence, BigEndianValueReader.ReadWord(Stream));
+      SetLength(FSequenceRules[i][j].InputSequence, BigEndianValue.ReadWord(Stream));
       Sequence := FSequenceRules[i][j].InputSequence;
       if (Length(Sequence) > 0) then
       begin
@@ -319,22 +319,22 @@ begin
 
         // Read remaining from input sequence list
         for k := 1 to High(Sequence) do
-          Sequence[k] := BigEndianValueReader.ReadWord(Stream);
+          Sequence[k] := BigEndianValue.ReadWord(Stream);
       end;
 
       // Read LookaheadSequence
-      SetLength(FSequenceRules[i][j].LookaheadSequence, BigEndianValueReader.ReadWord(Stream));
+      SetLength(FSequenceRules[i][j].LookaheadSequence, BigEndianValue.ReadWord(Stream));
       Sequence := FSequenceRules[i][j].LookaheadSequence;
       for k := 0 to High(Sequence) do
-        Sequence[k] := BigEndianValueReader.ReadWord(Stream);
+        Sequence[k] := BigEndianValue.ReadWord(Stream);
 
       // Read SequenceLookupRecords
-      SetLength(FSequenceRules[i][j].SequenceLookupRecords, BigEndianValueReader.ReadWord(Stream));
+      SetLength(FSequenceRules[i][j].SequenceLookupRecords, BigEndianValue.ReadWord(Stream));
       SequenceLookupRecords := FSequenceRules[i][j].SequenceLookupRecords;
       for k := 0 to High(SequenceLookupRecords) do
       begin
-        SequenceLookupRecords[k].SequenceIndex := BigEndianValueReader.ReadWord(Stream);
-        SequenceLookupRecords[k].LookupListIndex := BigEndianValueReader.ReadWord(Stream);
+        SequenceLookupRecords[k].SequenceIndex := BigEndianValue.ReadWord(Stream);
+        SequenceLookupRecords[k].LookupListIndex := BigEndianValue.ReadWord(Stream);
       end;
     end;
   end;
@@ -449,12 +449,12 @@ begin
 
   // Get the offsets to the class definition tables
   for Part := Low(ClassDefOffset) to High(ClassDefOffset) do
-    ClassDefOffset[Part] := BigEndianValueReader.ReadWord(Stream);
+    ClassDefOffset[Part] := BigEndianValue.ReadWord(Stream);
 
   // Read list of sequence rule set offsets
-  SetLength(SequenceRuleSetOffsets, BigEndianValueReader.ReadWord(Stream));
+  SetLength(SequenceRuleSetOffsets, BigEndianValue.ReadWord(Stream));
   for i := 0 to High(SequenceRuleSetOffsets) do
-    SequenceRuleSetOffsets[i] := BigEndianValueReader.ReadWord(Stream);
+    SequenceRuleSetOffsets[i] := BigEndianValue.ReadWord(Stream);
 
   SavePos := Stream.Position;
 
@@ -462,7 +462,7 @@ begin
   for Part := Low(FClassDefinitions) to High(FClassDefinitions) do
   begin
     Stream.Position := StartPos + ClassDefOffset[Part];
-    ClassDefinitionFormat := TClassDefinitionFormat(BigEndianValueReader.ReadWord(Stream));
+    ClassDefinitionFormat := TClassDefinitionFormat(BigEndianValue.ReadWord(Stream));
 
     ClassDefinitionTableClass := TCustomOpenTypeClassDefinitionTable.ClassByFormat(ClassDefinitionFormat);
     if (ClassDefinitionTableClass <> nil) then
@@ -485,9 +485,9 @@ begin
 
     // Read list of offsets to Sequence Rule Sets
     // Offsets are from beginning of the Sequence Rule Set table
-    SetLength(SequenceRuleOffsets, BigEndianValueReader.ReadWord(Stream));
+    SetLength(SequenceRuleOffsets, BigEndianValue.ReadWord(Stream));
     for j := 0 to High(SequenceRuleOffsets) do
-      SequenceRuleOffsets[j] := BigEndianValueReader.ReadWord(Stream);
+      SequenceRuleOffsets[j] := BigEndianValue.ReadWord(Stream);
 
     // Read a Sequence Rule Set
     SetLength(FSequenceRules[i], Length(SequenceRuleOffsets));
@@ -499,13 +499,13 @@ begin
       Stream.Position := StartPos + SequenceRuleSetOffsets[i] + SequenceRuleOffsets[j];
 
       // Read BacktrackSequence
-      SetLength(FSequenceRules[i][j].BacktrackSequence, BigEndianValueReader.ReadWord(Stream));
+      SetLength(FSequenceRules[i][j].BacktrackSequence, BigEndianValue.ReadWord(Stream));
       Sequence := FSequenceRules[i][j].BacktrackSequence;
       for k := 0 to High(Sequence) do
-        Sequence[k] := BigEndianValueReader.ReadWord(Stream);
+        Sequence[k] := BigEndianValue.ReadWord(Stream);
 
       // Read InputSequence
-      SetLength(FSequenceRules[i][j].InputSequence, BigEndianValueReader.ReadWord(Stream));
+      SetLength(FSequenceRules[i][j].InputSequence, BigEndianValue.ReadWord(Stream));
       Sequence := FSequenceRules[i][j].InputSequence;
       if (Length(Sequence) > 0) then
       begin
@@ -514,22 +514,22 @@ begin
 
         // Read remaining from input sequence list
         for k := 1 to High(Sequence) do
-          Sequence[k] := BigEndianValueReader.ReadWord(Stream);
+          Sequence[k] := BigEndianValue.ReadWord(Stream);
       end;
 
       // Read LookaheadSequence
-      SetLength(FSequenceRules[i][j].LookaheadSequence, BigEndianValueReader.ReadWord(Stream));
+      SetLength(FSequenceRules[i][j].LookaheadSequence, BigEndianValue.ReadWord(Stream));
       Sequence := FSequenceRules[i][j].LookaheadSequence;
       for k := 0 to High(Sequence) do
-        Sequence[k] := BigEndianValueReader.ReadWord(Stream);
+        Sequence[k] := BigEndianValue.ReadWord(Stream);
 
       // Read SequenceLookupRecords
-      SetLength(FSequenceRules[i][j].SequenceLookupRecords, BigEndianValueReader.ReadWord(Stream));
+      SetLength(FSequenceRules[i][j].SequenceLookupRecords, BigEndianValue.ReadWord(Stream));
       SequenceLookupRecords := FSequenceRules[i][j].SequenceLookupRecords;
       for k := 0 to High(SequenceLookupRecords) do
       begin
-        SequenceLookupRecords[k].SequenceIndex := BigEndianValueReader.ReadWord(Stream);
-        SequenceLookupRecords[k].LookupListIndex := BigEndianValueReader.ReadWord(Stream);
+        SequenceLookupRecords[k].SequenceIndex := BigEndianValue.ReadWord(Stream);
+        SequenceLookupRecords[k].LookupListIndex := BigEndianValue.ReadWord(Stream);
       end;
     end;
   end;
@@ -677,17 +677,17 @@ begin
   // Read coverage table offsets
   for Part := Low(FCoverageTables) to High(FCoverageTables) do
   begin
-    SetLength(CoverageOffsets[Part], BigEndianValueReader.ReadWord(Stream));
+    SetLength(CoverageOffsets[Part], BigEndianValue.ReadWord(Stream));
     for i := 0 to High(CoverageOffsets[Part]) do
-      CoverageOffsets[Part][i] := BigEndianValueReader.ReadWord(Stream);
+      CoverageOffsets[Part][i] := BigEndianValue.ReadWord(Stream);
   end;
 
   // Read Sequence Rule
-  SetLength(FSequenceRules, BigEndianValueReader.ReadWord(Stream));
+  SetLength(FSequenceRules, BigEndianValue.ReadWord(Stream));
   for i := 0 to High(FSequenceRules) do
   begin
-    FSequenceRules[i].SequenceIndex := BigEndianValueReader.ReadWord(Stream);
-    FSequenceRules[i].LookupListIndex := BigEndianValueReader.ReadWord(Stream);
+    FSequenceRules[i].SequenceIndex := BigEndianValue.ReadWord(Stream);
+    FSequenceRules[i].LookupListIndex := BigEndianValue.ReadWord(Stream);
   end;
 
 

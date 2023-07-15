@@ -292,7 +292,7 @@ begin
 
         // read location array data
         for LocationIndex := 0 to High(FLocations) do
-          FLocations[LocationIndex] := 2 * BigEndianValueReader.ReadWord(Stream);
+          FLocations[LocationIndex] := 2 * BigEndianValue.ReadWord(Stream);
       end;
 
     ilLong:
@@ -306,7 +306,7 @@ begin
 
         // read location array data
         for LocationIndex := 0 to High(FLocations) do
-          FLocations[LocationIndex] := BigEndianValueReader.ReadCardinal(Stream);
+          FLocations[LocationIndex] := BigEndianValue.ReadCardinal(Stream);
       end;
   end;
 
@@ -341,14 +341,14 @@ begin
       begin
         // write location array data
         for LocationIndex := 0 to High(FLocations) do
-          WriteSwappedWord(Stream, FLocations[LocationIndex] div 2);
+          BigEndianValue.WriteWord(Stream, FLocations[LocationIndex] div 2);
       end;
 
     ilLong:
       begin
         // write location array data
         for LocationIndex := 0 to High(FLocations) do
-          WriteSwappedCardinal(Stream, FLocations[LocationIndex]);
+          BigEndianValue.WriteCardinal(Stream, FLocations[LocationIndex]);
       end;
   end;
 end;

@@ -308,13 +308,13 @@ begin
   if Stream.Position + 2 * SizeOf(Word) > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  FeatureOffset := BigEndianValueReader.ReadWord(Stream);
+  FeatureOffset := BigEndianValue.ReadWord(Stream);
 
-  SetLength(FLookupListIndex, BigEndianValueReader.ReadWord(Stream));
+  SetLength(FLookupListIndex, BigEndianValue.ReadWord(Stream));
 
   // read lookup list index offsets
   for i := 0 to High(FLookupListIndex) do
-    FLookupListIndex[i] := BigEndianValueReader.ReadWord(Stream);
+    FLookupListIndex[i] := BigEndianValue.ReadWord(Stream);
 
   if (FeatureOffset <> 0) then
   begin
@@ -338,10 +338,10 @@ begin
   FeatureOffsetOffset := Stream.Position;
   Stream.Seek(SizeOf(Word), soFromCurrent);
 
-  WriteSwappedWord(Stream, Length(FLookupListIndex));
+  BigEndianValue.WriteWord(Stream, Length(FLookupListIndex));
 
   for LookupIndex := 0 to High(FLookupListIndex) do
-    WriteSwappedWord(Stream, FLookupListIndex[LookupIndex]);
+    BigEndianValue.WriteWord(Stream, FLookupListIndex[LookupIndex]);
 
   FeatureOffset := Stream.Position - StartPos;
   WriteFeatureParams(Stream);
@@ -350,7 +350,7 @@ begin
   begin
     SavePos := Stream.Position;
     Stream.Position := FeatureOffsetOffset;
-    WriteSwappedWord(Stream, FeatureOffset);
+    BigEndianValue.WriteWord(Stream, FeatureOffset);
     Stream.Position := SavePos;
   end;
 end;
@@ -417,7 +417,7 @@ begin
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // read feature list count
-  SetLength(FeatureList, BigEndianValueReader.ReadWord(Stream));
+  SetLength(FeatureList, BigEndianValue.ReadWord(Stream));
 
   for FeatureIndex := 0 to High(FeatureList) do
   begin
@@ -425,7 +425,7 @@ begin
     Stream.Read(FeatureList[FeatureIndex].Tag, SizeOf(TTableType));
 
     // read offset
-    FeatureList[FeatureIndex].Offset := BigEndianValueReader.ReadWord(Stream);
+    FeatureList[FeatureIndex].Offset := BigEndianValue.ReadWord(Stream);
   end;
 
   // clear language system list
@@ -471,7 +471,7 @@ begin
   inherited;
 
   // write feature list count
-  WriteSwappedWord(Stream, FFeatureList.Count);
+  BigEndianValue.WriteWord(Stream, FFeatureList.Count);
 
   // leave space for feature directory
   IndexPos := Stream.Position;
@@ -499,7 +499,7 @@ begin
     Stream.Write(FeatureList[FeatureIndex].Tag, SizeOf(TTableType));
 
     // write offset
-    WriteSwappedWord(Stream, FeatureList[FeatureIndex].Offset);
+    BigEndianValue.WriteWord(Stream, FeatureList[FeatureIndex].Offset);
   end;
 
   Stream.Position := SavePos;

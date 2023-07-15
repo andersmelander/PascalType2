@@ -43,7 +43,8 @@ function ByteCodeToString(ByteCode: array of Byte): string;
 implementation
 
 uses
-  PT_Math, PT_ResourceStrings;
+  PT_Math,
+  PT_ResourceStrings;
 
 procedure ByteCodeToStrings(ByteCodeStream: TStream; Strings: TStrings);
 var

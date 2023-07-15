@@ -208,60 +208,60 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read version
-  FVersion.Fixed := BigEndianValueReader.ReadInteger(Stream);
+  FVersion.Fixed := BigEndianValue.ReadInteger(Stream);
 
   // check version
   if (Version.Value <> 1) then
     raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
   // read font revision
-  FFontRevision.Fixed := BigEndianValueReader.ReadInteger(Stream);
+  FFontRevision.Fixed := BigEndianValue.ReadInteger(Stream);
 
   // read check sum adjust
-  FCheckSumAdjustment := BigEndianValueReader.ReadCardinal(Stream);;
+  FCheckSumAdjustment := BigEndianValue.ReadCardinal(Stream);;
 
   // read magic number
-  FMagicNumber := BigEndianValueReader.ReadCardinal(Stream);
+  FMagicNumber := BigEndianValue.ReadCardinal(Stream);
 
   // check for magic
   if (FMagicNumber <> $5F0F3CF5) then
     raise EPascalTypeError.Create(RCStrNoMagic);
 
   // read flags
-  FFlags := WordToFontHeaderTableFlags(BigEndianValueReader.ReadWord(Stream));
+  FFlags := WordToFontHeaderTableFlags(BigEndianValue.ReadWord(Stream));
 
   // read UnitsPerEm
-  FUnitsPerEm := BigEndianValueReader.ReadWord(Stream);
+  FUnitsPerEm := BigEndianValue.ReadWord(Stream);
 
   // read CreatedDate
-  FCreatedDate := BigEndianValueReader.ReadInt64(Stream);
+  FCreatedDate := BigEndianValue.ReadInt64(Stream);
 
   // read ModifiedDate
-  FModifiedDate := BigEndianValueReader.ReadInt64(Stream);
+  FModifiedDate := BigEndianValue.ReadInt64(Stream);
 
   // read xMin
-  FxMin := BigEndianValueReader.ReadSmallInt(Stream);
+  FxMin := BigEndianValue.ReadSmallInt(Stream);
 
   // read yMin
-  FyMin := BigEndianValueReader.ReadSmallInt(Stream);
+  FyMin := BigEndianValue.ReadSmallInt(Stream);
 
   // read xMax
-  FxMax := BigEndianValueReader.ReadSmallInt(Stream);
+  FxMax := BigEndianValue.ReadSmallInt(Stream);
 
   // read xMax
-  FyMax := BigEndianValueReader.ReadSmallInt(Stream);
+  FyMax := BigEndianValue.ReadSmallInt(Stream);
 
   // read MacStyle
-  FMacStyle := WordToMacStyles(BigEndianValueReader.ReadWord(Stream));
+  FMacStyle := WordToMacStyles(BigEndianValue.ReadWord(Stream));
 
   // read LowestRecPPEM
-  FLowestRecPPEM := BigEndianValueReader.ReadWord(Stream);
+  FLowestRecPPEM := BigEndianValue.ReadWord(Stream);
 
   // read FontDirectionHint
-  FFontDirectionHint := TFontDirectionHint(BigEndianValueReader.ReadSmallInt(Stream));
+  FFontDirectionHint := TFontDirectionHint(BigEndianValue.ReadSmallInt(Stream));
 
   // read IndexToLocFormat
-  Value16 := BigEndianValueReader.ReadSmallInt(Stream);
+  Value16 := BigEndianValue.ReadSmallInt(Stream);
   case Value16 of
     0:
       FIndexToLocFormat := ilShort;
@@ -272,69 +272,69 @@ begin
   end;
 
   // read GlyphDataFormat
-  FGlyphDataFormat := BigEndianValueReader.ReadSmallInt(Stream);
+  FGlyphDataFormat := BigEndianValue.ReadSmallInt(Stream);
 end;
 
 procedure TPascalTypeHeaderTable.SaveToStream(Stream: TStream);
 begin
   // write version
-  WriteSwappedCardinal(Stream, Cardinal(FVersion));
+  BigEndianValue.WriteCardinal(Stream, Cardinal(FVersion));
 
   // write font revision
-  WriteSwappedCardinal(Stream, Cardinal(FFontRevision));
+  BigEndianValue.WriteCardinal(Stream, Cardinal(FFontRevision));
 
   // write check sum adjust
-  WriteSwappedCardinal(Stream, FCheckSumAdjustment);
+  BigEndianValue.WriteCardinal(Stream, FCheckSumAdjustment);
 
   // write magic number
-  WriteSwappedCardinal(Stream, FMagicNumber);
+  BigEndianValue.WriteCardinal(Stream, FMagicNumber);
 
   // write flags
-  WriteSwappedWord(Stream, FontHeaderTableFlagsToWord(FFlags));
+  BigEndianValue.WriteWord(Stream, FontHeaderTableFlagsToWord(FFlags));
 
   // write UnitsPerEm
-  WriteSwappedWord(Stream, FUnitsPerEm);
+  BigEndianValue.WriteWord(Stream, FUnitsPerEm);
 
   // write CreatedDate
-  WriteSwappedInt64(Stream, FCreatedDate);
+  BigEndianValue.WriteInt64(Stream, FCreatedDate);
 
   // write ModifiedDate
-  WriteSwappedInt64(Stream, FModifiedDate);
+  BigEndianValue.WriteInt64(Stream, FModifiedDate);
 
   // write xMin
-  WriteSwappedSmallInt(Stream, FxMin);
+  BigEndianValue.WriteSmallInt(Stream, FxMin);
 
   // write yMin
-  WriteSwappedSmallInt(Stream, FyMin);
+  BigEndianValue.WriteSmallInt(Stream, FyMin);
 
   // write xMax
-  WriteSwappedSmallInt(Stream, FxMax);
+  BigEndianValue.WriteSmallInt(Stream, FxMax);
 
   // write xMax
-  WriteSwappedSmallInt(Stream, FyMax);
+  BigEndianValue.WriteSmallInt(Stream, FyMax);
 
   // write MacStyle
-  WriteSwappedWord(Stream, MacStylesToWord(FMacStyle));
+  BigEndianValue.WriteWord(Stream, MacStylesToWord(FMacStyle));
 
   // write LowestRecPPEM
-  WriteSwappedWord(Stream, FLowestRecPPEM);
+  BigEndianValue.WriteWord(Stream, FLowestRecPPEM);
 
   // write FontDirectionHint
-  WriteSwappedWord(Stream, Word(FFontDirectionHint));
+  BigEndianValue.WriteWord(Stream, Word(FFontDirectionHint));
 
   // write IndexToLocFormat
   case FIndexToLocFormat of
     ilShort:
-      WriteSwappedWord(Stream, 0);
+      BigEndianValue.WriteWord(Stream, 0);
     ilLong:
-      WriteSwappedWord(Stream, 1);
+      BigEndianValue.WriteWord(Stream, 1);
   else
     raise EPascalTypeError.CreateFmt(RCStrWrongIndexToLocFormat,
       [Word(FIndexToLocFormat)]);
   end;
 
   // write GlyphDataFormat
-  WriteSwappedWord(Stream, FGlyphDataFormat);
+  BigEndianValue.WriteWord(Stream, FGlyphDataFormat);
 end;
 
 procedure TPascalTypeHeaderTable.SetCheckSumAdjustment(const Value: Cardinal);

@@ -245,7 +245,6 @@ implementation
 
 uses
   Math,
-  PT_Math,
   PT_ResourceStrings;
 
 
@@ -278,10 +277,10 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read length
-  FLength := BigEndianValueReader.ReadWord(Stream);
+  FLength := BigEndianValue.ReadWord(Stream);
 
   // read language
-  FLanguage := BigEndianValueReader.ReadWord(Stream);
+  FLanguage := BigEndianValue.ReadWord(Stream);
 
   Stream.Read(FGlyphIdArray, SizeOf(FGlyphIdArray));
 end;
@@ -289,10 +288,10 @@ end;
 procedure TPascalTypeFormat0CharacterMap.SaveToStream(Stream: TStream);
 begin
   // write length
-  WriteSwappedWord(Stream, FLength);
+  BigEndianValue.WriteWord(Stream, FLength);
 
   // write language
-  WriteSwappedWord(Stream, FLanguage);
+  BigEndianValue.WriteWord(Stream, FLanguage);
 
   Stream.Write(FGlyphIdArray, SizeOf(FGlyphIdArray));
 end;
@@ -350,19 +349,19 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read length
-  FLength := BigEndianValueReader.ReadWord(Stream);
+  FLength := BigEndianValue.ReadWord(Stream);
 
   // read language
-  FLanguage := BigEndianValueReader.ReadWord(Stream);
+  FLanguage := BigEndianValue.ReadWord(Stream);
 end;
 
 procedure TPascalTypeFormat2CharacterMap.SaveToStream(Stream: TStream);
 begin
   // write length
-  WriteSwappedWord(Stream, FLength);
+  BigEndianValue.WriteWord(Stream, FLength);
 
   // write language
-  WriteSwappedWord(Stream, FLanguage);
+  BigEndianValue.WriteWord(Stream, FLanguage);
 end;
 
 
@@ -456,16 +455,16 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read length
-  FLength := BigEndianValueReader.ReadWord(Stream);
+  FLength := BigEndianValue.ReadWord(Stream);
 
   // check (minimum) table size
   if StartPos + FLength > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read language
-  FLanguage := BigEndianValueReader.ReadWord(Stream);
+  FLanguage := BigEndianValue.ReadWord(Stream);
 
-  Count := BigEndianValueReader.ReadWord(Stream) div 2;
+  Count := BigEndianValue.ReadWord(Stream) div 2;
   Stream.Seek(3*SizeOf(Word), soFromCurrent);
 
   SetLength(FSegments, Count);
@@ -474,7 +473,7 @@ begin
 
   // read end count
   for SegIndex := 0 to High(FSegments) do
-    FSegments[SegIndex].EndCode := BigEndianValueReader.ReadWord(Stream);
+    FSegments[SegIndex].EndCode := BigEndianValue.ReadWord(Stream);
 
   // confirm end code is valid (required for binary search)
   if FSegments[High(FSegments)].EndCode <> $FFFF then
@@ -482,7 +481,7 @@ begin
 
 {$IFDEF AmbigiousExceptions}
   // read reserved
-  Value16 := BigEndianValueReader.ReadWord(Stream);
+  Value16 := BigEndianValue.ReadWord(Stream);
 
   // confirm reserved value is valid
   if Value16 <> 0 then
@@ -495,7 +494,7 @@ begin
   // read start count
   for SegIndex := 0 to High(FSegments) do
   begin
-    FSegments[SegIndex].StartCode := BigEndianValueReader.ReadWord(Stream);
+    FSegments[SegIndex].StartCode := BigEndianValue.ReadWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
     // confirm start count is valid
@@ -506,7 +505,7 @@ begin
 
   // read ID delta
   for SegIndex := 0 to High(FIdDelta) do
-    Word(FIdDelta[SegIndex]) := BigEndianValueReader.ReadWord(Stream);
+    Word(FIdDelta[SegIndex]) := BigEndianValue.ReadWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
 (*
@@ -520,22 +519,22 @@ A value of 0 has been observed in the Architecture font. Actually the whole FIdD
 
   // read ID range offset
   for SegIndex := 0 to High(FIdRangeOffset) do
-    FIdRangeOffset[SegIndex] := BigEndianValueReader.ReadWord(Stream);
+    FIdRangeOffset[SegIndex] := BigEndianValue.ReadWord(Stream);
 
   SetLength(FGlyphIdArray, (FLength - (Stream.Position - StartPos)) div SizeOf(Word));
 
   // read glyph ID array
   for SegIndex := 0 to High(FGlyphIdArray) do
-    FGlyphIdArray[SegIndex] := BigEndianValueReader.ReadWord(Stream);
+    FGlyphIdArray[SegIndex] := BigEndianValue.ReadWord(Stream);
 end;
 
 procedure TPascalTypeFormat4CharacterMap.SaveToStream(Stream: TStream);
 begin
   // write length
-  WriteSwappedWord(Stream, FLength);
+  BigEndianValue.WriteWord(Stream, FLength);
 
   // write language
-  WriteSwappedWord(Stream, FLanguage);
+  BigEndianValue.WriteWord(Stream, FLanguage);
 
   // TODO : ...
 end;
@@ -581,20 +580,20 @@ begin
   inherited;
 
   // read table size
-  // TableLength := BigEndianValueReader.ReadWord(Stream);
+  // TableLength := BigEndianValue.ReadWord(Stream);
   Stream.Seek(SizeOf(Word), soFromCurrent);
 
   // read language
-  FLanguage := BigEndianValueReader.ReadWord(Stream);
+  FLanguage := BigEndianValue.ReadWord(Stream);
 
   // read first code
-  FFirstCode := BigEndianValueReader.ReadWord(Stream);
+  FFirstCode := BigEndianValue.ReadWord(Stream);
 
   // read number of character codes in subrange
-  SetLength(FGlyphIdArray, BigEndianValueReader.ReadWord(Stream));
+  SetLength(FGlyphIdArray, BigEndianValue.ReadWord(Stream));
 
   for EntryIndex := 0 to High(FGlyphIdArray) do
-    FGlyphIdArray[EntryIndex] := BigEndianValueReader.ReadWord(Stream);
+    FGlyphIdArray[EntryIndex] := BigEndianValue.ReadWord(Stream);
 end;
 
 procedure TPascalTypeFormat6CharacterMap.SaveToStream(Stream: TStream);
@@ -604,20 +603,20 @@ begin
   inherited;
 
   // write table size
-  WriteSwappedWord(Stream, 8 + 2 * Length(FGlyphIdArray));
+  BigEndianValue.WriteWord(Stream, 8 + 2 * Length(FGlyphIdArray));
 
   // write language
-  WriteSwappedWord(Stream, FLanguage);
+  BigEndianValue.WriteWord(Stream, FLanguage);
 
   // write first code
-  WriteSwappedWord(Stream, FFirstCode);
+  BigEndianValue.WriteWord(Stream, FFirstCode);
 
   // write number of character codes in subrange
-  WriteSwappedWord(Stream, Length(FGlyphIdArray));
+  BigEndianValue.WriteWord(Stream, Length(FGlyphIdArray));
 
   // write glyph indices
   for EntryIndex := 0 to High(FGlyphIdArray) do
-    WriteSwappedWord(Stream, FGlyphIdArray[EntryIndex]);
+    BigEndianValue.WriteWord(Stream, FGlyphIdArray[EntryIndex]);
 end;
 
 
@@ -674,25 +673,25 @@ begin
   inherited;
 
 {$IFDEF AmbigiousExceptions}
-  if BigEndianValueReader.ReadWord(Stream) <> 0 then
+  if BigEndianValue.ReadWord(Stream) <> 0 then
     raise EPascalTypeError.Create(RCStrReservedValueError);
 {$ELSE}
   Stream.Seek(2, soFromCurrent);
 {$ENDIF}
   // read table length
-  TableLength := BigEndianValueReader.ReadCardinal(Stream);
+  TableLength := BigEndianValue.ReadCardinal(Stream);
 
   // read language
-  FLanguage := BigEndianValueReader.ReadCardinal(Stream);
+  FLanguage := BigEndianValue.ReadCardinal(Stream);
 
   // read group count
-  SetLength(FCoverageArray, BigEndianValueReader.ReadCardinal(Stream));
+  SetLength(FCoverageArray, BigEndianValue.ReadCardinal(Stream));
 
   for GroupIndex := 0 to High(FCoverageArray) do
   begin
-    FCoverageArray[GroupIndex].StartCharCode := BigEndianValueReader.ReadCardinal(Stream);
-    FCoverageArray[GroupIndex].EndCharCode := BigEndianValueReader.ReadCardinal(Stream);
-    FCoverageArray[GroupIndex].StartGlyphID := BigEndianValueReader.ReadCardinal(Stream);
+    FCoverageArray[GroupIndex].StartCharCode := BigEndianValue.ReadCardinal(Stream);
+    FCoverageArray[GroupIndex].EndCharCode := BigEndianValue.ReadCardinal(Stream);
+    FCoverageArray[GroupIndex].StartGlyphID := BigEndianValue.ReadCardinal(Stream);
   end;
 
   // seek end of this table
@@ -744,17 +743,17 @@ begin
 
   inherited;
 
-  {TableLength := }BigEndianValueReader.ReadCardinal(Stream);
+  {TableLength := }BigEndianValue.ReadCardinal(Stream);
 
-  SetLength(FVariationSelectors, BigEndianValueReader.ReadCardinal(Stream));
+  SetLength(FVariationSelectors, BigEndianValue.ReadCardinal(Stream));
   SetLength(Offsets, Length(FVariationSelectors));
 
   for i := 0 to High(FVariationSelectors) do
   begin
-    FVariationSelectors[i].VariationSelector := BigEndianValueReader.ReadUInt24(Stream);
+    FVariationSelectors[i].VariationSelector := BigEndianValue.ReadUInt24(Stream);
 
-    Offsets[i].DefaultUVSOffset := BigEndianValueReader.ReadCardinal(Stream);
-    Offsets[i].NonDefaultUVSOffset := BigEndianValueReader.ReadCardinal(Stream);
+    Offsets[i].DefaultUVSOffset := BigEndianValue.ReadCardinal(Stream);
+    Offsets[i].NonDefaultUVSOffset := BigEndianValue.ReadCardinal(Stream);
   end;
 
   for i := 0 to High(FVariationSelectors) do
@@ -763,11 +762,11 @@ begin
     begin
       Stream.Position := StartPos + Offsets[i].DefaultUVSOffset;
 
-      SetLength(FVariationSelectors[i].DefaultUVS, BigEndianValueReader.ReadCardinal(Stream));
+      SetLength(FVariationSelectors[i].DefaultUVS, BigEndianValue.ReadCardinal(Stream));
       for j := 0 to High(FVariationSelectors[i].DefaultUVS) do
       begin
-        FVariationSelectors[i].DefaultUVS[j].StartUnicodeValue := BigEndianValueReader.ReadUInt24(Stream);
-        FVariationSelectors[i].DefaultUVS[j].AdditionalCount := BigEndianValueReader.ReadByte(Stream);
+        FVariationSelectors[i].DefaultUVS[j].StartUnicodeValue := BigEndianValue.ReadUInt24(Stream);
+        FVariationSelectors[i].DefaultUVS[j].AdditionalCount := BigEndianValue.ReadByte(Stream);
       end;
     end;
 
@@ -775,11 +774,11 @@ begin
     begin
       Stream.Position := StartPos + Offsets[i].NonDefaultUVSOffset;
 
-      SetLength(FVariationSelectors[i].NonDefaultUVS, BigEndianValueReader.ReadCardinal(Stream));
+      SetLength(FVariationSelectors[i].NonDefaultUVS, BigEndianValue.ReadCardinal(Stream));
       for j := 0 to High(FVariationSelectors[i].NonDefaultUVS) do
       begin
-        FVariationSelectors[i].NonDefaultUVS[j].UnicodeValue := BigEndianValueReader.ReadUInt24(Stream);
-        FVariationSelectors[i].NonDefaultUVS[j].GlyphID := BigEndianValueReader.ReadWord(Stream);
+        FVariationSelectors[i].NonDefaultUVS[j].UnicodeValue := BigEndianValue.ReadUInt24(Stream);
+        FVariationSelectors[i].NonDefaultUVS[j].GlyphID := BigEndianValue.ReadWord(Stream);
       end;
     end;
   end;

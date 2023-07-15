@@ -326,7 +326,7 @@ procedure TCustomPascalTypeCharacterMap.LoadFromStream(Stream: TStream; Size: Ca
 begin
   inherited;
 
-  if (BigEndianValueReader.ReadWord(Stream) <> Format) then
+  if (BigEndianValue.ReadWord(Stream) <> Format) then
     raise EPascalTypeError.Create('CharacterMap format mismatch');
 end;
 
@@ -334,7 +334,7 @@ procedure TCustomPascalTypeCharacterMap.SaveToStream(Stream: TStream);
 begin
   inherited;
 
-  WriteSwappedWord(Stream, Format);
+  BigEndianValue.WriteWord(Stream, Format);
 end;
 
 
@@ -403,7 +403,7 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read format
-  MapFormat := BigEndianValueReader.ReadWord(Stream);
+  MapFormat := BigEndianValue.ReadWord(Stream);
   MapClass := PascalTypeCharacterMaps.FindCharacterMapByFormat(MapFormat);
 
   if (MapClass = nil) then
@@ -692,14 +692,14 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read Version
-  FVersion := BigEndianValueReader.ReadWord(Stream);
+  FVersion := BigEndianValue.ReadWord(Stream);
 
   // check version
   if (FVersion <> 0) then
     raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
   // read subtable count
-  SetLength(Offsets, BigEndianValueReader.ReadWord(Stream));
+  SetLength(Offsets, BigEndianValue.ReadWord(Stream));
 
   if (Length(Offsets) = 0) then
     exit;
@@ -717,10 +717,10 @@ begin
   for i := 0 to High(Offsets) do
   begin
     // read Platform ID
-    PlatformID := BigEndianValueReader.ReadWord(Stream);
+    PlatformID := BigEndianValue.ReadWord(Stream);
 
     // read encoding ID
-    EncodingID := BigEndianValueReader.ReadWord(Stream);
+    EncodingID := BigEndianValue.ReadWord(Stream);
 
     // create character map based on encoding
     case TPlatformID(PlatformID) of
@@ -740,7 +740,7 @@ begin
     FMaps.Add(Map);
 
     // read and save offset
-    Offsets[i] := BigEndianValueReader.ReadCardinal(Stream);
+    Offsets[i] := BigEndianValue.ReadCardinal(Stream);
   end;
 
   // load character map entries from stream
@@ -763,10 +763,10 @@ begin
   inherited;
 
   // write format type
-  WriteSwappedWord(Stream, FVersion);
+  BigEndianValue.WriteWord(Stream, FVersion);
 
   // write directory entry count
-  WriteSwappedWord(Stream, CharacterMapSubtableCount);
+  BigEndianValue.WriteWord(Stream, CharacterMapSubtableCount);
 
   if (CharacterMapSubtableCount > 0) then
   begin
@@ -788,13 +788,13 @@ begin
     for DirIndex := 0 to FMaps.Count-1 do
     begin
       // write format
-      WriteSwappedWord(Stream, Word(FMaps[DirIndex].PlatformID));
+      BigEndianValue.WriteWord(Stream, Word(FMaps[DirIndex].PlatformID));
 
       // write encoding ID
-      WriteSwappedWord(Stream, FMaps[DirIndex].EncodingID);
+      BigEndianValue.WriteWord(Stream, FMaps[DirIndex].EncodingID);
 
       // write offset
-      WriteSwappedCardinal(Stream, Directory[DirIndex]);
+      BigEndianValue.WriteCardinal(Stream, Directory[DirIndex]);
     end;
   end;
 end;

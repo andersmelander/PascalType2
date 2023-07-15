@@ -179,11 +179,11 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // load number of glyphs
-  SetLength(FGlyphNameIndex, BigEndianValueReader.ReadWord(Stream));
+  SetLength(FGlyphNameIndex, BigEndianValue.ReadWord(Stream));
 
   // read glyph name index array
   for i := 0 to High(FGlyphNameIndex) do
-    FGlyphNameIndex[i] := BigEndianValueReader.ReadWord(Stream);
+    FGlyphNameIndex[i] := BigEndianValue.ReadWord(Stream);
 
   Dec(Size, (Length(FGlyphNameIndex) + 1) * SizeOf(Word));
 
@@ -263,15 +263,15 @@ procedure TPascalTypePostscriptTable.LoadFromStream(Stream: TStream; Size: Cardi
 begin
   inherited;
 
-  FVersion.Fixed := BigEndianValueReader.ReadInteger(Stream);;
-  FItalicAngle.Fixed := BigEndianValueReader.ReadInteger(Stream);;
-  FUnderlinePosition := BigEndianValueReader.ReadWord(Stream);
-  FUnderlineThickness := BigEndianValueReader.ReadWord(Stream);
-  FIsFixedPitch := BigEndianValueReader.ReadCardinal(Stream);
-  FMinMemType42 := BigEndianValueReader.ReadCardinal(Stream);
-  FMaxMemType42 := BigEndianValueReader.ReadCardinal(Stream);
-  FMinMemType1 := BigEndianValueReader.ReadCardinal(Stream);
-  FMaxMemType1 := BigEndianValueReader.ReadCardinal(Stream);
+  FVersion.Fixed := BigEndianValue.ReadInteger(Stream);;
+  FItalicAngle.Fixed := BigEndianValue.ReadInteger(Stream);;
+  FUnderlinePosition := BigEndianValue.ReadWord(Stream);
+  FUnderlineThickness := BigEndianValue.ReadWord(Stream);
+  FIsFixedPitch := BigEndianValue.ReadCardinal(Stream);
+  FMinMemType42 := BigEndianValue.ReadCardinal(Stream);
+  FMaxMemType42 := BigEndianValue.ReadCardinal(Stream);
+  FMinMemType1 := BigEndianValue.ReadCardinal(Stream);
+  FMaxMemType1 := BigEndianValue.ReadCardinal(Stream);
 
   (*
   ** Version 1.0 is used in order to supply PostScript glyph names when the font file contains exactly
@@ -307,15 +307,15 @@ procedure TPascalTypePostscriptTable.SaveToStream(Stream: TStream);
 begin
   inherited;
 
-  WriteSwappedCardinal(Stream, Cardinal(FVersion));
-  WriteSwappedCardinal(Stream, Cardinal(FItalicAngle));
-  WriteSwappedWord(Stream, FUnderlinePosition);
-  WriteSwappedWord(Stream, FUnderlineThickness);
-  WriteSwappedCardinal(Stream, FIsFixedPitch);
-  WriteSwappedCardinal(Stream, FMinMemType42);
-  WriteSwappedCardinal(Stream, FMaxMemType42);
-  WriteSwappedCardinal(Stream, FMinMemType1);
-  WriteSwappedCardinal(Stream, FMaxMemType1);
+  BigEndianValue.WriteCardinal(Stream, Cardinal(FVersion));
+  BigEndianValue.WriteCardinal(Stream, Cardinal(FItalicAngle));
+  BigEndianValue.WriteWord(Stream, FUnderlinePosition);
+  BigEndianValue.WriteWord(Stream, FUnderlineThickness);
+  BigEndianValue.WriteCardinal(Stream, FIsFixedPitch);
+  BigEndianValue.WriteCardinal(Stream, FMinMemType42);
+  BigEndianValue.WriteCardinal(Stream, FMaxMemType42);
+  BigEndianValue.WriteCardinal(Stream, FMinMemType1);
+  BigEndianValue.WriteCardinal(Stream, FMaxMemType1);
 end;
 
 procedure TPascalTypePostscriptTable.SetVersion(const Value: TFixedPoint);

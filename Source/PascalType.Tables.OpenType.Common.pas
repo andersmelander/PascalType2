@@ -147,18 +147,18 @@ begin
   StartPosition := Stream.Position;
 
   // read version
-  FVersion.Fixed := BigEndianValueReader.ReadCardinal(Stream);
+  FVersion.Fixed := BigEndianValue.ReadCardinal(Stream);
 
   if Version.Value <> 1 then
     raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
-  ScriptListPosition := StartPosition + BigEndianValueReader.ReadWord(Stream);
-  FeatureListPosition := StartPosition + BigEndianValueReader.ReadWord(Stream);
-  LookupListPosition := StartPosition + BigEndianValueReader.ReadWord(Stream);
+  ScriptListPosition := StartPosition + BigEndianValue.ReadWord(Stream);
+  FeatureListPosition := StartPosition + BigEndianValue.ReadWord(Stream);
+  LookupListPosition := StartPosition + BigEndianValue.ReadWord(Stream);
 
   // For version 1.1 there will be a 32-bit "featureVariationsOffset" here
   // if (FVersion.Fract >= 1) then
-  //   FeatureVariationsPosition := StartPosition + BigEndianValueReader.ReadCardinal(Stream);
+  //   FeatureVariationsPosition := StartPosition + BigEndianValue.ReadCardinal(Stream);
   // else
   //   FeatureVariationsPosition := 0;
 
@@ -186,23 +186,23 @@ begin
     StartPos := Position;
 
     // write version
-    WriteSwappedCardinal(Stream, Cardinal(FVersion));
+    BigEndianValue.WriteCardinal(Stream, Cardinal(FVersion));
 
     // write script list offset (fixed!)
-    WriteSwappedWord(Stream, 10);
+    BigEndianValue.WriteWord(Stream, 10);
 
     Position := StartPos + 10;
     FScriptListTable.SaveToStream(Stream);
 
     (*
       // write script list offset
-      WriteSwappedWord(Stream, FScriptListOffset);
+      BigEndianValue.WriteWord(Stream, FScriptListOffset);
 
       // write feature list offset
-      WriteSwappedWord(Stream, FFeatureListOffset);
+      BigEndianValue.WriteWord(Stream, FFeatureListOffset);
 
       // write lookup list offset
-      WriteSwappedWord(Stream, FLookupListOffset);
+      BigEndianValue.WriteWord(Stream, FLookupListOffset);
     *)
   end;
 end;

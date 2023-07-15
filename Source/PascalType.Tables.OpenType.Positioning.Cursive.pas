@@ -298,11 +298,11 @@ begin
   if Stream.Position + SizeOf(Word) > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  SetLength(EntryExitRecordOffsets, BigEndianValueReader.ReadWord(Stream));
+  SetLength(EntryExitRecordOffsets, BigEndianValue.ReadWord(Stream));
   for i := 0 to High(EntryExitRecordOffsets) do
   begin
-    EntryExitRecordOffsets[i].EntryAnchorOffset := BigEndianValueReader.ReadWord(Stream);
-    EntryExitRecordOffsets[i].ExitAnchorOffset := BigEndianValueReader.ReadWord(Stream);
+    EntryExitRecordOffsets[i].EntryAnchorOffset := BigEndianValue.ReadWord(Stream);
+    EntryExitRecordOffsets[i].ExitAnchorOffset := BigEndianValue.ReadWord(Stream);
   end;
 
   for i := 0 to High(EntryExitRecordOffsets) do

@@ -86,7 +86,6 @@ implementation
 
 uses
   SysUtils,
-  PT_Math,
   PT_ResourceStrings;
 
 //------------------------------------------------------------------------------
@@ -172,21 +171,21 @@ begin
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // Glyph class definition offset
-  GlyphClassDefinitionOffset := BigEndianValueReader.ReadWord(Stream);
+  GlyphClassDefinitionOffset := BigEndianValue.ReadWord(Stream);
 
   // Attachment list offset
-  FAttachmentListOffset := BigEndianValueReader.ReadWord(Stream);
+  FAttachmentListOffset := BigEndianValue.ReadWord(Stream);
 
   // Ligature caret list offset
-  FLigatureCaretListOffset := BigEndianValueReader.ReadWord(Stream);
+  FLigatureCaretListOffset := BigEndianValue.ReadWord(Stream);
 
   // Mark attachment class definition offset
-  MarkAttachmentClassDefOffset := BigEndianValueReader.ReadWord(Stream);
+  MarkAttachmentClassDefOffset := BigEndianValue.ReadWord(Stream);
 
   if (Version.Fract >= 2) then
   begin
     // Mark glyph set definitions offset
-    MarkGlyphSetsDefinitionsOffset := BigEndianValueReader.ReadWord(Stream);
+    MarkGlyphSetsDefinitionsOffset := BigEndianValue.ReadWord(Stream);
 
   end else
     MarkGlyphSetsDefinitionsOffset := 0;
@@ -197,7 +196,7 @@ begin
   begin
     Stream.Position := StartPos + GlyphClassDefinitionOffset;
 
-    Value16 := BigEndianValueReader.ReadWord(Stream);
+    Value16 := BigEndianValue.ReadWord(Stream);
     case Value16 of
       1:
         FGlyphClassDef := TOpenTypeClassDefinitionFormat1Table.Create;
@@ -217,7 +216,7 @@ begin
   begin
     Stream.Position := StartPos + MarkAttachmentClassDefOffset;
 
-    Value16 := BigEndianValueReader.ReadWord(Stream);
+    Value16 := BigEndianValue.ReadWord(Stream);
     case Value16 of
       1:
         FMarkAttachClassDef := TOpenTypeClassDefinitionFormat1Table.Create;
@@ -305,19 +304,19 @@ begin
     // write directory
 
     // write glyph class definition
-    WriteSwappedWord(Stream, Offsets[0]);
+    BigEndianValue.WriteWord(Stream, Offsets[0]);
 
     // write attach list
-    WriteSwappedWord(Stream, Offsets[1]);
+    BigEndianValue.WriteWord(Stream, Offsets[1]);
 
     // write ligature caret list
-    WriteSwappedWord(Stream, Offsets[2]);
+    BigEndianValue.WriteWord(Stream, Offsets[2]);
 
     // write mark attach class definition
-    WriteSwappedWord(Stream, Offsets[3]);
+    BigEndianValue.WriteWord(Stream, Offsets[3]);
 
     // write mark glyph set
-    WriteSwappedWord(Stream, Offsets[4]);
+    BigEndianValue.WriteWord(Stream, Offsets[4]);
   end;
 end;
 

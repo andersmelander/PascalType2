@@ -153,8 +153,8 @@ var
   SavePos: Int64;
   AnchorOffset: Word;
 begin
-  FMarkClass := BigEndianValueReader.ReadWord(Stream);
-  AnchorOffset := BigEndianValueReader.ReadWord(Stream);
+  FMarkClass := BigEndianValue.ReadWord(Stream);
+  AnchorOffset := BigEndianValue.ReadWord(Stream);
 
   SavePos := Stream.Position;
 
@@ -217,7 +217,7 @@ begin
 
   StartPos := Stream.Position;
 
-  MarkCount := BigEndianValueReader.ReadWord(Stream);
+  MarkCount := BigEndianValue.ReadWord(Stream);
 
   FMarks.Capacity := MarkCount;
   while (MarkCount > 0) do
@@ -239,12 +239,12 @@ var
 begin
   StartPos := Stream.Position;
 
-  WriteSwappedWord(Stream, FMarks.Count);
+  BigEndianValue.WriteWord(Stream, FMarks.Count);
 
   ListPos := Stream.Position;
   for i := 0 to FMarks.Count-1 do
   begin
-    WriteSwappedWord(Stream, FMarks[i].MarkClass);
+    BigEndianValue.WriteWord(Stream, FMarks[i].MarkClass);
     Stream.Position := Stream.Position + SizeOf(Word);
   end;
 
@@ -261,7 +261,7 @@ begin
   for i := 0 to FMarks.Count-1 do
   begin
     Stream.Position := Stream.Position + SizeOf(Word);
-    WriteSwappedWord(Stream, AnchorOffsets[i]);
+    BigEndianValue.WriteWord(Stream, AnchorOffsets[i]);
   end;
 
   Stream.Position := SavePos;

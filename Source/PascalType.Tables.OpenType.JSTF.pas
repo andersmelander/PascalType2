@@ -331,11 +331,11 @@ begin
       raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // set length of glyphID array
-    SetLength(FGlyphID, BigEndianValueReader.ReadWord(Stream));
+    SetLength(FGlyphID, BigEndianValue.ReadWord(Stream));
 
     // read glyph IDs from stream
     for GlyphIdIndex := 0 to High(FGlyphID) do
-      FGlyphID[GlyphIdIndex] := BigEndianValueReader.ReadWord(Stream)
+      FGlyphID[GlyphIdIndex] := BigEndianValue.ReadWord(Stream)
   end;
 end;
 
@@ -348,11 +348,11 @@ begin
   with Stream do
   begin
     // write length of glyphID array to stream
-    WriteSwappedWord(Stream, Length(FGlyphID));
+    BigEndianValue.WriteWord(Stream, Length(FGlyphID));
 
     // write glyph IDs to stream
     for GlyphIdIndex := 0 to High(FGlyphID) do
-      WriteSwappedWord(Stream, FGlyphID[GlyphIdIndex]);
+      BigEndianValue.WriteWord(Stream, FGlyphID[GlyphIdIndex]);
   end;
 end;
 
@@ -449,13 +449,13 @@ begin
       raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read extender glyph offset
-    ExtenderGlyph := BigEndianValueReader.ReadWord(Stream);
+    ExtenderGlyph := BigEndianValue.ReadWord(Stream);
 
     // read default language system offset
-    DefaultLangSys := BigEndianValueReader.ReadWord(Stream);
+    DefaultLangSys := BigEndianValue.ReadWord(Stream);
 
     // read language system record count
-    SetLength(LangSysRecords, BigEndianValueReader.ReadWord(Stream));
+    SetLength(LangSysRecords, BigEndianValue.ReadWord(Stream));
 
     for LangSysIndex := 0 to High(LangSysRecords) do
     begin
@@ -463,7 +463,7 @@ begin
       Read(LangSysRecords[LangSysIndex].Tag, SizeOf(TTableType));
 
       // read offset
-      LangSysRecords[LangSysIndex].Offset := BigEndianValueReader.ReadWord(Stream);
+      LangSysRecords[LangSysIndex].Offset := BigEndianValue.ReadWord(Stream);
     end;
 
     // load default language system
@@ -569,10 +569,10 @@ begin
       end;
 
     // write extender glyph offset
-    WriteSwappedWord(Stream, ExtGlyphOff);
+    BigEndianValue.WriteWord(Stream, ExtGlyphOff);
 
     // write default language system offset
-    WriteSwappedWord(Stream, DefLangSysOff);
+    BigEndianValue.WriteWord(Stream, DefLangSysOff);
 
     // write directory
     Position := StartPos;
@@ -584,7 +584,7 @@ begin
         Write(Tag, SizeOf(TTableType));
 
         // write offset
-        WriteSwappedWord(Stream, Offset);
+        BigEndianValue.WriteWord(Stream, Offset);
       end;
   end;
 end;
@@ -661,13 +661,13 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read version
-    FVersion.Fixed := BigEndianValueReader.ReadCardinal(Stream);
+    FVersion.Fixed := BigEndianValue.ReadCardinal(Stream);
 
     if Version.Value <> 1 then
       raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
     // read Justification Script Count
-    SetLength(Directory, BigEndianValueReader.ReadWord(Stream));
+    SetLength(Directory, BigEndianValue.ReadWord(Stream));
 
     // check if table is complete
     if Position + Length(Directory) * SizeOf(TJustificationScriptDirectoryEntry) > Size then
@@ -681,7 +681,7 @@ begin
         Read(Tag, SizeOf(Cardinal));
 
         // read offset
-        Offset := BigEndianValueReader.ReadWord(Stream);
+        Offset := BigEndianValue.ReadWord(Stream);
       end;
 
     // clear existing scripts
@@ -717,10 +717,10 @@ begin
     StartPos := Position;
 
     // write version
-    WriteSwappedCardinal(Stream, Cardinal(FVersion));
+    BigEndianValue.WriteCardinal(Stream, Cardinal(FVersion));
 
     // write Justification Script Count
-    WriteSwappedWord(Stream, Length(Directory));
+    BigEndianValue.WriteWord(Stream, Length(Directory));
 
     // set directory length
     SetLength(Directory, FScripts.Count);
@@ -746,7 +746,7 @@ begin
         Write(Directory[DirIndex].Tag, SizeOf(Cardinal));
 
         // write offset
-        WriteSwappedWord(Stream, Directory[DirIndex].Offset);
+        BigEndianValue.WriteWord(Stream, Directory[DirIndex].Offset);
       end;
   end;
 end;

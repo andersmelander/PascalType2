@@ -147,19 +147,19 @@ begin
   if Stream.Position + 2 > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  SetLength(SequenceOffsets, BigEndianValueReader.ReadWord(Stream));
+  SetLength(SequenceOffsets, BigEndianValue.ReadWord(Stream));
   for i := 0 to High(SequenceOffsets) do
-    SequenceOffsets[i] := BigEndianValueReader.ReadWord(Stream);
+    SequenceOffsets[i] := BigEndianValue.ReadWord(Stream);
 
   SetLength(FSequenceList, Length(SequenceOffsets));
   for i := 0 to High(FSequenceList) do
   begin
     Stream.Position := StartPos + SequenceOffsets[i];
 
-    SetLength(FSequenceList[i], BigEndianValueReader.ReadWord(Stream));
+    SetLength(FSequenceList[i], BigEndianValue.ReadWord(Stream));
 
     for j := 0 to High(FSequenceList[i]) do
-      FSequenceList[i][j] := BigEndianValueReader.ReadWord(Stream);
+      FSequenceList[i][j] := BigEndianValue.ReadWord(Stream);
   end;
 end;
 
@@ -176,7 +176,7 @@ begin
 
   inherited;
 
-  WriteSwappedWord(Stream, Length(FSequenceList));
+  BigEndianValue.WriteWord(Stream, Length(FSequenceList));
 
   SequenceListPos := Stream.Position;
   Size := 0;
@@ -191,18 +191,18 @@ begin
   begin
     SequenceOffsets[i] := Stream.Position - StartPos;
 
-    WriteSwappedWord(Stream, Length(FSequenceList[i]));
+    BigEndianValue.WriteWord(Stream, Length(FSequenceList[i]));
     for j := 0 to High(FSequenceList[i]) do
-      WriteSwappedWord(Stream, FSequenceList[i][j]);
+      BigEndianValue.WriteWord(Stream, FSequenceList[i][j]);
   end;
 
   // Save offset table
   SavePos := Stream.Position;
   Stream.Position := SequenceListPos;
 
-  WriteSwappedWord(Stream, Length(SequenceOffsets));
+  BigEndianValue.WriteWord(Stream, Length(SequenceOffsets));
   for i := 0 to High(FSequenceList) do
-    WriteSwappedWord(Stream, SequenceOffsets[i]);
+    BigEndianValue.WriteWord(Stream, SequenceOffsets[i]);
 
   Stream.Position := SavePos;
 end;

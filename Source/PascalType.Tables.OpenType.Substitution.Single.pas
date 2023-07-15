@@ -166,14 +166,14 @@ begin
   if Stream.Position + SizeOf(Word) > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  FDeltaGlyphID := BigEndianValueReader.ReadSmallInt(Stream);
+  FDeltaGlyphID := BigEndianValue.ReadSmallInt(Stream);
 end;
 
 procedure TOpenTypeSubstitutionSubTableSingleOffset.SaveToStream(Stream: TStream);
 begin
   inherited;
 
-  WriteSwappedSmallInt(Stream, FDeltaGlyphID);
+  BigEndianValue.WriteSmallInt(Stream, FDeltaGlyphID);
 end;
 
 function TOpenTypeSubstitutionSubTableSingleOffset.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;
@@ -215,9 +215,9 @@ begin
   if Stream.Position + 2 > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  SetLength(FSubstituteGlyphIDs, BigEndianValueReader.ReadWord(Stream));
+  SetLength(FSubstituteGlyphIDs, BigEndianValue.ReadWord(Stream));
   for i := 0 to High(FSubstituteGlyphIDs) do
-    FSubstituteGlyphIDs[i] := BigEndianValueReader.ReadWord(Stream);
+    FSubstituteGlyphIDs[i] := BigEndianValue.ReadWord(Stream);
 end;
 
 procedure TOpenTypeSubstitutionSubTableSingleList.SaveToStream(Stream: TStream);
@@ -226,9 +226,9 @@ var
 begin
   inherited;
 
-  WriteSwappedWord(Stream, Length(FSubstituteGlyphIDs));
+  BigEndianValue.WriteWord(Stream, Length(FSubstituteGlyphIDs));
   for i := 0 to High(FSubstituteGlyphIDs) do
-    WriteSwappedWord(Stream, FSubstituteGlyphIDs[i]);
+    BigEndianValue.WriteWord(Stream, FSubstituteGlyphIDs[i]);
 end;
 
 function TOpenTypeSubstitutionSubTableSingleList.Apply(var AGlyphIterator: TPascalTypeGlyphGlyphIterator): boolean;

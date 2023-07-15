@@ -348,13 +348,13 @@ begin
   else
   begin
     // read first cardinal
-    Result := BigEndianValueReader.ReadCardinal(Stream);
+    Result := BigEndianValue.ReadCardinal(Stream);
 
     // read subsequent cardinals
     for I := 1 to (Size div 4) - 1 do
     begin
 {$IFOPT Q+}{$DEFINE Q_PLUS}{$OVERFLOWCHECKS OFF}{$ENDIF}
-      Result := Result + BigEndianValueReader.ReadCardinal(Stream);
+      Result := Result + BigEndianValue.ReadCardinal(Stream);
 {$IFDEF Q_PLUS}{$OVERFLOWCHECKS ON}{$UNDEF Q_PLUS}{$ENDIF}
     end;
   end;
@@ -374,14 +374,14 @@ begin
     Seek(0, soFromBeginning);
 
     // read first cardinal
-    Result := BigEndianValueReader.ReadCardinal(Stream);
+    Result := BigEndianValue.ReadCardinal(Stream);
 
     // read subsequent cardinals
     for I := 1 to (Size div 4) - 1 do
     begin
       if I = 2 then
         Continue;
-      Result := Result + BigEndianValueReader.ReadCardinal(Stream);
+      Result := Result + BigEndianValue.ReadCardinal(Stream);
     end;
   end;
 end;
@@ -827,7 +827,7 @@ begin
     // ignore checksum adjustment
     Stream.Position := 8;
 {$IFOPT Q+}{$DEFINE Q_PLUS}{$OVERFLOWCHECKS OFF}{$ENDIF}
-    Checksum := Checksum - BigEndianValueReader.ReadCardinal(Stream);
+    Checksum := Checksum - BigEndianValue.ReadCardinal(Stream);
 {$IFDEF Q_PLUS}{$OVERFLOWCHECKS ON}{$UNDEF Q_PLUS}{$ENDIF}
   end;
 

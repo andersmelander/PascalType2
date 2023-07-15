@@ -191,12 +191,12 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read version
-  FVersion.Fixed := BigEndianValueReader.ReadCardinal(Stream);
+  FVersion.Fixed := BigEndianValue.ReadCardinal(Stream);
 
   if (Version.Fixed <> $00010000) and (Version.Fixed <> $00005000) then
     raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
-  FNumGlyphs := BigEndianValueReader.ReadWord(Stream);
+  FNumGlyphs := BigEndianValue.ReadWord(Stream);
 
   // Set postscript values to maximum
   if (Version.Fixed = $00005000) then
@@ -220,39 +220,39 @@ begin
   if Stream.Position + $1A > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-  FMaxPoints := BigEndianValueReader.ReadWord(Stream);
-  FMaxContours := BigEndianValueReader.ReadWord(Stream);
-  FMaxCompositePoints := BigEndianValueReader.ReadWord(Stream);
-  FMaxCompositeContours := BigEndianValueReader.ReadWord(Stream);
-  FMaxZones := BigEndianValueReader.ReadWord(Stream);
-  FMaxTwilightPoints := BigEndianValueReader.ReadWord(Stream);
-  FMaxStorage := BigEndianValueReader.ReadWord(Stream);
-  FMaxFunctionDefs := BigEndianValueReader.ReadWord(Stream);
-  FMaxInstructionDefs := BigEndianValueReader.ReadWord(Stream);
-  FMaxStackElements := BigEndianValueReader.ReadWord(Stream);
-  FMaxSizeOfInstructions := BigEndianValueReader.ReadWord(Stream);
-  FMaxComponentElements := BigEndianValueReader.ReadWord(Stream);
-  FMaxComponentDepth := BigEndianValueReader.ReadWord(Stream);
+  FMaxPoints := BigEndianValue.ReadWord(Stream);
+  FMaxContours := BigEndianValue.ReadWord(Stream);
+  FMaxCompositePoints := BigEndianValue.ReadWord(Stream);
+  FMaxCompositeContours := BigEndianValue.ReadWord(Stream);
+  FMaxZones := BigEndianValue.ReadWord(Stream);
+  FMaxTwilightPoints := BigEndianValue.ReadWord(Stream);
+  FMaxStorage := BigEndianValue.ReadWord(Stream);
+  FMaxFunctionDefs := BigEndianValue.ReadWord(Stream);
+  FMaxInstructionDefs := BigEndianValue.ReadWord(Stream);
+  FMaxStackElements := BigEndianValue.ReadWord(Stream);
+  FMaxSizeOfInstructions := BigEndianValue.ReadWord(Stream);
+  FMaxComponentElements := BigEndianValue.ReadWord(Stream);
+  FMaxComponentDepth := BigEndianValue.ReadWord(Stream);
 end;
 
 procedure TPascalTypeMaximumProfileTable.SaveToStream(Stream: TStream);
 begin
   inherited;
-  WriteSwappedCardinal(Stream, Cardinal(FVersion));
-  WriteSwappedWord(Stream, FNumGlyphs);
-  WriteSwappedWord(Stream, FMaxPoints);
-  WriteSwappedWord(Stream, FMaxContours);
-  WriteSwappedWord(Stream, FMaxCompositePoints);
-  WriteSwappedWord(Stream, FMaxCompositeContours);
-  WriteSwappedWord(Stream, FMaxZones);
-  WriteSwappedWord(Stream, FMaxTwilightPoints);
-  WriteSwappedWord(Stream, FMaxStorage);
-  WriteSwappedWord(Stream, FMaxFunctionDefs);
-  WriteSwappedWord(Stream, FMaxInstructionDefs);
-  WriteSwappedWord(Stream, FMaxStackElements);
-  WriteSwappedWord(Stream, FMaxSizeOfInstructions);
-  WriteSwappedWord(Stream, FMaxComponentElements);
-  WriteSwappedWord(Stream, FMaxComponentDepth);
+  BigEndianValue.WriteCardinal(Stream, Cardinal(FVersion));
+  BigEndianValue.WriteWord(Stream, FNumGlyphs);
+  BigEndianValue.WriteWord(Stream, FMaxPoints);
+  BigEndianValue.WriteWord(Stream, FMaxContours);
+  BigEndianValue.WriteWord(Stream, FMaxCompositePoints);
+  BigEndianValue.WriteWord(Stream, FMaxCompositeContours);
+  BigEndianValue.WriteWord(Stream, FMaxZones);
+  BigEndianValue.WriteWord(Stream, FMaxTwilightPoints);
+  BigEndianValue.WriteWord(Stream, FMaxStorage);
+  BigEndianValue.WriteWord(Stream, FMaxFunctionDefs);
+  BigEndianValue.WriteWord(Stream, FMaxInstructionDefs);
+  BigEndianValue.WriteWord(Stream, FMaxStackElements);
+  BigEndianValue.WriteWord(Stream, FMaxSizeOfInstructions);
+  BigEndianValue.WriteWord(Stream, FMaxComponentElements);
+  BigEndianValue.WriteWord(Stream, FMaxComponentDepth);
 end;
 
 procedure TPascalTypeMaximumProfileTable.SetMaxComponentDepth(const Value: Word);

@@ -195,7 +195,7 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read version
-    FVersion.Fixed := BigEndianValueReader.ReadCardinal(Stream);
+    FVersion.Fixed := BigEndianValue.ReadCardinal(Stream);
 
     if FVersion.Value < 2 then
       raise EPascalTypeError.Create(RCStrUnknownVersion);
@@ -207,7 +207,7 @@ begin
   inherited;
 
   // write version
-  WriteSwappedCardinal(Stream, Cardinal(FVersion));
+  BigEndianValue.WriteCardinal(Stream, Cardinal(FVersion));
 end;
 
 procedure TCustomPascalTypeEmbeddedBitmapTable.SetVersion
@@ -320,7 +320,7 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read number of BitmapSize tables
-    BitmapSizeCount := BigEndianValueReader.ReadCardinal(Stream);
+    BitmapSizeCount := BigEndianValue.ReadCardinal(Stream);
 
     // read bitmap size tables
     for BitmapSizeIndex := 0 to BitmapSizeCount - 1 do
@@ -342,7 +342,7 @@ begin
   inherited;
 
   // write number of BitmapSize tables
-  WriteSwappedCardinal(Stream, FBitmapSizeList.Count);
+  BigEndianValue.WriteCardinal(Stream, FBitmapSizeList.Count);
 
   // write bitmap size tables
   for BitmapSizeIndex := 0 to FBitmapSizeList.Count - 1 do
@@ -548,7 +548,7 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read number of bitmap scale tables
-    BitmapScaleCount := BigEndianValueReader.ReadCardinal(Stream);
+    BitmapScaleCount := BigEndianValue.ReadCardinal(Stream);
 
     // read bitmap size tables
     for BitmapScaleIndex := 0 to BitmapScaleCount - 1 do
@@ -573,7 +573,7 @@ begin
   with Stream do
   begin
     // write number of BitmapScale tables
-    WriteSwappedCardinal(Stream, FBitmapScaleList.Count);
+    BigEndianValue.WriteCardinal(Stream, FBitmapScaleList.Count);
 
     // write bitmap size tables
     for BitmapScaleIndex := 0 to FBitmapScaleList.Count - 1 do

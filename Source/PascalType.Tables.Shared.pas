@@ -477,16 +477,16 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read index subtable array offset
-    FIndexSubTableArrayOffset := BigEndianValueReader.ReadCardinal(Stream);
+    FIndexSubTableArrayOffset := BigEndianValue.ReadCardinal(Stream);
 
     // read index tables size
-    FIndexTablesSize := BigEndianValueReader.ReadCardinal(Stream);
+    FIndexTablesSize := BigEndianValue.ReadCardinal(Stream);
 
     // read number of index subtables
-    FNumberOfIndexSubTables := BigEndianValueReader.ReadCardinal(Stream);
+    FNumberOfIndexSubTables := BigEndianValue.ReadCardinal(Stream);
 
     // read color reference
-    FColorRef := BigEndianValueReader.ReadCardinal(Stream);
+    FColorRef := BigEndianValue.ReadCardinal(Stream);
 
     // load horizontal metrics from stream
     FHorizontalMetrics.LoadFromStream(Stream);
@@ -495,10 +495,10 @@ begin
     FVerticalMetrics.LoadFromStream(Stream);
 
     // read start glyph index
-    FStartGlyphIndex := BigEndianValueReader.ReadWord(Stream);
+    FStartGlyphIndex := BigEndianValue.ReadWord(Stream);
 
     // read end glyph index
-    FEndGlyphIndex := BigEndianValueReader.ReadWord(Stream);
+    FEndGlyphIndex := BigEndianValue.ReadWord(Stream);
 
     // read horizontal pixels per Em
     Read(FPpemX, 1);
@@ -517,16 +517,16 @@ end;
 procedure TPascalTypeBitmapSizeTable.SaveToStream(Stream: TStream);
 begin
   // write index subtable array offset
-  WriteSwappedCardinal(Stream, FIndexSubTableArrayOffset);
+  BigEndianValue.WriteCardinal(Stream, FIndexSubTableArrayOffset);
 
   // write index tables size
-  WriteSwappedCardinal(Stream, FIndexTablesSize);
+  BigEndianValue.WriteCardinal(Stream, FIndexTablesSize);
 
   // write number of index subtables
-  WriteSwappedCardinal(Stream, FNumberOfIndexSubTables);
+  BigEndianValue.WriteCardinal(Stream, FNumberOfIndexSubTables);
 
   // write color reference
-  WriteSwappedCardinal(Stream, FColorRef);
+  BigEndianValue.WriteCardinal(Stream, FColorRef);
 
   // save horizontal metrics to stream
   FHorizontalMetrics.SaveToStream(Stream);
@@ -535,10 +535,10 @@ begin
   FVerticalMetrics.SaveToStream(Stream);
 
   // write start glyph index
-  WriteSwappedWord(Stream, FStartGlyphIndex);
+  BigEndianValue.WriteWord(Stream, FStartGlyphIndex);
 
   // write end glyph index
-  WriteSwappedWord(Stream, FEndGlyphIndex);
+  BigEndianValue.WriteWord(Stream, FEndGlyphIndex);
 
   // write horizontal pixels per Em
   Write(FPpemX, 1);

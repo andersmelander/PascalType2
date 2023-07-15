@@ -150,16 +150,16 @@ procedure TOpenTypeAnchorDesignUnits.LoadFromStream(Stream: TStream);
 begin
   inherited;
 
-  FX := BigEndianValueReader.ReadSmallInt(Stream);
-  FY := BigEndianValueReader.ReadSmallInt(Stream);
+  FX := BigEndianValue.ReadSmallInt(Stream);
+  FY := BigEndianValue.ReadSmallInt(Stream);
 end;
 
 procedure TOpenTypeAnchorDesignUnits.SaveToStream(Stream: TStream);
 begin
   inherited;
 
-  WriteSwappedSmallInt(Stream, FX);
-  WriteSwappedSmallInt(Stream, FY);
+  BigEndianValue.WriteSmallInt(Stream, FX);
+  BigEndianValue.WriteSmallInt(Stream, FY);
 end;
 
 
@@ -200,14 +200,14 @@ procedure TOpenTypeAnchorDUContourPoint.LoadFromStream(Stream: TStream);
 begin
   inherited;
 
-  FContourPointIndex := BigEndianValueReader.ReadWord(Stream);
+  FContourPointIndex := BigEndianValue.ReadWord(Stream);
 end;
 
 procedure TOpenTypeAnchorDUContourPoint.SaveToStream(Stream: TStream);
 begin
   inherited;
 
-  WriteSwappedWord(Stream, FContourPointIndex);
+  BigEndianValue.WriteWord(Stream, FContourPointIndex);
 end;
 
 
@@ -246,8 +246,8 @@ begin
   inherited;
 
 (* TODO
-  XDeviceOffset := BigEndianValueReader.ReadWord(Stream);
-  YDeviceOffset := BigEndianValueReader.ReadWord(Stream);
+  XDeviceOffset := BigEndianValue.ReadWord(Stream);
+  YDeviceOffset := BigEndianValue.ReadWord(Stream);
 *)
 end;
 
@@ -310,7 +310,7 @@ var
 begin
   SavePos := Stream.Position;
 
-  AnchorFormat := TOpenTypeAnchorFormat(BigEndianValueReader.ReadWord(Stream));
+  AnchorFormat := TOpenTypeAnchorFormat(BigEndianValue.ReadWord(Stream));
 
   Result := AnchorClassByAnchorFormat(AnchorFormat).Create(AnchorFormat);
   try
@@ -328,13 +328,13 @@ procedure TOpenTypeAnchor.LoadFromStream(Stream: TStream);
 var
   AnchorFormat: TOpenTypeAnchorFormat;
 begin
-  AnchorFormat := TOpenTypeAnchorFormat(BigEndianValueReader.ReadWord(Stream));
+  AnchorFormat := TOpenTypeAnchorFormat(BigEndianValue.ReadWord(Stream));
   Assert(AnchorFormat = FAnchorFormat);
 end;
 
 procedure TOpenTypeAnchor.SaveToStream(Stream: TStream);
 begin
-  WriteSwappedWord(Stream, Ord(AnchorFormat));
+  BigEndianValue.WriteWord(Stream, Ord(AnchorFormat));
 end;
 
 

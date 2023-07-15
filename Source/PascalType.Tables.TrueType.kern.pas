@@ -241,15 +241,15 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read number of pairs
-  SetLength(FPairs, BigEndianValueReader.ReadWord(Stream));
+  SetLength(FPairs, BigEndianValue.ReadWord(Stream));
 
   Stream.Seek(3*SizeOf(Word), soFromCurrent);
 
   for PairIndex := 0 to High(FPairs) do
   begin
-    FPairs[PairIndex].Left := BigEndianValueReader.ReadWord(Stream);
-    FPairs[PairIndex].Right := BigEndianValueReader.ReadWord(Stream);
-    FPairs[PairIndex].Value := BigEndianValueReader.ReadSmallInt(Stream);
+    FPairs[PairIndex].Left := BigEndianValue.ReadWord(Stream);
+    FPairs[PairIndex].Right := BigEndianValue.ReadWord(Stream);
+    FPairs[PairIndex].Value := BigEndianValue.ReadSmallInt(Stream);
   end;
 end;
 
@@ -263,25 +263,25 @@ begin
   inherited;
 
   // write number of pairs
-  WriteSwappedWord(Stream, Length(FPairs));
+  BigEndianValue.WriteWord(Stream, Length(FPairs));
 
   // write search range
   SearchRange := Round(6 * (Power(2, Floor(Log2(Length(FPairs))))));
-  WriteSwappedWord(Stream, SearchRange);
+  BigEndianValue.WriteWord(Stream, SearchRange);
 
   // write entry selector
   EntrySelector := Round(Log2(SearchRange / 6));
-  WriteSwappedWord(Stream, EntrySelector);
+  BigEndianValue.WriteWord(Stream, EntrySelector);
 
   // write range shift
   RangeShift := 6 * Length(FPairs) - SearchRange;
-  WriteSwappedWord(Stream, RangeShift);
+  BigEndianValue.WriteWord(Stream, RangeShift);
 
   for PairIndex := 0 to High(FPairs) do
   begin
-    WriteSwappedWord(Stream, FPairs[PairIndex].Left);
-    WriteSwappedWord(Stream, FPairs[PairIndex].Right);
-    WriteSwappedSmallInt(Stream, FPairs[PairIndex].Value);
+    BigEndianValue.WriteWord(Stream, FPairs[PairIndex].Left);
+    BigEndianValue.WriteWord(Stream, FPairs[PairIndex].Right);
+    BigEndianValue.WriteSmallInt(Stream, FPairs[PairIndex].Value);
   end;
 end;
 
@@ -339,13 +339,13 @@ begin
   if Stream.Position + 4 > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-  FVersion := BigEndianValueReader.ReadWord(Stream);
+  FVersion := BigEndianValue.ReadWord(Stream);
 
   if FVersion <> 0 then
     raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
-  FLength := BigEndianValueReader.ReadWord(Stream);
-  FCoverage := BigEndianValueReader.ReadWord(Stream);
+  FLength := BigEndianValue.ReadWord(Stream);
+  FCoverage := BigEndianValue.ReadWord(Stream);
 
   AssignFormat;
 
@@ -367,9 +367,9 @@ procedure TPascalTypeKerningSubTable.SaveToStream(Stream: TStream);
 begin
   inherited;
 
-  WriteSwappedWord(Stream, FVersion);
-  WriteSwappedWord(Stream, FLength);
-  WriteSwappedWord(Stream, FCoverage);
+  BigEndianValue.WriteWord(Stream, FVersion);
+  BigEndianValue.WriteWord(Stream, FLength);
+  BigEndianValue.WriteWord(Stream, FCoverage);
 end;
 
 function TPascalTypeKerningSubTable.GetFormat: Byte;
@@ -572,7 +572,7 @@ begin
   FKerningSubtableList.Clear;
 
   // read version
-  FVersion := BigEndianValueReader.ReadWord(Stream);
+  FVersion := BigEndianValue.ReadWord(Stream);
 
   // For now we only support version 0 (same as Windows).
   // At time of writing, Apple has defined 3 additional versions.
@@ -583,7 +583,7 @@ begin
     // raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
   // read number of glyphs
-  SubTableCount := BigEndianValueReader.ReadWord(Stream);
+  SubTableCount := BigEndianValue.ReadWord(Stream);
 
   for SubTableIndex := 0 to SubTableCount - 1 do
   begin
@@ -598,10 +598,10 @@ var
   SubTableIndex: Integer;
 begin
   // write version
-  WriteSwappedWord(Stream, FVersion);
+  BigEndianValue.WriteWord(Stream, FVersion);
 
   // write number of glyphs
-  WriteSwappedWord(Stream, FKerningSubtableList.Count);
+  BigEndianValue.WriteWord(Stream, FKerningSubtableList.Count);
 
   // save to stream
   for SubTableIndex := 0 to FKerningSubtableList.Count - 1 do

@@ -305,10 +305,10 @@ begin
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // read default language system offset
-  DefaultLangSysOffset := BigEndianValueReader.ReadWord(Stream);
+  DefaultLangSysOffset := BigEndianValue.ReadWord(Stream);
 
   // read language system record count
-  SetLength(LangSysRecords, BigEndianValueReader.ReadWord(Stream));
+  SetLength(LangSysRecords, BigEndianValue.ReadWord(Stream));
 
   for LangSysIndex := 0 to High(LangSysRecords) do
   begin
@@ -316,7 +316,7 @@ begin
     Stream.Read(LangSysRecords[LangSysIndex].Tag, SizeOf(TTableType));
 
     // read offset
-    LangSysRecords[LangSysIndex].Offset := BigEndianValueReader.ReadWord(Stream);
+    LangSysRecords[LangSysIndex].Offset := BigEndianValue.ReadWord(Stream);
   end;
 
   // load default language system
@@ -379,7 +379,7 @@ begin
     Write(Value16, SizeOf(Word));
 
     // write feature list count
-    WriteSwappedWord(Stream, FLanguageSystemTables.Count);
+    BigEndianValue.WriteWord(Stream, FLanguageSystemTables.Count);
 
     // leave space for feature directory
     Seek(6 * FLanguageSystemTables.Count, soCurrent);
@@ -412,7 +412,7 @@ begin
         Write(Tag, SizeOf(TTableType));
 
         // write offset
-        WriteSwappedWord(Stream, Offset);
+        BigEndianValue.WriteWord(Stream, Offset);
       end;
   end;
 end;
@@ -531,7 +531,7 @@ begin
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // read script list count
-  SetLength(ScriptTableTagOffsets, BigEndianValueReader.ReadWord(Stream));
+  SetLength(ScriptTableTagOffsets, BigEndianValue.ReadWord(Stream));
 
   for ScriptIndex := 0 to High(ScriptTableTagOffsets) do
   begin
@@ -539,7 +539,7 @@ begin
     Stream.Read(ScriptTableTagOffsets[ScriptIndex].Tag, SizeOf(TTableType));
 
     // read offset
-    ScriptTableTagOffsets[ScriptIndex].Offset := BigEndianValueReader.ReadWord(Stream);
+    ScriptTableTagOffsets[ScriptIndex].Offset := BigEndianValue.ReadWord(Stream);
   end;
 
   // clear script list

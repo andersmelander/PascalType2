@@ -220,16 +220,16 @@ begin
   if Stream.Position + 6 > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-  FEncodingID := BigEndianValueReader.ReadWord(Stream);
-  FLanguageID := BigEndianValueReader.ReadWord(Stream);
-  FNameID := TNameID(BigEndianValueReader.ReadWord(Stream));
+  FEncodingID := BigEndianValue.ReadWord(Stream);
+  FLanguageID := BigEndianValue.ReadWord(Stream);
+  FNameID := TNameID(BigEndianValue.ReadWord(Stream));
 end;
 
 procedure TCustomTrueTypeFontNamePlatform.SaveToStream(Stream: TStream);
 begin
-  WriteSwappedWord(Stream, FEncodingID);
-  WriteSwappedWord(Stream, FLanguageID);
-  WriteSwappedWord(Stream, Word(FNameID));
+  BigEndianValue.WriteWord(Stream, FEncodingID);
+  BigEndianValue.WriteWord(Stream, FLanguageID);
+  BigEndianValue.WriteWord(Stream, Word(FNameID));
 end;
 
 procedure TCustomTrueTypeFontNamePlatform.SetEncodingIDAsWord(const Value: Word);
@@ -262,7 +262,7 @@ begin
   SetLength(FNameString, Length div 2);
 
   for i := 1 to High(FNameString) do
-    FNameString[i] := WideChar(BigEndianValueReader.ReadWord(Stream));
+    FNameString[i] := WideChar(BigEndianValue.ReadWord(Stream));
 end;
 
 function TTrueTypeFontNamePlatformUnicode.GetEncodingID: TUnicodeEncodingID;
@@ -322,7 +322,7 @@ begin
   SetLength(FNameString, Length div 2);
 
   for i := 1 to High(FNameString) do
-    FNameString[i] := WideChar(BigEndianValueReader.ReadWord(Stream));
+    FNameString[i] := WideChar(BigEndianValue.ReadWord(Stream));
 end;
 
 function TTrueTypeFontNamePlatformMicrosoft.GetEncodingID: TMicrosoftEncodingID;
@@ -364,7 +364,7 @@ begin
         SetLength(FNameString, Length div 2);
 
         for i := 1 to High(FNameString) do
-          FNameString[i] := WideChar(BigEndianValueReader.ReadWord(Stream));
+          FNameString[i] := WideChar(BigEndianValue.ReadWord(Stream));
       end;
   else
     raise EPascalTypeError.Create('Unsupported encoding');
@@ -441,22 +441,22 @@ begin
   if Stream.Position + 6 > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-  FFormat := BigEndianValueReader.ReadWord(Stream);
+  FFormat := BigEndianValue.ReadWord(Stream);
 
   if not(FFormat in [0..1]) then
     raise EPascalTypeError.Create(RCStrUnknownFormat);
 
-  Count := BigEndianValueReader.ReadWord(Stream);
+  Count := BigEndianValue.ReadWord(Stream);
   FNameSubTables.Capacity := Count;
 
-  StorageOffset := BigEndianValueReader.ReadWord(Stream);
+  StorageOffset := BigEndianValue.ReadWord(Stream);
 
   if Stream.Position + Count * 12 > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   for NameIndex := 0 to Count-1 do
   begin
-    Value16 := BigEndianValueReader.ReadWord(Stream);
+    Value16 := BigEndianValue.ReadWord(Stream);
 
     PlatformClass := PlatformClasses[TPlatformID(Value16)];
     if (PlatformClass = nil) then
@@ -467,8 +467,8 @@ begin
     // Load fixed part of name record
     SubTable.LoadFromStream(Stream);
 
-    StrLength := BigEndianValueReader.ReadWord(Stream);
-    StrOffset := BigEndianValueReader.ReadWord(Stream);
+    StrLength := BigEndianValue.ReadWord(Stream);
+    StrOffset := BigEndianValue.ReadWord(Stream);
 
     SavePos := Stream.Position;
 

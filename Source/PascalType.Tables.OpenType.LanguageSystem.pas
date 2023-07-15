@@ -213,17 +213,17 @@ begin
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // read default language system
-  FLookupOrder := BigEndianValueReader.ReadWord(Stream);
+  FLookupOrder := BigEndianValue.ReadWord(Stream);
 
   // read index of a feature required for this language system
-  FReqFeatureIndex := BigEndianValueReader.ReadWord(Stream);
+  FReqFeatureIndex := BigEndianValue.ReadWord(Stream);
 
   // read default language system
-  SetLength(FFeatureIndices, BigEndianValueReader.ReadWord(Stream));
+  SetLength(FFeatureIndices, BigEndianValue.ReadWord(Stream));
 
   // read default language system
   for FeatureIndex := 0 to High(FFeatureIndices) do
-    FFeatureIndices[FeatureIndex] := BigEndianValueReader.ReadWord(Stream);
+    FFeatureIndices[FeatureIndex] := BigEndianValue.ReadWord(Stream);
 end;
 
 procedure TCustomOpenTypeLanguageSystemTable.SaveToStream(Stream: TStream);
@@ -233,17 +233,17 @@ begin
   inherited;
 
   // write default language system
-  WriteSwappedWord(Stream, FLookupOrder);
+  BigEndianValue.WriteWord(Stream, FLookupOrder);
 
   // write index of a feature required for this language system
-  WriteSwappedWord(Stream, FReqFeatureIndex);
+  BigEndianValue.WriteWord(Stream, FReqFeatureIndex);
 
   // write default language system
-  WriteSwappedWord(Stream, Length(FFeatureIndices));
+  BigEndianValue.WriteWord(Stream, Length(FFeatureIndices));
 
   // write default language systems
   for FeatureIndex := 0 to High(FFeatureIndices) do
-    WriteSwappedWord(Stream, FFeatureIndices[FeatureIndex]);
+    BigEndianValue.WriteWord(Stream, FFeatureIndices[FeatureIndex]);
 end;
 
 procedure TCustomOpenTypeLanguageSystemTable.SetLookupOrder(const Value: Word);

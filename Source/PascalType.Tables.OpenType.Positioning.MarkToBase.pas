@@ -222,13 +222,13 @@ begin
   StartPos := Stream.Position;
 
   // BaseArray Table
-  SetLength(BaseRecordOffsets, BigEndianValueReader.ReadWord(Stream));
+  SetLength(BaseRecordOffsets, BigEndianValue.ReadWord(Stream));
   for i := 0 to High(BaseRecordOffsets) do
   begin
     // BaseRecord
     SetLength(BaseRecordOffsets[i], MarkClassCount);
     for j := 0 to High(BaseRecordOffsets[i]) do
-      BaseRecordOffsets[i, j] := BigEndianValueReader.ReadWord(Stream);
+      BaseRecordOffsets[i, j] := BigEndianValue.ReadWord(Stream);
   end;
 
   // Base records
@@ -258,7 +258,7 @@ var
 begin
   StartPos := Stream.Position;
 
-  WriteSwappedWord(Stream, Length(FBaseRecords));
+  BigEndianValue.WriteWord(Stream, Length(FBaseRecords));
 
   Stream.Position := Stream.Position + SizeOf(Word) * Length(FBaseRecords) * MarkClassCount;
   for i := 0 to High(FBaseRecords) do
@@ -275,7 +275,7 @@ begin
   Stream.Position := StartPos + SizeOf(Word);
   for i := 0 to High(BaseRecordOffsets) do
     for j := 0 to High(BaseRecordOffsets[i]) do
-      WriteSwappedWord(Stream, BaseRecordOffsets[i, j]);
+      BigEndianValue.WriteWord(Stream, BaseRecordOffsets[i, j]);
 end;
 
 

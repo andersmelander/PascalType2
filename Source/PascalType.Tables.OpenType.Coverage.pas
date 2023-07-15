@@ -174,7 +174,7 @@ procedure TCustomOpenTypeCoverageTable.LoadFromStream(Stream: TStream; Size: Car
 begin
   inherited;
 
-  if (TCoverageFormat(BigEndianValueReader.ReadWord(Stream)) <> FCoverageFormat) then
+  if (TCoverageFormat(BigEndianValue.ReadWord(Stream)) <> FCoverageFormat) then
     raise EPascalTypeError.Create('Coverage format mismatch');
 end;
 
@@ -182,7 +182,7 @@ procedure TCustomOpenTypeCoverageTable.SaveToStream(Stream: TStream);
 begin
   inherited;
 
-  WriteSwappedWord(Stream, Ord(FCoverageFormat));
+  BigEndianValue.WriteWord(Stream, Ord(FCoverageFormat));
 end;
 
 class function TCustomOpenTypeCoverageTable.ClassByFormat(ACoverageFormat: TCoverageFormat): TOpenTypeCoverageTableClass;
@@ -217,7 +217,7 @@ begin
   SavePos := Stream.Position;
 
   // Get the coverage type so we can create the correct object to read the coverage table
-  CoverageFormat := TCoverageFormat(BigEndianValueReader.ReadWord(Stream));
+  CoverageFormat := TCoverageFormat(BigEndianValue.ReadWord(Stream));
   Result := TCustomOpenTypeCoverageTable.ClassByFormat(CoverageFormat).Create(AParent);
   try
     Stream.Position := SavePos;
@@ -273,10 +273,10 @@ begin
   if Stream.Position + 2 > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  SetLength(FGlyphArray, BigEndianValueReader.ReadWord(Stream));
+  SetLength(FGlyphArray, BigEndianValue.ReadWord(Stream));
 
   for GlyphIndex := 0 to High(FGlyphArray) do
-    FGlyphArray[GlyphIndex] := BigEndianValueReader.ReadWord(Stream);
+    FGlyphArray[GlyphIndex] := BigEndianValue.ReadWord(Stream);
 end;
 
 procedure TOpenTypeCoverageListTable.SaveToStream(Stream: TStream);
@@ -285,10 +285,10 @@ var
 begin
   inherited;
 
-  WriteSwappedWord(Stream, Length(FGlyphArray));
+  BigEndianValue.WriteWord(Stream, Length(FGlyphArray));
 
   for GlyphIndex := 0 to High(FGlyphArray) do
-    WriteSwappedWord(Stream, FGlyphArray[GlyphIndex]);
+    BigEndianValue.WriteWord(Stream, FGlyphArray[GlyphIndex]);
 end;
 
 
@@ -352,13 +352,13 @@ begin
   if Stream.Position + SizeOf(Word) > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  SetLength(FRangeArray, BigEndianValueReader.ReadWord(Stream));
+  SetLength(FRangeArray, BigEndianValue.ReadWord(Stream));
 
   for GlyphIndex := 0 to High(FRangeArray) do
   begin
-    FRangeArray[GlyphIndex].StartGlyph := BigEndianValueReader.ReadWord(Stream);
-    FRangeArray[GlyphIndex].EndGlyph := BigEndianValueReader.ReadWord(Stream);
-    FRangeArray[GlyphIndex].StartCoverageIndex := BigEndianValueReader.ReadWord(Stream);
+    FRangeArray[GlyphIndex].StartGlyph := BigEndianValue.ReadWord(Stream);
+    FRangeArray[GlyphIndex].EndGlyph := BigEndianValue.ReadWord(Stream);
+    FRangeArray[GlyphIndex].StartCoverageIndex := BigEndianValue.ReadWord(Stream);
   end;
 end;
 
@@ -368,13 +368,13 @@ var
 begin
   inherited;
 
-  WriteSwappedWord(Stream, Length(FRangeArray));
+  BigEndianValue.WriteWord(Stream, Length(FRangeArray));
 
   for GlyphIndex := 0 to High(FRangeArray) do
   begin
-    WriteSwappedWord(Stream, FRangeArray[GlyphIndex].StartGlyph);
-    WriteSwappedWord(Stream, FRangeArray[GlyphIndex].EndGlyph);
-    WriteSwappedWord(Stream, FRangeArray[GlyphIndex].StartCoverageIndex);
+    BigEndianValue.WriteWord(Stream, FRangeArray[GlyphIndex].StartGlyph);
+    BigEndianValue.WriteWord(Stream, FRangeArray[GlyphIndex].EndGlyph);
+    BigEndianValue.WriteWord(Stream, FRangeArray[GlyphIndex].StartCoverageIndex);
   end;
 end;
 

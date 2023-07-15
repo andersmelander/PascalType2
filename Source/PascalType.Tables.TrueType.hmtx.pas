@@ -144,10 +144,10 @@ begin
   for MtxIndex := 0 to HorHead.NumOfLongHorMetrics - 1 do
   begin
     // read advance width
-    FHorizontalMetrics[MtxIndex].AdvanceWidth := BigEndianValueReader.ReadWord(Stream);
+    FHorizontalMetrics[MtxIndex].AdvanceWidth := BigEndianValue.ReadWord(Stream);
 
     // read left side bearing
-    FHorizontalMetrics[MtxIndex].Bearing := BigEndianValueReader.ReadSmallInt(Stream);
+    FHorizontalMetrics[MtxIndex].Bearing := BigEndianValue.ReadSmallInt(Stream);
 
     // remember last width
     LastWidth := FHorizontalMetrics[MtxIndex].AdvanceWidth;
@@ -156,7 +156,7 @@ begin
   for MtxIndex := HorHead.NumOfLongHorMetrics to High(FHorizontalMetrics) do
   begin
     // read left side bearing
-    FHorizontalMetrics[MtxIndex].Bearing := BigEndianValueReader.ReadSmallInt(Stream);
+    FHorizontalMetrics[MtxIndex].Bearing := BigEndianValue.ReadSmallInt(Stream);
 
     // use advance width from last entry (useful for monospaced fonts)
     FHorizontalMetrics[MtxIndex].AdvanceWidth := LastWidth;
@@ -180,15 +180,15 @@ begin
   for MtxIndex := 0 to HorHead.NumOfLongHorMetrics - 1 do
   begin
     // write advance width
-    WriteSwappedWord(Stream, FHorizontalMetrics[MtxIndex].AdvanceWidth);
+    BigEndianValue.WriteWord(Stream, FHorizontalMetrics[MtxIndex].AdvanceWidth);
 
     // write left side bearing
-    WriteSwappedSmallInt(Stream, FHorizontalMetrics[MtxIndex].Bearing);
+    BigEndianValue.WriteSmallInt(Stream, FHorizontalMetrics[MtxIndex].Bearing);
   end;
 
   for MtxIndex := HorHead.NumOfLongHorMetrics to High(FHorizontalMetrics) do
     // write advance width / left side bearing at once
-    WriteSwappedWord(Stream, FHorizontalMetrics[MtxIndex].AdvanceWidth);
+    BigEndianValue.WriteWord(Stream, FHorizontalMetrics[MtxIndex].AdvanceWidth);
 end;
 
 function TPascalTypeHorizontalMetricsTable.GetHorizontalMetric(Index: Integer): THorizontalMetric;

@@ -214,7 +214,7 @@ begin
   if Stream.Position + SizeOf(Word) > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  ValueFormat := BigEndianValueReader.ReadWord(Stream);
+  ValueFormat := BigEndianValue.ReadWord(Stream);
 
   FValueRecord.LoadFromStream(Stream, ValueFormat);
 end;
@@ -226,7 +226,7 @@ begin
   inherited;
 
   FValueRecord.BuildValueFormat(ValueFormat);
-  WriteSwappedWord(Stream, ValueFormat);
+  BigEndianValue.WriteWord(Stream, ValueFormat);
 
   FValueRecord.SaveToStream(Stream, ValueFormat);
 end;
@@ -263,9 +263,9 @@ begin
   if Stream.Position + 2 * SizeOf(Word) > Stream.Size then
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-  ValueFormat := BigEndianValueReader.ReadWord(Stream);
+  ValueFormat := BigEndianValue.ReadWord(Stream);
 
-  SetLength(FValueRecords, BigEndianValueReader.ReadWord(Stream));
+  SetLength(FValueRecords, BigEndianValue.ReadWord(Stream));
 
   for i := 0 to High(FValueRecords) do
     FValueRecords[i].LoadFromStream(Stream, ValueFormat);
@@ -283,9 +283,9 @@ begin
   else
     ValueFormat := 0;
 
-  WriteSwappedWord(Stream, ValueFormat);
+  BigEndianValue.WriteWord(Stream, ValueFormat);
 
-  WriteSwappedWord(Stream, Length(FValueRecords));
+  BigEndianValue.WriteWord(Stream, Length(FValueRecords));
 
   for i := 0 to High(FValueRecords) do
     FValueRecords[i].SaveToStream(Stream, ValueFormat);

@@ -155,7 +155,7 @@ begin
   begin
     if (ValueFormat and $0001 <> 0) then
     begin
-      pValue^ := BigEndianValueReader.ReadWord(Stream);
+      pValue^ := BigEndianValue.ReadWord(Stream);
       Inc(Result, SizeOf(Word));
     end;
 
@@ -175,7 +175,7 @@ begin
   begin
     if (ValueFormat and $0001 <> 0) then
     begin
-      WriteSwappedWord(Stream, pValue^);
+      BigEndianValue.WriteWord(Stream, pValue^);
       Inc(Result, SizeOf(Word));
     end;
 

@@ -180,41 +180,41 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read version
-  FVersion.Fixed := BigEndianValueReader.ReadCardinal(Stream);
+  FVersion.Fixed := BigEndianValue.ReadCardinal(Stream);
 
   // check version
   if not(Version.Value = 1) then
     raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
   // read Ascent
-  FAscent := BigEndianValueReader.ReadSmallInt(Stream);
+  FAscent := BigEndianValue.ReadSmallInt(Stream);
 
   // read Descent
-  FDescent := BigEndianValueReader.ReadSmallInt(Stream);
+  FDescent := BigEndianValue.ReadSmallInt(Stream);
 
   // read LineGap
-  FLineGap := BigEndianValueReader.ReadSmallInt(Stream);
+  FLineGap := BigEndianValue.ReadSmallInt(Stream);
 
   // read AdvanceWidthMax
-  FAdvanceWidthMax := BigEndianValueReader.ReadWord(Stream);
+  FAdvanceWidthMax := BigEndianValue.ReadWord(Stream);
 
   // read MinLeftSideBearing
-  FMinLeftSideBearing := BigEndianValueReader.ReadSmallInt(Stream);
+  FMinLeftSideBearing := BigEndianValue.ReadSmallInt(Stream);
 
   // read MinRightSideBearing
-  FMinRightSideBearing := BigEndianValueReader.ReadSmallInt(Stream);
+  FMinRightSideBearing := BigEndianValue.ReadSmallInt(Stream);
 
   // read XMaxExtent
-  FXMaxExtent := BigEndianValueReader.ReadSmallInt(Stream);
+  FXMaxExtent := BigEndianValue.ReadSmallInt(Stream);
 
   // read CaretSlopeRise
-  FCaretSlopeRise := BigEndianValueReader.ReadSmallInt(Stream);
+  FCaretSlopeRise := BigEndianValue.ReadSmallInt(Stream);
 
   // read CaretSlopeRun
-  FCaretSlopeRun := BigEndianValueReader.ReadSmallInt(Stream);
+  FCaretSlopeRun := BigEndianValue.ReadSmallInt(Stream);
 
   // read CaretOffset
-  FCaretOffset := BigEndianValueReader.ReadSmallInt(Stream);
+  FCaretOffset := BigEndianValue.ReadSmallInt(Stream);
 
 {$IFDEF AmbigiousExceptions}
   Stream.Read(Value32, SizeOf(Cardinal));
@@ -229,56 +229,56 @@ begin
   Stream.Position := Stream.Position + 2*SizeOf(Cardinal);
 {$ENDIF}
   // read MetricDataFormat
-  FMetricDataFormat := BigEndianValueReader.ReadSmallInt(Stream);
+  FMetricDataFormat := BigEndianValue.ReadSmallInt(Stream);
 
   // read NumOfLongHorMetrics
-  FNumOfLongHorMetrics := BigEndianValueReader.ReadWord(Stream);
+  FNumOfLongHorMetrics := BigEndianValue.ReadWord(Stream);
 end;
 
 procedure TPascalTypeHorizontalHeaderTable.SaveToStream(Stream: TStream);
 begin
   // write version
-  WriteSwappedCardinal(Stream, Cardinal(FVersion));
+  BigEndianValue.WriteCardinal(Stream, Cardinal(FVersion));
 
   // write Ascent
-  WriteSwappedSmallInt(Stream, FAscent);
+  BigEndianValue.WriteSmallInt(Stream, FAscent);
 
   // write Descent
-  WriteSwappedSmallInt(Stream, FDescent);
+  BigEndianValue.WriteSmallInt(Stream, FDescent);
 
   // write LineGap
-  WriteSwappedSmallInt(Stream, FLineGap);
+  BigEndianValue.WriteSmallInt(Stream, FLineGap);
 
   // write AdvanceWidthMax
-  WriteSwappedWord(Stream, FAdvanceWidthMax);
+  BigEndianValue.WriteWord(Stream, FAdvanceWidthMax);
 
   // write MinLeftSideBearing
-  WriteSwappedSmallInt(Stream, FMinLeftSideBearing);
+  BigEndianValue.WriteSmallInt(Stream, FMinLeftSideBearing);
 
   // write MinRightSideBearing
-  WriteSwappedSmallInt(Stream, FMinRightSideBearing);
+  BigEndianValue.WriteSmallInt(Stream, FMinRightSideBearing);
 
   // write XMaxExtent
-  WriteSwappedSmallInt(Stream, FXMaxExtent);
+  BigEndianValue.WriteSmallInt(Stream, FXMaxExtent);
 
   // write CaretSlopeRise
-  WriteSwappedSmallInt(Stream, FCaretSlopeRise);
+  BigEndianValue.WriteSmallInt(Stream, FCaretSlopeRise);
 
   // write CaretSlopeRun
-  WriteSwappedSmallInt(Stream, FCaretSlopeRun);
+  BigEndianValue.WriteSmallInt(Stream, FCaretSlopeRun);
 
   // write CaretOffset
-  WriteSwappedSmallInt(Stream, FCaretOffset);
+  BigEndianValue.WriteSmallInt(Stream, FCaretOffset);
 
   // reserved, set to zero!
-  WriteSwappedCardinal(Stream, 0);
-  WriteSwappedCardinal(Stream, 0);
+  BigEndianValue.WriteCardinal(Stream, 0);
+  BigEndianValue.WriteCardinal(Stream, 0);
 
   // write MetricDataFormat
-  WriteSwappedSmallInt(Stream, FMetricDataFormat);
+  BigEndianValue.WriteSmallInt(Stream, FMetricDataFormat);
 
   // write NumOfLongHorMetrics
-  WriteSwappedWord(Stream, FNumOfLongHorMetrics);
+  BigEndianValue.WriteWord(Stream, FNumOfLongHorMetrics);
 end;
 
 procedure TPascalTypeHorizontalHeaderTable.SetAdvanceWidthMax(const Value: Word);

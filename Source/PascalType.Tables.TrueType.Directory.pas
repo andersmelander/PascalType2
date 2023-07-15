@@ -103,7 +103,6 @@ uses
   Math,
   Generics.Collections,
   Generics.Defaults,
-  PT_Math,
   PT_ResourceStrings;
 
 //------------------------------------------------------------------------------
@@ -163,7 +162,7 @@ begin
     raise EPascalTypeError.Create(RCStrWrongFilesize);
 
   // read version
-  FVersion := BigEndianValueReader.ReadCardinal(Stream);
+  FVersion := BigEndianValue.ReadCardinal(Stream);
 
   // check for known scaler types (OSX and Windows)
   case Version of
@@ -175,7 +174,7 @@ begin
     raise EPascalTypeError.CreateFmt(RCStrUnknownVersion, [Version]);
   end;
 
-  SetLength(FTableList, BigEndianValueReader.ReadWord(Stream));
+  SetLength(FTableList, BigEndianValue.ReadWord(Stream));
 
   // Skip binary search stuff
   Stream.Seek(3*SizeOf(Word), soFromCurrent);
@@ -183,9 +182,9 @@ begin
   for i := 0 to High(FTableList) do
   begin
     Stream.Read(FTableList[i].TableType, SizeOf(TTableType));
-    FTableList[i].CheckSum := BigEndianValueReader.ReadCardinal(Stream);
-    FTableList[i].Offset := BigEndianValueReader.ReadCardinal(Stream);
-    FTableList[i].Length := BigEndianValueReader.ReadCardinal(Stream);
+    FTableList[i].CheckSum := BigEndianValue.ReadCardinal(Stream);
+    FTableList[i].Offset := BigEndianValue.ReadCardinal(Stream);
+    FTableList[i].Length := BigEndianValue.ReadCardinal(Stream);
   end;
 end;
 

@@ -164,7 +164,7 @@ begin
       raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read baseline tag list array length
-    SetLength(FBaseLineTags, BigEndianValueReader.ReadWord(Stream));
+    SetLength(FBaseLineTags, BigEndianValue.ReadWord(Stream));
 
     // check if table is complete
     if Position + 4 * Length(FBaseLineTags) > Size then
@@ -185,7 +185,7 @@ begin
   with Stream do
   begin
     // write baseline tag list array length
-    WriteSwappedWord(Stream, Length(FBaseLineTags));
+    BigEndianValue.WriteWord(Stream, Length(FBaseLineTags));
 
     // write baseline array data
     for TagIndex := 0 to High(FBaseLineTags) do
@@ -219,7 +219,7 @@ begin
       raise EPascalTypeError.Create(RCStrTableIncomplete);
 
     // read baseline stript list array length
-    SetLength(FBaseLineScript, BigEndianValueReader.ReadWord(Stream));
+    SetLength(FBaseLineScript, BigEndianValue.ReadWord(Stream));
 
     // check if table is complete
     if Position + 6 * Length(FBaseLineScript) > Size then
@@ -232,7 +232,7 @@ begin
       Read(FBaseLineScript[ScriptIndex].Tag, SizeOf(TTableType));
 
       // read script offset
-      FBaseLineScript[ScriptIndex].ScriptOffset := BigEndianValueReader.ReadWord(Stream);
+      FBaseLineScript[ScriptIndex].ScriptOffset := BigEndianValue.ReadWord(Stream);
     end;
   end;
 end;
@@ -288,7 +288,7 @@ begin
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // read baseline tag list table offset (maybe 0)
-  Offset := BigEndianValueReader.ReadWord(Stream);
+  Offset := BigEndianValue.ReadWord(Stream);
   if Offset <> 0 then
   begin
     // locate baseline tag list table
@@ -379,9 +379,9 @@ begin
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // read horizontal axis table offset (maybe 0)
-  HorzOffset := BigEndianValueReader.ReadWord(Stream);
+  HorzOffset := BigEndianValue.ReadWord(Stream);
   // read vertical axis table offset (maybe 0)
-  VertOffset := BigEndianValueReader.ReadWord(Stream);
+  VertOffset := BigEndianValue.ReadWord(Stream);
 
   if HorzOffset <> 0 then
   begin

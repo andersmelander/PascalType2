@@ -746,20 +746,20 @@ begin
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
     // read range from stream
-    FUnicodeRange[0] := BigEndianValueReader.ReadCardinal(Stream);
-    FUnicodeRange[1] := BigEndianValueReader.ReadCardinal(Stream);
-    FUnicodeRange[2] := BigEndianValueReader.ReadCardinal(Stream);
-    FUnicodeRange[3] := BigEndianValueReader.ReadCardinal(Stream);
+    FUnicodeRange[0] := BigEndianValue.ReadCardinal(Stream);
+    FUnicodeRange[1] := BigEndianValue.ReadCardinal(Stream);
+    FUnicodeRange[2] := BigEndianValue.ReadCardinal(Stream);
+    FUnicodeRange[3] := BigEndianValue.ReadCardinal(Stream);
   end;
 end;
 
 procedure TPascalTypeUnicodeRangeTable.SaveToStream(Stream: TStream);
 begin
   // write range to stream
-  WriteSwappedCardinal(Stream, FUnicodeRange[0]);
-  WriteSwappedCardinal(Stream, FUnicodeRange[1]);
-  WriteSwappedCardinal(Stream, FUnicodeRange[2]);
-  WriteSwappedCardinal(Stream, FUnicodeRange[3]);
+  BigEndianValue.WriteCardinal(Stream, FUnicodeRange[0]);
+  BigEndianValue.WriteCardinal(Stream, FUnicodeRange[1]);
+  BigEndianValue.WriteCardinal(Stream, FUnicodeRange[2]);
+  BigEndianValue.WriteCardinal(Stream, FUnicodeRange[3]);
 end;
 
 procedure TPascalTypeUnicodeRangeTable.SetAsCardinal(Index: Byte; const Value: Cardinal);
@@ -1829,19 +1829,19 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read first cardinal
-  FCodePageRange[0] := BigEndianValueReader.ReadCardinal(Stream);
+  FCodePageRange[0] := BigEndianValue.ReadCardinal(Stream);
 
   // read second cardinal
-  FCodePageRange[1] := BigEndianValueReader.ReadCardinal(Stream);
+  FCodePageRange[1] := BigEndianValue.ReadCardinal(Stream);
 end;
 
 procedure TPascalTypeOS2CodePageRangeTable.SaveToStream(Stream: TStream);
 begin
   // write first cardinal
-  WriteSwappedCardinal(Stream, FCodePageRange[0]);
+  BigEndianValue.WriteCardinal(Stream, FCodePageRange[0]);
 
   // write second cardinal
-  WriteSwappedCardinal(Stream, FCodePageRange[1]);
+  BigEndianValue.WriteCardinal(Stream, FCodePageRange[1]);
 end;
 
 procedure TPascalTypeOS2CodePageRangeTable.SetAsCardinal(Index: Byte; const Value: Cardinal);
@@ -1875,37 +1875,37 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read x-Height
-  FXHeight := BigEndianValueReader.ReadSmallInt(Stream);
+  FXHeight := BigEndianValue.ReadSmallInt(Stream);
 
   // read capital height
-  FCapHeight := BigEndianValueReader.ReadSmallInt(Stream);
+  FCapHeight := BigEndianValue.ReadSmallInt(Stream);
 
   // read default character
-  FDefaultChar := BigEndianValueReader.ReadWord(Stream);
+  FDefaultChar := BigEndianValue.ReadWord(Stream);
 
   // read break character
-  FBreakChar := BigEndianValueReader.ReadWord(Stream);
+  FBreakChar := BigEndianValue.ReadWord(Stream);
 
   // read max. context
-  FMaxContext := BigEndianValueReader.ReadWord(Stream);
+  FMaxContext := BigEndianValue.ReadWord(Stream);
 end;
 
 procedure TPascalTypeOS2AddendumTable.SaveToStream(Stream: TStream);
 begin
   // write x-Height
-  WriteSwappedSmallInt(Stream, FXHeight);
+  BigEndianValue.WriteSmallInt(Stream, FXHeight);
 
   // write capital height
-  WriteSwappedSmallInt(Stream, FCapHeight);
+  BigEndianValue.WriteSmallInt(Stream, FCapHeight);
 
   // write default character
-  WriteSwappedWord(Stream, FDefaultChar);
+  BigEndianValue.WriteWord(Stream, FDefaultChar);
 
   // write break character
-  WriteSwappedWord(Stream, FBreakChar);
+  BigEndianValue.WriteWord(Stream, FBreakChar);
 
   // write max. context
-  WriteSwappedWord(Stream, FMaxContext);
+  BigEndianValue.WriteWord(Stream, FMaxContext);
 end;
 
 procedure TPascalTypeOS2AddendumTable.SetBreakChar(const Value: Word);
@@ -2082,7 +2082,7 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read version
-  FVersion := BigEndianValueReader.ReadWord(Stream);
+  FVersion := BigEndianValue.ReadWord(Stream);
 
   // check version
 (*
@@ -2095,49 +2095,49 @@ can still read the parts we support. The format is forward compatible.
 *)
 
   // read average horizontal character width
-  FAverageCharacterWidth := BigEndianValueReader.ReadWord(Stream);
+  FAverageCharacterWidth := BigEndianValue.ReadWord(Stream);
 
   // read weight
-  FWeight := BigEndianValueReader.ReadWord(Stream);
+  FWeight := BigEndianValue.ReadWord(Stream);
 
   // read width type
-  FWidthType := BigEndianValueReader.ReadWord(Stream);
+  FWidthType := BigEndianValue.ReadWord(Stream);
 
   // read font embedding right flags
-  FFontEmbeddingFlags := BigEndianValueReader.ReadWord(Stream);
+  FFontEmbeddingFlags := BigEndianValue.ReadWord(Stream);
 
   // read SubscriptSizeX
-  FSubscriptSizeX := BigEndianValueReader.ReadWord(Stream);
+  FSubscriptSizeX := BigEndianValue.ReadWord(Stream);
 
   // read SubscriptSizeY
-  FSubscriptSizeY := BigEndianValueReader.ReadWord(Stream);
+  FSubscriptSizeY := BigEndianValue.ReadWord(Stream);
 
   // read SubScriptOffsetX
-  FSubScriptOffsetX := BigEndianValueReader.ReadWord(Stream);
+  FSubScriptOffsetX := BigEndianValue.ReadWord(Stream);
 
   // read SubscriptOffsetX
-  FSubscriptYOffsetY := BigEndianValueReader.ReadWord(Stream);
+  FSubscriptYOffsetY := BigEndianValue.ReadWord(Stream);
 
   // read SuperscriptSizeX
-  FSuperscriptSizeX := BigEndianValueReader.ReadWord(Stream);
+  FSuperscriptSizeX := BigEndianValue.ReadWord(Stream);
 
   // read SuperscriptSizeY
-  FSuperscriptSizeY := BigEndianValueReader.ReadWord(Stream);
+  FSuperscriptSizeY := BigEndianValue.ReadWord(Stream);
 
   // read SuperscriptOffsetX
-  FSuperscriptOffsetX := BigEndianValueReader.ReadWord(Stream);
+  FSuperscriptOffsetX := BigEndianValue.ReadWord(Stream);
 
   // read SuperscriptOffsetY
-  FSuperscriptOffsetY := BigEndianValueReader.ReadWord(Stream);
+  FSuperscriptOffsetY := BigEndianValue.ReadWord(Stream);
 
   // read StrikeoutSize
-  FStrikeoutSize := BigEndianValueReader.ReadWord(Stream);
+  FStrikeoutSize := BigEndianValue.ReadWord(Stream);
 
   // read StrikeoutPosition
-  FStrikeoutPosition := BigEndianValueReader.ReadWord(Stream);
+  FStrikeoutPosition := BigEndianValue.ReadWord(Stream);
 
   // read font family type
-  FFontFamilyType := BigEndianValueReader.ReadWord(Stream);
+  FFontFamilyType := BigEndianValue.ReadWord(Stream);
 
   // read panose
   Stream.Read(PanoseFamilyKind, 1);
@@ -2180,7 +2180,7 @@ can still read the parts we support. The format is forward compatible.
     Bits 10 to 15 are reserved and must be set to 0.
     Applications should ignore bits 10 to 15 in a font that has a version 4 or version 5 OS/2 table.
   *)
-  FFontSelection := BigEndianValueReader.ReadWord(Stream);
+  FFontSelection := BigEndianValue.ReadWord(Stream);
   case FVersion of
     0..3:
       FFontSelection := FFontSelection and $007F;
@@ -2194,25 +2194,25 @@ can still read the parts we support. The format is forward compatible.
 {$ENDIF};
 
   // read UnicodeFirstCharacterIndex
-  FUnicodeFirstCharIndex := BigEndianValueReader.ReadWord(Stream);
+  FUnicodeFirstCharIndex := BigEndianValue.ReadWord(Stream);
 
   // read UnicodeLastCharacterIndex
-  FUnicodeLastCharIndex := BigEndianValueReader.ReadWord(Stream);
+  FUnicodeLastCharIndex := BigEndianValue.ReadWord(Stream);
 
   // read TypographicAscent
-  FTypographicAscent := BigEndianValueReader.ReadWord(Stream);
+  FTypographicAscent := BigEndianValue.ReadWord(Stream);
 
   // read TypographicDescent
-  FTypographicDescent := BigEndianValueReader.ReadWord(Stream);
+  FTypographicDescent := BigEndianValue.ReadWord(Stream);
 
   // read TypographicLineGap
-  FTypographicLineGap := BigEndianValueReader.ReadWord(Stream);
+  FTypographicLineGap := BigEndianValue.ReadWord(Stream);
 
   // read WindowsAscent
-  FWindowsAscent := BigEndianValueReader.ReadWord(Stream);
+  FWindowsAscent := BigEndianValue.ReadWord(Stream);
 
   // read WindowsDescent
-  FWindowsDescent := BigEndianValueReader.ReadWord(Stream);
+  FWindowsDescent := BigEndianValue.ReadWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
   HorizontalHeader := TPascalTypeHorizontalHeaderTable(FontFace.GetTableByTableName('hhea'));
@@ -2276,52 +2276,52 @@ end;
 procedure TPascalTypeOS2Table.SaveToStream(Stream: TStream);
 begin
   // write version
-  WriteSwappedWord(Stream, FVersion);
+  BigEndianValue.WriteWord(Stream, FVersion);
 
   // write average horizontal character width
-  WriteSwappedWord(Stream, FAverageCharacterWidth);
+  BigEndianValue.WriteWord(Stream, FAverageCharacterWidth);
 
   // write weight
-  WriteSwappedWord(Stream, FWeight);
+  BigEndianValue.WriteWord(Stream, FWeight);
 
   // write width class
-  WriteSwappedWord(Stream, FWidthType);
+  BigEndianValue.WriteWord(Stream, FWidthType);
 
   // write font embedding rights
-  WriteSwappedWord(Stream, FFontEmbeddingFlags);
+  BigEndianValue.WriteWord(Stream, FFontEmbeddingFlags);
 
   // write SubscriptSizeX
-  WriteSwappedWord(Stream, FSubscriptSizeX);
+  BigEndianValue.WriteWord(Stream, FSubscriptSizeX);
 
   // write SubscriptSizeY
-  WriteSwappedWord(Stream, FSubscriptSizeY);
+  BigEndianValue.WriteWord(Stream, FSubscriptSizeY);
 
   // write SubScriptOffsetX
-  WriteSwappedWord(Stream, FSubScriptOffsetX);
+  BigEndianValue.WriteWord(Stream, FSubScriptOffsetX);
 
   // write SubscriptOffsetX
-  WriteSwappedWord(Stream, FSubscriptYOffsetY);
+  BigEndianValue.WriteWord(Stream, FSubscriptYOffsetY);
 
   // write SuperscriptSizeX
-  WriteSwappedWord(Stream, FSuperscriptSizeX);
+  BigEndianValue.WriteWord(Stream, FSuperscriptSizeX);
 
   // write SuperscriptSizeY
-  WriteSwappedWord(Stream, FSuperscriptSizeY);
+  BigEndianValue.WriteWord(Stream, FSuperscriptSizeY);
 
   // write SuperscriptOffsetX
-  WriteSwappedWord(Stream, FSuperscriptOffsetX);
+  BigEndianValue.WriteWord(Stream, FSuperscriptOffsetX);
 
   // write SuperscriptOffsetY
-  WriteSwappedWord(Stream, FSuperscriptOffsetY);
+  BigEndianValue.WriteWord(Stream, FSuperscriptOffsetY);
 
   // write StrikeoutSize
-  WriteSwappedWord(Stream, FStrikeoutSize);
+  BigEndianValue.WriteWord(Stream, FStrikeoutSize);
 
   // write StrikeoutPosition
-  WriteSwappedWord(Stream, FStrikeoutPosition);
+  BigEndianValue.WriteWord(Stream, FStrikeoutPosition);
 
   // write font family type
-  WriteSwappedWord(Stream, FFontFamilyType);
+  BigEndianValue.WriteWord(Stream, FFontFamilyType);
 
   // write panose
   FPanose.SaveToStream(Stream);
@@ -2333,28 +2333,28 @@ begin
   Stream.Write(FFontVendorID, 4);
 
   // write font selection
-  WriteSwappedWord(Stream, FFontSelection);
+  BigEndianValue.WriteWord(Stream, FFontSelection);
 
   // write UnicodeFirstCharacterIndex
-  WriteSwappedWord(Stream, FUnicodeFirstCharIndex);
+  BigEndianValue.WriteWord(Stream, FUnicodeFirstCharIndex);
 
   // write UnicodeLastCharacterIndex
-  WriteSwappedWord(Stream, FUnicodeLastCharIndex);
+  BigEndianValue.WriteWord(Stream, FUnicodeLastCharIndex);
 
   // write TypographicAscent
-  WriteSwappedWord(Stream, FTypographicAscent);
+  BigEndianValue.WriteWord(Stream, FTypographicAscent);
 
   // write TypographicDescent
-  WriteSwappedWord(Stream, FTypographicDescent);
+  BigEndianValue.WriteWord(Stream, FTypographicDescent);
 
   // write TypographicLineGap
-  WriteSwappedWord(Stream, FTypographicLineGap);
+  BigEndianValue.WriteWord(Stream, FTypographicLineGap);
 
   // write WindowsAscent
-  WriteSwappedWord(Stream, FWindowsAscent);
+  BigEndianValue.WriteWord(Stream, FWindowsAscent);
 
   // write WindowsDescent
-  WriteSwappedWord(Stream, FWindowsDescent);
+  BigEndianValue.WriteWord(Stream, FWindowsDescent);
 
   // eventually write code page range and addendum table
   if (FVersion > 0) then

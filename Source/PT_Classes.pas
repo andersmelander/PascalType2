@@ -140,24 +140,34 @@ type
   end;
 
 type
-  ValueReader = class
+  EndianValue = class
   protected
-    class procedure PostProcess(var ABuffer; ASize, AElementSize: integer); virtual;
+    class procedure Process(const ASource; var ADest; ASize, AElementSize: integer); virtual;
   public
     class procedure Read<T>(AStream: TStream; var Buffer: T); overload;
     class procedure Read<T>(AStream: TStream; var Buffer; Count: integer); overload;
+    class procedure Write<T>(AStream: TStream; const Buffer: T); overload;
+    class procedure Write<T>(AStream: TStream; const Buffer; Count: integer); overload;
 
     // 8 bit
     class function ReadByte(AStream: TStream): Byte; overload;
     class procedure ReadByte(AStream: TStream; var Buffer; Count: integer = 1); overload;
     class function ReadShortInt(AStream: TStream): ShortInt; overload;
     class procedure ReadShortInt(AStream: TStream; var Buffer; Count: integer = 1); overload;
+    class procedure WriteByte(AStream: TStream; AValue: Byte); overload;
+    class procedure WriteByte(AStream: TStream; var Buffer; Count: integer); overload;
+    class procedure WriteShortInt(AStream: TStream; AValue: ShortInt); overload;
+    class procedure WriteShortInt(AStream: TStream; var Buffer; Count: integer); overload;
 
     // 16 bit
     class function ReadWord(AStream: TStream): Word; overload;
     class procedure ReadWord(AStream: TStream; var Buffer; Count: integer = 1); overload;
     class function ReadSmallInt(AStream: TStream): SmallInt; overload;
     class procedure ReadSmallInt(AStream: TStream; var Buffer; Count: integer = 1); overload;
+    class procedure WriteWord(AStream: TStream; AValue: Word); overload;
+    class procedure WriteWord(AStream: TStream; var Buffer; Count: integer); overload;
+    class procedure WriteSmallInt(AStream: TStream; AValue: SmallInt); overload;
+    class procedure WriteSmallInt(AStream: TStream; var Buffer; Count: integer); overload;
 
     // 24 bit
     class function ReadUInt24(AStream: TStream): Cardinal; overload; virtual;
@@ -168,124 +178,39 @@ type
     class procedure ReadCardinal(AStream: TStream; var Buffer; Count: integer = 1); overload;
     class function ReadInteger(AStream: TStream): Integer; overload;
     class procedure ReadInteger(AStream: TStream; var Buffer; Count: integer = 1); overload;
+    class procedure WriteCardinal(AStream: TStream; AValue: Cardinal); overload;
+    class procedure WriteCardinal(AStream: TStream; var Buffer; Count: integer); overload;
+    class procedure WriteInteger(AStream: TStream; AValue: Integer); overload;
+    class procedure WriteInteger(AStream: TStream; var Buffer; Count: integer); overload;
 
     // 64 bit
     class function ReadUInt64(AStream: TStream): UInt64; overload;
     class procedure ReadUInt64(AStream: TStream; var Buffer; Count: integer = 1); overload;
     class function ReadInt64(AStream: TStream): Int64; overload;
     class procedure ReadInt64(AStream: TStream; var Buffer; Count: integer = 1); overload;
+    class procedure WriteUInt64(AStream: TStream; AValue: UInt64); overload;
+    class procedure WriteUInt64(AStream: TStream; var Buffer; Count: integer); overload;
+    class procedure WriteInt64(AStream: TStream; AValue: Int64); overload;
+    class procedure WriteInt64(AStream: TStream; var Buffer; Count: Int64); overload;
 
     class procedure Copy<T>(const ASource; var ADest: T; ASize: integer); overload;
     class procedure Copy(ASource, ADest: PWord; ACount: integer); overload;
   end;
 
-  BigEndianValueReader = class(ValueReader)
+  BigEndianValue = class(EndianValue)
   protected
-    class procedure PostProcess(var ABuffer; ASize, AElementSize: integer); override;
+    class procedure Process(const ASource; var ADest; ASize, AElementSize: integer); override;
   public
     // 24 bit
     class function ReadUInt24(AStream: TStream): Cardinal; overload; override;
     class procedure ReadUInt24(AStream: TStream; var Buffer; Count: integer = 1); overload; override;
   end;
 
-// big-endian stream I/O
-function ReadSwappedWord(Stream: TStream): Word; {$IFDEF UseInline} inline; {$ENDIF} deprecated 'Use BigEndianValueReader.ReadWord';
-function ReadSwappedSmallInt(Stream: TStream): SmallInt; {$IFDEF UseInline} inline; {$ENDIF} deprecated 'Use BigEndianValueReader.ReadSmallInt';
-function ReadSwappedCardinal(Stream: TStream): Cardinal; {$IFDEF UseInline} inline; {$ENDIF} deprecated 'Use BigEndianValueReader.ReadCardinal';
-function ReadSwappedInt64(Stream: TStream): Int64; {$IFDEF UseInline} inline; {$ENDIF} deprecated 'Use BigEndianValueReader.ReadInt64';
-procedure WriteSwappedWord(Stream: TStream; Value: Word); {$IFDEF UseInline} inline; {$ENDIF}
-procedure WriteSwappedSmallInt(Stream: TStream; Value: SmallInt); {$IFDEF UseInline} inline; {$ENDIF}
-procedure WriteSwappedCardinal(Stream: TStream; Value: Cardinal); {$IFDEF UseInline} inline; {$ENDIF}
-procedure WriteSwappedInt64(Stream: TStream; Value: Int64); {$IFDEF UseInline} inline; {$ENDIF}
-procedure CopySwappedWord(Source: PWord; Destination: PWord; Size: Integer); deprecated 'Use BigEndianValueReader.Copy';
-
 implementation
 
 uses
   PT_Math,
   PT_ResourceStrings;
-
-function ReadSwappedWord(Stream: TStream): Word;
-begin
-{$IFDEF ValidateEveryReadOperation}
-  if Stream.Read(Result, SizeOf(Word)) <> SizeOf(Word) then
-    raise EPascalTypeStremReadError.Create(RCStrStreamReadError);
-{$ELSE}
-  Stream.Read(Result, SizeOf(Word));
-{$ENDIF}
-  Result := Swap16(Result);
-end;
-
-function ReadSwappedSmallInt(Stream: TStream): SmallInt;
-begin
-{$IFDEF ValidateEveryReadOperation}
-  if Stream.Read(Result, SizeOf(SmallInt)) <> SizeOf(SmallInt) then
-    raise EPascalTypeStremReadError.Create(RCStrStreamReadError);
-{$ELSE}
-  Stream.Read(Result, SizeOf(SmallInt));
-{$ENDIF}
-  Result := SmallInt(Swap16(Word(Result)));
-end;
-
-function ReadSwappedCardinal(Stream: TStream): Cardinal;
-begin
-{$IFDEF ValidateEveryReadOperation}
-  Assert(SizeOf(Cardinal) = 4);
-  if Stream.Read(Result, SizeOf(Cardinal)) <> SizeOf(Cardinal) then
-    raise EPascalTypeStremReadError.Create(RCStrStreamReadError);
-{$ELSE}
-  Stream.Read(Result, SizeOf(Cardinal));
-{$ENDIF}
-  Result := Swap32(Result);
-end;
-
-function ReadSwappedInt64(Stream: TStream): Int64;
-begin
-{$IFDEF ValidateEveryReadOperation}
-  if Stream.Read(Result, SizeOf(Int64)) <> SizeOf(Int64) then
-    raise EPascalTypeStremReadError.Create(RCStrStreamReadError);
-{$ELSE}
-  Stream.Read(Result, SizeOf(Int64));
-{$ENDIF}
-  Result := Swap64(Result);
-end;
-
-procedure WriteSwappedWord(Stream: TStream; Value: Word);
-begin
-  Value := Swap16(Value);
-  Stream.Write(Value, SizeOf(Word));
-end;
-
-procedure WriteSwappedSmallInt(Stream: TStream; Value: SmallInt);
-begin
-  Value := Swap16(Value);
-  Stream.Write(Value, SizeOf(SmallInt));
-end;
-
-procedure WriteSwappedCardinal(Stream: TStream; Value: Cardinal);
-begin
-  Value := Swap32(Value);
-  Stream.Write(Value, SizeOf(Cardinal));
-end;
-
-procedure WriteSwappedInt64(Stream: TStream; Value: Int64);
-begin
-  Value := Swap64(Value);
-  Stream.Write(Value, SizeOf(Int64));
-end;
-
-procedure CopySwappedWord(Source: PWord; Destination: PWord; Size: Integer);
-var
-  Cnt: Integer;
-begin
-  for Cnt := 0 to Size - 1 do
-  begin
-    Destination^ := Swap16(Source^);
-    Inc(Source);
-    Inc(Destination);
-  end;
-end;
-
 
 { TPascalTypeTableList<T> }
 
@@ -416,24 +341,124 @@ begin
   Stream.Write(TableName, 4);
 end;
 
-{ ValueReader }
+{ EndianValue }
 
-class procedure ValueReader.Copy(ASource, ADest: PWord; ACount: integer);
+class procedure EndianValue.Copy(ASource, ADest: PWord; ACount: integer);
 begin
   Copy<Word>(ASource^, ADest^, ACount * SizeOf(Word));
 end;
 
-class procedure ValueReader.Copy<T>(const ASource; var ADest: T; ASize: integer);
+class procedure EndianValue.Copy<T>(const ASource; var ADest: T; ASize: integer);
+begin
+  Process(ADest, ASize, ASize, SizeOf(T));
+end;
+
+class procedure EndianValue.Process(const ASource; var ADest; ASize, AElementSize: integer);
 begin
   Move(ASource, ADest, ASize);
-  PostProcess(ADest, ASize, SizeOf(T));
 end;
 
-class procedure ValueReader.PostProcess(var ABuffer; ASize, AElementSize: integer);
+class procedure EndianValue.Write<T>(AStream: TStream; const Buffer: T);
 begin
+  Write<T>(AStream, Buffer, 1);
 end;
 
-class procedure ValueReader.Read<T>(AStream: TStream; var Buffer; Count: integer);
+class procedure EndianValue.Write<T>(AStream: TStream; const Buffer; Count: integer);
+var
+  p: ^T;
+  Value: T;
+begin
+  p := @Buffer;
+  while (Count > 0) do
+  begin
+    Process(p^, Value, SizeOf(T), SizeOf(T));
+    AStream.Write(Value, SizeOf(T));
+    Inc(p);
+    Dec(Count);
+  end;
+end;
+
+class procedure EndianValue.WriteByte(AStream: TStream; AValue: Byte);
+begin
+  Write(AStream, AValue);
+end;
+
+class procedure EndianValue.WriteByte(AStream: TStream; var Buffer; Count: integer);
+begin
+  Write<Byte>(AStream, Buffer, Count);
+end;
+
+class procedure EndianValue.WriteShortInt(AStream: TStream; AValue: ShortInt);
+begin
+  Write(AStream, AValue);
+end;
+
+class procedure EndianValue.WriteShortInt(AStream: TStream; var Buffer; Count: integer);
+begin
+  Write<ShortInt>(AStream, Buffer, Count);
+end;
+
+class procedure EndianValue.WriteSmallInt(AStream: TStream; AValue: SmallInt);
+begin
+  Write(AStream, AValue);
+end;
+
+class procedure EndianValue.WriteSmallInt(AStream: TStream; var Buffer; Count: integer);
+begin
+  Write<SmallInt>(AStream, Buffer, Count);
+end;
+
+class procedure EndianValue.WriteWord(AStream: TStream; AValue: Word);
+begin
+  Write(AStream, AValue);
+end;
+
+class procedure EndianValue.WriteWord(AStream: TStream; var Buffer; Count: integer);
+begin
+  Write<Word>(AStream, Buffer, Count);
+end;
+
+class procedure EndianValue.WriteCardinal(AStream: TStream; AValue: Cardinal);
+begin
+  Write(AStream, AValue);
+end;
+
+class procedure EndianValue.WriteCardinal(AStream: TStream; var Buffer; Count: integer);
+begin
+  Write<Cardinal>(AStream, Buffer, Count);
+end;
+
+class procedure EndianValue.WriteInteger(AStream: TStream; AValue: Integer);
+begin
+  Write(AStream, AValue);
+end;
+
+class procedure EndianValue.WriteInteger(AStream: TStream; var Buffer; Count: integer);
+begin
+  Write<Integer>(AStream, Buffer, Count);
+end;
+
+class procedure EndianValue.WriteUInt64(AStream: TStream; AValue: UInt64);
+begin
+  Write(AStream, AValue);
+end;
+
+class procedure EndianValue.WriteUInt64(AStream: TStream; var Buffer; Count: integer);
+begin
+  Write<UInt64>(AStream, Buffer, Count);
+end;
+
+class procedure EndianValue.WriteInt64(AStream: TStream; AValue: Int64);
+begin
+  Write(AStream, AValue);
+end;
+
+class procedure EndianValue.WriteInt64(AStream: TStream; var Buffer; Count: Int64);
+begin
+  Write<Int64>(AStream, Buffer, Count);
+end;
+
+class procedure EndianValue.Read<T>(AStream: TStream; var Buffer; Count: integer);
 var
   BufferSize: Int64;
   ReadSize: Int64;
@@ -444,20 +469,20 @@ begin
   if ReadSize <> BufferSize then
     raise EPascalTypeStremReadError.Create(RCStrStreamReadError);
 {$ENDIF}
-  PostProcess(Buffer, ReadSize, SizeOf(T));
+  Process(Buffer, Buffer, ReadSize, SizeOf(T));
 end;
 
-class procedure ValueReader.Read<T>(AStream: TStream; var Buffer: T);
+class procedure EndianValue.Read<T>(AStream: TStream; var Buffer: T);
 begin
   Read<T>(AStream, Buffer, 1);
 end;
 
-class procedure ValueReader.ReadByte(AStream: TStream; var Buffer; Count: integer);
+class procedure EndianValue.ReadByte(AStream: TStream; var Buffer; Count: integer);
 begin
   Read<Byte>(AStream, Buffer, Count);
 end;
 
-class function ValueReader.ReadByte(AStream: TStream): Byte;
+class function EndianValue.ReadByte(AStream: TStream): Byte;
 begin
   Read(AStream, Result);
 end;
@@ -466,7 +491,7 @@ type
   UInt24 = array[0..2] of Byte;
   PUInt24 = ^UInt24;
 
-class procedure ValueReader.ReadUInt24(AStream: TStream; var Buffer; Count: integer);
+class procedure EndianValue.ReadUInt24(AStream: TStream; var Buffer; Count: integer);
 var
   p: PUInt24;
 begin
@@ -479,7 +504,7 @@ begin
   end;
 end;
 
-class function ValueReader.ReadUInt24(AStream: TStream): Cardinal;
+class function EndianValue.ReadUInt24(AStream: TStream): Cardinal;
 var
   Value: UInt24;
 begin
@@ -487,99 +512,101 @@ begin
   Result := Value[0] or (Value[1] shl 8) or (Value[2] shl 16);
 end;
 
-class procedure ValueReader.ReadCardinal(AStream: TStream; var Buffer; Count: integer);
+class procedure EndianValue.ReadCardinal(AStream: TStream; var Buffer; Count: integer);
 begin
   Read<Cardinal>(AStream, Buffer, Count);
 end;
 
-class function ValueReader.ReadCardinal(AStream: TStream): Cardinal;
+class function EndianValue.ReadCardinal(AStream: TStream): Cardinal;
 begin
   Read(AStream, Result);
 end;
 
-class procedure ValueReader.ReadInt64(AStream: TStream; var Buffer; Count: integer);
+class procedure EndianValue.ReadInt64(AStream: TStream; var Buffer; Count: integer);
 begin
   Read<Int64>(AStream, Buffer, Count);
 end;
 
-class function ValueReader.ReadInt64(AStream: TStream): Int64;
+class function EndianValue.ReadInt64(AStream: TStream): Int64;
 begin
   Read(AStream, Result);
 end;
 
-class procedure ValueReader.ReadInteger(AStream: TStream; var Buffer; Count: integer);
+class procedure EndianValue.ReadInteger(AStream: TStream; var Buffer; Count: integer);
 begin
   Read<Integer>(AStream, Buffer, Count);
 end;
 
-class function ValueReader.ReadInteger(AStream: TStream): Integer;
+class function EndianValue.ReadInteger(AStream: TStream): Integer;
 begin
   Read(AStream, Result);
 end;
 
-class procedure ValueReader.ReadShortInt(AStream: TStream; var Buffer; Count: integer);
+class procedure EndianValue.ReadShortInt(AStream: TStream; var Buffer; Count: integer);
 begin
   Read<ShortInt>(AStream, Buffer, Count);
 end;
 
-class function ValueReader.ReadShortInt(AStream: TStream): ShortInt;
+class function EndianValue.ReadShortInt(AStream: TStream): ShortInt;
 begin
   Read(AStream, Result);
 end;
 
-class procedure ValueReader.ReadSmallInt(AStream: TStream; var Buffer; Count: integer);
+class procedure EndianValue.ReadSmallInt(AStream: TStream; var Buffer; Count: integer);
 begin
   Read<SmallInt>(AStream, Buffer, Count);
 end;
 
-class function ValueReader.ReadSmallInt(AStream: TStream): SmallInt;
+class function EndianValue.ReadSmallInt(AStream: TStream): SmallInt;
 begin
   Read(AStream, Result);
 end;
 
-class procedure ValueReader.ReadUInt64(AStream: TStream; var Buffer; Count: integer);
+class procedure EndianValue.ReadUInt64(AStream: TStream; var Buffer; Count: integer);
 begin
   Read<UInt64>(AStream, Buffer, Count);
 end;
 
-class function ValueReader.ReadUInt64(AStream: TStream): UInt64;
+class function EndianValue.ReadUInt64(AStream: TStream): UInt64;
 begin
   Read(AStream, Result);
 end;
 
-class procedure ValueReader.ReadWord(AStream: TStream; var Buffer; Count: integer);
+class procedure EndianValue.ReadWord(AStream: TStream; var Buffer; Count: integer);
 begin
   Read<Word>(AStream, Buffer, Count);
 end;
 
-class function ValueReader.ReadWord(AStream: TStream): Word;
+class function EndianValue.ReadWord(AStream: TStream): Word;
 begin
   Read(AStream, Result);
 end;
 
-{ BigEndianValueReader }
+{ BigEndianValue }
 
-class procedure BigEndianValueReader.PostProcess(var ABuffer; ASize, AElementSize: integer);
+class procedure BigEndianValue.Process(const ASource; var ADest; ASize, AElementSize: integer);
 var
-  p: PByte;
+  pSource, pDest: PByte;
 begin
-  p := @ABuffer;
+  pSource := @ASource;
+  pDest := @ADest;
   while (ASize >= AElementSize) do
   begin
     case AElementSize of
       1: ;
-      2: PWord(p)^ := Swap16(PWord(p)^);
-      4: PCardinal(p)^ := Swap32(PCardinal(p)^);
-      8: PInt64(p)^ := Swap64(PInt64(p)^);
+      2: PWord(pDest)^ := Swap16(PWord(pSource)^);
+      4: PCardinal(pDest)^ := Swap32(PCardinal(pSource)^);
+      8: PInt64(pDest)^ := Swap64(PInt64(pSource)^);
     else
       Assert(False);
     end;
-    Inc(p, AElementSize);
+    Inc(pSource, AElementSize);
+    Inc(pDest, AElementSize);
     Dec(ASize, AElementSize);
   end;
 end;
 
-class procedure BigEndianValueReader.ReadUInt24(AStream: TStream; var Buffer; Count: integer);
+class procedure BigEndianValue.ReadUInt24(AStream: TStream; var Buffer; Count: integer);
 var
   p: PUInt24;
   Temp: Byte;
@@ -596,7 +623,7 @@ begin
   end;
 end;
 
-class function BigEndianValueReader.ReadUInt24(AStream: TStream): Cardinal;
+class function BigEndianValue.ReadUInt24(AStream: TStream): Cardinal;
 var
   Value: UInt24;
 begin

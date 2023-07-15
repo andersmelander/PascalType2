@@ -145,10 +145,10 @@ begin
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // Offsets and count
-  CoverageOffset := BigEndianValueReader.ReadWord(Stream);
-  FMarkClassCount := BigEndianValueReader.ReadWord(Stream);
-  MarkArrayOffset := BigEndianValueReader.ReadWord(Stream);
-  BaseArrayOffset := BigEndianValueReader.ReadWord(Stream);
+  CoverageOffset := BigEndianValue.ReadWord(Stream);
+  FMarkClassCount := BigEndianValue.ReadWord(Stream);
+  MarkArrayOffset := BigEndianValue.ReadWord(Stream);
+  BaseArrayOffset := BigEndianValue.ReadWord(Stream);
 
   // Coverage table
   Stream.Position := StartPos + CoverageOffset;
@@ -180,7 +180,7 @@ begin
   CoverageOffsetOffset := Stream.Position;
   Stream.Position := Stream.Position + SizeOf(Word);
 
-  WriteSwappedWord(Stream, MarkClassCount);
+  BigEndianValue.WriteWord(Stream, MarkClassCount);
 
   MarkArrayOffsetOffset := Stream.Position;
   Stream.Position := Stream.Position + SizeOf(Word);
@@ -202,13 +202,13 @@ begin
   SavePos := Stream.Position;
 
   Stream.Position := CoverageOffsetOffset;
-  WriteSwappedWord(Stream, CoverageOffset);
+  BigEndianValue.WriteWord(Stream, CoverageOffset);
 
   Stream.Position := MarkArrayOffsetOffset;
-  WriteSwappedWord(Stream, MarkArrayOffset);
+  BigEndianValue.WriteWord(Stream, MarkArrayOffset);
 
   Stream.Position := BaseArrayOffsetOffset;
-  WriteSwappedWord(Stream, BaseArrayOffset);
+  BigEndianValue.WriteWord(Stream, BaseArrayOffset);
 
   Stream.Position := SavePos;
 end;
