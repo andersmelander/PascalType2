@@ -64,13 +64,14 @@ type
     property Format: Cardinal read FFormat write SetFormat;
   end;
 
-  TDigitalSignatureDirectory = packed record
-    Format: Cardinal; // Format of the signature
-    Length: Cardinal; // Length of signature in bytes
-    Offset: Cardinal; // Offset to the signature block from the beginning of the table
-  end;
 
   TPascalTypeDigitalSignatureTable = class(TCustomPascalTypeNamedTable)
+  strict private type
+    TDigitalSignatureDirectory = packed record
+      Format: Cardinal; // Format of the signature
+      Length: Cardinal; // Length of signature in bytes
+      Offset: Cardinal; // Offset to the signature block from the beginning of the table
+    end;
   private
     FVersion: Cardinal; // Version number of the DSIG table (0x00000001)
     FFlags  : TDigitalSignatureFlags; // Permission flags: Bit 0: cannot be resigned, Bits 1-7: Reserved (Set to 0)
@@ -102,17 +103,17 @@ type
 
   // table 'gasp'
 
-const
-  Gasp_GridFit = 1;
-  Gasp_DoGray = 2;
-
 type
-  TGaspRange = record
-    MaxPPEM: Byte;
-    GaspFlag: Byte;
-  end;
-
   TPascalTypeGridFittingAndScanConversionProcedureTable = class(TCustomPascalTypeNamedTable)
+  public const
+    Gasp_GridFit = 1;
+    Gasp_DoGray = 2;
+
+  public type
+    TGaspRange = record
+      MaxPPEM: Byte;
+      GaspFlag: Byte;
+    end;
   private
     FVersion   : Word;
     FGaspRanges: array of TGaspRange;
@@ -289,43 +290,49 @@ type
     property StrokeWeight: AnsiChar read FStrokeWeight write SetStrokeWeight;
     property WidthType: AnsiChar read FWidthType write SetWidthType;
     property SerifStyle: Byte read FSerifStyle write SetSerifStyle;
-    property Padding: Byte read FPadding write SetPadding;
-    // Reserved (set to 0 read FPadding write SetPadding)
+    property Padding: Byte read FPadding write SetPadding; // Reserved (set to 0 read FPadding write SetPadding)
   end;
 
 
   // table 'VDMX'
 
-  TVDMXHeightRecord = packed record
-    yPelHeight: Word; // yPelHeight to which values apply.
-    yMax: SmallInt; // Maximum value (in pels) for this yPelHeight.
-    yMin: SmallInt; // Minimum value (in pels) for this yPelHeight.
-  end;
-
   TPascalTypeVDMXGroupTable = class(TCustomPascalTypeTable)
+  public type
+    TVDMXHeightRecord = packed record
+      yPelHeight: Word; // yPelHeight to which values apply.
+      yMax: SmallInt; // Maximum value (in pels) for this yPelHeight.
+      yMin: SmallInt; // Minimum value (in pels) for this yPelHeight.
+    end;
+
+    TVDMXHeightRecords = TArray<TVDMXHeightRecord>;
   private
     FStartsz: Byte; // Starting yPelHeight
-    FEndsz  : Byte; // Ending yPelHeight
-    FEntry  : array of TVDMXHeightRecord; // The VDMX records
+    FEndsz: Byte; // Ending yPelHeight
+    FEntry: TVDMXHeightRecords; // The VDMX records
   protected
   public
     procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
-  end;
 
-  TVDMXRatioRecord = packed record
-    bCharSet: Byte; // Character set (see below).
-    xRatio: Byte; // Value to use for x-Ratio
-    yStartRatio: Byte; // Starting y-Ratio value.
-    yEndRatio: Byte; // Ending y-Ratio value.
+    // TODO : Proper array getter
+    property Entry: TVDMXHeightRecords read FEntry;
   end;
 
   TPascalTypeVerticalDeviceMetricsTable = class(TCustomPascalTypeNamedTable)
+  public type
+    TVDMXRatioRecord = packed record
+      bCharSet: Byte; // Character set (see below).
+      xRatio: Byte; // Value to use for x-Ratio
+      yStartRatio: Byte; // Starting y-Ratio value.
+      yEndRatio: Byte; // Ending y-Ratio value.
+    end;
+    TVDMXRatioRecords = TArray<TVDMXRatioRecord>;
+
   private
     FVersion: Word; // Version number (0 or 1).
-    FRatios : array of TVDMXRatioRecord;
+    FRatios : TVDMXRatioRecords;
     FGroups : TPascalTypeTableList<TPascalTypeVDMXGroupTable>;
     procedure SetVersion(const Value: Word);
     function GetRatioCount: Word;
@@ -344,8 +351,14 @@ type
     procedure SaveToStream(Stream: TStream); override;
 
     property Version: Word read FVersion write SetVersion;
+
     property RatioCount: Word read GetRatioCount;
+    // TODO : Proper array getter
+    property Ratios: TVDMXRatioRecords read FRatios;
+
     property GroupCount: Word read GetGroupCount;
+    // TODO : Proper array getter
+    property Groups: TPascalTypeTableList<TPascalTypeVDMXGroupTable> read FGroups;
   end;
 
 implementation
@@ -386,43 +399,29 @@ procedure TPascalTypeDigitalSignatureBlock.LoadFromStream(Stream: TStream; Size:
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 8 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 8 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read reserved 1
-    FReserved[0] := BigEndianValue.ReadWord(Stream);
+  FReserved[0] := BigEndianValue.ReadWord(Stream);
+  FReserved[1] := BigEndianValue.ReadWord(Stream);
+  SetLength(FSignature, BigEndianValue.ReadCardinal(Stream));
 
-    // read reserved 2
-    FReserved[1] := BigEndianValue.ReadWord(Stream);
+  // check if table contains the entire signature
+  if Stream.Position + Length(FSignature) > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read signature length
-    SetLength(FSignature, BigEndianValue.ReadCardinal(Stream));
-
-    // check if table contains the entire signature
-    if Position + Length(FSignature) > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-    // read signature length
-    Read(FSignature[0], Length(FSignature));
-  end;
+  Stream.Read(FSignature[0], Length(FSignature));
 end;
 
 procedure TPascalTypeDigitalSignatureBlock.SaveToStream(Stream: TStream);
 begin
-  // write reserved 1
+  inherited;
+
   BigEndianValue.WriteWord(Stream, FReserved[0]);
-
-  // write reserved 2
   BigEndianValue.WriteWord(Stream, FReserved[1]);
-
-  // write signature length
   BigEndianValue.WriteCardinal(Stream, Length(FSignature));
-
-  // write signature length
-  Write(FSignature[0], Length(FSignature));
+  Stream.Write(FSignature[0], Length(FSignature));
 end;
 
 procedure TPascalTypeDigitalSignatureBlock.SetFormat(const Value: Cardinal);
@@ -501,120 +500,96 @@ end;
 procedure TPascalTypeDigitalSignatureTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos : Int64;
-  DirIndex : Integer;
-  Directory: array of TDigitalSignatureDirectory;
+  i : Integer;
+  Directory: TArray<TDigitalSignatureDirectory>;
   SigBlock : TPascalTypeDigitalSignatureBlock;
 begin
+  // store stream start position
+  StartPos := Stream.Position;
+
   inherited;
 
-  with Stream do
+  // check (minimum) table size
+  if Stream.Position + 8 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  FVersion := BigEndianValue.ReadCardinal(Stream);
+
+  if Version <> 1 then
+    raise EPascalTypeError.Create(RCStrUnsupportedVersion);
+
+  SetLength(Directory, BigEndianValue.ReadWord(Stream));
+
+  FFlags := WordToDigitalSignatureFlags(BigEndianValue.ReadWord(Stream));
+
+  if Stream.Position + Length(Directory) * SizeOf(TDigitalSignatureDirectory) > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  // read directory entry
+  for i := 0 to High(Directory) do
   begin
-    // check (minimum) table size
-    if Position + 8 > Size then
+    Directory[i].Format := BigEndianValue.ReadCardinal(Stream);
+    Directory[i].Length := BigEndianValue.ReadCardinal(Stream);
+    Directory[i].Offset := BigEndianValue.ReadCardinal(Stream);
+  end;
+
+  // clear existing signatures
+  FSignatures.Clear;
+
+  // read digital signatures
+  for i := 0 to High(Directory) do
+  begin
+    Stream.Position := StartPos + Directory[i].Offset;
+
+    // check if table contains the entire signature
+    if Stream.Position + Directory[i].Length > Stream.Size then
       raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // store stream start position
-    StartPos := Position;
-
-    // read version
-    FVersion := BigEndianValue.ReadCardinal(Stream);
-
-    if Version <> 1 then
-      raise EPascalTypeError.Create(RCStrUnsupportedVersion);
-
-    // read directory entry count
-    SetLength(Directory, BigEndianValue.ReadWord(Stream));
-
-    // read flags
-    FFlags := WordToDigitalSignatureFlags(BigEndianValue.ReadWord(Stream));
-
-    if Position + Length(Directory) * SizeOf(TDigitalSignatureDirectory) > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-    // read directory entry
-    for DirIndex := 0 to High(Directory) do
-      with Directory[DirIndex] do
-      begin
-        // read format
-        Format := BigEndianValue.ReadCardinal(Stream);
-
-        // read length
-        Length := BigEndianValue.ReadCardinal(Stream);
-
-        // read offset
-        Offset := BigEndianValue.ReadCardinal(Stream);
-      end;
-
-    // clear existing signatures
-    FSignatures.Clear;
-
-    // read digital signatures
-    for DirIndex := 0 to High(Directory) do
-    begin
-      SigBlock := FSignatures.Add;
-
-      Position := StartPos + Directory[DirIndex].Offset;
-
-      // check if table contains the entire signature
-      if Position + Directory[DirIndex].Length > Size then
-        raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-      // load digital signature from stream
-      SigBlock.LoadFromStream(Stream);
-    end;
+    // load digital signature from stream
+    SigBlock := FSignatures.Add;
+    SigBlock.LoadFromStream(Stream);
   end;
 end;
 
 procedure TPascalTypeDigitalSignatureTable.SaveToStream(Stream: TStream);
 var
   StartPos : Int64;
-  DirIndex : Integer;
-  Directory: array of TDigitalSignatureDirectory;
+  DirPos : Int64;
+  i : Integer;
+  Directory: TArray<TDigitalSignatureDirectory>;
 begin
-  with Stream do
+  // store stream start position
+  StartPos := Stream.Position;
+
+  inherited;
+
+  BigEndianValue.WriteWord(Stream, FVersion);
+  BigEndianValue.WriteWord(Stream, FSignatures.Count);
+  BigEndianValue.WriteWord(Stream, DigitalSignatureFlagsToWord(FFlags));
+  SetLength(Directory, FSignatures.Count);
+
+  // offset directory
+  DirPos := Stream.Position;
+  Stream.Seek(soFromCurrent, FSignatures.Count * 3 * SizeOf(Cardinal));
+
+  // build directory and store signature
+  for i := 0 to FSignatures.Count - 1 do
   begin
-    // store stream start position
-    StartPos := Position;
+    Directory[i].Format := FSignatures[i].Format;
+    Directory[i].Offset := Stream.Position - StartPos;
+    FSignatures[i].SaveToStream(Stream);
+    Directory[i].Length := (Stream.Position - StartPos) - Directory[i].Offset;
+  end;
 
-    // write format type
-    BigEndianValue.WriteWord(Stream, FVersion);
+  // locate directory
+  Stream.Position := DirPos;
 
-    // write directory entry count
-    BigEndianValue.WriteWord(Stream, FSignatures.Count);
-
-    // write flags
-    BigEndianValue.WriteWord(Stream, DigitalSignatureFlagsToWord(FFlags));
-
-    // set length of temporary directory
-    SetLength(Directory, FSignatures.Count);
-
-    // offset directory
-    Seek(soFromCurrent, FSignatures.Count * 3 * SizeOf(Cardinal));
-
-    // build directory and store signature
-    for DirIndex := 0 to FSignatures.Count - 1 do
-    begin
-      Directory[DirIndex].Format := FSignatures[DirIndex].Format;
-      Directory[DirIndex].Offset := Position - StartPos;
-      FSignatures[DirIndex].SaveToStream(Stream);
-      Directory[DirIndex].Length := (Position - StartPos) - Directory[DirIndex].Offset;
-    end;
-
-    // locate directory
-    Position := StartPos + 3 * SizeOf(Word);
-
-    // write directory entries
-    for DirIndex := 0 to High(Directory) do
-    begin
-      // write format
-      BigEndianValue.WriteCardinal(Stream, Directory[DirIndex].Format);
-
-      // write length
-      BigEndianValue.WriteCardinal(Stream, Directory[DirIndex].Length);
-
-      // write offset
-      BigEndianValue.WriteCardinal(Stream, Directory[DirIndex].Offset);
-    end;
+  // write directory entries
+  for i := 0 to High(Directory) do
+  begin
+    BigEndianValue.WriteCardinal(Stream, Directory[i].Format);
+    BigEndianValue.WriteCardinal(Stream, Directory[i].Length);
+    BigEndianValue.WriteCardinal(Stream, Directory[i].Offset);
   end;
 end;
 
@@ -678,61 +653,44 @@ end;
 
 procedure TPascalTypeGridFittingAndScanConversionProcedureTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
-  RangeIndex: Integer;
+  i: Integer;
 begin
   inherited;
 
-  with Stream do
+  // check (minimum) table size
+  if Stream.Position + 4 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  FVersion := BigEndianValue.ReadWord(Stream);
+
+  // check version
+  if not(Version in [0..1]) then
+    raise EPascalTypeError.Create(RCStrUnsupportedVersion);
+
+  SetLength(FGaspRanges, BigEndianValue.ReadWord(Stream));
+
+  // check (minimum) table size
+  if Stream.Position + 4 * Length(FGaspRanges) > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  for i := 0 to High(FGaspRanges) do
   begin
-    // check (minimum) table size
-    if Position + 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-    // read version
-    FVersion := BigEndianValue.ReadWord(Stream);
-
-    // check version
-    if not(Version in [0..1]) then
-      raise EPascalTypeError.Create(RCStrUnsupportedVersion);
-
-    // read version
-    SetLength(FGaspRanges, BigEndianValue.ReadWord(Stream));
-
-    // check (minimum) table size
-    if Position + 4 * Length(FGaspRanges) > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-    for RangeIndex := 0 to High(FGaspRanges) do
-    begin
-      // read MaxPPEM
-      FGaspRanges[RangeIndex].MaxPPEM := Byte(BigEndianValue.ReadWord(Stream));
-
-      // read GaspFlag
-      FGaspRanges[RangeIndex].GaspFlag := Byte(BigEndianValue.ReadWord(Stream));
-    end;
+    FGaspRanges[i].MaxPPEM := Byte(BigEndianValue.ReadWord(Stream));
+    FGaspRanges[i].GaspFlag := Byte(BigEndianValue.ReadWord(Stream));
   end;
 end;
 
 procedure TPascalTypeGridFittingAndScanConversionProcedureTable.SaveToStream(Stream: TStream);
 var
-  RangeIndex: Integer;
+  i: Integer;
 begin
-  with Stream do
+  BigEndianValue.WriteWord(Stream, FVersion);
+  BigEndianValue.WriteWord(Stream, Length(FGaspRanges));
+
+  for i := 0 to High(FGaspRanges) do
   begin
-    // write version
-    BigEndianValue.WriteWord(Stream, FVersion);
-
-    // write numRanges
-    BigEndianValue.WriteWord(Stream, Length(FGaspRanges));
-
-    for RangeIndex := 0 to High(FGaspRanges) do
-    begin
-      // write MaxPPEM
-      BigEndianValue.WriteWord(Stream, FGaspRanges[RangeIndex].MaxPPEM);
-
-      // write GaspFlag
-      BigEndianValue.WriteWord(Stream, FGaspRanges[RangeIndex].GaspFlag);
-    end;
+    BigEndianValue.WriteWord(Stream, FGaspRanges[i].MaxPPEM);
+    BigEndianValue.WriteWord(Stream, FGaspRanges[i].GaspFlag);
   end;
 end;
 
@@ -784,50 +742,37 @@ begin
 
   MaxProfile := TPascalTypeMaximumProfileTable(FontFace.GetTableByTableName('maxp'));
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 2 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 2 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read ppem
-    Read(Fppem, 1);
+  // read ppem
+  Stream.Read(Fppem, 1);
 
-    // read max width
-    Read(FMaxWidth, 1);
+  // read max width
+  Stream.Read(FMaxWidth, 1);
 
-    // set length of widths to number of glyphs
-    SetLength(FWidths, MaxProfile.NumGlyphs);
+  // set length of widths to number of glyphs
+  SetLength(FWidths, MaxProfile.NumGlyphs);
 
-    // check (minimum) table size
-    if Position + Length(FWidths) > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + Length(FWidths) > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read widths
-    Read(FWidths[0], Length(FWidths));
-  end;
+  // read widths
+  Stream.Read(FWidths[0], Length(FWidths));
 end;
 
-procedure TPascalTypeHorizontalDeviceMetricsSubTable.SaveToStream
-  (Stream: TStream);
+procedure TPascalTypeHorizontalDeviceMetricsSubTable.SaveToStream(Stream: TStream);
 begin
   inherited;
 
-  with Stream do
-  begin
-    // write ppem
-    BigEndianValue.WriteWord(Stream, Fppem);
-
-    // write max width
-    BigEndianValue.WriteWord(Stream, FMaxWidth);
-
-    // write widths
-    Write(FWidths[0], Length(FWidths));
-  end;
+  BigEndianValue.WriteWord(Stream, Fppem);
+  BigEndianValue.WriteWord(Stream, FMaxWidth);
+  Write(FWidths[0], Length(FWidths));
 end;
 
-procedure TPascalTypeHorizontalDeviceMetricsSubTable.SetMaxWidth
-  (const Value: Byte);
+procedure TPascalTypeHorizontalDeviceMetricsSubTable.SetMaxWidth(const Value: Byte);
 begin
   if FMaxWidth <> Value then
   begin
@@ -907,63 +852,52 @@ var
 begin
   inherited;
 
-  with Stream do
+  // check (minimum) table size
+  if Stream.Position + 8 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  FVersion := BigEndianValue.ReadWord(Stream);
+
+  if Version <> 0 then
+    raise EPascalTypeError.Create(RCStrUnsupportedVersion);
+
+  NumRecords := BigEndianValue.ReadSmallInt(Stream);
+  SizeDeviceRecord := BigEndianValue.ReadCardinal(Stream);
+
+  // store offset position
+  OffsetPosition := Stream.Position;
+
+  for RecordIndex := 0 to NumRecords - 1 do
   begin
-    // check (minimum) table size
-    if Position + 8 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+    // locate current record
+    Stream.Position := OffsetPosition + RecordIndex * SizeDeviceRecord;
 
-    // read format type
-    FVersion := BigEndianValue.ReadWord(Stream);
+    // create subtable entry
+    // add subtable entry to subtables
+    SubTableRecord := FSubtables.Add;
 
-    if Version <> 0 then
-      raise EPascalTypeError.Create(RCStrUnsupportedVersion);
-
-    // read num records
-    NumRecords := BigEndianValue.ReadSmallInt(Stream);
-
-    // read device record size
-    SizeDeviceRecord := BigEndianValue.ReadCardinal(Stream);
-
-    // store offset position
-    OffsetPosition := Position;
-
-    for RecordIndex := 0 to NumRecords - 1 do
-    begin
-      // locate current record
-      Position := OffsetPosition + RecordIndex * SizeDeviceRecord;
-
-      // create subtable entry
-      // add subtable entry to subtables
-      SubTableRecord := FSubtables.Add;
-
-      // load subtable entry from stream
-      SubTableRecord.LoadFromStream(Stream);
-    end;
+    // load subtable entry from stream
+    SubTableRecord.LoadFromStream(Stream);
   end;
 end;
 
 procedure TPascalTypeHorizontalDeviceMetricsTable.SaveToStream(Stream: TStream);
 begin
-  with Stream do
-  begin
-    // write format type
-    BigEndianValue.WriteWord(Stream, FVersion);
+  inherited;
 
-    // write num records
-    BigEndianValue.WriteWord(Stream, FSubtables.Count);
+  BigEndianValue.WriteWord(Stream, FVersion);
+  BigEndianValue.WriteWord(Stream, FSubtables.Count);
 
-    (*
-      TODO: Write further TPascalTypeHorizontalDeviceMetricsTable properties
+  (*
+    TODO: Write further TPascalTypeHorizontalDeviceMetricsTable properties
 
-      // write device record size
-      BigEndianValue.WriteWord(Stream, FSizeDeviceRecord);
-    *)
-  end;
+    // write device record size
+    BigEndianValue.WriteWord(Stream, FSizeDeviceRecord);
+  *)
+  Assert(False, 'Not implemented');
 end;
 
-procedure TPascalTypeHorizontalDeviceMetricsTable.SetDeviceRecord(Index: Word;
-  const Value: TPascalTypeHorizontalDeviceMetricsSubTable);
+procedure TPascalTypeHorizontalDeviceMetricsTable.SetDeviceRecord(Index: Word; const Value: TPascalTypeHorizontalDeviceMetricsSubTable);
 begin
 
 end;
@@ -1017,38 +951,27 @@ procedure TPascalTypeLinearThresholdTable.LoadFromStream(Stream: TStream; Size: 
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 4 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read version
-    Version := BigEndianValue.ReadWord(Stream);
+  Version := BigEndianValue.ReadWord(Stream);
 
-    if Version <> 0 then
-      raise EPascalTypeError.Create(RCStrUnsupportedVersion);
+  if Version <> 0 then
+    raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
-    // read number of glyphs
-    SetLength(FVerticalPels, BigEndianValue.ReadWord(Stream));
+  SetLength(FVerticalPels, BigEndianValue.ReadWord(Stream));
 
-    if Position + Length(FVerticalPels) > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  if Stream.Position + Length(FVerticalPels) > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read vertical pel height
-    Read(FVerticalPels[0], Length(FVerticalPels));
-  end;
+  Stream.Read(FVerticalPels[0], Length(FVerticalPels));
 end;
 
 procedure TPascalTypeLinearThresholdTable.SaveToStream(Stream: TStream);
 begin
-  // write version
   BigEndianValue.WriteWord(Stream, Version);
-
-  // write number of glyphs
   BigEndianValue.WriteWord(Stream, Length(FVerticalPels));
-
-  // write vertical pel height
   Stream.Write(FVerticalPels[0], Length(FVerticalPels));
 end;
 
@@ -1119,121 +1042,57 @@ begin
 end;
 
 procedure TPascalTypePCL5Table.LoadFromStream(Stream: TStream; Size: Cardinal);
-var
-  Value32: Cardinal;
 begin
   inherited;
 
-  with Stream do
+  // check (minimum) table size
+  if Stream.Position + 54 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  FVersion.Fixed := BigEndianValue.ReadCardinal(Stream);
+
+  if Version.Value <> 1 then
   begin
-    // check (minimum) table size
-    if Position + 54 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-    // read version
-    FVersion.Fixed := BigEndianValue.ReadCardinal(Stream);
-
-    if Version.Value <> 1 then
-    begin
-      // A value of $00000100 observed in the "Architecture" and "Technical" fonts
-      if (FVersion.Fixed <> $00000100) then
-        raise EPascalTypeError.Create(RCStrUnsupportedVersion);
-    end;
-
-    // read font number
-    Read(Value32, SizeOf(Cardinal));
-    FFontNumber := TPcl5FontNumber(Value32);
-
-    // read pitch
-    FPitch := BigEndianValue.ReadWord(Stream);
-
-    // read x-height
-    FXHeight := BigEndianValue.ReadWord(Stream);
-
-    // read style
-    FStyle := BigEndianValue.ReadWord(Stream);
-
-    // read type family
-    FTypeFamily := BigEndianValue.ReadWord(Stream);
-
-    // read capital height
-    FCapHeight := BigEndianValue.ReadWord(Stream);
-
-    // read symbol set
-    FSymbolSet := BigEndianValue.ReadWord(Stream);
-
-    // read typeface
-    Read(FTypeface, 16);
-
-    // read character complement
-    Read(FCharacterComplement, 8);
-
-    // read filename
-    Read(FFileName, 6);
-
-    // read stroke weight
-    Read(FStrokeWeight, SizeOf(AnsiChar));
-
-    // read width type
-    Read(FWidthType, SizeOf(AnsiChar));
-
-    // read serif style
-    Read(FSerifStyle, SizeOf(Byte));
-
-    // read Padding
-    Read(FPadding, SizeOf(Byte));
+    // A value of $00000100 observed in the "Architecture" and "Technical" fonts
+    if (FVersion.Fixed <> $00000100) then
+      raise EPascalTypeError.Create(RCStrUnsupportedVersion);
   end;
+
+  FFontNumber := TPcl5FontNumber(BigEndianValue.ReadCardinal(Stream));
+  FPitch := BigEndianValue.ReadWord(Stream);
+  FXHeight := BigEndianValue.ReadWord(Stream);
+  FStyle := BigEndianValue.ReadWord(Stream);
+  FTypeFamily := BigEndianValue.ReadWord(Stream);
+  FCapHeight := BigEndianValue.ReadWord(Stream);
+  FSymbolSet := BigEndianValue.ReadWord(Stream);
+  Stream.Read(FTypeface, 16);
+  Stream.Read(FCharacterComplement, 8);
+  Stream.Read(FFileName, 6);
+  Stream.Read(FStrokeWeight, SizeOf(AnsiChar));
+  Stream.Read(FWidthType, SizeOf(AnsiChar));
+  Stream.Read(FSerifStyle, SizeOf(Byte));
+  Stream.Read(FPadding, SizeOf(Byte));
 end;
 
 procedure TPascalTypePCL5Table.SaveToStream(Stream: TStream);
 begin
-  with Stream do
-  begin
-    // write version
-    BigEndianValue.WriteCardinal(Stream, Cardinal(FVersion));
+  inherited;
 
-    // write font number
-    BigEndianValue.WriteCardinal(Stream, Cardinal(FFontNumber));
-
-    // write pitch
-    BigEndianValue.WriteWord(Stream, FPitch);
-
-    // write XHeight
-    BigEndianValue.WriteWord(Stream, FXHeight);
-
-    // write style
-    BigEndianValue.WriteWord(Stream, FStyle);
-
-    // write type family
-    BigEndianValue.WriteWord(Stream, FTypeFamily);
-
-    // write capital height
-    BigEndianValue.WriteWord(Stream, FCapHeight);
-
-    // write symbol set
-    BigEndianValue.WriteWord(Stream, FSymbolSet);
-
-    // write typeface
-    Write(FTypeface, 16);
-
-    // write character complement
-    Write(FCharacterComplement, 8);
-
-    // write filename
-    Write(FFileName, 6);
-
-    // write stroke weight
-    Write(FStrokeWeight, SizeOf(AnsiChar));
-
-    // write width type
-    Write(FWidthType, SizeOf(AnsiChar));
-
-    // write serif style
-    Write(FSerifStyle, SizeOf(Byte));
-
-    // write Padding
-    Write(FPadding, SizeOf(Byte));
-  end;
+  BigEndianValue.WriteCardinal(Stream, Cardinal(FVersion));
+  BigEndianValue.WriteCardinal(Stream, Cardinal(FFontNumber));
+  BigEndianValue.WriteWord(Stream, FPitch);
+  BigEndianValue.WriteWord(Stream, FXHeight);
+  BigEndianValue.WriteWord(Stream, FStyle);
+  BigEndianValue.WriteWord(Stream, FTypeFamily);
+  BigEndianValue.WriteWord(Stream, FCapHeight);
+  BigEndianValue.WriteWord(Stream, FSymbolSet);
+  Stream.Write(FTypeface, 16);
+  Stream.Write(FCharacterComplement, 8);
+  Stream.Write(FFileName, 6);
+  Stream.Write(FStrokeWeight, SizeOf(AnsiChar));
+  Stream.Write(FWidthType, SizeOf(AnsiChar));
+  Stream.Write(FSerifStyle, SizeOf(Byte));
+  Stream.Write(FPadding, SizeOf(Byte));
 end;
 
 procedure TPascalTypePCL5Table.SetCapHeight(const Value: Word);
@@ -1438,69 +1297,41 @@ end;
 
 procedure TPascalTypeVDMXGroupTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
-  EntryIndex: Integer;
+  i: Integer;
 begin
   inherited;
 
-  with Stream do
+  // check (minimum) table size
+  if Stream.Position + 4 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  SetLength(FEntry, BigEndianValue.ReadWord(Stream));
+  Stream.Read(FStartsz, 1);
+  Stream.Read(FEndsz, 1);
+
+  for i := 0 to High(FEntry) do
   begin
-    // check (minimum) table size
-    if Position + 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-    // read number of height records
-    SetLength(FEntry, BigEndianValue.ReadWord(Stream));
-
-    // read starting yPelHeight
-    Read(FStartsz, 1);
-
-    // read ending yPelHeight
-    Read(FEndsz, 1);
-
-    for EntryIndex := 0 to High(FEntry) do
-      with FEntry[EntryIndex] do
-      begin
-        // read yPelHeight to which values apply.
-        yPelHeight := BigEndianValue.ReadWord(Stream);
-
-        // read Maximum value (in pels) for this yPelHeight.
-        yMax := BigEndianValue.ReadSmallInt(Stream);
-
-        // read Minimum value (in pels) for this yPelHeight.
-        yMin := BigEndianValue.ReadSmallInt(Stream);
-      end;
+    FEntry[i].yPelHeight := BigEndianValue.ReadWord(Stream);
+    FEntry[i].yMax := BigEndianValue.ReadSmallInt(Stream);
+    FEntry[i].yMin := BigEndianValue.ReadSmallInt(Stream);
   end;
 end;
 
 procedure TPascalTypeVDMXGroupTable.SaveToStream(Stream: TStream);
 var
-  EntryIndex: Integer;
+  i: Integer;
 begin
   inherited;
 
-  with Stream do
+  BigEndianValue.WriteWord(Stream, Length(FEntry));
+  Stream.Write(FStartsz, 1);
+  Stream.Write(FEndsz, 1);
+
+  for i := 0 to High(FEntry) do
   begin
-    // write number of height records
-    BigEndianValue.WriteWord(Stream, Length(FEntry));
-
-    // write starting yPelHeight
-    Write(FStartsz, 1);
-
-    // write ending yPelHeight
-    Write(FEndsz, 1);
-
-    for EntryIndex := 0 to High(FEntry) do
-      with FEntry[EntryIndex] do
-      begin
-        // write yPelHeight to which values apply.
-        BigEndianValue.WriteWord(Stream, yPelHeight);
-
-        // write Maximum value (in pels) for this yPelHeight.
-        BigEndianValue.WriteSmallInt(Stream, yMax);
-
-        // write Minimum value (in pels) for this yPelHeight.
-        BigEndianValue.WriteSmallInt(Stream, yMin);
-      end;
+    BigEndianValue.WriteWord(Stream, FEntry[i].yPelHeight);
+    BigEndianValue.WriteSmallInt(Stream, FEntry[i].yMax);
+    BigEndianValue.WriteSmallInt(Stream, FEntry[i].yMin);
   end;
 end;
 
@@ -1547,74 +1378,53 @@ end;
 
 procedure TPascalTypeVerticalDeviceMetricsTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
-  RatioIndex: Integer;
-  Offsets   : array of Word;
-  NumRecs   : Word;
-  Group     : TPascalTypeVDMXGroupTable;
+  i: Integer;
+  Offsets: array of Word;
+  NumRecs: Word;
+  Group: TPascalTypeVDMXGroupTable;
 begin
   inherited;
 
-  with Stream do
+  // check (minimum) table size
+  if Stream.Position + 6 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  FVersion := BigEndianValue.ReadWord(Stream);
+
+  if not(FVersion in [0..1]) then
+    raise EPascalTypeError.Create(RCStrUnsupportedVersion);
+
+  NumRecs := BigEndianValue.ReadWord(Stream);
+  SetLength(FRatios, BigEndianValue.ReadWord(Stream));
+  SetLength(Offsets, Length(FRatios));
+
+  if Stream.Position + 6 * Length(FRatios) > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  for i := 0 to High(FRatios) do
   begin
-    // check (minimum) table size
-    if Position + 6 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+    Stream.Read(FRatios[i].bCharSet, 1);
+    Stream.Read(FRatios[i].xRatio, 1);
+    Stream.Read(FRatios[i].yStartRatio, 1);
+    Stream.Read(FRatios[i].yEndRatio, 1);
+  end;
 
-    // read version
-    FVersion := BigEndianValue.ReadWord(Stream);
+  for i := 0 to High(FRatios) do
+    Offsets[i] := BigEndianValue.ReadWord(Stream);
 
-    // check version in 0..1
-    if not(FVersion in [0..1]) then
-      raise EPascalTypeError.Create(RCStrUnsupportedVersion);
-
-    // read number of VDMX groups present
-    NumRecs := BigEndianValue.ReadWord(Stream);
-
-    // read number of aspect ratio groupings
-    SetLength(FRatios, BigEndianValue.ReadWord(Stream));
-    SetLength(Offsets, Length(FRatios));
-
-    // check (minimum) table size
-    if Position + 6 * Length(FRatios) > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-    // read ratios
-    for RatioIndex := 0 to High(FRatios) do
-      with FRatios[RatioIndex] do
-      begin
-        Read(bCharSet, 1);
-        Read(xRatio, 1);
-        Read(yStartRatio, 1);
-        Read(yEndRatio, 1);
-      end;
-
-    // read offsets
-    for RatioIndex := 0 to High(FRatios) do
-      Offsets[RatioIndex] := BigEndianValue.ReadWord(Stream);
-
-    // read groups
-    for RatioIndex := 0 to NumRecs - 1 do
-    begin
-      // create new group
-      // add group to list
-      Group := FGroups.Add;
-
-      // load gropu from stream
-      Group.LoadFromStream(Stream);
-    end;
+  for i := 0 to NumRecs - 1 do
+  begin
+    Group := FGroups.Add;
+    Group.LoadFromStream(Stream);
   end;
 end;
 
 procedure TPascalTypeVerticalDeviceMetricsTable.SaveToStream(Stream: TStream);
 begin
-  // write version
   BigEndianValue.WriteWord(Stream, FVersion);
-
-  // write number of VDMX groups present
   BigEndianValue.WriteWord(Stream, FGroups.Count);
-
-  // write number of aspect ratio groupings
   BigEndianValue.WriteWord(Stream, Length(FRatios));
+  Assert(False, 'Not implemented');
 end;
 
 procedure TPascalTypeVerticalDeviceMetricsTable.SetVersion(const Value: Word);

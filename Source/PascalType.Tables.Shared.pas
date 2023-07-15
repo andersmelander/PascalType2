@@ -84,10 +84,8 @@ type
     property Ascender: Shortint read FAscender write SetAscender;
     property Descender: Shortint read FDescender write SetDescender;
     property WidthMax: Byte read FWidthMax write SetWidthMax;
-    property CaretSlopeNumerator: Shortint read FCaretSlopeNumerator
-      write SetCaretSlopeNumerator;
-    property CaretSlopeDenominator: Shortint read FCaretSlopeDenominator
-      write SetCaretSlopeDenominator;
+    property CaretSlopeNumerator: Shortint read FCaretSlopeNumerator write SetCaretSlopeNumerator;
+    property CaretSlopeDenominator: Shortint read FCaretSlopeDenominator write SetCaretSlopeDenominator;
     property CaretOffset: Shortint read FCaretOffset write SetCaretOffset;
     property MinOriginSB: Shortint read FMinOriginSB write SetMinOriginSB;
     property MinAdvanceSB: Shortint read FMinAdvanceSB write SetMinAdvanceSB;
@@ -144,25 +142,19 @@ type
     procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    property IndexSubTableArrayOffset: Cardinal read FIndexSubTableArrayOffset
-      write SetIndexSubTableArrayOffset;
-    property IndexTablesSize: Cardinal read FIndexTablesSize
-      write SetIndexTablesSize;
-    property NumberOfIndexSubTables: Cardinal read FNumberOfIndexSubTables
-      write SetNumberOfIndexSubTables;
+    property IndexSubTableArrayOffset: Cardinal read FIndexSubTableArrayOffset write SetIndexSubTableArrayOffset;
+    property IndexTablesSize: Cardinal read FIndexTablesSize write SetIndexTablesSize;
+    property NumberOfIndexSubTables: Cardinal read FNumberOfIndexSubTables write SetNumberOfIndexSubTables;
     property ColorRef: Cardinal read FColorRef write SetColorRef;
-    property StartGlyphIndex: Word read FStartGlyphIndex
-      write SetStartGlyphIndex;
+    property StartGlyphIndex: Word read FStartGlyphIndex write SetStartGlyphIndex;
     property EndGlyphIndex: Word read FEndGlyphIndex write SetEndGlyphIndex;
     property PpemX: Byte read FPpemX write SetPpemX;
     property PpemY: Byte read FPpemY write SetPpemY;
     property BitDepth: Byte read FBitDepth write SetBitDepth;
     property Flags: Byte read FFlags write SetFlags;
 
-    property HorizontalMetrics: TPascalTypeBitmapLineMetrics
-      read FHorizontalMetrics;
-    property VerticalMetrics: TPascalTypeBitmapLineMetrics
-      read FVerticalMetrics;
+    property HorizontalMetrics: TPascalTypeBitmapLineMetrics read FHorizontalMetrics;
+    property VerticalMetrics: TPascalTypeBitmapLineMetrics read FVerticalMetrics;
   end;
 
 implementation
@@ -198,93 +190,48 @@ var
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 12 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  if Stream.Position + 12 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read horizontal metrics ascender
-    Read(FAscender, 1);
-
-    // read horizontal metrics descender
-    Read(FDescender, 1);
-
-    // read horizontal metrics maximum width
-    Read(FWidthMax, 1);
-
-    // read horizontal metrics caret slope numerator
-    Read(FCaretSlopeNumerator, 1);
-
-    // read horizontal metrics caret slope denominator
-    Read(FCaretSlopeDenominator, 1);
-
-    // read horizontal metrics caret offset
-    Read(FCaretOffset, 1);
-
-    // read horizontal metrics MinOriginSB
-    Read(FMinOriginSB, 1);
-
-    // read horizontal metrics MinAdvanceSB
-    Read(FMinAdvanceSB, 1);
-
-    // read horizontal metrics MaxBeforeBL
-    Read(FMaxBeforeBL, 1);
-
-    // read horizontal metrics MaxBeforeBL
-    Read(FMinAfterBL, 1);
+  Stream.Read(FAscender, 1);
+  Stream.Read(FDescender, 1);
+  Stream.Read(FWidthMax, 1);
+  Stream.Read(FCaretSlopeNumerator, 1);
+  Stream.Read(FCaretSlopeDenominator, 1);
+  Stream.Read(FCaretOffset, 1);
+  Stream.Read(FMinOriginSB, 1);
+  Stream.Read(FMinAdvanceSB, 1);
+  Stream.Read(FMaxBeforeBL, 1);
+  Stream.Read(FMinAfterBL, 1);
 
 {$IFDEF AmbigiousExceptions}
-    // read horizontal metrics padding
-    Read(Value8, 1);
-    if Value8 <> 0 then
-      raise EPascalTypeError.Create(RCStrPaddingByteError);
+  // read horizontal metrics padding
+  Stream.Read(Value8, 1);
+  if Value8 <> 0 then
+    raise EPascalTypeError.Create(RCStrPaddingByteError);
 
-    Read(Value8, 1);
-    if Value8 <> 0 then
-      raise EPascalTypeError.Create(RCStrPaddingByteError);
+  Stream.Read(Value8, 1);
+  if Value8 <> 0 then
+    raise EPascalTypeError.Create(RCStrPaddingByteError);
 {$ELSE}
-    Seek(2, soCurrent);
+  Stream.Seek(2, soCurrent);
 {$ENDIF}
-  end;
 end;
 
 procedure TPascalTypeBitmapLineMetrics.SaveToStream(Stream: TStream);
 begin
   inherited;
 
-  with Stream do
-  begin
-    // write horizontal metrics ascender
-    Write(FAscender, 1);
-
-    // write horizontal metrics descender
-    Write(FDescender, 1);
-
-    // write horizontal metrics maximum width
-    Write(FWidthMax, 1);
-
-    // write horizontal metrics caret slope numerator
-    Write(FCaretSlopeNumerator, 1);
-
-    // write horizontal metrics caret slope denominator
-    Write(FCaretSlopeDenominator, 1);
-
-    // write horizontal metrics caret offset
-    Write(FCaretOffset, 1);
-
-    // write horizontal metrics MinOriginSB
-    Write(FMinOriginSB, 1);
-
-    // write horizontal metrics MinAdvanceSB
-    Write(FMinAdvanceSB, 1);
-
-    // write horizontal metrics MaxBeforeBL
-    Write(FMaxBeforeBL, 1);
-
-    // write horizontal metrics MaxBeforeBL
-    Write(FMinAfterBL, 1);
-  end;
+  Stream.Write(FAscender, 1);
+  Stream.Write(FDescender, 1);
+  Stream.Write(FWidthMax, 1);
+  Stream.Write(FCaretSlopeNumerator, 1);
+  Stream.Write(FCaretSlopeDenominator, 1);
+  Stream.Write(FCaretOffset, 1);
+  Stream.Write(FMinOriginSB, 1);
+  Stream.Write(FMinAdvanceSB, 1);
+  Stream.Write(FMaxBeforeBL, 1);
+  Stream.Write(FMinAfterBL, 1);
 end;
 
 procedure TPascalTypeBitmapLineMetrics.SetAscender(const Value: Shortint);
@@ -470,86 +417,38 @@ procedure TPascalTypeBitmapSizeTable.LoadFromStream(Stream: TStream; Size: Cardi
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 24 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 24 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read index subtable array offset
-    FIndexSubTableArrayOffset := BigEndianValue.ReadCardinal(Stream);
-
-    // read index tables size
-    FIndexTablesSize := BigEndianValue.ReadCardinal(Stream);
-
-    // read number of index subtables
-    FNumberOfIndexSubTables := BigEndianValue.ReadCardinal(Stream);
-
-    // read color reference
-    FColorRef := BigEndianValue.ReadCardinal(Stream);
-
-    // load horizontal metrics from stream
-    FHorizontalMetrics.LoadFromStream(Stream);
-
-    // load vertical metrics from stream
-    FVerticalMetrics.LoadFromStream(Stream);
-
-    // read start glyph index
-    FStartGlyphIndex := BigEndianValue.ReadWord(Stream);
-
-    // read end glyph index
-    FEndGlyphIndex := BigEndianValue.ReadWord(Stream);
-
-    // read horizontal pixels per Em
-    Read(FPpemX, 1);
-
-    // read vertical pixels per Em
-    Read(FPpemY, 1);
-
-    // read bit depth
-    Read(FBitDepth, 1);
-
-    // read flags
-    Read(FFlags, 1);
-  end;
+  FIndexSubTableArrayOffset := BigEndianValue.ReadCardinal(Stream);
+  FIndexTablesSize := BigEndianValue.ReadCardinal(Stream);
+  FNumberOfIndexSubTables := BigEndianValue.ReadCardinal(Stream);
+  FColorRef := BigEndianValue.ReadCardinal(Stream);
+  FHorizontalMetrics.LoadFromStream(Stream);
+  FVerticalMetrics.LoadFromStream(Stream);
+  FStartGlyphIndex := BigEndianValue.ReadWord(Stream);
+  FEndGlyphIndex := BigEndianValue.ReadWord(Stream);
+  Stream.Read(FPpemX, 1);
+  Stream.Read(FPpemY, 1);
+  Stream.Read(FBitDepth, 1);
+  Stream.Read(FFlags, 1);
 end;
 
 procedure TPascalTypeBitmapSizeTable.SaveToStream(Stream: TStream);
 begin
-  // write index subtable array offset
+
   BigEndianValue.WriteCardinal(Stream, FIndexSubTableArrayOffset);
-
-  // write index tables size
   BigEndianValue.WriteCardinal(Stream, FIndexTablesSize);
-
-  // write number of index subtables
   BigEndianValue.WriteCardinal(Stream, FNumberOfIndexSubTables);
-
-  // write color reference
   BigEndianValue.WriteCardinal(Stream, FColorRef);
-
-  // save horizontal metrics to stream
   FHorizontalMetrics.SaveToStream(Stream);
-
-  // save vertical metrics to stream
   FVerticalMetrics.SaveToStream(Stream);
-
-  // write start glyph index
   BigEndianValue.WriteWord(Stream, FStartGlyphIndex);
-
-  // write end glyph index
   BigEndianValue.WriteWord(Stream, FEndGlyphIndex);
-
-  // write horizontal pixels per Em
   Write(FPpemX, 1);
-
-  // write vertical pixels per Em
   Write(FPpemY, 1);
-
-  // write bit depth
   Write(FBitDepth, 1);
-
-  // write flags
   Write(FFlags, 1);
 end;
 
