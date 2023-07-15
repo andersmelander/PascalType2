@@ -117,7 +117,7 @@ end;
 
 class function PascalTypeTableClasses.FindTableByType(const TableType: TTableType): TCustomPascalTypeNamedTableClass;
 begin
-  if (FTableClasses <> nil) or (not FTableClasses.TryGetValue(TableType, Result)) then
+  if (FTableClasses = nil) or (not FTableClasses.TryGetValue(TableType, Result)) then
     Result := nil;
 end;
 

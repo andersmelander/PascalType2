@@ -62,19 +62,12 @@ type
     procedure RenderShapedGlyph(AGlyph: TPascalTypeGlyph; Canvas: TCustomPath; var X, Y: Single); virtual;
 
     // GDI like functions
-    function GetGlyphOutlineA(Character: Cardinal; Format: TGetGlyphOutlineUnion;
+    function GetGlyphOutline(Character: Cardinal; Format: TGetGlyphOutlineUnion;
       out GlyphMetrics: TGlyphMetrics; BufferSize: Cardinal; Buffer: Pointer;
       const TransformationMatrix: TTransformationMatrix): Cardinal;
-    function GetGlyphOutlineW(Character: Cardinal; Format: TGetGlyphOutlineUnion;
-      out GlyphMetrics: TGlyphMetrics; BufferSize: Cardinal; Buffer: Pointer;
-      const TransformationMatrix: TTransformationMatrix): Cardinal;
-
-    function GetTextMetricsA(var TextMetric: TTextMetricA): Boolean;
-    function GetTextMetricsW(var TextMetric: TTextMetricW): Boolean;
-    function GetOutlineTextMetricsA(Buffersize: Cardinal; OutlineTextMetric: Pointer): Cardinal;
-    function GetOutlineTextMetricsW(Buffersize: Cardinal; OutlineTextMetric: Pointer): Cardinal;
-    function GetTextExtentPoint32A(Text: string; var Size: TSize): Boolean;
-    function GetTextExtentPoint32W(Text: WideString; var Size: TSize): Boolean;
+    function GetTextMetrics(var TextMetric: TTextMetricW): Boolean;
+    function GetOutlineTextMetrics(Buffersize: Cardinal; OutlineTextMetric: Pointer): Cardinal;
+    function GetTextExtentPoint32(Text: WideString; var Size: TSize): Boolean;
   end;
 
 function ConvertLocalPointerToGlobalPointer(Local, Base: Pointer): Pointer;
@@ -97,127 +90,7 @@ end;
 
 { TPascalTypeRasterizerGraphics32 }
 
-function TPascalTypeRasterizerGraphics32.GetTextMetricsA(
-  var TextMetric: TTextMetricA): Boolean;
-begin
-  Result := False;
-
-  if (FontFace.OS2Table = nil) then
-    exit;
-
-  with FontFace, OS2Table, TextMetric do
-  begin
-    // find right ascent/descent pair and calculate leading
-    if fsfUseTypoMetrics in FontSelectionFlags then
-    begin
-      tmAscent := RoundedScaleY(TypographicAscent);
-      tmDescent := RoundedScaleY(TypographicDescent);
-      tmInternalLeading := RoundedScaleY(TypographicAscent + TypographicDescent - HeaderTable.UnitsPerEm);
-      tmExternalLeading := Max(0, RoundedScaleY(HorizontalHeader.LineGap - ((TypographicAscent + TypographicDescent) - (HorizontalHeader.Ascent - HorizontalHeader.Descent))));
-    end else
-    begin
-      if (WindowsAscent + WindowsDescent) = 0 then
-      begin
-        tmAscent := RoundedScaleY(HorizontalHeader.Ascent);
-        tmDescent := RoundedScaleY(-HorizontalHeader.Descent);
-        tmInternalLeading := RoundedScaleY(HorizontalHeader.Ascent + HorizontalHeader.Descent - HeaderTable.UnitsPerEm);
-        tmExternalLeading := Max(0, RoundedScaleY(HorizontalHeader.LineGap - ((HorizontalHeader.Ascent + HorizontalHeader.Descent) - (HorizontalHeader.Ascent - HorizontalHeader.Descent))));
-      end else
-      begin
-        tmAscent := RoundedScaleY(WindowsAscent);
-        tmDescent := RoundedScaleY(WindowsDescent);
-        tmInternalLeading := RoundedScaleY(WindowsAscent + WindowsDescent - HeaderTable.UnitsPerEm);
-        tmExternalLeading := Max(0, RoundedScaleY(HorizontalHeader.LineGap - ((WindowsAscent + WindowsDescent) - (HorizontalHeader.Ascent - HorizontalHeader.Descent))));
-      end;
-    end;
-
-    tmHeight := tmAscent + tmDescent;
-
-    tmAveCharWidth := RoundedScaleX(AverageCharacterWidth);
-    if tmAveCharWidth = 0 then
-      tmAveCharWidth := 1;
-
-    tmMaxCharWidth := RoundedScaleX(HorizontalHeader.AdvanceWidthMax);
-    tmWeight := Weight;
-    tmOverhang := 0;
-    tmDigitizedAspectX := PixelPerInchX;
-    tmDigitizedAspectY := PixelPerInchY;
-
-{$IFDEF FPC}
-    if WideChar(UnicodeFirstCharacterIndex) < #$FF then
-      tmFirstChar := BCHAR(UnicodeFirstCharacterIndex)
-    else
-      tmFirstChar := $FF;
-
-    if WideChar(UnicodeLastCharacterIndex) < #$FF then
-      tmLastChar := BCHAR(UnicodeLastCharacterIndex)
-    else
-      tmLastChar := $FF;
-{$ELSE}
-    if WideChar(UnicodeFirstCharacterIndex) < #$FF then
-      tmFirstChar := AnsiChar(UnicodeFirstCharacterIndex)
-    else
-      tmFirstChar := #$FF;
-
-    if WideChar(UnicodeLastCharacterIndex) < #$FF then
-      tmLastChar := AnsiChar(UnicodeLastCharacterIndex)
-    else
-      tmLastChar := #$FF;
-{$ENDIF}
-    tmItalic := Integer(fsfItalic in FontSelectionFlags);
-    tmUnderlined := Integer(fsfUnderscore in FontSelectionFlags);
-    tmStruckOut := Integer(fsfStrikeout in FontSelectionFlags);
-
-    case FontFamilyClassID of
-      9, 12:
-        tmPitchAndFamily := FF_DECORATIVE;
-      10:
-        tmPitchAndFamily := FF_SCRIPT;
-      8:
-        tmPitchAndFamily := FF_SWISS;
-      3, 7:
-        tmPitchAndFamily := FF_MODERN; // monospaced!
-      1, 2, 4, 5:
-        tmPitchAndFamily := FF_ROMAN;
-    else
-      tmPitchAndFamily := 0;
-    end;
-
-    if (Self.FontFace.PostScriptTable.IsFixedPitch = 0) then
-      tmPitchAndFamily := tmPitchAndFamily + TMPF_FIXED_PITCH;
-    if Self.FontFace.ContainsTable('glyf') then
-      tmPitchAndFamily := tmPitchAndFamily + TMPF_VECTOR + TMPF_TRUETYPE;
-    if Self.FontFace.ContainsTable('CFF ') then
-      tmPitchAndFamily := tmPitchAndFamily + TMPF_VECTOR;
-    if Self.FontFace.ContainsTable('HDMX') then
-      tmPitchAndFamily := tmPitchAndFamily + TMPF_DEVICE;
-
-    (*
-      if Assigned(AddendumTable) then
-      begin
-      tmBreakChar := Char(AddendumTable.BreakChar);
-      tmDefaultChar := Char(Integer(tmBreakChar) - 1); // WideChar(AddendumTable.DefaultChar);
-      end
-      else
-      begin
-      if tmFirstChar <= #1
-      then tmBreakChar := WChar(Integer(tmFirstChar) + 2) else
-      if tmFirstChar > #$FF
-      then tmBreakChar := #$20
-      else tmBreakChar := tmFirstChar;
-      tmDefaultChar := WChar(Integer(tmBreakChar) - 1);
-      end;
-    *)
-
-    if Assigned(CodePageRange) and (CodePageRange.SupportsLatin1) then
-      tmCharSet := 0;
-  end;
-
-  Result := True;
-end;
-
-function TPascalTypeRasterizerGraphics32.GetTextMetricsW(
-  var TextMetric: TTextMetricW): Boolean;
+function TPascalTypeRasterizerGraphics32.GetTextMetrics(var TextMetric: TTextMetricW): Boolean;
 begin
   Result := False;
 
@@ -318,125 +191,18 @@ end;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-function TPascalTypeRasterizerGraphics32.GetOutlineTextMetricsA(
-  Buffersize: Cardinal; OutlineTextMetric: Pointer): Cardinal;
-begin
-  if OutlineTextMetric = nil then
-  begin
-    Result := SizeOf(TOutlineTextmetricA);
-    Exit;
-  end;
-
-  if not Assigned(FontFace.OS2Table) or (Buffersize < SizeOf(TOutlineTextmetricA)) then
-  begin
-    Result := 0;
-    if Buffersize < SizeOf(TOutlineTextmetricA) then
-      FillChar(OutlineTextMetric^, Buffersize, 0) else
-    FillChar(OutlineTextMetric^, SizeOf(TOutlineTextmetricW), 0);
-    Exit;
-  end;
-
-  with FontFace, OS2Table, POutlineTextmetricA(OutlineTextMetric)^ do
-  begin
-    otmSize := SizeOf(TOutlineTextmetricA);
-
-    // get text metrics
-    GetTextMetricsA(otmTextMetrics);
-
-    // set padding filler to zero
-    otmFiller := 0;
-
-    // set font selection
-    otmfsSelection := FontSelection;
-
-    // set font embedding rights
-    otmfsType := FontEmbeddingFlags;
-
-    // set caret slope rise/run
-    otmsCharSlopeRise := HorizontalHeader.CaretSlopeRise;
-    otmsCharSlopeRun := HorizontalHeader.CaretSlopeRun;
-
-    // set italic angle (fixed point with MS compatibility fix)
-    with PostScriptTable.ItalicAngle do
-      otmItalicAngle := Round(10 * (Value + Fract / (1 shl 16)));
-
-    otmEMSquare := HeaderTable.UnitsPerEm;
-    otmAscent := RoundedScaleY(OS2Table.TypographicAscent);
-    otmDescent := RoundedScaleY(OS2Table.TypographicDescent);
-    otmLineGap := RoundedScaleY(OS2Table.TypographicLineGap);
-    if Assigned(AddendumTable) then
-    begin
-      otmsXHeight := RoundedScaleY(AddendumTable.XHeight);
-      otmsCapEmHeight := RoundedScaleY(AddendumTable.CapHeight);
-    end
-    else
-    begin
-      otmsXHeight := 0;
-      otmsCapEmHeight := 0;
-    end;
-
-    otmrcFontBox.Left := RoundedScaleX(HeaderTable.XMin);
-    otmrcFontBox.Top := RoundedScaleY(HeaderTable.YMax);
-    otmrcFontBox.Right := RoundedScaleX(HeaderTable.XMax);
-    otmrcFontBox.Bottom := RoundedScaleY(HeaderTable.YMin);
-    otmMacAscent := RoundedScaleY(HorizontalHeader.Ascent);
-    otmMacDescent := RoundedScaleY(HorizontalHeader.Descent);
-    otmMacLineGap := RoundedScaleY(HorizontalHeader.LineGap);
-    otmusMinimumPPEM := HeaderTable.LowestRecPPEM;
-    otmptSubscriptSize.X := RoundedScaleX(SubScriptSizeX);
-    otmptSubscriptSize.Y := RoundedScaleY(SubScriptSizeY);
-    otmptSubscriptOffset.X := RoundedScaleX(SubScriptOffsetX);
-    otmptSubscriptOffset.Y := RoundedScaleY(SubScriptOffsetY);
-    otmptSuperscriptSize.X := RoundedScaleX(SuperScriptSizeX);
-    otmptSuperscriptSize.Y := RoundedScaleY(SuperScriptSizeY);
-    otmptSuperscriptOffset.X := RoundedScaleX(SuperScriptOffsetX);
-    otmptSuperscriptOffset.Y := RoundedScaleY(SuperScriptOffsetY);
-    otmsStrikeoutSize := RoundedScaleY(StrikeoutSize);
-    otmsStrikeoutPosition := RoundedScaleY(StrikeoutPosition);
-    otmsUnderscoreSize := RoundedScaleY(PostScriptTable.UnderlineThickness);
-    otmsUnderscorePosition := RoundedScaleY(PostScriptTable.UnderlinePosition);
-
-    // copy panose data
-    Panose := Self.FontFace.Panose;
-    if Assigned(Panose) then
-      with otmPanoseNumber, Panose do
-      begin
-        bFamilyType      := FamilyType;
-        bSerifStyle      := Data[0];
-        bWeight          := Data[1];
-        bProportion      := Data[2];
-        bContrast        := Data[3];
-        bStrokeVariation := Data[4];
-        bArmStyle        := Data[5];
-        bLetterform      := Data[6];
-        bMidline         := Data[7];
-        bXHeight         := Data[8];
-      end
-    else
-      Exit;
-
-    // do not fill strings yet
-    otmpFamilyName := nil;
-    otmpFaceName := nil;
-    otmpStyleName := nil;
-    otmpFullName := nil;
-
-    Result := 0;
-  end;
-end;
-
-function TPascalTypeRasterizerGraphics32.GetOutlineTextMetricsW(
-  Buffersize: Cardinal; OutlineTextMetric: Pointer): Cardinal;
+function TPascalTypeRasterizerGraphics32.GetOutlineTextMetrics(Buffersize: Cardinal; OutlineTextMetric: Pointer): Cardinal;
 var
   FamilyNameStr: WideString;
   FaceNameStr: WideString;
   StyleNameStr: WideString;
   FullNameStr: WideString;
+  ResultSize: Cardinal;
 begin
+  Result := 0;
   // check if OS/2 table exists (as it is not necessary in the true type spec
   if not Assigned(FontFace.OS2Table) then
   begin
-    Result := 0;
     FillChar(OutlineTextMetric^, Buffersize, 0);
     Exit;
   end;
@@ -450,22 +216,23 @@ begin
     FullNameStr   := UniqueIdentifier + #0;
   end;
 
+  ResultSize := SizeOf(TOutlineTextmetricW) + 2 * (Length(FamilyNameStr) +
+    Length(FaceNameStr) + Length(StyleNameStr) + Length(FullNameStr));
+
   // check if OutlineTextMetric buffer is passed, if not return the necessary size
   if OutlineTextMetric = nil then
   begin
-    Result := SizeOf(TOutlineTextmetricW) + 2 * (Length(FamilyNameStr) +
-      Length(FaceNameStr) + Length(StyleNameStr) + Length(FullNameStr));
+    Result := ResultSize;
     Exit;
   end;
+
+  if (Buffersize < ResultSize) then
+    Exit;
 
   // check if OS/2 table exists (as it is not necessary in the true type spec
   if (Buffersize < SizeOf(TOutlineTextmetricW)) then
   begin
-    Result := 0;
-    if Buffersize < SizeOf(TOutlineTextmetricW) then
-      FillChar(OutlineTextMetric^, Buffersize, 0)
-    else
-      FillChar(OutlineTextMetric^, SizeOf(TOutlineTextmetricW), 0);
+    FillChar(OutlineTextMetric^, Buffersize, 0);
     Exit;
   end;
 
@@ -475,7 +242,7 @@ begin
       Length(FaceNameStr) + Length(StyleNameStr) + Length(FullNameStr));
 
     // get text metrics
-    GetTextMetricsW(otmTextMetrics);
+    GetTextMetrics(otmTextMetrics);
 
     // set padding filler to zero
     otmFiller := 0;
@@ -547,7 +314,7 @@ begin
         bXHeight         := Data[8];
       end
     else
-      Exit;
+      Exit; // TODO : Why?
 
     // do not fill strings yet
     otmpFamilyName := PAnsiChar(SizeOf(TOutlineTextmetricW));
@@ -561,20 +328,13 @@ begin
     StrPCopy(ConvertLocalPointerToGlobalPointer(otmpStyleName, OutlineTextMetric), StyleNameStr);
     StrPCopy(ConvertLocalPointerToGlobalPointer(otmpFullName, OutlineTextMetric), FullNameStr);
 
-    Result := 0;
+    Result := ResultSize;
   end;
 end;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-function TPascalTypeRasterizerGraphics32.GetTextExtentPoint32A(Text: string;
-  var Size: TSize): Boolean;
-begin
-  // TODO
-  Result := False;
-end;
-
-function TPascalTypeRasterizerGraphics32.GetTextExtentPoint32W(Text: WideString;
+function TPascalTypeRasterizerGraphics32.GetTextExtentPoint32(Text: WideString;
   var Size: TSize): Boolean;
 var
   CharIndex: Integer;
@@ -616,28 +376,7 @@ end;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-function TPascalTypeRasterizerGraphics32.GetGlyphOutlineA(Character: Cardinal;
-  Format: TGetGlyphOutlineUnion; out GlyphMetrics: TGlyphMetrics;
-  BufferSize: Cardinal; Buffer: Pointer;
-  const TransformationMatrix: TTransformationMatrix): Cardinal;
-begin
-  // TODO
-  Result := 0;
-(*
-  if (ggoGlyphIndex in Format.Flags) then
-    GlyphIndex := Character
-  else
-    GlyphIndex := FontFace.GetGlyphByCharacter(Character);
-
- if Buffer = nil then
-  case Format.Format of
-
-
-  end;
-*)
-end;
-
-function TPascalTypeRasterizerGraphics32.GetGlyphOutlineW(Character: Cardinal;
+function TPascalTypeRasterizerGraphics32.GetGlyphOutline(Character: Cardinal;
   Format: TGetGlyphOutlineUnion; out GlyphMetrics: TGlyphMetrics;
   BufferSize: Cardinal; Buffer: Pointer;
   const TransformationMatrix: TTransformationMatrix): Cardinal;
@@ -730,6 +469,8 @@ begin
   Ascent := Max(TPascalTypeFontFace(FontFace).HeaderTable.YMax, TPascalTypeFontFace(FontFace).HorizontalHeader.Ascent);
   Origin.X := X;
   Origin.Y := Y + Ascent * ScalerY;
+
+  // TODO : This logic belongs in the font.
 
 {$ifdef DEBUG_CURVE}
   var DebugPath := TFlattenedPath.Create;
@@ -858,7 +599,7 @@ begin
     Canvas.EndPath(True);
   end;
 {$ifdef DEBUG_CURVE}
-  for var i := 0 to High(DebugPath.Path) do
+  for i := 0 to High(DebugPath.Path) do
     if (DebugPath.PathClosed[i]) then
       Canvas.Polygon(DebugPath.Path[i])
     else

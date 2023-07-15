@@ -35,14 +35,10 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Generics.Collections,
-  Classes, Sysutils,
+  Classes,
   PascalType.Types,
   PascalType.FontFace,
-  PascalType.FontFace.SFNT,
-  PascalType.Tables,
-  PascalType.Tables.TrueType.CharacterMaps,
-  PascalType.Tables.Optional;
+  PascalType.FontFace.SFNT;
 
 type
   TFontPoint = packed record
@@ -61,36 +57,6 @@ type
     end;
   end;
 
-type
-  TPascalTypeScaledContour = class(TPersistent)
-  protected
-//    FPrimitives: TObjectList<>;
-  public
-    constructor Create; virtual;
-    destructor Destroy; override;
-  end;
-
-  TPascalTypeScaledGlyph = class(TPersistent)
-  private
-    FContours: TObjectList<TPascalTypeScaledContour>;
-    function GetContour(Index: Integer): TPascalTypeScaledContour;
-    function GetContourCount: Integer;
-  protected
-    FAdvanceWidth: TScaleType;
-    FLeftSideBearing: TScaleType;
-    FGlyphName: string;
-  public
-    constructor Create; virtual;
-    destructor Destroy; override;
-
-    property AdvanceWidth: TScaleType read FAdvanceWidth;
-    property LeftSideBearing: TScaleType read FLeftSideBearing;
-    property GlyphName: string read FGlyphName;
-
-    property Contour[Index: Integer]: TPascalTypeScaledContour read GetContour;
-    property ContourCount: Integer read GetContourCount;
-  end;
-
 //------------------------------------------------------------------------------
 //
 //              TCustomPascalTypeRasterizer
@@ -107,7 +73,6 @@ type
     FPixelPerInchY: Integer;
     FScalerX: TScaleType;
     FScalerY: TScaleType;
-    FScaledGlyphs: array of TPascalTypeScaledGlyph;
     procedure SetFontSize(const Value: Integer);
     procedure SetPixelPerInchX(const Value: Integer);
     procedure SetPixelPerInchY(const Value: Integer);
@@ -118,8 +83,6 @@ type
     procedure CalculateScaler;
     procedure CalculateScalerX;
     procedure CalculateScalerY;
-    procedure ClearScaledGlyphs;
-    procedure PrecalculateScaledGlyphs;
 
     function RoundedScaleX(Value: Integer): Integer;
     function RoundedScaleY(Value: Integer): Integer;
@@ -132,16 +95,13 @@ type
     procedure PixelPerInchXChanged; virtual;
     procedure PixelPerInchYChanged; virtual;
 
-    procedure RenderText(const Text: string);
-    procedure RenderCharacter(Character: AnsiChar);
-
     property ScalerX: TScaleType read FScalerX;
     property ScalerY: TScaleType read FScalerY;
   public
     constructor Create; virtual;
     destructor Destroy; override;
 
-    property FontFace: TPascalTypeFontFace read FFontFace write SetFontFace;
+    property FontFace: TPascalTypeFontFace read FFontFace write SetFontFace; // TODO : This ought to be TCustomPascalTypeFontFace
     property FontHeight: Integer read FFontHeight write SetFontHeight default -11;
     property FontSize: Integer read GetFontSize write SetFontSize stored False;
     property PixelPerInchX: Integer read FPixelPerInchX write SetPixelPerInchX default 96;
@@ -156,48 +116,6 @@ implementation
 
 uses
   PascalType.ResourceStrings;
-
-
-{ TPascalTypeScaledContour }
-
-constructor TPascalTypeScaledContour.Create;
-begin
-  inherited;
-//  FPrimitives := TObjectList<>.Create;
-end;
-
-destructor TPascalTypeScaledContour.Destroy;
-begin
-//  FreeAndNil(FPrimitives);
-  inherited;
-end;
-
-
-{ TPascalTypeScaledGlyph }
-
-constructor TPascalTypeScaledGlyph.Create;
-begin
-  inherited Create;
-  FContours := TObjectList<TPascalTypeScaledContour>.Create;
-end;
-
-destructor TPascalTypeScaledGlyph.Destroy;
-begin
-  FreeAndNil(FContours);
-  inherited;
-end;
-
-function TPascalTypeScaledGlyph.GetContour(Index: Integer): TPascalTypeScaledContour;
-begin
-  if (Index < 0) or (Index >= FContours.Count) then
-    raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
-  Result := FContours[Index];
-end;
-
-function TPascalTypeScaledGlyph.GetContourCount: Integer;
-begin
-  Result := FContours.Count;
-end;
 
 
 //------------------------------------------------------------------------------
@@ -230,20 +148,6 @@ begin
   CalculateScaler;
 end;
 
-procedure TCustomPascalTypeRasterizer.RenderText(const Text: string);
-var
-  CharIndex: Integer;
-begin
-  for CharIndex := 1 to Length(Text) do
-  begin
-    // RenderCharacter(Text[CharIndex]);
-  end;
-end;
-
-procedure TCustomPascalTypeRasterizer.RenderCharacter(Character: AnsiChar);
-begin
-end;
-
 procedure TCustomPascalTypeRasterizer.PixelPerInchXChanged;
 begin
   // nothing in here yet (trigger recalculation of cache here soon!)
@@ -252,43 +156,6 @@ end;
 procedure TCustomPascalTypeRasterizer.PixelPerInchYChanged;
 begin
   // nothing in here yet (trigger recalculation of cache here soon!)
-end;
-
-procedure TCustomPascalTypeRasterizer.ClearScaledGlyphs;
-var
-  GlyphIndex: Integer;
-begin
-  for GlyphIndex := 0 to High(FScaledGlyphs) do
-    FScaledGlyphs[GlyphIndex].Free;
-  SetLength(FScaledGlyphs, 0);
-end;
-
-procedure TCustomPascalTypeRasterizer.PrecalculateScaledGlyphs;
-var
-  GlyphIndex: Integer;
-  // HDMXTable: TPascalTypeHorizontalDeviceMetricsSubTable;
-begin
-  ClearScaledGlyphs;
-  with FontFace do
-    for GlyphIndex := 0 to FontFace.GlyphCount - 1 do
-    begin
-      FScaledGlyphs[GlyphIndex] := TPascalTypeScaledGlyph.Create;
-
-      // get horizontal metrics
-      with HorizontalMetrics, FScaledGlyphs[GlyphIndex] do
-      begin
-        FAdvanceWidth := ScalerX * HorizontalMetric[GlyphIndex].AdvanceWidth;
-        FLeftSideBearing := ScalerY * HorizontalMetric[GlyphIndex].AdvanceWidth;
-      end;
-
-      if not(htfIntegerScaling in HeaderTable.Flags) then
-      begin
-        // get scaling from 'hdmx' table here
-      end;
-
-      // get glyph data
-      // GlyphData[GlyphIndex]
-    end;
 end;
 
 function TCustomPascalTypeRasterizer.RoundedScaleX(Value: Integer): Integer;
