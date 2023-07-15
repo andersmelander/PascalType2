@@ -41,8 +41,8 @@ interface
 
 uses
   Classes,
-  PT_Types,
-  PT_Classes,
+  PascalType.Types,
+  PascalType.Classes,
   PascalType.Tables;
 
 type
@@ -192,7 +192,7 @@ implementation
 
 uses
   SysUtils,
-  PT_ResourceStrings;
+  PascalType.ResourceStrings;
 
 
 //------------------------------------------------------------------------------

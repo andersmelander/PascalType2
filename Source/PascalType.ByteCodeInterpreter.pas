@@ -1,4 +1,4 @@
-unit PT_ByteCodeInterpreter;
+unit PascalType.ByteCodeInterpreter deprecated 'Unused. Can probably be deleted.';
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -35,7 +35,10 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, SysUtils, PT_Types, PascalType.Tables;
+  Classes,
+  SysUtils,
+  PascalType.Types,
+  PascalType.Tables;
 
 procedure ByteCodeToStrings(ByteCodeStream: TStream; Strings: TStrings);
 function ByteCodeToString(ByteCode: array of Byte): string;
@@ -43,8 +46,8 @@ function ByteCodeToString(ByteCode: array of Byte): string;
 implementation
 
 uses
-  PT_Math,
-  PT_ResourceStrings;
+  PascalType.Math,
+  PascalType.ResourceStrings;
 
 procedure ByteCodeToStrings(ByteCodeStream: TStream; Strings: TStrings);
 var

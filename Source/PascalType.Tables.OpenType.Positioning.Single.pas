@@ -36,8 +36,8 @@ interface
 
 uses
   Classes,
-  PT_Classes,
-  PT_Types,
+  PascalType.Classes,
+  PascalType.Types,
   PascalType.GlyphString,
   PascalType.Tables.OpenType.Common.ValueRecord,
   PascalType.Tables.OpenType.Lookup,
@@ -142,7 +142,7 @@ implementation
 
 uses
   SysUtils,
-  PT_ResourceStrings;
+  PascalType.ResourceStrings;
 
 //------------------------------------------------------------------------------
 //

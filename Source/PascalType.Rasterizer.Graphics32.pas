@@ -42,8 +42,8 @@ uses
 
   GR32_Paths,
 
-  PT_Types,
-  PT_Classes,
+  PascalType.Types,
+  PascalType.Classes,
   PascalType.FontFace,
   PascalType.Rasterizer,
   PascalType.GlyphString,

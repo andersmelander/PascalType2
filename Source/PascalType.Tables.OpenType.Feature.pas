@@ -42,8 +42,8 @@ uses
   Generics.Collections,
   Generics.Defaults,
   Classes,
-  PT_Types,
-  PT_Classes,
+  PascalType.Types,
+  PascalType.Classes,
   PascalType.Tables,
   PascalType.Tables.OpenType;
 
@@ -150,7 +150,7 @@ implementation
 
 uses
   SysUtils,
-  PT_ResourceStrings;
+  PascalType.ResourceStrings;
 
 //------------------------------------------------------------------------------
 //

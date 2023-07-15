@@ -36,8 +36,8 @@ interface
 
 uses
   Classes, SysUtils,
-  PT_Types,
-  PT_Classes;
+  PascalType.Types,
+  PascalType.Classes;
 
 //------------------------------------------------------------------------------
 //

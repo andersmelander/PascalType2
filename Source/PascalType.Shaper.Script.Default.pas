@@ -39,7 +39,7 @@ unit PascalType.Shaper.Script.Default;
 interface
 
 uses
-  PT_Types,
+  PascalType.Types,
   PascalType.GlyphString,
   PascalType.Shaper,
   PascalType.Shaper.Plan,

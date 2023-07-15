@@ -5,8 +5,8 @@ interface
 uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
   StdCtrls, ExtCtrls, Vcl.Menus, System.Actions, Vcl.ActnList,
-  PT_Types,
-  PT_Classes,
+  PascalType.Types,
+  PascalType.Classes,
   PascalType.Tables,
   PascalType.FontFace,
   PascalType.FontFace.SFNT,

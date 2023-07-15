@@ -38,8 +38,8 @@ uses
   Generics.Collections,
   Generics.Defaults,
   Classes,
-  PT_Types,
-  PT_Classes,
+  PascalType.Types,
+  PascalType.Classes,
   PascalType.Tables;
 
 type
@@ -162,7 +162,7 @@ implementation
 
 uses
   Math, SysUtils,
-  PT_ResourceStrings;
+  PascalType.ResourceStrings;
 
 
 { TCustomOpenTypeVersionedNamedTable }

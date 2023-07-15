@@ -40,7 +40,7 @@ unit PascalType.Shaper.Script.Arabic;
 interface
 
 uses
-  PT_Types,
+  PascalType.Types,
   PascalType.Unicode,
   PascalType.GlyphString,
   PascalType.Shaper,

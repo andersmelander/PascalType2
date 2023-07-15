@@ -33,7 +33,7 @@ unit PascalType.Shaper.Layout.OpenType;
 interface
 
 uses
-  PT_Types,
+  PascalType.Types,
   PascalType.FontFace.SFNT,
   PascalType.GlyphString,
   PascalType.Shaper.Plan,

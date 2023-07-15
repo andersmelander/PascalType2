@@ -35,8 +35,8 @@ interface
 uses
   System.Classes,
   Generics.Collections,
-  PT_Types,
-  PT_Classes,
+  PascalType.Types,
+  PascalType.Classes,
   PascalType.Unicode,
   PascalType.GlyphString,
   PascalType.FontFace.SFNT,

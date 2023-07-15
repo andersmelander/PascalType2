@@ -36,8 +36,8 @@ interface
 
 uses
   Classes, SysUtils,
-  PT_Types,
-  PT_Classes,
+  PascalType.Types,
+  PascalType.Classes,
   PascalType.Tables,
   PascalType.Unicode,
   PascalType.Tables.TrueType.cmap;
@@ -245,7 +245,7 @@ implementation
 
 uses
   Math,
-  PT_ResourceStrings;
+  PascalType.ResourceStrings;
 
 
 //------------------------------------------------------------------------------

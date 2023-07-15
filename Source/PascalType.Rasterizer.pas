@@ -37,7 +37,7 @@ interface
 uses
   Generics.Collections,
   Classes, Sysutils,
-  PT_Types,
+  PascalType.Types,
   PascalType.FontFace,
   PascalType.FontFace.SFNT,
   PascalType.Tables,
@@ -155,7 +155,7 @@ type
 implementation
 
 uses
-  PT_ResourceStrings;
+  PascalType.ResourceStrings;
 
 
 { TPascalTypeScaledContour }

@@ -36,8 +36,8 @@ interface
 
 uses
   Classes,
-  PT_Types,
-  PT_Classes,
+  PascalType.Types,
+  PascalType.Classes,
   PascalType.Tables,
   PascalType.Tables.Shared,
   PascalType.Tables.TrueType.head;
@@ -727,8 +727,8 @@ implementation
 
 uses
   SysUtils,
-  PT_Math,
-  PT_ResourceStrings,
+  PascalType.Math,
+  PascalType.ResourceStrings,
   PascalType.Tables.TrueType.maxp;
 
 resourcestring

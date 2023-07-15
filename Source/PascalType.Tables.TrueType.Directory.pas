@@ -36,8 +36,8 @@ interface
 uses
   Classes,
   SysUtils,
-  PT_Types,
-  PT_Classes;
+  PascalType.Types,
+  PascalType.Classes;
 
 type
   // TableRecord: TrueType Table Directory Entry type
@@ -103,7 +103,7 @@ uses
   Math,
   Generics.Collections,
   Generics.Defaults,
-  PT_ResourceStrings;
+  PascalType.ResourceStrings;
 
 //------------------------------------------------------------------------------
 //

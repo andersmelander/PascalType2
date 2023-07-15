@@ -36,8 +36,8 @@ interface
 
 uses
   Generics.Collections,
-  PT_Classes,
-  PT_Types,
+  PascalType.Classes,
+  PascalType.Types,
   PascalType.Unicode,
   PascalType.Tables.OpenType.Common.Anchor,
   PascalType.Tables.OpenType.Common.ValueRecord;

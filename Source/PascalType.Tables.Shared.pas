@@ -37,8 +37,8 @@ interface
 uses
   Classes,
   SysUtils,
-  PT_Types,
-  PT_Classes,
+  PascalType.Types,
+  PascalType.Classes,
   PascalType.Tables;
 
 type
@@ -168,7 +168,7 @@ type
 implementation
 
 uses
-  PT_ResourceStrings;
+  PascalType.ResourceStrings;
 
 { TPascalTypeBitmapLineMetrics }
 

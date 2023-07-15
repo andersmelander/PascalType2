@@ -106,9 +106,9 @@ implementation
 
 uses
   System.SysUtils,
-  PT_ResourceStrings,
-  PT_Classes,
-  PT_Types;
+  PascalType.ResourceStrings,
+  PascalType.Classes,
+  PascalType.Types;
 
 //------------------------------------------------------------------------------
 //      TOpenTypeAnchorDesignUnits

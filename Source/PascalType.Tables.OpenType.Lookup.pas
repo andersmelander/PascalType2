@@ -38,8 +38,8 @@ uses
   Generics.Collections,
   Generics.Defaults,
   System.Classes,
-  PT_Types,
-  PT_Classes,
+  PascalType.Types,
+  PascalType.Classes,
   PascalType.Tables,
   PascalType.GlyphString,
   PascalType.Tables.OpenType.Coverage;
@@ -225,7 +225,7 @@ uses
 {$ifdef DEBUG}
   WinApi.Windows,
 {$endif DEBUG}
-  PT_ResourceStrings,
+  PascalType.ResourceStrings,
   PascalType.Tables.OpenType.Common;
 
 //------------------------------------------------------------------------------

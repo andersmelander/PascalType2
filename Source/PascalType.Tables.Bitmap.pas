@@ -37,8 +37,8 @@ interface
 uses
   Classes,
   SysUtils,
-  PT_Types,
-  PT_Classes,
+  PascalType.Types,
+  PascalType.Classes,
   PascalType.Tables,
   PascalType.Tables.Shared;
 
@@ -167,7 +167,7 @@ type
 implementation
 
 uses
-  PT_ResourceStrings;
+  PascalType.ResourceStrings;
 
 { TCustomPascalTypeEmbeddedBitmapTable }
 

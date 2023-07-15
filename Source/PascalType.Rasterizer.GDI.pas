@@ -37,7 +37,7 @@ interface
 uses
   {$IFDEF FPC}LCLIntf, LCLType, {$IFDEF MSWINDOWS} Windows, {$ENDIF}
   {$ELSE}Windows, {$ENDIF} Classes, Sysutils, Graphics,
-  PT_Types,
+  PascalType.Types,
   PascalType.FontFace,
   PascalType.Rasterizer,
   PascalType.Tables,

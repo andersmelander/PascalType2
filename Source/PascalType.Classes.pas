@@ -1,4 +1,4 @@
-unit PT_Classes;
+unit PascalType.Classes;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -37,7 +37,7 @@ interface
 uses
   Generics.Collections,
   Classes, SysUtils,
-  PT_Types;
+  PascalType.Types;
 
 type
   // A GlyphID
@@ -209,8 +209,8 @@ type
 implementation
 
 uses
-  PT_Math,
-  PT_ResourceStrings;
+  PascalType.Math,
+  PascalType.ResourceStrings;
 
 { TPascalTypeTableList<T> }
 

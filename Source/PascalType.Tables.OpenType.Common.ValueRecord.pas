@@ -108,7 +108,7 @@ const
 implementation
 
 uses
-  PT_Classes;
+  PascalType.Classes;
 
 //------------------------------------------------------------------------------
 //

@@ -33,7 +33,7 @@ unit PascalType.Shaper.OpenType.Processor.GPOS;
 interface
 
 uses
-  PT_Types,
+  PascalType.Types,
   PascalType.GlyphString,
   PascalType.FontFace.SFNT,
   PascalType.Tables.OpenType.Common,
@@ -71,7 +71,7 @@ uses
   WinApi.Windows,
 {$endif DEBUG}
   System.SysUtils,
-  PT_Classes;
+  PascalType.Classes;
 
 
 //------------------------------------------------------------------------------

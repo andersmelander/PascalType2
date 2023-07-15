@@ -40,7 +40,7 @@ unit PascalType.Shaper.Script.Hangul;
 interface
 
 uses
-  PT_Types,
+  PascalType.Types,
   PascalType.Unicode,
   PascalType.GlyphString,
   PascalType.Shaper,

@@ -38,8 +38,8 @@ uses
   Generics.Collections,
   Generics.Defaults,
   System.Classes,
-  PT_Types,
-  PT_Classes,
+  PascalType.Types,
+  PascalType.Classes,
   PascalType.GlyphString,
   PascalType.Tables.OpenType.Lookup,
   PascalType.Tables.OpenType.Coverage,
@@ -113,7 +113,7 @@ implementation
 uses
   System.Math,
   System.SysUtils,
-  PT_ResourceStrings;
+  PascalType.ResourceStrings;
 
 //------------------------------------------------------------------------------
 //

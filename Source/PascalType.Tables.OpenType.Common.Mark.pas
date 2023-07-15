@@ -115,7 +115,7 @@ implementation
 
 uses
   SysUtils,
-  PT_Classes;
+  PascalType.Classes;
 
 //------------------------------------------------------------------------------
 //

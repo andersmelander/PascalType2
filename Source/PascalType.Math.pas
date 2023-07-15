@@ -1,4 +1,4 @@
-unit PT_Math;
+unit PascalType.Math;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -35,7 +35,7 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  PT_Types;
+  PascalType.Types;
 
 // various swap functions for converting big-endian data
 function Swap16(Value: Word): Word; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}

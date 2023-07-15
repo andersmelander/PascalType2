@@ -38,8 +38,8 @@ uses
   Classes,
   SysUtils,
   Types,
-  PT_Types,
-  PT_Classes,
+  PascalType.Types,
+  PascalType.Classes,
   PascalType.Tables.TrueType.Directory,
   PascalType.Tables;
 

@@ -138,14 +138,13 @@
         <DCCReference Include="RenderDemoMain.pas">
             <Form>FmRenderDemo</Form>
         </DCCReference>
-        <DCCReference Include="..\..\Source\PT_ByteCodeInterpreter.pas"/>
-        <DCCReference Include="..\..\Source\PT_Classes.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Classes.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.CharacterMaps.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Rasterizer.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Rasterizer.GDI.pas"/>
-        <DCCReference Include="..\..\Source\PT_Math.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Math.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.Panose.Classifications.pas"/>
-        <DCCReference Include="..\..\Source\PT_ResourceStrings.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.ResourceStrings.pas"/>
         <DCCReference Include="..\..\Source\PascalType.FontFace.pas"/>
         <DCCReference Include="..\..\Source\PascalType.FontFace.SFNT.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.Directory.pas"/>
@@ -163,7 +162,7 @@
         <DCCReference Include="..\..\Source\PascalType.Tables.Postscript.Operands.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.Shared.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.pas"/>
-        <DCCReference Include="..\..\Source\PT_Types.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Types.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Unicode.Names.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Platform.Windows.pas"/>
         <DCCReference Include="RenderDemoFontNameScanner.pas"/>

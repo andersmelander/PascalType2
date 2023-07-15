@@ -40,8 +40,8 @@ interface
 
 uses
   System.Classes,
-  PT_Types,
-  PT_Classes,
+  PascalType.Types,
+  PascalType.Classes,
   PascalType.Tables;
 
 //------------------------------------------------------------------------------
@@ -198,7 +198,7 @@ implementation
 uses
   System.SysUtils,
   System.Math,
-  PT_ResourceStrings;
+  PascalType.ResourceStrings;
 
 
 //------------------------------------------------------------------------------

@@ -38,8 +38,8 @@ uses
   Generics.Collections,
   Generics.Defaults,
   Classes,
-  PT_Classes,
-  PT_Types,
+  PascalType.Classes,
+  PascalType.Types,
   PascalType.GlyphString,
   PascalType.Tables.OpenType.Lookup,
   PascalType.Tables.OpenType.Substitution;
@@ -101,7 +101,7 @@ implementation
 
 uses
   SysUtils,
-  PT_ResourceStrings;
+  PascalType.ResourceStrings;
 
 //------------------------------------------------------------------------------
 //

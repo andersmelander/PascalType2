@@ -35,7 +35,7 @@ interface
 {$I PT_Compiler.inc}
 
 uses
-  Classes, PT_Types, PT_Classes, PascalType.Tables;
+  Classes, PascalType.Types, PascalType.Classes, PascalType.Tables;
 
 type
   // table 'DSIG'
@@ -353,7 +353,7 @@ implementation
 uses
   Math,
   SysUtils,
-  PT_ResourceStrings,
+  PascalType.ResourceStrings,
   PascalType.Tables.TrueType.maxp;
 
 

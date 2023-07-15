@@ -1,4 +1,4 @@
-unit PT_ResourceStrings;
+unit PascalType.ResourceStrings;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //

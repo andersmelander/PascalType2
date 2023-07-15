@@ -36,8 +36,8 @@ interface
 
 uses
   Classes,
-  PT_Types,
-  PT_Classes,
+  PascalType.Types,
+  PascalType.Classes,
   PascalType.Tables,
   PascalType.Tables.Shared;
 
@@ -148,7 +148,7 @@ type
 implementation
 
 uses
-  PT_ResourceStrings;
+  PascalType.ResourceStrings;
 
 { TPascalTypeFontForgeX11BDFTable }
 

@@ -40,8 +40,8 @@ interface
 
 uses
   Classes,
-  PT_Types,
-  PT_Classes,
+  PascalType.Types,
+  PascalType.Classes,
   PascalType.Tables,
   PascalType.Tables.TrueType.Panose;
 
@@ -713,7 +713,7 @@ implementation
 
 uses
   SysUtils,
-  PT_ResourceStrings,
+  PascalType.ResourceStrings,
   PascalType.Tables.TrueType.hhea;
 
 

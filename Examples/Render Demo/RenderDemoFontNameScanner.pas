@@ -4,8 +4,8 @@ interface
 
 uses
   Windows, Classes, SysUtils,
-  PT_Types,
-  PT_Classes,
+  PascalType.Types,
+  PascalType.Classes,
   PascalType.Tables,
   PascalType.FontFace,
   PascalType.FontFace.SFNT;

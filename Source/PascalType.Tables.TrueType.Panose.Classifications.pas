@@ -36,7 +36,7 @@ interface
 
 uses
   Classes, Sysutils,
-  PT_Types,
+  PascalType.Types,
   PascalType.Tables.TrueType.Panose;
 
 //------------------------------------------------------------------------------

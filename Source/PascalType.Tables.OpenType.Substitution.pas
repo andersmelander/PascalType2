@@ -38,7 +38,7 @@ uses
   Generics.Collections,
   Generics.Defaults,
   Classes,
-  PT_Types,
+  PascalType.Types,
   PascalType.Tables,
   PascalType.GlyphString,
   PascalType.Tables.OpenType.Coverage,
@@ -101,7 +101,7 @@ uses
   WinApi.Windows,
   TypInfo,
 {$endif DEBUG}
-  PT_ResourceStrings;
+  PascalType.ResourceStrings;
 
 
 //------------------------------------------------------------------------------

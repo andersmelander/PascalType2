@@ -33,7 +33,7 @@ unit PascalType.Shaper.OpenType.Processor.GSUB;
 interface
 
 uses
-  PT_Types,
+  PascalType.Types,
   PascalType.FontFace.SFNT,
   PascalType.Tables.OpenType.Common,
   PascalType.Tables.OpenType.GSUB,
@@ -67,7 +67,7 @@ type
 implementation
 
 uses
-  PT_Classes;
+  PascalType.Classes;
 
 //------------------------------------------------------------------------------
 //

@@ -41,8 +41,8 @@ interface
 uses
   Generics.Collections,
   Classes, SysUtils, Types,
-  PT_Types,
-  PT_Classes,
+  PascalType.Types,
+  PascalType.Classes,
   PascalType.Unicode,
   PascalType.GlyphString,
   PascalType.FontFace,
@@ -283,11 +283,11 @@ implementation
 
 uses
   Math,
-  PT_Math,
+  PascalType.Math,
   PascalType.Tables.TrueType,
   PascalType.Tables.OpenType.GDEF,
   PascalType.Shaper.Layout.OpenType,
-  PT_ResourceStrings;
+  PascalType.ResourceStrings;
 
 function CalculateCheckSum(Data: Pointer; Size: Integer): Cardinal; overload;
 {$IFDEF PUREPASCAL}

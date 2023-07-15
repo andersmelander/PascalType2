@@ -41,8 +41,8 @@ interface
 uses
   Generics.Collections,
   Classes,
-  PT_Types,
-  PT_Classes,
+  PascalType.Types,
+  PascalType.Classes,
   PascalType.Unicode;
 
 //------------------------------------------------------------------------------
@@ -254,7 +254,7 @@ uses
   PascalType.Tables,
   PascalType.FontFace.SFNT,
   PascalType.Tables.TrueType.os2,
-  PT_ResourceStrings;
+  PascalType.ResourceStrings;
 
 var
   GCharacterMapClasses: array of TPascalTypeCharacterMapClass;

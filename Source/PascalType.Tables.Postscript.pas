@@ -37,8 +37,8 @@ interface
 uses
   Classes,
   SysUtils,
-  PT_Types,
-  PT_Classes,
+  PascalType.Types,
+  PascalType.Classes,
   PascalType.Tables;
 
 type
@@ -239,7 +239,7 @@ function FindOperatorByEncoding(Encoding: Byte): TPascalTypePostscriptDictOperat
 implementation
 
 uses
-  PT_ResourceStrings,
+  PascalType.ResourceStrings,
   PascalType.Tables.Postscript.Operators,
   PascalType.Tables.Postscript.Operands;
 
