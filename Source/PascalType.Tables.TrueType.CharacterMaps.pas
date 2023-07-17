@@ -217,10 +217,13 @@ type
       GlyphID: Word;                            // Glyph ID of the UVS
     end;
 
+    TDefaultUVS = TArray<TUnicodeRange>;
+    TNonDefaultUVS = TArray<TUVSMapping>;
+
     TVariationSelector = record
       VariationSelector: Cardinal;
-      DefaultUVS: TArray<TUnicodeRange>;
-      NonDefaultUVS: TArray<TUVSMapping>;
+      DefaultUVS: TDefaultUVS;
+      NonDefaultUVS: TNonDefaultUVS;
     end;
 
     TVariationSelectors = TArray<TVariationSelector>;
@@ -235,6 +238,7 @@ type
     procedure SaveToStream(Stream: TStream); override;
 
     function CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer; override;
+    function TryGetGlyphID(ACodePoint, ANextCodePoint: TPascalTypeCodePoint; DefaultGlyphID: Word; var Index: integer; out GlyphID: Word): boolean;
   end;
 
 //------------------------------------------------------------------------------
@@ -721,7 +725,110 @@ end;
 
 function TPascalTypeFormat14CharacterMap.CharacterToGlyph(ACodePoint: TPascalTypeCodePoint): Integer;
 begin
-  raise EPascalTypeNotImplemented.Create(RCStrNotImplemented);
+  Result := 0;
+end;
+
+function TPascalTypeFormat14CharacterMap.TryGetGlyphID(ACodePoint, ANextCodePoint: TPascalTypeCodePoint; DefaultGlyphID: Word;
+  var Index: integer; out GlyphID: Word): boolean;
+var
+  Lo, Hi, Mid: Integer;
+  NonDefaultUVS: TNonDefaultUVS;
+  DefaultUVS: TDefaultUVS;
+begin
+  Result := False;
+
+  if (ANextCodePoint = 0) or (not PascalTypeUnicode.IsVariationSelector(ANextCodePoint)) then
+    exit;
+
+  // Binary search for VariationSelector
+  Mid := 0;
+  Lo := Low(FVariationSelectors);
+  Hi := High(FVariationSelectors);
+  while (Lo <= Hi) do
+  begin
+    Mid := (Lo + Hi) div 2;
+    if (ANextCodePoint > FVariationSelectors[Mid].VariationSelector) then
+      Lo := Succ(Mid)
+    else
+    if (ANextCodePoint < FVariationSelectors[Mid].VariationSelector) then
+      Hi := Pred(Mid)
+    else
+      break;
+  end;
+  if (Lo > Hi) then
+    exit;
+
+  NonDefaultUVS := FVariationSelectors[Mid].NonDefaultUVS;
+  DefaultUVS := FVariationSelectors[Mid].DefaultUVS;
+
+  // If the sequence is a non-default UVS, return the mapped glyph
+  // Binary search for VariationSelector
+  Lo := Low(NonDefaultUVS);
+  Hi := High(NonDefaultUVS);
+  while (Lo <= Hi) do
+  begin
+    Mid := (Lo + Hi) div 2;
+    if (ACodePoint > NonDefaultUVS[Mid].UnicodeValue) then
+      Lo := Succ(Mid)
+    else
+    if (ACodePoint < NonDefaultUVS[Mid].UnicodeValue) then
+      Hi := Pred(Mid)
+    else
+    begin
+      GlyphID := NonDefaultUVS[Mid].GlyphID;
+      Inc(Index, 2);
+      Exit(True);
+    end;
+  end;
+
+  // If the sequence is a default UVS, return the default glyph
+  Lo := Low(DefaultUVS);
+  Hi := High(DefaultUVS);
+  while (Lo <= Hi) do
+  begin
+    Mid := (Lo + Hi) div 2;
+    if (ACodePoint < DefaultUVS[Mid].StartUnicodeValue) then
+      Hi := Pred(Mid)
+    else
+    if (ACodePoint > DefaultUVS[Mid].StartUnicodeValue + DefaultUVS[Mid].AdditionalCount) then
+      Lo := Succ(Mid)
+    else
+    begin
+      GlyphID := DefaultGlyphID;
+      Inc(Index, 2);
+      Exit(True);
+    end;
+  end;
+
+  // At this point we are neither a non-default UVS nor a default UVS,
+  // but we know the next codepoint is a variation selector.
+  //
+  //   http://unicode.org/faq/unsup_char.html#4
+  //
+  //   Q: What is the intended display for variation selector sequences (including unsupported ones)?
+  //
+  //   A: The expected rendering behavior for the sequence of character plus a variation selector (C+VS)
+  //      is specified as follows:
+  //
+  //      - If C + VS is listed in StandardizedVariants.txt or in the Ideographic Variation Database
+  //        and is supported by the rendering system, then display with the specified glyph.
+  //
+  //      - If C + FE0F is listed in emoji-variant-sequences.txt, display C as emoji, if supported.
+  //
+  //      - If C + FE0E is listed in emoji-variant-sequences.txt, display C with a regular, non-emoji
+  //        glyph, if supported.
+  //
+  //      - Otherwise, display with the normal glyph for C (with no visible rendering for the VS).
+  //
+  //   If C is unsupported see Q: "How should characters be displayed if the rendering system doesn’t
+  //   fully support them?"
+  //
+  //   A VS sequence may also be part of a grapheme cluster, such as an emoji sequence. See UTS #51
+  //   Unicode Emoji for more details about emoji display.
+
+  GlyphID := DefaultGlyphID;
+  Inc(Index, 2);
+  Result := True;
 end;
 
 class function TPascalTypeFormat14CharacterMap.GetFormat: Word;
@@ -739,6 +846,18 @@ var
     NonDefaultUVSOffset: Cardinal;
   end;
 begin
+  // +-------------------+------------------------------------+------------------------------------------------------+
+  // | Type              | Name                               | Description                                          |
+  // +===================+====================================+======================================================+
+  // | uint16            | format                             | Subtable format. Set to 14.                          |
+  // +-------------------+------------------------------------+------------------------------------------------------+
+  // | uint32            | length                             | Byte length of this subtable (including this header) |
+  // +-------------------+------------------------------------+------------------------------------------------------+
+  // | uint32            | numVarSelectorRecords              | Number of variation Selector Records                 |
+  // +-------------------+------------------------------------+------------------------------------------------------+
+  // | VariationSelector | varSelector[numVarSelectorRecords] | Array of VariationSelector records.                  |
+  // +-------------------+------------------------------------+------------------------------------------------------+
+
   StartPos := Stream.Position;
 
   inherited;
@@ -750,6 +869,17 @@ begin
 
   for i := 0 to High(FVariationSelectors) do
   begin
+    // +----------+---------------------+----------------------------------------------------+
+    // | Type     | Name                | Description                                        |
+    // +==========+=====================+====================================================+
+    // | uint24   | varSelector         | Variation selector                                 |
+    // +----------+---------------------+----------------------------------------------------+
+    // | Offset32 | defaultUVSOffset    | Offset from the start of the format 14 subtable to |
+    // |          |                     | Default UVS Table. May be 0.                       |
+    // +----------+---------------------+----------------------------------------------------+
+    // | Offset32 | nonDefaultUVSOffset | Offset from the start of the format 14 subtable to |
+    // |          |                     | Non-Default UVS Table. May be 0.                   |
+    // +----------+---------------------+----------------------------------------------------+
     FVariationSelectors[i].VariationSelector := BigEndianValue.ReadUInt24(Stream);
 
     Offsets[i].DefaultUVSOffset := BigEndianValue.ReadCardinal(Stream);
@@ -762,9 +892,26 @@ begin
     begin
       Stream.Position := StartPos + Offsets[i].DefaultUVSOffset;
 
+      // Default UVS table
+      // +--------------+-------------------------------+-------------------------------------+
+      // | Type         | Name                          | Description                         |
+      // +==============+===============================+=====================================+
+      // | uint32       | numUnicodeValueRanges         | Number of Unicode character ranges. |
+      // +--------------+-------------------------------+-------------------------------------+
+      // | UnicodeRange | ranges[numUnicodeValueRanges] | Array of UnicodeRange records.      |
+      // +--------------+-------------------------------+-------------------------------------+
       SetLength(FVariationSelectors[i].DefaultUVS, BigEndianValue.ReadCardinal(Stream));
+
       for j := 0 to High(FVariationSelectors[i].DefaultUVS) do
       begin
+        // UnicodeRange Record
+        // +--------+-------------------+-------------------------------------------+
+        // | Type   | Name              | Description                               |
+        // +========+===================+===========================================+
+        // | uint24 | startUnicodeValue | First value in this range                 |
+        // +--------+-------------------+-------------------------------------------+
+        // | uint8  | additionalCount   | Number of additional values in this range |
+        // +--------+-------------------+-------------------------------------------+
         FVariationSelectors[i].DefaultUVS[j].StartUnicodeValue := BigEndianValue.ReadUInt24(Stream);
         FVariationSelectors[i].DefaultUVS[j].AdditionalCount := BigEndianValue.ReadByte(Stream);
       end;
@@ -774,9 +921,26 @@ begin
     begin
       Stream.Position := StartPos + Offsets[i].NonDefaultUVSOffset;
 
+      // Non-Default UVS table
+      // +------------+-----------------------------+------------------------------------+
+      // | Type       | Name                        | Description                        |
+      // +============+=============================+====================================+
+      // | uint32     | numUVSMappings              | Number of UVS Mappings that follow |
+      // +------------+-----------------------------+------------------------------------+
+      // | UVSMapping | uvsMappings[numUVSMappings] | Array of UVSMapping records.       |
+      // +------------+-----------------------------+------------------------------------+
       SetLength(FVariationSelectors[i].NonDefaultUVS, BigEndianValue.ReadCardinal(Stream));
+
       for j := 0 to High(FVariationSelectors[i].NonDefaultUVS) do
       begin
+        // UVSMapping Record
+        // +--------+--------------+-------------------------------+
+        // | Type   | Name         | Description                   |
+        // +========+==============+===============================+
+        // | uint24 | unicodeValue | Base Unicode value of the UVS |
+        // +--------+--------------+-------------------------------+
+        // | uint16 | glyphID      | Glyph ID of the UVS           |
+        // +--------+--------------+-------------------------------+
         FVariationSelectors[i].NonDefaultUVS[j].UnicodeValue := BigEndianValue.ReadUInt24(Stream);
         FVariationSelectors[i].NonDefaultUVS[j].GlyphID := BigEndianValue.ReadWord(Stream);
       end;
