@@ -200,140 +200,105 @@ begin
 end;
 
 procedure TPascalTypeHeaderTable.LoadFromStream(Stream: TStream; Size: Cardinal);
-var
-  Value16: SmallInt;
 begin
+  inherited;
+
+  // Type         | Name               | Description
+  // -------------|--------------------|----------------------------------------------------------------------------------------------------
+  // uint16       | majorVersion       | Major version number of the font header table — set to 1.
+  // uint16       | minorVersion       | Minor version number of the font header table — set to 0.
+  // Fixed        | fontRevision       | Set by font manufacturer.
+  // uint32       | checkSumAdjustment | To compute: set it to 0, sum the entire font as uint32, then store 0xB1B0AFBA - sum.If the font is used as a component in a font collection file, the value of this field will be invalidated by changes to the file structure and font table directory, and must be ignored.
+  // uint32       | magicNumber        | Set to 0x5F0F3CF5.
+  // uint16       | flags              |    Bit 0: Baseline for font at y = 0;
+  //                                        Bit 1: Left sidebearing point at x = 0(relevant only for TrueType rasterizers) — see the note below regarding variable fonts;
+  //                                        Bit 2: Instructions may depend on point size;
+  //                                        Bit 3: Force ppem to integer values for all internal scaler math; may use fractional ppem sizes if this bit is clear;
+  //                                        Bit 4: Instructions may alter advance width(the advance widths might not scale linearly);
+  //                                        Bit 5: This bit is not used in OpenType, and should not be set in order to ensure compatible behavior on all platforms.If set, it may result in different behavior for vertical layout in some platforms. (See Apple's specification for details regarding behavior in Apple platforms.)
+  //                                        Bits 6–10: These bits are not used in Opentype and should always be cleared. (See Apple's specification for details regarding legacy used in Apple platforms.)
+  //                                        Bit 11: Font data is ‘lossless’ as a results of having been subjected to optimizing transformation and/or compression (such as e.g.compression mechanisms defined by ISO/IEC 14496-18, MicroType Express, WOFF 2.0 or similar) where the original font functionality and features are retained but the binary compatibility between input and output font files is not guaranteed.As a result of the applied transform, the ‘DSIG’ Table may also be invalidated.
+  //                                        Bit 12: Font converted (produce compatible metrics)
+  //                                        Bit 13: Font optimized for ClearType™. Note, fonts that rely on embedded bitmaps (EBDT) for rendering should not be considered optimized for ClearType, and therefore should keep this bit cleared.
+  //                                        Bit 14: Last Resort font.If set, indicates that the glyphs encoded in the cmap subtables are simply generic symbolic representations of code point ranges and don’t truly represent support for those code points.If unset, indicates that the glyphs encoded in the cmap subtables represent proper support for those code points.
+  //                                        Bit 15: Reserved, set to 0
+  // uint16       | unitsPerEm         | Valid range is from 16 to 16384. This value should be a power of 2 for fonts that have TrueType outlines.
+  // LONGDATETIME | created            | Number of seconds since 12:00 midnight that started January 1st 1904 in GMT/UTC time zone. 64-bit integer
+  // LONGDATETIME | modified           | Number of seconds since 12:00 midnight that started January 1st 1904 in GMT/UTC time zone. 64-bit integer
+  // int16        | xMin               | For all glyph bounding boxes.
+  // int16        | yMin               | For all glyph bounding boxes.
+  // int16        | xMax               | For all glyph bounding boxes.
+  // int16        | yMax               | For all glyph bounding boxes.
+  // uint16       | macStyle           |   Bit 0: Bold (if set to 1);
+  //                                       Bit 1: Italic(if set to 1)
+  //                                       Bit 2: Underline(if set to 1)
+  //                                       Bit 3: Outline(if set to 1)
+  //                                       Bit 4: Shadow(if set to 1)
+  //                                       Bit 5: Condensed(if set to 1)
+  //                                       Bit 6: Extended(if set to 1)
+  //                                       Bits 7–15: Reserved(set to 0).
+  // uint16       |lowestRecPPEM       |  Smallest readable size in pixels.
+  // int16        | fontDirectionHint  |  Deprecated(Set to 2).
+  //                                          0: Fully mixed directional glyphs;
+  //                                          1: Only strongly left to right;
+  //                                          2: Like 1 but also contains neutrals;
+  //                                          -1: Only strongly right to left;
+  //                                          -2: Like -1 but also contains neutrals. 1
+  // int16        | indexToLocFormat   | 0 for short offsets (Offset16), 1 for long (Offset32).
+  // int16        | glyphDataFormat    | 0 for current format.
+
   // check (minimum) table size
   if Stream.Position + 54 > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-  // read version
   FVersion.Fixed := BigEndianValue.ReadInteger(Stream);
 
-  // check version
   if (Version.Value <> 1) then
     raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
-  // read font revision
   FFontRevision.Fixed := BigEndianValue.ReadInteger(Stream);
-
-  // read check sum adjust
   FCheckSumAdjustment := BigEndianValue.ReadCardinal(Stream);;
-
-  // read magic number
   FMagicNumber := BigEndianValue.ReadCardinal(Stream);
-
-  // check for magic
   if (FMagicNumber <> $5F0F3CF5) then
     raise EPascalTypeError.Create(RCStrNoMagic);
 
-  // read flags
   FFlags := WordToFontHeaderTableFlags(BigEndianValue.ReadWord(Stream));
-
-  // read UnitsPerEm
   FUnitsPerEm := BigEndianValue.ReadWord(Stream);
-
-  // read CreatedDate
   FCreatedDate := BigEndianValue.ReadInt64(Stream);
-
-  // read ModifiedDate
   FModifiedDate := BigEndianValue.ReadInt64(Stream);
-
-  // read xMin
   FxMin := BigEndianValue.ReadSmallInt(Stream);
-
-  // read yMin
   FyMin := BigEndianValue.ReadSmallInt(Stream);
-
-  // read xMax
   FxMax := BigEndianValue.ReadSmallInt(Stream);
-
-  // read xMax
   FyMax := BigEndianValue.ReadSmallInt(Stream);
-
-  // read MacStyle
   FMacStyle := WordToMacStyles(BigEndianValue.ReadWord(Stream));
-
-  // read LowestRecPPEM
   FLowestRecPPEM := BigEndianValue.ReadWord(Stream);
-
-  // read FontDirectionHint
   FFontDirectionHint := TFontDirectionHint(BigEndianValue.ReadSmallInt(Stream));
-
-  // read IndexToLocFormat
-  Value16 := BigEndianValue.ReadSmallInt(Stream);
-  case Value16 of
-    0:
-      FIndexToLocFormat := ilShort;
-    1:
-      FIndexToLocFormat := ilLong;
-  else
-    raise EPascalTypeError.CreateFmt(RCStrWrongIndexToLocFormat, [Value16]);
-  end;
-
-  // read GlyphDataFormat
+  FIndexToLocFormat := TIndexToLocationFormat(BigEndianValue.ReadSmallInt(Stream));
+  if (not(FIndexToLocFormat in [ilShort, ilLong])) then
+    raise EPascalTypeError.CreateFmt(RCStrWrongIndexToLocFormat, [Ord(FIndexToLocFormat)]);
   FGlyphDataFormat := BigEndianValue.ReadSmallInt(Stream);
 end;
 
 procedure TPascalTypeHeaderTable.SaveToStream(Stream: TStream);
 begin
-  // write version
+  inherited;
+
   BigEndianValue.WriteCardinal(Stream, Cardinal(FVersion));
-
-  // write font revision
   BigEndianValue.WriteCardinal(Stream, Cardinal(FFontRevision));
-
-  // write check sum adjust
   BigEndianValue.WriteCardinal(Stream, FCheckSumAdjustment);
-
-  // write magic number
   BigEndianValue.WriteCardinal(Stream, FMagicNumber);
-
-  // write flags
   BigEndianValue.WriteWord(Stream, FontHeaderTableFlagsToWord(FFlags));
-
-  // write UnitsPerEm
   BigEndianValue.WriteWord(Stream, FUnitsPerEm);
-
-  // write CreatedDate
   BigEndianValue.WriteInt64(Stream, FCreatedDate);
-
-  // write ModifiedDate
   BigEndianValue.WriteInt64(Stream, FModifiedDate);
-
-  // write xMin
   BigEndianValue.WriteSmallInt(Stream, FxMin);
-
-  // write yMin
   BigEndianValue.WriteSmallInt(Stream, FyMin);
-
-  // write xMax
   BigEndianValue.WriteSmallInt(Stream, FxMax);
-
-  // write xMax
   BigEndianValue.WriteSmallInt(Stream, FyMax);
-
-  // write MacStyle
   BigEndianValue.WriteWord(Stream, MacStylesToWord(FMacStyle));
-
-  // write LowestRecPPEM
   BigEndianValue.WriteWord(Stream, FLowestRecPPEM);
-
-  // write FontDirectionHint
   BigEndianValue.WriteWord(Stream, Word(FFontDirectionHint));
-
-  // write IndexToLocFormat
-  case FIndexToLocFormat of
-    ilShort:
-      BigEndianValue.WriteWord(Stream, 0);
-    ilLong:
-      BigEndianValue.WriteWord(Stream, 1);
-  else
-    raise EPascalTypeError.CreateFmt(RCStrWrongIndexToLocFormat,
-      [Word(FIndexToLocFormat)]);
-  end;
-
-  // write GlyphDataFormat
+  BigEndianValue.WriteWord(Stream, Ord(FIndexToLocFormat));
   BigEndianValue.WriteWord(Stream, FGlyphDataFormat);
 end;
 

@@ -234,6 +234,18 @@ procedure TPascalTypeKerningFormat0SubTable.LoadFromStream(Stream: TStream; Size
 var
   PairIndex    : Integer;
 begin
+  // +--------+---------------+----------------------------------------------------------+
+  // | Type   | Field         | Description                                              |
+  // +========+===============+==========================================================+
+  // | uint16 | nPairs        | This gives the number of kerning pairs in the table.     |
+  // +--------+---------------+----------------------------------------------------------+
+  // | uint16 | searchRange   | Ignored                                                  |
+  // +--------+---------------+----------------------------------------------------------+
+  // | uint16 | entrySelector | Ignored                                                  |
+  // +--------+---------------+----------------------------------------------------------+
+  // | uint16 | rangeShift    | Ignored                                                  |
+  // +--------+---------------+----------------------------------------------------------+
+
   inherited;
 
   // check (minimum) table size
@@ -333,10 +345,22 @@ end;
 
 procedure TPascalTypeKerningSubTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
+  // Kerning subtables share the same header format.
+  // This header is used to identify the format of the subtable and the kind of information it contains:
+  // +--------+----------+----------------------------------------------------------+
+  // | Type   | Field    | Description                                              |
+  // +========+==========+==========================================================+
+  // | uint16 | version  | Kern subtable version number                             |
+  // +--------+----------+----------------------------------------------------------+
+  // | uint16 | length   | Length of the subtable, in bytes(including this header). |
+  // +--------+----------+----------------------------------------------------------+
+  // | uint16 | coverage | What type of information is contained in this table.     |
+  // +--------+----------+----------------------------------------------------------+
+
   inherited;
 
   // check (minimum) table size
-  if Stream.Position + 4 > Stream.Size then
+  if Stream.Position + 3*SizeOf(Word) > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   FVersion := BigEndianValue.ReadWord(Stream);
@@ -350,16 +374,14 @@ begin
   AssignFormat;
 
   case Format of
-    0, 2:
+    0:
       FFormatTable.LoadFromStream(Stream);
   else
-    begin
-      // check minimum size
-      if Stream.Position + FLength - 6 > Stream.Size then
-        raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+    // check minimum size
+    if Stream.Position + FLength - 6 > Stream.Size then
+      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-      Stream.Seek(soFromCurrent, FLength - 6);
-    end;
+    Stream.Seek(soFromCurrent, FLength - 6);
   end;
 end;
 
@@ -562,16 +584,22 @@ var
   SubTable     : TPascalTypeKerningSubTable;
   SubTableCount: Word;
 begin
+  // +--------+---------+-------------------------------------------+
+  // | Type   | Field   | Description                               |
+  // +========+=========+===========================================+
+  // | uint16 | version | Table version number(0)                   |
+  // +--------+---------+-------------------------------------------+
+  // | uint16 | nTables | Number of subtables in the kerning table. |
+  // +--------+---------+-------------------------------------------+
+
+  FKerningSubtableList.Clear;
+
   inherited;
 
   // check (minimum) table size
-  if Stream.Position + 4 > Stream.Size then
+  if Stream.Position + 2*SizeOf(Word) > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-  // clear eventually existing tables
-  FKerningSubtableList.Clear;
-
-  // read version
   FVersion := BigEndianValue.ReadWord(Stream);
 
   // For now we only support version 0 (same as Windows).
@@ -582,13 +610,11 @@ begin
     exit;
     // raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
-  // read number of glyphs
   SubTableCount := BigEndianValue.ReadWord(Stream);
 
   for SubTableIndex := 0 to SubTableCount - 1 do
   begin
     SubTable := FKerningSubtableList.Add;
-    // load from stream
     SubTable.LoadFromStream(Stream);
   end;
 end;

@@ -68,7 +68,6 @@ type
     FCaretSlopeRise       : SmallInt; // The value of the caretSlopeRise field divided by the value of the caretSlopeRun Field determines the slope of the caret. A value of 0 for the rise and a value of 1 for the run specifies a horizontal caret. A value of 1 for the rise and a value of 0 for the run specifies a vertical caret. Intermediate values are desirable for fonts whose glyphs are oblique or italic. For a vertical font, a horizontal caret is best.
     FCaretSlopeRun        : SmallInt; // See the caretSlopeRise field. Value=1 for nonslanted vertical fonts.
     FCaretOffset          : SmallInt; // The amount by which the highlight on a slanted glyph needs to be shifted away from the glyph in order to produce the best appearance. Set value equal to 0 for nonslanted fonts.
-//    FReserved             : array [0..3] of SmallInt; // Set to 0.
     FMetricDataFormat     : SmallInt; // Set to 0.
     FNumOfLongVerMetrics  : Word;     // Number of advance heights in the vertical metrics table.
 
@@ -179,16 +178,76 @@ begin
 end;
 
 procedure TPascalTypeVerticalHeaderTable.LoadFromStream(Stream: TStream; Size: Cardinal);
-var
-  i: integer;
 begin
   inherited;
+
+  // +---------+----------------------+----------------------------------------------------------------------+
+  // | Type    | Name                 | Description                                                          |
+  // +=========+======================+======================================================================+
+  // | fixed32 | version              | Version number of the Vertical Header Table (0x00011000 for          |
+  // |         |                      | the current version).                                                |
+  // +---------+----------------------+----------------------------------------------------------------------+
+  // | int16   | vertTypoAscender     | The vertical typographic ascender for this font. It is the distance  |
+  // |         |                      | in FUnits from the vertical center baseline to the right of the      |
+  // |         |                      | design space. This will usually be set to half the horizontal        |
+  // |         |                      | advance of full-width glyphs. For example, if the full width is      |
+  // |         |                      | 1000 FUnits, this field will be set to 500.                          |
+  // +---------+----------------------+----------------------------------------------------------------------+
+  // | int16   | vertTypoDescender    | The vertical typographic descender for this font. It is the          |
+  // |         |                      | distance in FUnits from the vertical center baseline to the left of  |
+  // |         |                      | the design space. This will usually be set to half the horizontal    |
+  // |         |                      | advance of full-width glyphs. For example, if the full width is      |
+  // |         |                      | 1000 FUnits, this field will be set to -500.                         |
+  // +---------+----------------------+----------------------------------------------------------------------+
+  // | int16   | vertTypoLineGap      | The vertical typographic line gap for this font.                     |
+  // +---------+----------------------+----------------------------------------------------------------------+
+  // | int16   | advanceHeightMax     | The maximum advance height measurement in FUnits found in            |
+  // |         |                      | the font. This value must be consistent with the entries in the      |
+  // |         |                      | vertical metrics table.                                              |
+  // +---------+----------------------+----------------------------------------------------------------------+
+  // | int16   | minTopSideBearing    | The minimum top side bearing measurement in FUnits found in          |
+  // |         |                      | the font, in FUnits. This value must be consistent with the          |
+  // |         |                      | entries in the vertical metrics table.                               |
+  // +---------+----------------------+----------------------------------------------------------------------+
+  // | int16   | minBottomSideBearing | The minimum bottom side bearing measurement in FUnits                |
+  // |         |                      | found in the font, in FUnits. This value must be consistent with     |
+  // |         |                      | the entries in the vertical metrics table.                           |
+  // +---------+----------------------+----------------------------------------------------------------------+
+  // | int16   | yMaxExtent           | This is defined as the value of the minTopSideBearing field          |
+  // |         |                      | added to the result of the value of the yMin field subtracted        |
+  // |         |                      | from the value of the yMax field.                                    |
+  // +---------+----------------------+----------------------------------------------------------------------+
+  // | int16   | caretSlopeRise       | The value of the caretSlopeRise field divided by the value of the    |
+  // |         |                      | caretSlopeRun field determines the slope of the caret. A value       |
+  // |         |                      | of 0 for the rise and a value of 1 for the run specifies a           |
+  // |         |                      | horizontal caret. A value of 1 for the rise and a value of 0 for the |
+  // |         |                      | run specifies a vertical caret. A value between 0 for the rise and   |
+  // |         |                      | 1 for the run is desirable for fonts whose glyphs are oblique or     |
+  // |         |                      | italic. For a vertical font, a horizontal caret is best.             |
+  // +---------+----------------------+----------------------------------------------------------------------+
+  // | int16   | caretSlopeRun        | See the caretSlopeRise field. Value = 0 for non-slanted fonts.       |
+  // +---------+----------------------+----------------------------------------------------------------------+
+  // | int16   | caretOffset          | The amount by which the highlight on a slanted glyph needs to        |
+  // |         |                      | be shifted away from the glyph in order to produce the best          |
+  // |         |                      | appearance. Set value equal to 0 for non-slanted fonts.              |
+  // +---------+----------------------+----------------------------------------------------------------------+
+  // | int16   | reserved             | Set to 0.                                                            |
+  // +---------+----------------------+----------------------------------------------------------------------+
+  // | int16   | reserved             | Set to 0.                                                            |
+  // +---------+----------------------+----------------------------------------------------------------------+
+  // | int16   | reserved             | Set to 0.                                                            |
+  // +---------+----------------------+----------------------------------------------------------------------+
+  // | int16   | reserved             | Set to 0.                                                            |
+  // +---------+----------------------+----------------------------------------------------------------------+
+  // | int16   | metricDataFormat     | Set to 0.                                                            |
+  // +---------+----------------------+----------------------------------------------------------------------+
+  // | uint16  | numOfLongVerMetrics  | Number of advance heights in the Vertical Metrics table.             |
+  // +---------+----------------------+----------------------------------------------------------------------+
 
   // check (minimum) table size
   if Stream.Position + 36 > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-  // read version
   FVersion.Fixed := BigEndianValue.ReadCardinal(Stream);
 
   if Version.Value <> 1 then
@@ -197,103 +256,45 @@ begin
   // if Version.Fract <> 0
   // then raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
-  // read ascent
   FAscent := BigEndianValue.ReadSmallInt(Stream);
-
-  // read descent
   FDescent := BigEndianValue.ReadSmallInt(Stream);
-
-  // read line gap
   FLineGap := BigEndianValue.ReadSmallInt(Stream);
-
-  // read advanced height max
   FAdvanceHeightMax := BigEndianValue.ReadSmallInt(Stream);
-
-  // read minimum side bearing
   FMinTopSideBearing := BigEndianValue.ReadSmallInt(Stream);
-
-  // read minimum bottom bearing
   FMinBottomSideBearing := BigEndianValue.ReadSmallInt(Stream);
-
-  // read y-max extent
   FYMaxExtent := BigEndianValue.ReadSmallInt(Stream);
-
-  // read caret slope rise
   FCaretSlopeRise := BigEndianValue.ReadSmallInt(Stream);
-
-  // read caret slope run
   FCaretSlopeRun := BigEndianValue.ReadSmallInt(Stream);
-
-  // read caret offset
   FCaretOffset := BigEndianValue.ReadSmallInt(Stream);
-
-{$IFDEF AmbigiousExceptions}
-  // read reserved
-  for i := 0 to 3 do
-    if BigEndianValue.ReadSmallInt(Stream) <> 0 then
-      raise EPascalTypeError.Create(RCStrReservedValueError);
-{$ELSE}
-  Stream.Seek(4*SizeOf(SmallInt), soCurrent);
-{$ENDIF}
-  // read metric data format
+  Stream.Seek(4*SizeOf(SmallInt), soCurrent); // Reserved
   FMetricDataFormat := BigEndianValue.ReadWord(Stream); // Unused - Set to 0
-
-  // read metric data format
   FNumOfLongVerMetrics := BigEndianValue.ReadWord(Stream);
 end;
 
 procedure TPascalTypeVerticalHeaderTable.SaveToStream(Stream: TStream);
-var
-  i: integer;
 begin
   inherited;
 
-  // write version
   BigEndianValue.WriteCardinal(Stream, Cardinal(FVersion));
-
-  // write ascent
   BigEndianValue.WriteSmallInt(Stream, FAscent);
-
-  // write descent
   BigEndianValue.WriteSmallInt(Stream, FDescent);
-
-  // write line gap
   BigEndianValue.WriteSmallInt(Stream, FLineGap);
-
-  // write advanced height max
   BigEndianValue.WriteSmallInt(Stream, FAdvanceHeightMax);
-
-  // write minimum side bearing
   BigEndianValue.WriteSmallInt(Stream, FMinTopSideBearing);
-
-  // write minimum bottom bearing
   BigEndianValue.WriteSmallInt(Stream, FMinBottomSideBearing);
-
-  // write y-max extent
   BigEndianValue.WriteSmallInt(Stream, FYMaxExtent);
-
-  // write caret slope rise
   BigEndianValue.WriteSmallInt(Stream, FCaretSlopeRise);
-
-  // write caret slope run
   BigEndianValue.WriteSmallInt(Stream, FCaretSlopeRun);
-
-  // write caret offset
   BigEndianValue.WriteSmallInt(Stream, FCaretOffset);
-
-  // write reserved
-  for i := 0 to 3 do
-    BigEndianValue.WriteCardinal(Stream, 0);
-
-  // write metric data format
+  BigEndianValue.WriteSmallInt(Stream, 0); // Reserved
+  BigEndianValue.WriteSmallInt(Stream, 0); // Reserved
+  BigEndianValue.WriteSmallInt(Stream, 0); // Reserved
+  BigEndianValue.WriteSmallInt(Stream, 0); // Reserved
   BigEndianValue.WriteWord(Stream, FMetricDataFormat);
-
-  // write number of long vertical metrics
   BigEndianValue.WriteWord(Stream, FNumOfLongVerMetrics);
 end;
 
-procedure TPascalTypeVerticalHeaderTable.SetAdvanceHeightMax
-  (const Value: SmallInt);
+procedure TPascalTypeVerticalHeaderTable.SetAdvanceHeightMax(const Value: SmallInt);
 begin
   if FAdvanceHeightMax <> Value then
   begin
@@ -320,8 +321,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeVerticalHeaderTable.SetCaretSlopeRise
-  (const Value: SmallInt);
+procedure TPascalTypeVerticalHeaderTable.SetCaretSlopeRise(const Value: SmallInt);
 begin
   if CaretSlopeRise <> Value then
   begin
@@ -330,8 +330,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeVerticalHeaderTable.SetCaretSlopeRun
-  (const Value: SmallInt);
+procedure TPascalTypeVerticalHeaderTable.SetCaretSlopeRun(const Value: SmallInt);
 begin
   if CaretSlopeRun <> Value then
   begin
@@ -358,8 +357,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeVerticalHeaderTable.SetMetricDataFormat
-  (const Value: SmallInt);
+procedure TPascalTypeVerticalHeaderTable.SetMetricDataFormat(const Value: SmallInt);
 begin
   if MetricDataFormat <> Value then
   begin
@@ -368,8 +366,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeVerticalHeaderTable.SetMinBottomSideBearing
-  (const Value: SmallInt);
+procedure TPascalTypeVerticalHeaderTable.SetMinBottomSideBearing(const Value: SmallInt);
 begin
   if MinBottomSideBearing <> Value then
   begin
@@ -378,8 +375,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeVerticalHeaderTable.SetMinTopSideBearing
-  (const Value: SmallInt);
+procedure TPascalTypeVerticalHeaderTable.SetMinTopSideBearing(const Value: SmallInt);
 begin
   if MinTopSideBearing <> Value then
   begin
@@ -388,8 +384,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeVerticalHeaderTable.SetNumOfLongVerMetrics
-  (const Value: Word);
+procedure TPascalTypeVerticalHeaderTable.SetNumOfLongVerMetrics(const Value: Word);
 begin
   if NumOfLongVerMetrics <> Value then
   begin

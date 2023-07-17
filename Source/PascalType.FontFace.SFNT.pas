@@ -164,11 +164,11 @@ type
 
     function ContainsTable(const ATableType: TTableType): Boolean;
 
-    function GetGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): Integer; overload; virtual; abstract;
-    function GetGlyphByCharacter(ACodePoint: Word): Integer; overload;
+    function GetGlyphByCodePoint(ACodePoint: TPascalTypeCodePoint): Integer; overload; virtual; abstract;
+    function GetGlyphByCodePoint(ACodePoint: Word): Integer; overload;
+    function HasGlyphByCodePoint(ACodePoint: TPascalTypeCodePoint): boolean;
     function GetGlyphByCharacter(ACharacter: WideChar): Integer; overload;
     function GetGlyphByCharacter(ACharacter: AnsiChar): Integer; overload;
-    function HasGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): boolean;
 
     function GetAdvanceWidth(GlyphIndex: Word): Word; virtual;
 
@@ -232,7 +232,7 @@ type
     function GetAdvanceWidth(GlyphIndex: Word): Word; override;
     function GetKerning(Last, Next: Word): Word;
 
-    function GetGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): Integer; override;
+    function GetGlyphByCodePoint(ACodePoint: TPascalTypeCodePoint): Integer; override;
 
     function GetGlyphPath(GlyphIndex: Word): TPascalTypePath; // TODO : Use TFloatPoint
 
@@ -269,7 +269,7 @@ type
     function LoadTableFromStream(Stream: TStream; const TableEntry: TDirectoryTableEntry): TCustomPascalTypeNamedTable; override;
     procedure Loaded; override;
   public
-    function GetGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): Integer; override;
+    function GetGlyphByCodePoint(ACodePoint: TPascalTypeCodePoint): Integer; override;
     procedure SaveToStream(Stream: TStream); override;
     function CreateLayoutEngine: TObject; override;
   end;
@@ -425,7 +425,7 @@ var
   SpaceGlyph: Word;
   Glyph: TPascalTypeGlyph;
 begin
-  SpaceGlyph := Font.GetGlyphByCharacter(32);
+  SpaceGlyph := Font.GetGlyphByCodePoint(32);
   for Glyph in Self do
     if (Length(Glyph.CodePoints) > 0) and (PascalTypeUnicode.IsDefaultIgnorable(Glyph.CodePoints[0])) then
     begin
@@ -851,28 +851,28 @@ begin
 
   // Map Unicode CodePoints to Glyph IDs
   for Glyph in Result do
-    Glyph.GlyphID := GetGlyphByCharacter(Glyph.CodePoints[0]);
+    Glyph.GlyphID := GetGlyphByCodePoint(Glyph.CodePoints[0]);
 end;
 
 
-function TCustomPascalTypeFontFace.GetGlyphByCharacter(ACodePoint: Word): Integer;
+function TCustomPascalTypeFontFace.GetGlyphByCodePoint(ACodePoint: Word): Integer;
 begin
-  Result := GetGlyphByCharacter(TPascalTypeCodePoint(ACodePoint));
+  Result := GetGlyphByCodePoint(TPascalTypeCodePoint(ACodePoint));
 end;
 
 function TCustomPascalTypeFontFace.GetGlyphByCharacter(ACharacter: WideChar): Integer;
 begin
-  Result := GetGlyphByCharacter(TPascalTypeCodePoint(ACharacter));
+  Result := GetGlyphByCodePoint(TPascalTypeCodePoint(ACharacter));
 end;
 
 function TCustomPascalTypeFontFace.GetGlyphByCharacter(ACharacter: AnsiChar): Integer;
 begin
-  Result := GetGlyphByCharacter(TPascalTypeCodePoint(ACharacter));
+  Result := GetGlyphByCodePoint(TPascalTypeCodePoint(ACharacter));
 end;
 
-function TCustomPascalTypeFontFace.HasGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): boolean;
+function TCustomPascalTypeFontFace.HasGlyphByCodePoint(ACodePoint: TPascalTypeCodePoint): boolean;
 begin
-  Result := (GetGlyphByCharacter(ACodePoint) <> 0);
+  Result := (GetGlyphByCodePoint(ACodePoint) <> 0);
 end;
 
 function TCustomPascalTypeFontFace.GetAdvanceWidth(GlyphIndex: Word): Word;
@@ -891,7 +891,7 @@ begin
   Result := nil;
 end;
 
-function TPascalTypeFontFaceScan.GetGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): Integer;
+function TPascalTypeFontFaceScan.GetGlyphByCodePoint(ACodePoint: TPascalTypeCodePoint): Integer;
 begin
   Result := 0;
 end;
@@ -969,7 +969,7 @@ begin
       Result := GlyphTable.GlyphData[Index];
 end;
 
-function TPascalTypeFontFace.GetGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): Integer;
+function TPascalTypeFontFace.GetGlyphByCodePoint(ACodePoint: TPascalTypeCodePoint): Integer;
 begin
   if (CharacterMap <> nil) then
     Result := CharacterMap.GetGlyphByCharacter(ACodePoint)

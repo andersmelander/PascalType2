@@ -326,7 +326,7 @@ begin
 
   // Lookup codepoint in font.
   // Reject if font doesn't contain a glyph for the codepoint
-  Result := Font.HasGlyphByCharacter(Composite);
+  Result := Font.HasGlyphByCodePoint(Composite);
 end;
 
 function TPascalTypeShaper.DecompositionFilter(Composite: TPascalTypeCodePoint; CodePoint: TPascalTypeCodePoint): boolean;
@@ -345,7 +345,7 @@ begin
   end else
   begin
     // Decomposition filtering
-    Result := Font.HasGlyphByCharacter(CodePoint);
+    Result := Font.HasGlyphByCodePoint(CodePoint);
   end;
 end;
 
@@ -371,16 +371,16 @@ procedure TPascalTypeShaper.ProcessCodePoints(var CodePoints: TPascalTypeCodePoi
         // TODO : Revisit once full substitution has been implemented.
         // For now we replace with a regular simple hyphen ("hyphen minus") instead.
         //
-        if (Font.HasGlyphByCharacter($2010)) then
+        if (Font.HasGlyphByCodePoint($2010)) then
           CodePoint := $2010 // hyphen
         else
-        if (Font.HasGlyphByCharacter($002D)) then
+        if (Font.HasGlyphByCodePoint($002D)) then
           CodePoint := $002D; // hyphen-minus
     else
       // TODO : Harfbuzz stores the space type for later use. I don't know the purpose of this yet.
       // Actually, I don't even know the purpose of replacing "blank" codepoints in the first place...
       if (PascalTypeUnicode.IsBlank(CodePoint)) and (PascalTypeUnicode.GetSpaceType(CodePoint) <> ustNOT_SPACE) and
-        (Font.HasGlyphByCharacter($0020)) then
+        (Font.HasGlyphByCodePoint($0020)) then
           // TODO : We probably need to handle the difference in width
           CodePoint := $0020; // Regular space
     end;

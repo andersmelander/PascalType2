@@ -105,8 +105,8 @@ type
 
     procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
+
     property Version: TFixedPoint read FVersion write SetVersion;
-  published
     property Ascent         : SmallInt read FAscent write SetAscent;
     property Descent        : SmallInt read FDescent write SetDescent;
     property LineGap        : SmallInt read FLineGap write SetLineGap;
@@ -170,114 +170,92 @@ begin
 end;
 
 procedure TPascalTypeHorizontalHeaderTable.LoadFromStream(Stream: TStream; Size: Cardinal);
-{$IFDEF AmbigiousExceptions}
-var
-  Value32: Cardinal;
-{$ENDIF}
 begin
+  inherited;
+
+  // +--------+---------------------+---------------------------------------------------------------------------------+
+  // | Type   | Name                | Description                                                                     |
+  // +========+=====================+=================================================================================+
+  // | Fixed  | version             | 0x00010000 (1.0)                                                                |
+  // +--------+---------------------+---------------------------------------------------------------------------------+
+  // | FWord  | ascent              | Distance from baseline of highest ascender                                      |
+  // +--------+---------------------+---------------------------------------------------------------------------------+
+  // | FWord  | descent             | Distance from baseline of lowest descender                                      |
+  // +--------+---------------------+---------------------------------------------------------------------------------+
+  // | FWord  | lineGap             | typographic line gap                                                            |
+  // +--------+---------------------+---------------------------------------------------------------------------------+
+  // | uFWord | advanceWidthMax     | must be consistent with horizontal metrics                                      |
+  // +--------+---------------------+---------------------------------------------------------------------------------+
+  // | FWord  | minLeftSideBearing  | must be consistent with horizontal metrics                                      |
+  // +--------+---------------------+---------------------------------------------------------------------------------+
+  // | FWord  | minRightSideBearing | must be consistent with horizontal metrics                                      |
+  // +--------+---------------------+---------------------------------------------------------------------------------+
+  // | FWord  | xMaxExtent          | max(lsb + (xMax-xMin))                                                          |
+  // +--------+---------------------+---------------------------------------------------------------------------------+
+  // | int16  | caretSlopeRise      | used to calculate the slope of the caret (rise/run) set to 1 for vertical caret |
+  // +--------+---------------------+---------------------------------------------------------------------------------+
+  // | int16  | caretSlopeRun       | 0 for vertical                                                                  |
+  // +--------+---------------------+---------------------------------------------------------------------------------+
+  // | FWord  | caretOffset         | set value to 0 for non-slanted fonts                                            |
+  // +--------+---------------------+---------------------------------------------------------------------------------+
+  // | int16  | reserved            | set value to 0                                                                  |
+  // +--------+---------------------+---------------------------------------------------------------------------------+
+  // | int16  | reserved            | set value to 0                                                                  |
+  // +--------+---------------------+---------------------------------------------------------------------------------+
+  // | int16  | reserved            | set value to 0                                                                  |
+  // +--------+---------------------+---------------------------------------------------------------------------------+
+  // | int16  | reserved            | set value to 0                                                                  |
+  // +--------+---------------------+---------------------------------------------------------------------------------+
+  // | int16  | metricDataFormat    | 0 for current format                                                            |
+  // +--------+---------------------+---------------------------------------------------------------------------------+
+  // | uint16 | numOfLongHorMetrics | number of advance widths in metrics table                                       |
+  // +--------+---------------------+---------------------------------------------------------------------------------+
+
   // check (minimum) table size
   if Stream.Position + 32 > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-  // read version
   FVersion.Fixed := BigEndianValue.ReadCardinal(Stream);
 
   // check version
   if not(Version.Value = 1) then
     raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 
-  // read Ascent
   FAscent := BigEndianValue.ReadSmallInt(Stream);
-
-  // read Descent
   FDescent := BigEndianValue.ReadSmallInt(Stream);
-
-  // read LineGap
   FLineGap := BigEndianValue.ReadSmallInt(Stream);
-
-  // read AdvanceWidthMax
   FAdvanceWidthMax := BigEndianValue.ReadWord(Stream);
-
-  // read MinLeftSideBearing
   FMinLeftSideBearing := BigEndianValue.ReadSmallInt(Stream);
-
-  // read MinRightSideBearing
   FMinRightSideBearing := BigEndianValue.ReadSmallInt(Stream);
-
-  // read XMaxExtent
   FXMaxExtent := BigEndianValue.ReadSmallInt(Stream);
-
-  // read CaretSlopeRise
   FCaretSlopeRise := BigEndianValue.ReadSmallInt(Stream);
-
-  // read CaretSlopeRun
   FCaretSlopeRun := BigEndianValue.ReadSmallInt(Stream);
-
-  // read CaretOffset
   FCaretOffset := BigEndianValue.ReadSmallInt(Stream);
-
-{$IFDEF AmbigiousExceptions}
-  Stream.Read(Value32, SizeOf(Cardinal));
-  if Value32 <> 0 then
-    raise EPascalTypeError.Create(RCStrHorizontalHeaderReserved);
-
-  Stream.Read(Value32, SizeOf(Cardinal));
-  if Value32 <> 0 then
-    raise EPascalTypeError.Create(RCStrHorizontalHeaderReserved);
-{$ELSE}
-  // reserved (ignore!)
-  Stream.Position := Stream.Position + 2*SizeOf(Cardinal);
-{$ENDIF}
-  // read MetricDataFormat
-  FMetricDataFormat := BigEndianValue.ReadSmallInt(Stream);
-
-  // read NumOfLongHorMetrics
+  Stream.Position := Stream.Position + 4*SizeOf(Word); // reserved (ignore!)
+  FMetricDataFormat := BigEndianValue.ReadSmallInt(Stream); // TODO : Check for FMetricDataFormat=0?
   FNumOfLongHorMetrics := BigEndianValue.ReadWord(Stream);
 end;
 
 procedure TPascalTypeHorizontalHeaderTable.SaveToStream(Stream: TStream);
 begin
-  // write version
+  inherited;
+
   BigEndianValue.WriteCardinal(Stream, Cardinal(FVersion));
-
-  // write Ascent
   BigEndianValue.WriteSmallInt(Stream, FAscent);
-
-  // write Descent
   BigEndianValue.WriteSmallInt(Stream, FDescent);
-
-  // write LineGap
   BigEndianValue.WriteSmallInt(Stream, FLineGap);
-
-  // write AdvanceWidthMax
   BigEndianValue.WriteWord(Stream, FAdvanceWidthMax);
-
-  // write MinLeftSideBearing
   BigEndianValue.WriteSmallInt(Stream, FMinLeftSideBearing);
-
-  // write MinRightSideBearing
   BigEndianValue.WriteSmallInt(Stream, FMinRightSideBearing);
-
-  // write XMaxExtent
   BigEndianValue.WriteSmallInt(Stream, FXMaxExtent);
-
-  // write CaretSlopeRise
   BigEndianValue.WriteSmallInt(Stream, FCaretSlopeRise);
-
-  // write CaretSlopeRun
   BigEndianValue.WriteSmallInt(Stream, FCaretSlopeRun);
-
-  // write CaretOffset
   BigEndianValue.WriteSmallInt(Stream, FCaretOffset);
-
-  // reserved, set to zero!
-  BigEndianValue.WriteCardinal(Stream, 0);
-  BigEndianValue.WriteCardinal(Stream, 0);
-
-  // write MetricDataFormat
+  BigEndianValue.WriteWord(Stream, 0); // reserved, set to zero!
+  BigEndianValue.WriteWord(Stream, 0);
+  BigEndianValue.WriteWord(Stream, 0);
+  BigEndianValue.WriteWord(Stream, 0);
   BigEndianValue.WriteSmallInt(Stream, FMetricDataFormat);
-
-  // write NumOfLongHorMetrics
   BigEndianValue.WriteWord(Stream, FNumOfLongHorMetrics);
 end;
 

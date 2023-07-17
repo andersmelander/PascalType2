@@ -225,15 +225,15 @@ begin
     TCodePoint := 0;
 
   // Keep original glyph if font doesn't have the decomposed glyphs
-  LGlyphID := Font.GetGlyphByCharacter(LCodePoint);
+  LGlyphID := Font.GetGlyphByCodePoint(LCodePoint);
   if (LGlyphID = 0) then
     exit;
-  VGlyphID := Font.GetGlyphByCharacter(VCodePoint);
+  VGlyphID := Font.GetGlyphByCodePoint(VCodePoint);
   if (VGlyphID = 0) then
     exit;
   if (TCodePoint <> 0) then
   begin
-    TGlyphID := Font.GetGlyphByCharacter(TCodePoint);
+    TGlyphID := Font.GetGlyphByCodePoint(TCodePoint);
     if (TGlyphID = 0) then
       exit;
   end else
@@ -342,7 +342,7 @@ begin
 
     // Replace with a composed glyph if supported by the font,
     // otherwise apply the proper OpenType features to each component.
-    GlyphID := Font.GetGlyphByCharacter(SCodePoint);
+    GlyphID := Font.GetGlyphByCodePoint(SCodePoint);
     if (GlyphID <> 0) then
     begin
       Features := Glyph.Features;
@@ -413,7 +413,7 @@ begin
   Assert(Index > 0);
 
   // Move tone mark to the beginning of the previous syllable, unless it is zero width
-  GlyphIndex := Font.GetGlyphByCharacter(AGlyphs[Index].CodePoints[0]);
+  GlyphIndex := Font.GetGlyphByCodePoint(AGlyphs[Index].CodePoints[0]);
   if (GlyphIndex = 0) or (Font.GetAdvanceWidth(GlyphIndex) = 0) then
     exit;
 
@@ -432,7 +432,7 @@ begin
 
   Result := Index;
 
-  GlyphID := Font.GetGlyphByCharacter(PascalTypeUnicode.cpDottedCircle);
+  GlyphID := Font.GetGlyphByCodePoint(PascalTypeUnicode.cpDottedCircle);
   if (GlyphID = 0) then
     exit;
 
@@ -474,7 +474,7 @@ begin
     case StateEntry.Action of
       saDecompose:
         // Decompose the composed syllable if it is not supported by the font.
-        if (not Font.HasGlyphByCharacter(CodePoint)) then
+        if (not Font.HasGlyphByCodePoint(CodePoint)) then
           i := Decompose(AGlyphs, i);
 
       saCompose:
