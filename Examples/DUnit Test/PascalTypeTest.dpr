@@ -79,7 +79,9 @@ uses
   PascalType.Tables.OpenType.Substitution.Ligature in '..\..\Source\PascalType.Tables.OpenType.Substitution.Ligature.pas',
   PascalType.Unicode in '..\..\Source\PascalType.Unicode.pas',
   PascalType.Tables.TrueType.cmap in '..\..\Source\PascalType.Tables.TrueType.cmap.pas',
-  TestUnicode in 'TestUnicode.pas';
+  TestUnicode in 'TestUnicode.pas',
+  TestOpenTypeReader in 'TestOpenTypeReader.pas',
+  TestShaper in 'TestShaper.pas';
 
 {$R *.RES}
 
