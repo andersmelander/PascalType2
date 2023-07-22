@@ -825,7 +825,6 @@ begin
   //
   //   A VS sequence may also be part of a grapheme cluster, such as an emoji sequence. See UTS #51
   //   Unicode Emoji for more details about emoji display.
-
   GlyphID := DefaultGlyphID;
   Inc(Index, 2);
   Result := True;

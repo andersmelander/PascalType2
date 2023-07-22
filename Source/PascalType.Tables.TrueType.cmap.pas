@@ -635,6 +635,24 @@ begin
     if (FMaps = nil) then
       Exit(0);
 
+    // TODO : Is font contains a symbol map then it is a symbol font and we should prefer the symbol map.
+    // TODO : Prefer 32-bit encoding over 16-bit; Prioritized map type list should be passed to FindPlatformMap:
+    (* Pairs are: (Platform, Encoding)
+      FindPlatformMap(piUnicode, [
+        // 32-bit
+        (piMicrosoft, 10),
+        (piUnicode, 6),
+        (piUnicode, 4),
+
+        // 16-bit
+        (piMicrosoft, 1),
+        (piUnicode, 3),
+        (piUnicode, 2),
+        (piUnicode, 1),
+        (piUnicode, 0)
+      ]);
+    *)
+
     // Prefer Unicode
     FBestCharacterMap := FindPlatformMap(piUnicode);
 
