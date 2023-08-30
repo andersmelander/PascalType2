@@ -388,7 +388,7 @@ begin
     try
       Font := TFontCache.Create(FontReader);
       try
-        Font.FontHeight :=  _DPIAware(FFontSize);
+        Font.FontHeight :=  _DPIAware(FFontSize * 97 div 72);
 
         Font.InvertY := True;
 
