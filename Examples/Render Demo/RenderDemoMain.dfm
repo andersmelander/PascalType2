@@ -8,8 +8,8 @@ object FmRenderDemo: TFmRenderDemo
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
-  Font.Height = -11
-  Font.Name = 'Tahoma'
+  Font.Height = -15
+  Font.Name = 'Segoe UI'
   Font.Style = []
   PopupMenu = PopupMenu
   Position = poMainFormCenter
@@ -19,55 +19,55 @@ object FmRenderDemo: TFmRenderDemo
   DesignSize = (
     916
     436)
-  TextHeight = 13
+  TextHeight = 20
   object LabelText: TLabel
     Left = 8
     Top = 11
-    Width = 26
-    Height = 13
+    Width = 30
+    Height = 20
     Caption = 'Text:'
   end
   object LabelFont: TLabel
     Left = 660
     Top = 11
-    Width = 26
-    Height = 13
+    Width = 32
+    Height = 20
     Anchors = [akTop, akRight]
     Caption = 'Font:'
   end
   object LabelFontSize: TLabel
-    Left = 836
-    Top = 11
-    Width = 23
-    Height = 13
+    Left = 829
+    Top = 12
+    Width = 30
+    Height = 20
     Anchors = [akTop, akRight]
     Caption = 'Size:'
-    ExplicitLeft = 391
   end
   object Label1: TLabel
-    Left = 492
-    Top = 11
-    Width = 50
-    Height = 13
+    Left = 447
+    Top = 12
+    Width = 62
+    Height = 20
     Anchors = [akTop, akRight]
     Caption = 'Test case:'
   end
   object EditText: TEdit
-    Left = 40
+    Left = 44
     Top = 8
-    Width = 441
-    Height = 21
+    Width = 397
+    Height = 28
     Anchors = [akLeft, akTop, akRight]
     TabOrder = 0
     Text = 'PascalType Render Demo'
     OnChange = EditTextChange
   end
   object ComboBoxFont: TComboBox
-    Left = 692
+    Left = 698
     Top = 8
-    Width = 138
-    Height = 21
+    Width = 111
+    Height = 28
     Anchors = [akTop, akRight]
+    DropDownWidth = 200
     TabOrder = 1
     OnChange = ComboBoxFontChange
   end
@@ -75,16 +75,10 @@ object FmRenderDemo: TFmRenderDemo
     Left = 865
     Top = 8
     Width = 43
-    Height = 21
+    Height = 28
     Style = csDropDownList
     Anchors = [akTop, akRight]
-    Font.Charset = DEFAULT_CHARSET
-    Font.Color = clWindowText
-    Font.Height = -11
-    Font.Name = 'MS Sans Serif'
-    Font.Style = []
     ItemIndex = 13
-    ParentFont = False
     TabOrder = 2
     Text = '36'
     OnChange = ComboBoxFontSizeChange
@@ -160,6 +154,8 @@ object FmRenderDemo: TFmRenderDemo
       end>
     ShowCaption = False
     TabOrder = 3
+    ExplicitWidth = 894
+    ExplicitHeight = 384
     object PanelGDI: TPanel
       AlignWithMargins = True
       Left = 0
@@ -175,6 +171,8 @@ object FmRenderDemo: TFmRenderDemo
       Caption = 'GDI TextOut'
       ShowCaption = False
       TabOrder = 0
+      ExplicitWidth = 894
+      ExplicitHeight = 95
       object PaintBox1: TPaintBox
         Left = 879
         Top = 0
@@ -213,6 +211,9 @@ object FmRenderDemo: TFmRenderDemo
       Caption = 'PascalType GDI'
       ShowCaption = False
       TabOrder = 1
+      ExplicitTop = 97
+      ExplicitWidth = 894
+      ExplicitHeight = 95
       object PaintBox2: TPaintBox
         Left = 879
         Top = 0
@@ -250,6 +251,9 @@ object FmRenderDemo: TFmRenderDemo
       Caption = 'PascalType Graphics32'
       ShowCaption = False
       TabOrder = 2
+      ExplicitTop = 193
+      ExplicitWidth = 894
+      ExplicitHeight = 95
       object PaintBox3: TPaintBox
         Left = 879
         Top = 0
@@ -287,6 +291,9 @@ object FmRenderDemo: TFmRenderDemo
       Caption = 'Image32'
       ShowCaption = False
       TabOrder = 3
+      ExplicitTop = 289
+      ExplicitWidth = 894
+      ExplicitHeight = 95
       object PaintBox4: TPaintBox
         Left = 879
         Top = 0
@@ -311,11 +318,12 @@ object FmRenderDemo: TFmRenderDemo
     end
   end
   object ComboBoxTestCase: TComboBox
-    Left = 544
+    Left = 512
     Top = 8
-    Width = 105
-    Height = 21
+    Width = 137
+    Height = 28
     Anchors = [akTop, akRight]
+    DropDownWidth = 250
     TabOrder = 4
     OnChange = ComboBoxTestCaseChange
   end
