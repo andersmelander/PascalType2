@@ -5,8 +5,8 @@ uses
   RenderDemoMain in 'RenderDemoMain.pas' {FmRenderDemo},
   PascalType.Classes in '..\..\Source\PascalType.Classes.pas',
   PascalType.Tables.TrueType.CharacterMaps in '..\..\Source\PascalType.Tables.TrueType.CharacterMaps.pas',
-  PascalType.Rasterizer in '..\..\Source\PascalType.Rasterizer.pas',
-  PascalType.Rasterizer.GDI in '..\..\Source\PascalType.Rasterizer.GDI.pas',
+  PascalType.Renderer in '..\..\Source\PascalType.Renderer.pas',
+  PascalType.Painter.GDI in '..\..\Source\PascalType.Painter.GDI.pas',
   PascalType.Math in '..\..\Source\PascalType.Math.pas',
   PascalType.Tables.TrueType.Panose.Classifications in '..\..\Source\PascalType.Tables.TrueType.Panose.Classifications.pas',
   PascalType.ResourceStrings in '..\..\Source\PascalType.ResourceStrings.pas',
@@ -57,7 +57,7 @@ uses
   PascalType.Tables.TrueType.os2 in '..\..\Source\PascalType.Tables.TrueType.os2.pas',
   PascalType.Tables.TrueType.Panose in '..\..\Source\PascalType.Tables.TrueType.Panose.pas',
   PascalType.Shaper in '..\..\Source\PascalType.Shaper.pas',
-  PascalType.Rasterizer.Graphics32 in '..\..\Source\PascalType.Rasterizer.Graphics32.pas',
+  PascalType.Painter.Graphics32 in '..\..\Source\PascalType.Painter.Graphics32.pas',
   PascalType.GlyphString in '..\..\Source\PascalType.GlyphString.pas',
   PascalType.Tables.OpenType.Substitution.Ligature in '..\..\Source\PascalType.Tables.OpenType.Substitution.Ligature.pas',
   PascalType.Unicode in '..\..\Source\PascalType.Unicode.pas',
@@ -88,7 +88,8 @@ uses
   PascalType.Tables.TrueType.head in '..\..\Source\PascalType.Tables.TrueType.head.pas',
   PascalType.Tables.TrueType.name in '..\..\Source\PascalType.Tables.TrueType.name.pas',
   PascalType.Tables.TrueType.maxp in '..\..\Source\PascalType.Tables.TrueType.maxp.pas',
-  PascalType.Tables.TrueType.post in '..\..\Source\PascalType.Tables.TrueType.post.pas';
+  PascalType.Tables.TrueType.post in '..\..\Source\PascalType.Tables.TrueType.post.pas',
+  PascalType.Painter in '..\..\Source\PascalType.Painter.pas';
 
 {$R *.res}
 

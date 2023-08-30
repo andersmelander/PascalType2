@@ -327,12 +327,21 @@ object FmRenderDemo: TFmRenderDemo
       Caption = 'Color individual glyphs'
       OnExecute = ActionColorExecute
     end
+    object ActionPaintPoints: TAction
+      AutoCheck = True
+      Caption = 'Paint curve control points'
+      OnExecute = ActionPaintPointsExecute
+    end
   end
   object PopupMenu: TPopupMenu
     Left = 452
     Top = 224
     object MenuItemColor: TMenuItem
       Action = ActionColor
+      AutoCheck = True
+    end
+    object Paintcurvecontrolpoints1: TMenuItem
+      Action = ActionPaintPoints
       AutoCheck = True
     end
   end

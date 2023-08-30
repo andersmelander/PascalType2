@@ -10,14 +10,16 @@ uses
   PascalType.Tables,
   PascalType.FontFace,
   PascalType.FontFace.SFNT,
-  PascalType.Rasterizer.GDI,
-  PascalType.Rasterizer.Graphics32,
+  PascalType.Renderer,
+  PascalType.Painter,
+  PascalType.Painter.GDI,
+  PascalType.Painter.Graphics32,
   RenderDemoFontNameScanner;
 
 {$I ..\..\Source\PT_Compiler.inc}
 
 {$define IMAGE32} // Define to include Image32 text output
-{-$define RASTERIZER_GDI} // Define to include GDI rasterizer
+{$define RASTERIZER_GDI} // Define to include GDI rasterizer
 {$define WIN_ANTIALIAS} // Define to have Windows TextOut anti-aliased
 
 type
@@ -52,6 +54,8 @@ type
     ActionColor: TAction;
     PopupMenu: TPopupMenu;
     MenuItemColor: TMenuItem;
+    ActionPaintPoints: TAction;
+    Paintcurvecontrolpoints1: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -65,10 +69,10 @@ type
     procedure PaintBox1Paint(Sender: TObject);
     procedure ComboBoxTestCaseChange(Sender: TObject);
     procedure ActionColorExecute(Sender: TObject);
+    procedure ActionPaintPointsExecute(Sender: TObject);
   private
     FFontFace: TPascalTypeFontFace;
-    FRasterizerGDI  : TPascalTypeFontRasterizerGDI;
-    FRasterizerGraphics32: TPascalTypeRasterizerGraphics32;
+    FRenderer: TPascalTypeRenderer;
     FFontScanner : TFontNameScanner;
     FUserFontScanner : TFontNameScanner;
     FFontArray   : array of TFontNameFile;
@@ -195,11 +199,8 @@ begin
   FFontFace := TPascalTypeFontFace.Create;
 
   // create rasterizers
-  FRasterizerGDI := TPascalTypeFontRasterizerGDI.Create;
-  FRasterizerGraphics32 := TPascalTypeRasterizerGraphics32.Create;
-
-  FRasterizerGDI.FontFace := FFontFace;
-  FRasterizerGraphics32.FontFace := FFontFace;
+  FRenderer := TPascalTypeRenderer.Create;
+  FRenderer.FontFace := FFontFace;
 
   // set initial properties
   FFontSize := StrToIntDef(ComboBoxFontSize.Text, 36);
@@ -218,8 +219,7 @@ end;
 
 procedure TFmRenderDemo.FormDestroy(Sender: TObject);
 begin
-  FreeAndNil(FRasterizerGDI);
-  FreeAndNil(FRasterizerGraphics32);
+  FreeAndNil(FRenderer);
   FreeAndNil(FFontFace);
 
   FFontScanner.Terminate;
@@ -255,63 +255,50 @@ end;
 procedure TFmRenderDemo.PaintBoxGDIPaint(Sender: TObject);
 var
   Canvas: TCanvas;
+  Painter: IPascalTypePainter;
 begin
   Canvas := TPaintBox(Sender).Canvas;
 
   Canvas.Brush.Color := clWhite;
   Canvas.FillRect(Canvas.ClipRect);
 
-  FRasterizerGDI.FontSize := _DPIAware(FFontSize);
-  FRasterizerGDI.RenderText(FText, Canvas, 0, 0)
+  Painter := TPascalTypePainterGDI.Create(Canvas);
+
+  FRenderer.RenderText(FText, Painter);
+
+  if (ActionPaintPoints.Checked) then
+  begin
+    FRenderer.RenderMode := rmPoints;
+    FRenderer.RenderText(FText, Painter);
+    FRenderer.RenderMode := rmNormal;
+  end;
 end;
 
 procedure TFmRenderDemo.PaintBoxGraphics32Paint(Sender: TObject);
 var
   Canvas: TCanvas;
-  Canvas32: TCanvas32;
+  Painter: IPascalTypePainter;
   Bitmap32: TBitmap32;
   Script: TTableType;
   Shaper: TPascalTypeShaper;
   UTF32: TPascalTypeCodePoints;
   ShapedText: TPascalTypeGlyphString;
   i: integer;
-  CursorPos: TFloatPoint;
-{$define FILL_PATH}
-{-$define STROKE_PATH}
-{$ifdef FILL_PATH}
-  BrushFill: TSolidBrush;
-{$endif FILL_PATH}
-{$ifdef STROKE_PATH}
-  BrushStroke: TStrokeBrush;
-{$endif STROKE_PATH}
+  CursorPosX, CursorPosY: TRenderFloat;
 begin
   Canvas := TPaintBox(Sender).Canvas;
 
   Canvas.Brush.Color := clWhite;
   Canvas.FillRect(Canvas.ClipRect);
 
-  // CBezierTolerance := 0.01;
+//  CBezierTolerance := 0.01;
   Bitmap32 := TBitmap32.Create;
   try
     Bitmap32.SetSize(TPaintBox(Sender).Width, TPaintBox(Sender).Height);
     Bitmap32.Clear(clWhite32);
-    Canvas32 := TCanvas32.Create(Bitmap32);
-    try
-{$ifdef FILL_PATH}
-      BrushFill := Canvas32.Brushes.Add(TSolidBrush) as TSolidBrush;
-      BrushFill.FillColor := clBlack32;
-      BrushFill.FillMode := pfNonZero;
-{$endif FILL_PATH}
-{$ifdef STROKE_PATH}
-      BrushStroke := Canvas32.Brushes.Add(TStrokeBrush) as TStrokeBrush;
-      BrushStroke.FillColor := clTrRed32;
-      BrushStroke.StrokeWidth := 1;
-      BrushStroke.JoinStyle := jsMiter;
-      BrushStroke.EndStyle := esButt;
-{$endif STROKE_PATH}
-      FRasterizerGraphics32.FontSize := 0; // TODO : We need to force a recalc of the scale. Changing the font doesn't notify the rasterizer.
-      FRasterizerGraphics32.FontSize := _DPIAware(FFontSize);
 
+    Painter := TPascalTypePainterBitmap32.Create(Bitmap32);
+    try
       // Convert to UTF32 so we only do it once
       UTF32 := PascalTypeUnicode.UTF16ToUTF32(FText);
 
@@ -336,19 +323,27 @@ begin
 
           if (ActionColor.Checked) then
           begin
-            CursorPos.X := 0;
-            CursorPos.Y := 0;
+            CursorPosX := 0;
+            CursorPosY := 0;
 
             for i := 0 to ShapedText.Count-1 do
             begin
+              Painter.SetColor(Cardinal(WinColor(GlyphPalette[i mod Length(GlyphPalette)])) or $FF000000);
 
-              BrushFill.FillColor := Color32(GlyphPalette[i mod Length(GlyphPalette)]);
-              FRasterizerGraphics32.RenderShapedGlyph(ShapedText[i], Canvas32, CursorPos.X, CursorPos.Y);
-
+              FRenderer.RenderShapedGlyph(ShapedText[i], Painter, CursorPosX, CursorPosY);
             end;
           end else
-            FRasterizerGraphics32.RenderShapedText(ShapedText, Canvas32);
+          begin
+            Painter.SetColor($FF000000);
+            FRenderer.RenderShapedText(ShapedText, Painter);
+          end;
 
+          if (ActionPaintPoints.Checked) then
+          begin
+            FRenderer.RenderMode := rmPoints;
+            FRenderer.RenderShapedText(ShapedText, Painter);
+            FRenderer.RenderMode := rmNormal;
+          end;
         finally
           ShapedText.Free;
         end;
@@ -358,7 +353,7 @@ begin
       end;
 
     finally
-      Canvas32.Free;
+      Painter := nil;
     end;
     Bitmap32.DrawTo(Canvas.Handle, 0, 0);
 
@@ -467,12 +462,17 @@ begin
     begin
       FFontFilename := FFontArray[FontIndex].FileName;
       FFontFace.LoadFromFile(FFontFilename);
+
+      FRenderer.FontSize := 0; // TODO : We need to force a recalc of the scale. Changing the font doesn't notify the rasterizer.
+      FRenderer.FontSize := _DPIAware(FFontSize);
+
       Break;
     end;
 end;
 
 procedure TFmRenderDemo.FontSizeChanged;
 begin
+  FRenderer.FontSize := _DPIAware(FFontSize);
   Invalidate;
 end;
 
@@ -489,8 +489,8 @@ procedure TFmRenderDemo.SetFontSize(const Value: Integer);
 begin
   if FFontSize <> Value then
   begin
-   FFontSize := Value;
-   FontSizeChanged;
+    FFontSize := Value;
+    FontSizeChanged;
   end;
 end;
 
@@ -504,6 +504,11 @@ begin
 end;
 
 procedure TFmRenderDemo.ActionColorExecute(Sender: TObject);
+begin
+  Invalidate;
+end;
+
+procedure TFmRenderDemo.ActionPaintPointsExecute(Sender: TObject);
 begin
   Invalidate;
 end;

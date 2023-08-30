@@ -140,8 +140,8 @@
         </DCCReference>
         <DCCReference Include="..\..\Source\PascalType.Classes.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.CharacterMaps.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Rasterizer.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Rasterizer.GDI.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Renderer.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Painter.GDI.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Math.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.Panose.Classifications.pas"/>
         <DCCReference Include="..\..\Source\PascalType.ResourceStrings.pas"/>
@@ -192,7 +192,7 @@
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.os2.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.Panose.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Shaper.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Rasterizer.Graphics32.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Painter.Graphics32.pas"/>
         <DCCReference Include="..\..\Source\PascalType.GlyphString.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Substitution.Ligature.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Unicode.pas"/>
@@ -224,6 +224,7 @@
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.name.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.maxp.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.post.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Painter.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

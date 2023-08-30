@@ -1,4 +1,4 @@
-unit PascalType.Rasterizer.Graphics32;
+unit PascalType.Painter.Graphics32;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -34,61 +34,101 @@ interface
 
 {$I PT_Compiler.inc}
 
-{-$define DEBUG_CURVE}
+{$define FILL_PATH}
+{-$define STROKE_PATH}
 
 uses
   {$IFDEF FPC}LCLIntf, LCLType, {$IFDEF MSWINDOWS} Windows, {$ENDIF}
-  {$ELSE}Windows, {$ENDIF} Classes, Contnrs, Sysutils, Graphics,
+  {$ELSE}Windows, {$ENDIF} Classes, Controls, Sysutils, Graphics,
 
+  GR32,
+  GR32_Brushes,
   GR32_Paths,
 
-  PascalType.Types,
-  PascalType.Classes,
-  PascalType.FontFace,
-  PascalType.Rasterizer,
-  PascalType.GlyphString,
-  PascalType.Tables.TrueType;
+  PascalType.Painter;
 
+//------------------------------------------------------------------------------
+//
+//              TCustomPascalTypePainterCanvas32
+//
+//------------------------------------------------------------------------------
+// Abstract Graphics32 font rasterizer base class
+//------------------------------------------------------------------------------
 type
-  TPascalTypeRasterizerGraphics32 = class(TCustomPascalTypeRasterizer)
+  TCustomPascalTypePainterCanvas32 = class abstract(TInterfacedObject, IPascalTypePainter)
+  private
+    FCanvas: TCustomPath;
+    FBrush: TSolidBrush;
   protected
-    procedure RasterizeGlyph(GlyphIndex: Integer; Canvas: TCustomPath; X, Y: Single);
-    procedure RasterizeGlyphPath(const GlyphPath: TPascalTypePath; Canvas: TCustomPath; X, Y: Single);
-  public
-    procedure RenderText(const Text: string; Canvas: TCustomPath); overload; virtual;
-    procedure RenderText(const Text: string; Canvas: TCustomPath; var X, Y: Single); overload; virtual;
-    procedure RenderShapedText(ShapedText: TPascalTypeGlyphString; Canvas: TCustomPath); overload; virtual;
-    procedure RenderShapedText(ShapedText: TPascalTypeGlyphString; Canvas: TCustomPath; var X, Y: Single); overload; virtual;
-    procedure RenderShapedGlyph(AGlyph: TPascalTypeGlyph; Canvas: TCustomPath; var X, Y: Single); virtual;
+    property Canvas: TCustomPath read FCanvas;
+    property Brush: TSolidBrush read FBrush;
+  protected
+    // IPascalTypePainter
+    procedure BeginUpdate;
+    procedure EndUpdate;
 
-    // GDI like functions
-    function GetGlyphOutline(Character: Cardinal; Format: TGetGlyphOutlineUnion;
-      out GlyphMetrics: TGlyphMetrics; BufferSize: Cardinal; Buffer: Pointer;
-      const TransformationMatrix: TTransformationMatrix): Cardinal;
-    function GetTextMetrics(var TextMetric: TTextMetricW): Boolean;
-    function GetOutlineTextMetrics(Buffersize: Cardinal; OutlineTextMetric: Pointer): Cardinal;
-    function GetTextExtentPoint32(Text: WideString; var Size: TSize): Boolean;
+    procedure BeginGlyph;
+    procedure EndGlyph;
+
+    procedure BeginPath;
+    procedure EndPath;
+
+    procedure SetColor(Color: Cardinal);
+
+    procedure MoveTo(const p: TFloatPoint);
+    procedure LineTo(const p: TFloatPoint);
+    procedure QuadraticBezierTo(const ControlPoint, p: TFloatPoint);
+    procedure CubicBezierTo(const ControlPoint1, ControlPoint2, p: TFloatPoint);
+    procedure Rectangle(const r: TFloatRect);
+    procedure Circle(const p: TFloatPoint; Radius: TRenderFloat);
+
+  protected
+    constructor Create(ACanvas: TCustomPath; ABrush: TSolidBrush = nil);
+  public
   end;
 
-function ConvertLocalPointerToGlobalPointer(Local, Base: Pointer): Pointer;
+
+//------------------------------------------------------------------------------
+//
+//              TPascalTypePainterCanvas32
+//
+//------------------------------------------------------------------------------
+// Font rasterizer targeting a Graphics32 canvas
+//------------------------------------------------------------------------------
+type
+  TPascalTypePainterCanvas32 = class(TCustomPascalTypePainterCanvas32)
+  public
+    constructor Create(ACanvas: TCustomPath; ABrush: TSolidBrush = nil);
+  end;
+
+
+//------------------------------------------------------------------------------
+//
+//              TPascalTypePainterBitmap32
+//
+//------------------------------------------------------------------------------
+// Font rasterizer targeting a Graphics32 bitmap
+//------------------------------------------------------------------------------
+type
+  TPascalTypePainterBitmap32 = class(TCustomPascalTypePainterCanvas32)
+  private
+    FCanvas32: TCanvas32;
+  public
+    constructor Create(ABitmap32: TBitmap32);
+    destructor Destroy; override;
+  end;
 
 implementation
 
 uses
-  Math,
-  GR32,
-  PascalType.Tables,
-  PascalType.FontFace.SFNT,
-  PascalType.Tables.TrueType.glyf,
-  PascalType.Tables.TrueType.hhea;
+  GR32_Polygons;
 
+(*
 function ConvertLocalPointerToGlobalPointer(Local, Base: Pointer): Pointer;
 begin
   Result := Pointer(Integer(Base) + Integer(Local));
 end;
 
-
-{ TPascalTypeRasterizerGraphics32 }
 
 function TPascalTypeRasterizerGraphics32.GetTextMetrics(var TextMetric: TTextMetricW): Boolean;
 begin
@@ -360,10 +400,6 @@ begin
       GlyphIndex := FontFace.GetGlyphByCharacter(Text[CharIndex]);
       Advance := Advance + GetAdvanceWidth(GlyphIndex);
 
-(*
-        Advance := Advance + GetKerningWidth(GlyphIndex);
-*)
-
       Inc(CharIndex);
     end;
 
@@ -383,7 +419,7 @@ function TPascalTypeRasterizerGraphics32.GetGlyphOutline(Character: Cardinal;
 begin
   // TODO
   Result := 0;
-(*
+
   // get glyph index
   if (ggoGlyphIndex in Format.Flags) then
     GlyphIndex := Character
@@ -405,314 +441,134 @@ begin
    ggoBitmap
 
   end;
+end;
+
 *)
-end;
-
-////////////////////////////////////////////////////////////////////////////////
-procedure TPascalTypeRasterizerGraphics32.RasterizeGlyph(GlyphIndex: Integer; Canvas: TCustomPath; X, Y: Single);
-var
-  GlyphPath: TPascalTypePath;
-begin
-  GlyphPath := FontFace.GetGlyphPath(GlyphIndex);
-  RasterizeGlyphPath(GlyphPath, Canvas, X, Y);
-end;
-
-type
-  TPathState = (
-    psCurve,            // The previous point was a curve-point.
-    psControl           // The previous point was a control-point.
-  );
-
-  TPathEmit = (
-    emitNone,           // Draw nothing.
-    emitLine,           // Draw a line.
-    emitQuadratic,      // Draw a Quadratic bezier.
-    emitHalfway         // Draw a Quadratic bezier.
-                        // The two previous points were control-points; This
-                        // implies an implicit curve-point halfway between the
-                        // control-points.
-  );
-
-  TStateTransition = record
-    NextState: TPathState;
-    Emit: TPathEmit;
-  end;
-
-const
-  StateMachine: array[boolean, TPathState] of TStateTransition = (
-    // False: Current point is a control-point
-    ((NextState: psControl;     Emit: emitNone),        // psCurve -> psControl
-     (NextState: psControl;     Emit: emitHalfway)),    // psControl -> psControl: synthesize point, emitQuadratic
-    // True: Current point is a curve-point
-    ((NextState: psCurve;       Emit: emitLine),        // psCurve -> psCurve: emitLine
-     (NextState: psCurve;       Emit: emitQuadratic))   // psControl -> psCurve: emitQuadratic
-  );
-
-
-procedure TPascalTypeRasterizerGraphics32.RasterizeGlyphPath(const GlyphPath: TPascalTypePath; Canvas: TCustomPath; X, Y: Single);
-var
-  Ascent: integer;
-  Origin: TFloatPoint;
-  PointIndex: Integer;
-  CurrentPoint: TFloatPoint;
-  ControlPoint: TFloatPoint;
-  MidPoint: TFloatPoint;
-  IsOnCurve: Boolean;
-  Contour: TPascalTypeContour;
-  PathState: TPathState;
-  StateTransition: TStateTransition;
-  i: integer;
-begin
-  if (Length(GlyphPath) = 0) then
-    exit;
-
-  Ascent := Max(TPascalTypeFontFace(FontFace).HeaderTable.YMax, TPascalTypeFontFace(FontFace).HorizontalHeader.Ascent);
-  Origin.X := X;
-  Origin.Y := Y + Ascent * ScalerY;
-
-  // TODO : This logic belongs in the font.
-
-{$ifdef DEBUG_CURVE}
-  var DebugPath := TFlattenedPath.Create;
-{$endif DEBUG_CURVE}
-
-  for Contour in GlyphPath do
-  begin
-    if (Length(Contour) < 2) then
-      continue;
-
-    CurrentPoint.X := Origin.X + Contour[0].XPos * ScalerX;
-{$ifdef Inverse_Y_axis}
-    CurrentPoint.Y := Origin.Y - Contour[0].YPos * ScalerY;
-{$else Inverse_Y_axis}
-    CurrentPoint.Y := Origin.Y + Contour[0].YPos * ScalerY;
-{$endif Inverse_Y_axis}
-
-    // Process the start point
-    if (Contour[0].Flags and TTrueTypeFontSimpleGlyphData.GLYF_ON_CURVE <> 0) then
-    begin
-      // It's a curve-point
-      PathState := psCurve;
-    end else
-    begin
-      ControlPoint := CurrentPoint;
-      // It's a control-point. See if the prior point in the closed polygon
-      // (i.e. last point in the array) is a curve-point.
-      if (Contour[High(Contour)].Flags and TTrueTypeFontSimpleGlyphData.GLYF_ON_CURVE <> 0) then
-      begin
-        // Last point was a curve-point. Use it as the current point and use
-        // the first point as the control-point.
-        // Seen with: Kalinga Bold, small letter "r"
-        CurrentPoint.X := Origin.X + Contour[High(Contour)].XPos * ScalerX;
-{$ifdef Inverse_Y_axis}
-        CurrentPoint.Y := Origin.Y - Contour[High(Contour)].YPos * ScalerY;
-{$else Inverse_Y_axis}
-        CurrentPoint.Y := Origin.Y + Contour[High(Contour)].YPos * ScalerY;
-{$endif Inverse_Y_axis}
-      end else
-      begin
-        // Both first and last points are control-points.
-        // Synthesize a curve-point in between the two control-points.
-        // Seen with: SimSun-ExtB, small letter "a"
-        CurrentPoint.X := Origin.X + (Contour[0].XPos + Contour[High(Contour)].XPos) * 0.5 * ScalerX;
-{$ifdef Inverse_Y_axis}
-        CurrentPoint.Y := Origin.Y - (Contour[0].YPos + Contour[High(Contour)].YPos) * 0.5 * ScalerY;
-{$else Inverse_Y_axis}
-        CurrentPoint.Y := Origin.Y + (Contour[0].YPos + Contour[High(Contour)].YPos) * 0.5 * ScalerY;
-{$endif Inverse_Y_axis}
-      end;
-      PathState := psControl;
-    end;
-
-    // Move to the first curve-point (the one we just found above)
-    Canvas.MoveTo(CurrentPoint);
-{$ifdef DEBUG_CURVE}
-    DebugPath.Circle(CurrentPoint, 3);
-{$endif DEBUG_CURVE}
-
-    // Note that PointIndex wraps around to zero
-    PointIndex := 1;
-    for i := 0 to High(Contour) do
-    begin
-      // Get the next point
-      CurrentPoint.X := Origin.X + Contour[PointIndex].XPos * ScalerX;
-{$ifdef Inverse_Y_axis}
-      CurrentPoint.Y := Origin.Y - Contour[PointIndex].YPos * ScalerY;
-{$else Inverse_Y_axis}
-      CurrentPoint.Y := Origin.Y + Contour[PointIndex].YPos * ScalerY;
-{$endif Inverse_Y_axis}
-
-      // Is it a curve-point?
-      IsOnCurve := (Contour[PointIndex].Flags and TTrueTypeFontSimpleGlyphData.GLYF_ON_CURVE <> 0);
-
-      StateTransition := StateMachine[IsOnCurve, PathState];
-      PathState := StateTransition.NextState;
-
-      case StateTransition.Emit of
-        emitNone:
-          begin
-            ControlPoint := CurrentPoint;
-{$ifdef DEBUG_CURVE}
-            var r: TFloatRect;
-            r.TopLeft := ControlPoint;
-            r.BottomRight := ControlPoint;
-            InflateRect(r, 2, 2);
-            DebugPath.Rectangle(r);
-{$endif DEBUG_CURVE}
-          end;
-
-        emitLine:
-          begin
-            Canvas.LineTo(CurrentPoint);
-{$ifdef DEBUG_CURVE}
-            DebugPath.Circle(CurrentPoint, 3);
-{$endif DEBUG_CURVE}
-          end;
-
-        emitQuadratic:
-          begin
-            Canvas.ConicTo(ControlPoint, CurrentPoint);
-{$ifdef DEBUG_CURVE}
-            DebugPath.Circle(CurrentPoint, 3);
-{$endif DEBUG_CURVE}
-          end;
-
-        emitHalfway:
-          begin
-            MidPoint.X := (ControlPoint.X + CurrentPoint.X) * 0.5;
-            MidPoint.Y := (ControlPoint.Y + CurrentPoint.Y) * 0.5;
-            Canvas.ConicTo(ControlPoint, MidPoint);
-            ControlPoint := CurrentPoint;
-{$ifdef DEBUG_CURVE}
-            DebugPath.Circle(MidPoint, 3);
-            var r: TFloatRect;
-            r.TopLeft := ControlPoint;
-            r.BottomRight := ControlPoint;
-            InflateRect(r, 2, 2);
-            DebugPath.Rectangle(r);
-{$endif DEBUG_CURVE}
-          end;
-      end;
-      PointIndex := (PointIndex + 1) mod Length(Contour);
-    end;
-
-    Canvas.EndPath(True);
-  end;
-{$ifdef DEBUG_CURVE}
-  for i := 0 to High(DebugPath.Path) do
-    if (DebugPath.PathClosed[i]) then
-      Canvas.Polygon(DebugPath.Path[i])
-    else
-      Canvas.Polyline(DebugPath.Path[i]);
-  DebugPath.Free;
-{$endif DEBUG_CURVE}
-end;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-procedure TPascalTypeRasterizerGraphics32.RenderText(const Text: string; Canvas: TCustomPath);
-var
-  X, Y: Single;
+//------------------------------------------------------------------------------
+//
+//              TCustomPascalTypePainterCanvas32
+//
+//------------------------------------------------------------------------------
+constructor TPascalTypePainterCanvas32.Create(ACanvas: TCustomPath; ABrush: TSolidBrush);
 begin
-  RenderText(Text, Canvas, X, Y);
+  inherited Create(ACanvas, ABrush);
 end;
 
-procedure TPascalTypeRasterizerGraphics32.RenderShapedText(ShapedText: TPascalTypeGlyphString; Canvas: TCustomPath);
-var
-  X, Y: Single;
+{ TCustomPascalTypePainterCanvas32 }
+
+constructor TCustomPascalTypePainterCanvas32.Create(ACanvas: TCustomPath; ABrush: TSolidBrush);
 begin
-  RenderShapedText(ShapedText, Canvas, X, Y);
+  inherited Create;
+  FCanvas := ACanvas;
+  FBrush := ABrush;
 end;
 
-procedure TPascalTypeRasterizerGraphics32.RenderShapedGlyph(AGlyph: TPascalTypeGlyph; Canvas: TCustomPath; var X, Y: Single);
-var
-  Pos: TFloatPoint;
+procedure TCustomPascalTypePainterCanvas32.BeginGlyph;
+begin
+  BeginUpdate;
+end;
+
+procedure TCustomPascalTypePainterCanvas32.EndGlyph;
+begin
+  EndUpdate;
+end;
+
+procedure TCustomPascalTypePainterCanvas32.BeginPath;
+begin
+
+end;
+
+procedure TCustomPascalTypePainterCanvas32.EndPath;
+begin
+  Canvas.EndPath(True);
+end;
+
+procedure TCustomPascalTypePainterCanvas32.BeginUpdate;
 begin
   Canvas.BeginUpdate;
-  try
-    // Position glyph relative to cursor
-    Pos.X := X + ScalerX * AGlyph.XOffset;
-{$ifdef Inverse_Y_axis}
-    Pos.Y := Y - ScalerY * AGlyph.YOffset;
-{$else Inverse_Y_axis}
-    Pos.Y := CursorPos.Y + ScalerY * Glyph.YOffset;
-{$endif Inverse_Y_axis}
-
-    // Rasterize glyph
-    RasterizeGlyph(AGlyph.GlyphID, Canvas, Pos.X, Pos.Y);
-
-    // Advance cursor
-    X := X + ScalerX * AGlyph.XAdvance;
-    Y := Y + ScalerY * AGlyph.YAdvance;
-
-  finally
-    Canvas.EndUpdate;
-  end;
 end;
 
-procedure TPascalTypeRasterizerGraphics32.RenderShapedText(ShapedText: TPascalTypeGlyphString; Canvas: TCustomPath; var X, Y: Single);
-var
-  CursorPos: TFloatPoint;
-  Glyph: TPascalTypeGlyph;
+procedure TCustomPascalTypePainterCanvas32.EndUpdate;
 begin
-  CursorPos.X := X;
-  CursorPos.Y := Y;
-
-  Canvas.BeginUpdate;
-  try
-
-    for Glyph in ShapedText do
-      RenderShapedGlyph(Glyph, Canvas, CursorPos.X, CursorPos.Y);
-
-  finally
-    Canvas.EndUpdate;
-  end;
-
-  X := CursorPos.X;
-  Y := CursorPos.Y;
+  Canvas.EndUpdate;
 end;
 
-procedure TPascalTypeRasterizerGraphics32.RenderText(const Text: string; Canvas: TCustomPath; var X, Y: Single);
-var
-  CharIndex: Integer;
-  GlyphIndex: Integer;
-  Pos: TFloatPoint;
-  GlyphMetric: TGlyphMetric;
+procedure TCustomPascalTypePainterCanvas32.Circle(const p: TFloatPoint; Radius: TRenderFloat);
 begin
-  Pos.X := X;
-  Pos.Y := Y;
+  Canvas.Circle(p.X, p.Y, Radius);
+end;
 
-  Canvas.BeginUpdate;
-  try
+procedure TCustomPascalTypePainterCanvas32.CubicBezierTo(const ControlPoint1, ControlPoint2, p: TFloatPoint);
+begin
+  Canvas.CurveTo(ControlPoint1.X, ControlPoint1.Y, ControlPoint2.X, ControlPoint2.Y, p.X, p.Y);
+end;
 
-    for CharIndex := 1 to Length(Text) do
-    begin
-      if Text[CharIndex] <= #31 then
-      begin
-        case Text[CharIndex] of
-          #10: ;// handle CR
-          #13: ;// handle LF
-        end;
-      end else
-      begin
-        // get glyph index
-        GlyphIndex := FontFace.GetGlyphByCharacter(Text[CharIndex]);
+procedure TCustomPascalTypePainterCanvas32.LineTo(const p: TFloatPoint);
+begin
+  Canvas.LineTo(p.X, p.Y);
+end;
 
-        // rasterize character
-        RasterizeGlyph(GlyphIndex, Canvas, Pos.X, Pos.Y);
+procedure TCustomPascalTypePainterCanvas32.MoveTo(const p: TFloatPoint);
+begin
+  Canvas.MoveTo(p.X, p.Y);
+end;
 
-        // advance cursor
-        GlyphMetric := GetGlyphMetric(GlyphIndex);
-        Pos.X := Pos.X + GlyphMetric.HorizontalMetric.AdvanceWidth;
-      end;
-    end;
+procedure TCustomPascalTypePainterCanvas32.QuadraticBezierTo(const ControlPoint, p: TFloatPoint);
+begin
+  Canvas.CurveTo(ControlPoint.X, ControlPoint.Y, p.X, p.Y);
+end;
 
-  finally
-    Canvas.EndUpdate;
-  end;
+procedure TCustomPascalTypePainterCanvas32.Rectangle(const r: TFloatRect);
+begin
+  Canvas.Rectangle(GR32.FloatRect(r.Left, r.Top, r.Right, r.Bottom));
+end;
 
-  X := Pos.X;
-  Y := Pos.Y;
+procedure TCustomPascalTypePainterCanvas32.SetColor(Color: Cardinal);
+begin
+  if (FBrush <> nil) then
+    FBrush.FillColor := Color32(TColor(Color and $00FFFFFF)) or (Color and $FF000000);
+end;
+
+//------------------------------------------------------------------------------
+//
+//              TPascalTypePainterBitmap32
+//
+//------------------------------------------------------------------------------
+constructor TPascalTypePainterBitmap32.Create(ABitmap32: TBitmap32);
+var
+  BrushFill: TSolidBrush;
+{$ifdef STROKE_PATH}
+  BrushStroke: TStrokeBrush;
+{$endif STROKE_PATH}
+begin
+  FCanvas32 := TCanvas32.Create(ABitmap32);
+
+{$ifdef FILL_PATH}
+  BrushFill := FCanvas32.Brushes.Add(TSolidBrush) as TSolidBrush;
+  BrushFill.FillColor := clBlack32;
+  BrushFill.FillMode := pfNonZero;
+{$else  FILL_PATH}
+  BrushFill := nil;
+{$endif FILL_PATH}
+
+{$ifdef STROKE_PATH}
+  BrushStroke := FCanvas32.Brushes.Add(TStrokeBrush) as TStrokeBrush;
+  BrushStroke.FillColor := clTrRed32;
+  BrushStroke.StrokeWidth := 1;
+  BrushStroke.JoinStyle := jsMiter;
+  BrushStroke.EndStyle := esButt;
+{$endif STROKE_PATH}
+
+  inherited Create(FCanvas32, BrushFill);
+end;
+
+destructor TPascalTypePainterBitmap32.Destroy;
+begin
+  FCanvas32.Free;
+  inherited;
 end;
 
 end.
