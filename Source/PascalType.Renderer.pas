@@ -71,7 +71,7 @@ type
 // A class that knows how to render a glyph
 //------------------------------------------------------------------------------
 type
-  TPascalTypeRenderMode = (rmNormal, rmPoints);
+  TPascalTypeRenderOptions = set of (roPoints, roFill, roStroke, roColorize);
 
   TPascalTypeRenderer = class(TInterfacedPersistent)
   strict private
@@ -80,13 +80,15 @@ type
       FDebugCircleRadius: Single;
       FDebugRectColor: Cardinal;
       FDebugCircleColor: Cardinal;
+      FDebugGlyphPalette: TArray<Cardinal>;
   public
     class property DebugRectSize: Single read FDebugRectSize write FDebugRectSize;
     class property DebugCircleRadius: Single read FDebugCircleRadius write FDebugCircleRadius;
     class property DebugRectColor: Cardinal read FDebugRectColor write FDebugRectColor;
     class property DebugCircleColor: Cardinal read FDebugCircleColor write FDebugCircleColor;
+    class property DebugGlyphPalette: TArray<Cardinal> read FDebugGlyphPalette write FDebugGlyphPalette;
   strict private
-    FRenderMode: TPascalTypeRenderMode;
+    FOptions: TPascalTypeRenderOptions;
     FFontFace: TPascalTypeFontFace;
     FFontHeight: Integer;
     FPixelPerInchX: Integer;
@@ -140,7 +142,7 @@ type
 
     procedure RenderShapedGlyph(AGlyph: TPascalTypeGlyph; const Painter: IPascalTypePainter; var X, Y: TRenderFloat);
 
-    property RenderMode: TPascalTypeRenderMode read FRenderMode write FRenderMode;
+    property Options: TPascalTypeRenderOptions read FOptions write FOptions;
 
     property FontFace: TPascalTypeFontFace read FFontFace write SetFontFace; // TODO : This ought to be TCustomPascalTypeFontFace
     property FontHeight: Integer read FFontHeight write SetFontHeight default -11;
@@ -172,6 +174,7 @@ begin
   FDebugRectSize := 2.0;
   FDebugCircleColor := Cardinal(clRed) or $A0000000;
   FDebugRectColor := Cardinal(clBlue) or $A0000000;
+  FDebugGlyphPalette := [$FF233BC2, $FF529cc7, $FF52DAEA, $FF3CC003, $FFBE9A57, $FFD76E97];
 end;
 
 constructor TPascalTypeRenderer.Create;
@@ -283,7 +286,7 @@ begin
   Origin.X := Cursor.X;
   Origin.Y := Cursor.Y + Ascent * ScalerY;
 
-  if (FRenderMode <> rmPoints) then
+  if (not (roPoints in FOptions)) then
     Painter.BeginGlyph;
 
   for Contour in GlyphPath do
@@ -335,10 +338,10 @@ begin
     end;
 
     // Move to the first curve-point (the one we just found above)
-    if (FRenderMode <> rmPoints) then
+    if (not (roPoints in FOptions)) then
       Painter.BeginPath;
 
-    if (FRenderMode = rmPoints) then
+    if (roPoints in FOptions) then
       RenderDebugCircle(Painter, CurrentPoint)
     else
       Painter.MoveTo(CurrentPoint);
@@ -365,13 +368,13 @@ begin
         emitNone:
           begin
             ControlPoint := CurrentPoint;
-            if (FRenderMode = rmPoints) then
+            if (roPoints in FOptions) then
               RenderDebugRect(Painter, ControlPoint);
           end;
 
         emitLine:
           begin
-            if (FRenderMode = rmPoints) then
+            if (roPoints in FOptions) then
               RenderDebugCircle(Painter, CurrentPoint)
             else
               Painter.LineTo(CurrentPoint);
@@ -379,7 +382,7 @@ begin
 
         emitQuadratic:
           begin
-            if (FRenderMode = rmPoints) then
+            if (roPoints in FOptions) then
               RenderDebugCircle(Painter, CurrentPoint)
             else
               Painter.QuadraticBezierTo(ControlPoint, CurrentPoint);
@@ -389,7 +392,7 @@ begin
           begin
             MidPoint.X := (ControlPoint.X + CurrentPoint.X) * 0.5;
             MidPoint.Y := (ControlPoint.Y + CurrentPoint.Y) * 0.5;
-            if (FRenderMode = rmPoints) then
+            if (roPoints in FOptions) then
             begin
               RenderDebugCircle(Painter, MidPoint);
               RenderDebugRect(Painter, CurrentPoint);
@@ -401,11 +404,11 @@ begin
       PointIndex := (PointIndex + 1) mod Length(Contour);
     end;
 
-    if (FRenderMode <> rmPoints) then
+    if (not (roPoints in FOptions)) then
       Painter.EndPath;
   end;
 
-  if (FRenderMode <> rmPoints) then
+  if (not (roPoints in FOptions)) then
     Painter.EndGlyph;
 end;
 
@@ -449,20 +452,33 @@ end;
 procedure TPascalTypeRenderer.RenderShapedText(ShapedText: TPascalTypeGlyphString; const Painter: IPascalTypePainter; var X, Y: TRenderFloat);
 var
   Cursor: TFloatPoint;
-  Glyph: TPascalTypeGlyph;
+  SaveColor: Cardinal;
+  i: integer;
 begin
   Cursor.X := X;
   Cursor.Y := Y;
 
-  if (FRenderMode <> rmPoints) then // rmPoints needs to be able to draw each point in a different color
+  SaveColor := 0;
+  if (roColorize in FOptions) then
+    SaveColor := Painter.Color
+  else
+  if (not (roPoints in FOptions)) then // rmPoints needs to be able to draw each point in a different color
     Painter.BeginUpdate;
   try
 
-    for Glyph in ShapedText do
-      RenderShapedGlyph(Glyph, Painter, Cursor.X, Cursor.Y);
+    for i := 0 to ShapedText.Count-1 do
+    begin
+      if (roColorize in FOptions) then
+        Painter.Color := FDebugGlyphPalette[i mod Length(FDebugGlyphPalette)];
+
+      RenderShapedGlyph(ShapedText[i], Painter, Cursor.X, Cursor.Y);
+    end;
 
   finally
-    if (FRenderMode <> rmPoints) then
+    if (roColorize in FOptions) then
+      Painter.Color := SaveColor
+    else
+    if (not (roPoints in FOptions)) then
       Painter.EndUpdate;
   end;
 
@@ -485,11 +501,16 @@ var
   GlyphIndex: Integer;
   Cursor: TFloatPoint;
   GlyphMetric: TGlyphMetric;
+  SaveColor: Cardinal;
 begin
   Cursor.X := X;
   Cursor.Y := Y;
 
-  Painter.BeginUpdate;
+  SaveColor := 0;
+  if (roColorize in FOptions) then
+    SaveColor := Painter.Color
+  else
+    Painter.BeginUpdate;
   try
 
     for CharIndex := 1 to Length(Text) do
@@ -502,6 +523,9 @@ begin
         end;
       end else
       begin
+        if (roColorize in FOptions) then
+          Painter.Color := FDebugGlyphPalette[(CharIndex-1) mod Length(FDebugGlyphPalette)];
+
         // Get glyph index
         GlyphIndex := FontFace.GetGlyphByCharacter(Text[CharIndex]);
 
@@ -515,7 +539,10 @@ begin
     end;
 
   finally
-    Painter.EndUpdate;
+    if (roColorize in FOptions) then
+      Painter.Color := SaveColor
+    else
+      Painter.EndUpdate;
   end;
 
   X := Cursor.X;

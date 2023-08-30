@@ -73,14 +73,15 @@ type
     procedure BeginPath;
     procedure EndPath;
 
-    procedure SetColor(Color: Cardinal);
-
     procedure MoveTo(const p: TFloatPoint);
     procedure LineTo(const p: TFloatPoint);
     procedure QuadraticBezierTo(const ControlPoint, p: TFloatPoint);
     procedure CubicBezierTo(const ControlPoint1, ControlPoint2, p: TFloatPoint);
     procedure Rectangle(const r: TFloatRect);
     procedure Circle(const p: TFloatPoint; Radius: TRenderFloat);
+
+    procedure SetColor(Color: Cardinal);
+    function GetColor: Cardinal;
 
   protected
     constructor Create(ACanvas: TCustomPath; ABrush: TSolidBrush = nil);
@@ -496,6 +497,20 @@ begin
   Canvas.EndUpdate;
 end;
 
+procedure TCustomPascalTypePainterCanvas32.SetColor(Color: Cardinal);
+begin
+  if (FBrush <> nil) then
+    FBrush.FillColor := (Color32(TColor(Color and $00FFFFFF)) and $00FFFFFF) or (Color and $FF000000);
+end;
+
+function TCustomPascalTypePainterCanvas32.GetColor: Cardinal;
+begin
+  if (FBrush <> nil) then
+    Result := (WinColor(FBrush.FillColor) and $00FFFFFF) or (FBrush.FillColor and $FF000000)
+  else
+    Result := $FF000000;
+end;
+
 procedure TCustomPascalTypePainterCanvas32.Circle(const p: TFloatPoint; Radius: TRenderFloat);
 begin
   Canvas.Circle(p.X, p.Y, Radius);
@@ -524,12 +539,6 @@ end;
 procedure TCustomPascalTypePainterCanvas32.Rectangle(const r: TFloatRect);
 begin
   Canvas.Rectangle(GR32.FloatRect(r.Left, r.Top, r.Right, r.Bottom));
-end;
-
-procedure TCustomPascalTypePainterCanvas32.SetColor(Color: Cardinal);
-begin
-  if (FBrush <> nil) then
-    FBrush.FillColor := (Color32(TColor(Color and $00FFFFFF)) and $00FFFFFF) or (Color and $FF000000);
 end;
 
 //------------------------------------------------------------------------------

@@ -68,14 +68,15 @@ type
     procedure BeginPath;
     procedure EndPath;
 
-    procedure SetColor(Color: Cardinal);
-
     procedure MoveTo(const p: TFloatPoint);
     procedure LineTo(const p: TFloatPoint);
     procedure QuadraticBezierTo(const ControlPoint, p: TFloatPoint);
     procedure CubicBezierTo(const ControlPoint1, ControlPoint2, p: TFloatPoint);
     procedure Rectangle(const r: TFloatRect);
     procedure Circle(const p: TFloatPoint; Radius: TRenderFloat);
+
+    procedure SetColor(Color: Cardinal);
+    function GetColor: Cardinal;
 
   public
     constructor Create(ACanvas: TCanvas);
@@ -84,6 +85,7 @@ type
 implementation
 
 uses
+  UITypes,
   Math,
   PascalType.FontFace.SFNT,
   PascalType.Tables.TrueType.hhea;
@@ -128,6 +130,16 @@ end;
 
 procedure TPascalTypePainterGDI.EndUpdate;
 begin
+end;
+
+procedure TPascalTypePainterGDI.SetColor(Color: Cardinal);
+begin
+  Canvas.Brush.Color := Color and $00FFFFFF;
+end;
+
+function TPascalTypePainterGDI.GetColor: Cardinal;
+begin
+  Result := Cardinal(Canvas.Brush.Color) or $FF000000;
 end;
 
 procedure TPascalTypePainterGDI.Circle(const p: TFloatPoint; Radius: TRenderFloat);
@@ -184,11 +196,6 @@ begin
   r2.Right := Ceil(r.Right);
   r2.Bottom := Ceil(r.Bottom);
   Canvas.Rectangle(r2);
-end;
-
-procedure TPascalTypePainterGDI.SetColor(Color: Cardinal);
-begin
-  Canvas.Brush.Color := Color and $00FFFFFF;
 end;
 
 end.

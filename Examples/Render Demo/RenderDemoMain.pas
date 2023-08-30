@@ -160,9 +160,6 @@ const
     (Name: 'Composite glyphs'; FontName: 'Segoe UI'; Text: '½äâåéò')
   );
 
-const
-  GlyphPalette: TArray<TColor> = [$233BC2, $529cc7, $52DAEA, $3CC003, $BE9A57, $D76E97];
-
 var
   OneOverDPIScale: Double;
 
@@ -268,9 +265,11 @@ begin
 
   if (ActionPaintPoints.Checked) then
   begin
-    FRenderer.RenderMode := rmPoints;
+    FRenderer.Options := FRenderer.Options + [roPoints];
+
     FRenderer.RenderText(FText, Painter);
-    FRenderer.RenderMode := rmNormal;
+
+    FRenderer.Options := FRenderer.Options - [roPoints];
   end;
 end;
 
@@ -283,8 +282,6 @@ var
   Shaper: TPascalTypeShaper;
   UTF32: TPascalTypeCodePoints;
   ShapedText: TPascalTypeGlyphString;
-  i: integer;
-  CursorPosX, CursorPosY: TRenderFloat;
 begin
   Canvas := TPaintBox(Sender).Canvas;
 
@@ -321,28 +318,15 @@ begin
         ShapedText := Shaper.Shape(UTF32);
         try
 
-          if (ActionColor.Checked) then
-          begin
-            CursorPosX := 0;
-            CursorPosY := 0;
-
-            for i := 0 to ShapedText.Count-1 do
-            begin
-              Painter.SetColor(Cardinal(WinColor(GlyphPalette[i mod Length(GlyphPalette)])) or $FF000000);
-
-              FRenderer.RenderShapedGlyph(ShapedText[i], Painter, CursorPosX, CursorPosY);
-            end;
-          end else
-          begin
-            Painter.SetColor($FF000000);
-            FRenderer.RenderShapedText(ShapedText, Painter);
-          end;
+          FRenderer.RenderShapedText(ShapedText, Painter);
 
           if (ActionPaintPoints.Checked) then
           begin
-            FRenderer.RenderMode := rmPoints;
+            FRenderer.Options := FRenderer.Options + [roPoints];
+
             FRenderer.RenderShapedText(ShapedText, Painter);
-            FRenderer.RenderMode := rmNormal;
+
+            FRenderer.Options := FRenderer.Options - [roPoints];
           end;
         finally
           ShapedText.Free;
@@ -506,6 +490,10 @@ end;
 procedure TFmRenderDemo.ActionColorExecute(Sender: TObject);
 begin
   Invalidate;
+  if (TAction(Sender).Checked) then
+    FRenderer.Options := FRenderer.Options + [roColorize]
+  else
+    FRenderer.Options := FRenderer.Options - [roColorize];
 end;
 
 procedure TFmRenderDemo.ActionPaintPointsExecute(Sender: TObject);
