@@ -97,16 +97,20 @@ constructor TPascalTypePainterGDI.Create(ACanvas: TCanvas);
 begin
   inherited Create;
   FCanvas := ACanvas;
+  FCanvas.Brush.Color := clBlack;
+  FCanvas.Brush.Style := bsSolid;
+  Windows.SetPolyFillMode(FCanvas.Handle, WINDING);
 end;
 
 procedure TPascalTypePainterGDI.BeginGlyph;
 begin
-  BeginUpdate;
+  Windows.BeginPath(FCanvas.Handle);
 end;
 
 procedure TPascalTypePainterGDI.EndGlyph;
 begin
-  EndUpdate;
+  Windows.EndPath(FCanvas.Handle);
+  Windows.FillPath(FCanvas.Handle);
 end;
 
 procedure TPascalTypePainterGDI.BeginPath;
@@ -115,6 +119,7 @@ end;
 
 procedure TPascalTypePainterGDI.EndPath;
 begin
+  Windows.CloseFigure(FCanvas.Handle);
 end;
 
 procedure TPascalTypePainterGDI.BeginUpdate;

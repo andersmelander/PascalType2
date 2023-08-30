@@ -170,8 +170,8 @@ class constructor TPascalTypeRenderer.Create;
 begin
   FDebugCircleRadius := 2.0;
   FDebugRectSize := 2.0;
-  FDebugCircleColor := Cardinal(clRed) or $7F000000;
-  FDebugRectColor := Cardinal(clBlue) or $7F000000;
+  FDebugCircleColor := Cardinal(clRed) or $A0000000;
+  FDebugRectColor := Cardinal(clBlue) or $A0000000;
 end;
 
 constructor TPascalTypeRenderer.Create;

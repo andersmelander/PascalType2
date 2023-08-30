@@ -518,7 +518,7 @@ end;
 
 procedure TCustomPascalTypePainterCanvas32.QuadraticBezierTo(const ControlPoint, p: TFloatPoint);
 begin
-  Canvas.CurveTo(ControlPoint.X, ControlPoint.Y, p.X, p.Y);
+  Canvas.ConicTo(ControlPoint.X, ControlPoint.Y, p.X, p.Y);
 end;
 
 procedure TCustomPascalTypePainterCanvas32.Rectangle(const r: TFloatRect);
@@ -529,7 +529,7 @@ end;
 procedure TCustomPascalTypePainterCanvas32.SetColor(Color: Cardinal);
 begin
   if (FBrush <> nil) then
-    FBrush.FillColor := Color32(TColor(Color and $00FFFFFF)) or (Color and $FF000000);
+    FBrush.FillColor := (Color32(TColor(Color and $00FFFFFF)) and $00FFFFFF) or (Color and $FF000000);
 end;
 
 //------------------------------------------------------------------------------
