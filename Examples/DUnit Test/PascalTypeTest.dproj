@@ -58,7 +58,7 @@
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=;CFBundleName=</VerInfo_Keys>
         <DCC_DcuOutput>.\lib</DCC_DcuOutput>
         <DCC_ExeOutput>.\bin</DCC_ExeOutput>
-        <DCC_UnitSearchPath>..\..\Source;..\..\..\Graphics32\Source;..\..\Source\Externals\pucu\src;..\..\..\Image32\Source;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\..\Source;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_DebugDCUs>true</DCC_DebugDCUs>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
@@ -107,64 +107,6 @@
         <RcCompile Include="..\..\Resource\Default.rc">
             <Form>Default.res</Form>
         </RcCompile>
-        <DCCReference Include="..\..\Source\PT_ByteCodeInterpreter.pas"/>
-        <DCCReference Include="..\..\Source\PT_Classes.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.CharacterMaps.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Rasterizer.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Rasterizer.GDI.pas"/>
-        <DCCReference Include="..\..\Source\PT_Math.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.Panose.Classifications.pas"/>
-        <DCCReference Include="..\..\Source\PT_ResourceStrings.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.FontFace.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.FontFace.SFNT.pas"/>
-        <DCCReference Include="..\..\Source\PT_TableDirectory.pas"/>
-        <DCCReference Include="..\..\Source\PT_Tables.pas"/>
-        <DCCReference Include="..\..\Source\PT_TablesApple.pas"/>
-        <DCCReference Include="..\..\Source\PT_TablesBitmap.pas"/>
-        <DCCReference Include="..\..\Source\PT_TablesFontForge.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.GSUB.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Features.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Languages.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Scripts.pas"/>
-        <DCCReference Include="..\..\Source\PT_TablesOptional.pas"/>
-        <DCCReference Include="..\..\Source\PT_TablesPostscript.pas"/>
-        <DCCReference Include="..\..\Source\PT_TablesPostscriptOperators.pas"/>
-        <DCCReference Include="..\..\Source\PT_TablesPostscriptOperands.pas"/>
-        <DCCReference Include="..\..\Source\PT_TablesShared.pas"/>
-        <DCCReference Include="..\..\Source\PT_TablesTrueType.pas"/>
-        <DCCReference Include="..\..\Source\PT_Types.pas"/>
-        <DCCReference Include="..\Render Demo\RenderDemoFontNameScanner.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.GPOS.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Common.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Coverage.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Substitution.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Lookup.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.BASE.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.GDEF.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.JSTF.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.LanguageSystem.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Script.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Feature.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Substitution.Single.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Substitution.Multiple.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Positioning.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Positioning.Single.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Positioning.Pair.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.ClassDefinition.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.glyf.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.hmtx.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.vmtx.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.hhea.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.vhea.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.os2.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.Panose.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Shaper.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Rasterizer.Graphics32.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.GlyphString.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Substitution.Ligature.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Unicode.pas"/>
-        <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.cmap.pas"/>
         <DCCReference Include="TestUnicode.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>

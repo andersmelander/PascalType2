@@ -1,0 +1,6 @@
+[submodule "Source/Externals/graphics32"]
+	path = Source/Externals/graphics32
+	url = https://github.com/graphics32/graphics32.git
+[submodule "Source/Externals/Image32"]
+	path = Source/Externals/Image32
+	url = https://github.com/AngusJohnson/Image32.git
