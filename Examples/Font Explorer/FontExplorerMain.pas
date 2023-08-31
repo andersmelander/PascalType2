@@ -10,14 +10,49 @@ interface
 uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
   Menus, ComCtrls, StdCtrls, ExtCtrls, ToolWin, ActnList, StdActns, AppEvnts,
-  ImgList, PT_Types, PT_Classes, PT_Tables, PT_CharacterMap, PT_TablesTrueType,
-  PT_TablesOptional, PT_TablesBitmap, PT_TablesApple, PT_TablesShared,
+  ImgList, System.Actions, System.ImageList,
+
+  PascalType.Types,
+  PascalType.Classes,
+  PascalType.Tables,
+  PascalType.Tables.TrueType.CharacterMaps,
+  PascalType.Tables.TrueType,
+  PascalType.Tables.Optional,
+  PascalType.Tables.Bitmap,
+  PascalType.Tables.Apple,
+  PascalType.Tables.Shared,
 {$IFDEF ShowOpenType}
-  PT_TablesOpenType,
+  PascalType.Tables.OpenType,
+  PascalType.Tables.OpenType.Common,
+  PascalType.Tables.OpenType.GDEF,
+  PascalType.Tables.OpenType.JSTF,
+  PascalType.Tables.OpenType.Feature,
+  PascalType.Tables.OpenType.Lookup,
+  PascalType.Tables.OpenType.Script,
+  PascalType.Tables.OpenType.LanguageSystem,
+  PascalType.Tables.OpenType.Coverage,
 {$ENDIF}
-  PT_TablesPostscript, PT_TablesFontForge, PT_ByteCodeInterpreter, PT_Storage,
-  PT_StorageSFNT, PT_UnicodeNames, PT_FontEngine, PT_PanoseClassifications,
-  PT_Windows, FE_FontHeader, System.Actions;
+  PascalType.ByteCodeInterpreter,
+  PascalType.FontFace,
+  PascalType.FontFace.SFNT,
+  PascalType.Unicode.Names,
+  PascalType.Platform.Windows,
+  PascalType.Tables.Postscript,
+  PascalType.Tables.FontForge,
+  PascalType.Tables.TrueType.Panose,
+  PascalType.Tables.TrueType.Panose.Classifications,
+  PascalType.Tables.TrueType.cmap,
+  PascalType.Tables.TrueType.kern,
+  PascalType.Tables.TrueType.glyf,
+  PascalType.Tables.TrueType.head,
+  PascalType.Tables.TrueType.hhea,
+  PascalType.Tables.TrueType.hmtx,
+  PascalType.Tables.TrueType.maxp,
+  PascalType.Tables.TrueType.name,
+  PascalType.Tables.TrueType.os2,
+  PascalType.Tables.TrueType.post,
+  PascalType.Tables.TrueType.vhea,
+  FE_FontHeader;
 
 type
   TFormTTF = class(TForm)
@@ -117,9 +152,8 @@ type
     procedure TreeViewChange(Sender: TObject; Node: TTreeNode);
     procedure TreeViewMouseMove(Sender: TObject; Shift: TShiftState;
       X, Y: Integer);
-    procedure MenuItemAboutClick(Sender: TObject);
   private
-    FFontEngine  : TPascalTypeFontEngine;
+    FFont  : TPascalTypeFontFace;
     FCurrentGlyph: TBitmap;
     FFontSize    : Integer;
     Fppem        : Integer;
@@ -234,7 +268,7 @@ type
       : TCustomOpenTypeClassDefinitionTable);
     procedure DisplayOpenTypeMarkGlyphSetTable(MarkGlyphSetTable
       : TOpenTypeMarkGlyphSetTable);
-    procedure DisplayOpenTypeLookupTable(LookupTable: TOpenTypeLookupTable);
+    procedure DisplayOpenTypeLookupTable(LookupTable: TCustomOpenTypeLookupTable);
 {$ENDIF}
     procedure DisplayGlyphDataPoints(SimpleGlyphData
       : TTrueTypeFontSimpleGlyphData);
@@ -264,7 +298,8 @@ implementation
 {$ENDIF}
 
 uses
-  Inifiles, Math, Types, AboutDialog;
+  IOUtils,
+  Inifiles, Math, Types;
 
 resourcestring
   RCStrFileDoesNotExists = 'File does not exists';
@@ -278,7 +313,7 @@ begin
   GetWindowsDirectory(PWindowsDir, MAX_PATH);
   ActionFileOpen.Dialog.InitialDir := GetFontDirectory;
 
-  FFontEngine := TPascalTypeFontEngine.Create;
+  FFont := TPascalTypeFontFace.Create;
 
   FCurrentGlyph := TBitmap.Create;
   FCurrentGlyph.PixelFormat := pf8bit;
@@ -289,7 +324,7 @@ end;
 procedure TFormTTF.FormDestroy(Sender: TObject);
 begin
   // free pascal type Storage
-  FreeAndNil(FFontEngine);
+  FreeAndNil(FFont);
 
   // free current glyph display bitmap
   FreeAndNil(FCurrentGlyph);
@@ -306,7 +341,10 @@ end;
 procedure TFormTTF.FontSizeChanged;
 begin
   Fppem := FFontSize * PixelsPerInch div 72;
-  FScaler := Fppem / FFontEngine.Storage.HeaderTable.UnitsPerEm;
+  if (FFont.HeaderTable <> nil) then
+    FScaler := Fppem / FFont.HeaderTable.UnitsPerEm
+  else
+    FScaler := 1;
 end;
 
 procedure TFormTTF.InitializeDefaultListView;
@@ -389,16 +427,6 @@ end;
 procedure TFormTTF.MenuItemFileArialRegularClick(Sender: TObject);
 begin
   LoadFromFile(GetFontDirectory + '\Arial.ttf');
-end;
-
-procedure TFormTTF.MenuItemAboutClick(Sender: TObject);
-begin
-  with TFmAbout.Create(Self) do
-  try
-    ShowModal;
-  finally
-    Free;
-  end;
 end;
 
 procedure TFormTTF.MenuItemFileArialBoldClick(Sender: TObject);
@@ -784,18 +812,15 @@ end;
 procedure TFormTTF.DisplayCustomOpenTypeFeatureTable(FeatureTable
   : TCustomOpenTypeFeatureTable);
 begin
-  with FeatureTable do
-  begin
-    InitializeDefaultListView;
+  InitializeDefaultListView;
 
-    // add Feature Parameters
-    ListViewData(['Feature Parameters', IntToStr(FeatureParams)]);
+  // add Feature Parameters
+//  ListViewData(['Feature Parameters', IntToStr(FeatureTable.FeatureParams)]);
 
-    // add Number of Lookups
-    ListViewData(['Number of Lookups', IntToStr(LookupListCount)]);
+  // add Number of Lookups
+  ListViewData(['Number of Lookups', IntToStr(FeatureTable.LookupListCount)]);
 
-    ListView.BringToFront;
-  end;
+  ListView.BringToFront;
 end;
 
 procedure TFormTTF.DisplayCustomOpenTypeLanguageSystemTable(LanguageSystemTable
@@ -1854,40 +1879,34 @@ begin
   end;
 end;
 
-procedure TFormTTF.DisplayOpenTypeLookupTable(LookupTable: TOpenTypeLookupTable);
+procedure TFormTTF.DisplayOpenTypeLookupTable(LookupTable: TCustomOpenTypeLookupTable);
 begin
-  with LookupTable do
-  begin
-    InitializeDefaultListView;
+  InitializeDefaultListView;
 
-    // add lookup type
-    ListViewData(['Lookup Type', IntToStr(LookupType)]);
+  // add lookup type
+  ListViewData(['Lookup Type', IntToStr(LookupTable.LookupType)]);
 
-    // add lookup flag
-    ListViewData(['Lookup Flag', IntToStr(LookupFlag)]);
+  // add lookup flag
+  ListViewData(['Lookup Flag', LookupTable.LookupFlags.ToHexString]);
 
-    // add mark filtering set
-    ListViewData(['Mark Filtering Set', IntToStr(MarkFilteringSet)]);
+  // add mark filtering set
+  ListViewData(['Mark Filtering Set', IntToStr(LookupTable.MarkFilteringSet)]);
 
-    // add number of lookup sub tables
-    ListViewData(['Number of Lookups', IntToStr(SubtableCount)]);
+  // add number of lookup sub tables
+  ListViewData(['Number of Lookups', IntToStr(LookupTable.SubtableCount)]);
 
-    ListView.BringToFront;
-  end;
+  ListView.BringToFront;
 end;
 
 procedure TFormTTF.DisplayOpenTypeScriptListTable(ScriptListTable
   : TOpenTypeScriptListTable);
 begin
-  with ScriptListTable do
-  begin
-    InitializeDefaultListView;
+  InitializeDefaultListView;
 
-    // add number of language systems
-    ListViewData(['Number of Language Systems', IntToStr(LanguageSystemCount)]);
+  // add number of language systems
+  ListViewData(['Number of Language Systems', IntToStr(ScriptListTable.ScriptCount)]);
 
-    ListView.BringToFront;
-  end;
+  ListView.BringToFront;
 end;
 {$ENDIF}
 
@@ -3114,6 +3133,7 @@ var
   ContourIndex: Integer;
   PointIndex  : Integer;
   PointCnt    : Integer;
+  Item: TListItem;
 begin
   with SimpleGlyphData do
   begin
@@ -3126,17 +3146,17 @@ begin
     PointCnt := 0;
     for ContourIndex := 0 to ContourCount - 1 do
       for PointIndex := 0 to Contour[ContourIndex].PointCount - 1 do
-        with Contour[ContourIndex].Point[PointIndex], ListView.Items.Add do
-        begin
-          Caption := IntToStr(PointCnt + 1) + ' (' + IntToStr(ContourIndex + 1)
-            + '.' + IntToStr(PointIndex + 1) + ')';
-          SubItems.Add(IntToStr(XPos) + ', ' + IntToStr(YPos));
-          if (Flags and 1) <> 0 then
-            SubItems.Add('On')
-          else
-            SubItems.Add('Off');
-          Inc(PointCnt);
-        end;
+      begin
+        Item := ListView.Items.Add;
+        Item.Caption := IntToStr(PointCnt + 1) + ' (' + IntToStr(ContourIndex + 1)
+          + '.' + IntToStr(PointIndex + 1) + ')';
+        Item.SubItems.Add(Format('%.2n, %2n', [Contour[ContourIndex].Point[PointIndex].XPos, Contour[ContourIndex].Point[PointIndex].YPos]));
+        if (Contour[ContourIndex].Point[PointIndex].Flags and 1) <> 0 then
+          Item.SubItems.Add('On')
+        else
+          Item.SubItems.Add('Off');
+        Inc(PointCnt);
+      end;
 
     // end update (unlock)
     ListView.Items.EndUpdate;
@@ -3148,31 +3168,29 @@ end;
 procedure TFormTTF.DisplayGlyphDataContour(Contour: TPascalTypeTrueTypeContour);
 var
   PointIndex: Integer;
+  Item: TListItem;
 begin
-  with Contour do
+  // add columns
+  ListViewColumns(['Point #', 'Position', 'Type']);
+
+  // begin update
+  ListView.Items.BeginUpdate;
+
+  for PointIndex := 0 to Contour.PointCount - 1 do
   begin
-    // add columns
-    ListViewColumns(['Point #', 'Position', 'Type']);
-
-    // begin update
-    ListView.Items.BeginUpdate;
-
-    for PointIndex := 0 to PointCount - 1 do
-      with Point[PointIndex], ListView.Items.Add do
-      begin
-        Caption := IntToStr(PointIndex + 1);
-        SubItems.Add(IntToStr(XPos) + ', ' + IntToStr(YPos));
-        if (Flags and 1) <> 0 then
-          SubItems.Add('On')
-        else
-          SubItems.Add('Off');
-      end;
-
-    // end update
-    ListView.Items.EndUpdate;
-
-    ListView.BringToFront;
+    Item := ListView.Items.Add;
+    Item.Caption := IntToStr(PointIndex + 1);
+    Item.SubItems.Add(Format('%.2n, %2n', [Contour.Point[PointIndex].XPos, Contour.Point[PointIndex].YPos]));
+    if (Contour.Point[PointIndex].Flags and 1) <> 0 then
+      Item.SubItems.Add('On')
+    else
+      Item.SubItems.Add('Off');
   end;
+
+  // end update
+  ListView.Items.EndUpdate;
+
+  ListView.BringToFront;
 end;
 
 procedure TFormTTF.DisplayGlyphDataSimpleOutline(SimpleGlyphData
@@ -3207,25 +3225,20 @@ begin
     LineTo(FCurrentGlyph.Width, Center.Y);
 
     if GlyphIndex >= 0 then
-      with FFontEngine.Storage.HorizontalMetrics do
-      begin
-        // use dotted style
-        Pen.Style := psDot;
+    begin
+      // use dotted style
+      Pen.Style := psDot;
 
-        // draw left side bearing
-        Pen.Color := clBlue;
-        MoveTo(Center.X + Round(HorizontalMetric[GlyphIndex].Bearing *
-          FScaler), 0);
-        LineTo(Center.X + Round(HorizontalMetric[GlyphIndex].Bearing * FScaler),
-          FCurrentGlyph.Height);
+      // draw left side bearing
+      Pen.Color := clBlue;
+      MoveTo(Center.X + Round(FFont.HorizontalMetrics[GlyphIndex].Bearing * FScaler), 0);
+      LineTo(Center.X + Round(FFont.HorizontalMetrics[GlyphIndex].Bearing * FScaler), FCurrentGlyph.Height);
 
-        // draw advance width
-        Pen.Color := clLime;
-        MoveTo(Center.X + Round(HorizontalMetric[GlyphIndex].AdvanceWidth *
-          FScaler), 0);
-        LineTo(Center.X + Round(HorizontalMetric[GlyphIndex].AdvanceWidth *
-          FScaler), FCurrentGlyph.Height);
-      end;
+      // draw advance width
+      Pen.Color := clLime;
+      MoveTo(Center.X + Round(FFont.HorizontalMetrics[GlyphIndex].AdvanceWidth * FScaler), 0);
+      LineTo(Center.X + Round(FFont.HorizontalMetrics[GlyphIndex].AdvanceWidth * FScaler), FCurrentGlyph.Height);
+    end;
 
     // set pen to solid black
     Pen.Color := clBlack;
@@ -3346,7 +3359,7 @@ begin
       with TPascalTypeCompositeGlyph(Glyph[CompositeIndex]) do
       begin
         TextOut(Center.X, Center.Y + 8 * CompositeIndex, IntToStr(GlyphIndex));
-        // FFontEngine.Storage.
+        // FFont.Storage.
       end;
 
     PaintBox.Invalidate;
@@ -3602,43 +3615,49 @@ end;
 
 procedure TFormTTF.MenuItemFileOpenFromInstalledClick(Sender: TObject);
 var
-  SR: TSearchRec;
+  Folder: string;
+  Mask: string;
+  Filename: string;
+  FontFaceScan: TPascalTypeFontFaceScan;
 begin
-  if FontDialog.Execute then
-  begin
-    SetCurrentDir(GetFontDirectory);
+  if not FontDialog.Execute then
+    exit;
 
-    with TPascalTypeStorageScan.Create do
+  Folder := GetFontDirectory;
+  if (not TDirectory.Exists(Folder)) then
+    exit;
+
+  Mask := '*.ttf';
+
+  for Filename in TDirectory.GetFiles(Folder, Mask) do
+  begin
+
+    FontFaceScan := TPascalTypeFontFaceScan.Create;
+    try
+
       try
-        // scan installed fonts
-        if FindFirst('*.ttf', faAnyFile, SR) = 0 then
-          try
-            repeat
-              try
-                LoadFromFile(SR.Name);
-                if (FontName = FontDialog.Font.Name) and
-                  ((Graphics.fsItalic in FontDialog.Font.Style)
-                  = (fsItalic in FontStyle)) and
-                  ((Graphics.fsBold in FontDialog.Font.Style)
-                  = (fsBold in FontStyle)) and
-                  ((Graphics.fsUnderline in FontDialog.Font.Style)
-                  = (fsUnderline in FontStyle)) then
-                begin
-                  Self.LoadFromFile(SR.Name);
-                  Exit;
-                end;
-              except
-                on e: EPascalTypeError do
-                  Continue;
-              end;
-            until FindNext(SR) <> 0;
-          finally
-            FindClose(SR);
-          end;
-        // search font...
-      finally
-        Free;
+
+        // load font from file
+        FontFaceScan.LoadFromFile(Filename);
+
+        if (FontFaceScan.FontName = FontDialog.Font.Name) and ((Graphics.fsItalic in FontDialog.Font.Style) = (fsItalic in FontFaceScan.FontStyle)) and
+          ((Graphics.fsBold in FontDialog.Font.Style) = (fsBold in FontFaceScan.FontStyle)) and
+          ((Graphics.fsUnderline in FontDialog.Font.Style) = (fsUnderline in FontFaceScan.FontStyle)) then
+        begin
+          Self.LoadFromFile(Filename);
+          Exit;
+        end;
+
+      except
+        on E: EPascalTypeError do
+          continue;
+      else
+        continue;
       end;
+
+    finally
+      FreeAndNil(FontFaceScan);
+    end;
   end;
 end;
 
@@ -3849,8 +3868,8 @@ begin
     else
 
     // Open Type Lookup Table
-    if TObject(Node.Data) is TOpenTypeLookupTable then
-      DisplayOpenTypeLookupTable(TOpenTypeLookupTable(Node.Data))
+    if TObject(Node.Data) is TCustomOpenTypeLookupTable then
+      DisplayOpenTypeLookupTable(TCustomOpenTypeLookupTable(Node.Data))
     else
 
     // Open Type Lookup Table
@@ -4012,7 +4031,7 @@ begin
       QueryPerformanceCounter(Start);
 
       // load font file
-      FFontEngine.Storage.LoadFromStream(MemoryFileStream);
+      FFont.LoadFromStream(MemoryFileStream);
 
       // query stop
       QueryPerformanceCounter(Stop);
@@ -4065,7 +4084,7 @@ begin
   QueryPerformanceCounter(Start);
 
   // load font file
-  FFontEngine.Storage.LoadFromStream(Stream);
+  FFont.LoadFromStream(Stream);
 
   // query stop
   QueryPerformanceCounter(Stop);
@@ -4112,32 +4131,33 @@ var
   str          : string;
   Node, SubNode: TTreeNode;
   SubSubNode   : TTreeNode;
+  CommonTable: TCustomOpenTypeCommonTable;
 begin
-  with FFontEngine.Storage, TreeView do
+  with TreeView do
   begin
     // set width and height of current glyph bitmap
-    FScaler := Fppem / HeaderTable.UnitsPerEm;
-    FCurrentGlyph.Width := Fppem * (1 shl 16) div (HeaderTable.UnitsPerEm);
-    FCurrentGlyph.Height := Fppem * (1 shl 16) div (HeaderTable.UnitsPerEm);
+    FScaler := Fppem / FFont.HeaderTable.UnitsPerEm;
+    FCurrentGlyph.Width := Fppem * (1 shl 16) div (FFont.HeaderTable.UnitsPerEm);
+    FCurrentGlyph.Height := Fppem * (1 shl 16) div (FFont.HeaderTable.UnitsPerEm);
 
     // begin update
     Items.BeginUpdate;
 
     // add font header table
-    Items.AddChildObject(Items[0], 'head', HeaderTable);
+    Items.AddChildObject(Items[0], 'head', FFont.HeaderTable);
 
     // add maximum profile table
-    Items.AddChildObject(Items[0], 'maxp', MaximumProfile);
+    Items.AddChildObject(Items[0], 'maxp', FFont.MaximumProfile);
 
     // add horizontal header
-    Items.AddChildObject(Items[0], 'hhea', HorizontalHeader);
+    Items.AddChildObject(Items[0], 'hhea', FFont.HorizontalHeader);
 
     // add horizontal metrics
-    Items.AddChildObject(Items[0], 'hmtx', HorizontalMetrics);
+    Items.AddChildObject(Items[0], 'hmtx', FFont.HorizontalMetrics);
 
     // add character mapping
-    Node := Items.AddChildObject(Items[0], 'cmap', CharacterMap);
-    with CharacterMap do
+    Node := Items.AddChildObject(Items[0], 'cmap', FFont.CharacterMap);
+    with FFont.CharacterMap do
       for SubtableIndex := 0 to CharacterMapSubtableCount - 1 do
       begin
         case CharacterMapSubTable[SubtableIndex].PlatformID of
@@ -4179,43 +4199,43 @@ begin
       end;
 
     // add name table
-    Node := Items.AddChildObject(Items[0], 'name', NameTable);
-    with NameTable do
+    Node := Items.AddChildObject(Items[0], 'name', FFont.NameTable);
+    with FFont.NameTable do
     begin
       // check for Unicode
       for SubtableIndex := 0 to NameSubTableCount - 1 do
         if NameSubTable[SubtableIndex].PlatformID = piUnicode then
         begin
-          Items.AddChildObject(Node, 'Unicode', NameTable);
+          Items.AddChildObject(Node, 'Unicode', FFont.NameTable);
           Break;
         end;
       // check for Apple
       for SubtableIndex := 0 to NameSubTableCount - 1 do
         if NameSubTable[SubtableIndex].PlatformID = piApple then
         begin
-          Items.AddChildObject(Node, 'Apple', NameTable);
+          Items.AddChildObject(Node, 'Apple', FFont.NameTable);
           Break;
         end;
       // check for Microsoft
       for SubtableIndex := 0 to NameSubTableCount - 1 do
         if NameSubTable[SubtableIndex].PlatformID = piMicrosoft then
         begin
-          Items.AddChildObject(Node, 'Microsoft', NameTable);
+          Items.AddChildObject(Node, 'Microsoft', FFont.NameTable);
           Break;
         end;
     end;
 
     // add postscript table
-    Node := Items.AddChildObject(Items[0], 'post', PostscriptTable);
-    if Assigned(PostscriptTable.PostscriptV2Table) then
+    Node := Items.AddChildObject(Items[0], 'post', FFont.PostscriptTable);
+    if Assigned(FFont.PostscriptTable.PostscriptV2Table) then
       Items.AddChildObjectFirst(Node, 'Glyph Names',
-        PostscriptTable.PostscriptV2Table);
+        FFont.PostscriptTable.PostscriptV2Table);
 
     // add OS/2 table
-    if Assigned(OS2Table) then
-      with TPascalTypeOS2Table(OS2Table) do
+    if Assigned(FFont.OS2Table) then
+      with TPascalTypeOS2Table(FFont.OS2Table) do
       begin
-        Node := Items.AddChildObject(Items[0], string(TableType), OS2Table);
+        Node := Items.AddChildObject(Items[0], string(TableType), FFont.OS2Table);
         Items.AddChildObject(Node, 'Panpose', Panose);
         Items.AddChildObject(Node, 'Unicode Range', UnicodeRange);
         if Assigned(CodePageRange) then
@@ -4223,15 +4243,15 @@ begin
       end;
 
     // add additional tables
-    for OptTableIndex := 0 to OptionalTableCount - 1 do
-      with OptionalTable[OptTableIndex] do
+    for OptTableIndex := 0 to FFont.TableCount - 1 do
+      with FFont.Tables[OptTableIndex] do
       begin
         Node := Items.AddChildObject(Items[0], string(TableType),
-          OptionalTable[OptTableIndex]);
+          FFont.Tables[OptTableIndex]);
 
         // digital signature
-        if OptionalTable[OptTableIndex] is TPascalTypeDigitalSignatureTable then
-          with TPascalTypeDigitalSignatureTable(OptionalTable[OptTableIndex]) do
+        if FFont.Tables[OptTableIndex] is TPascalTypeDigitalSignatureTable then
+          with TPascalTypeDigitalSignatureTable(FFont.Tables[OptTableIndex]) do
             for SubtableIndex := 0 to SignatureCount - 1 do
               Items.AddChildObject(Node,
                 'Signature #' + IntToStr(SubtableIndex + 1),
@@ -4239,8 +4259,8 @@ begin
         else
 
         // kerning table
-        if OptionalTable[OptTableIndex] is TPascalTypeKerningTable then
-          with TPascalTypeKerningTable(OptionalTable[OptTableIndex]) do
+        if FFont.Tables[OptTableIndex] is TPascalTypeKerningTable then
+          with TPascalTypeKerningTable(FFont.Tables[OptTableIndex]) do
             for SubtableIndex := 0 to KerningSubtableCount - 1 do
             begin
               str := 'Subtable #' + IntToStr(SubtableIndex + 1);
@@ -4259,8 +4279,8 @@ begin
         else
 
         // horizontal device metrics
-        if OptionalTable[OptTableIndex] is TPascalTypeHorizontalDeviceMetricsTable then
-          with TPascalTypeHorizontalDeviceMetricsTable(OptionalTable[OptTableIndex]) do
+        if FFont.Tables[OptTableIndex] is TPascalTypeHorizontalDeviceMetricsTable then
+          with TPascalTypeHorizontalDeviceMetricsTable(FFont.Tables[OptTableIndex]) do
           begin
             for SubtableIndex := 0 to DeviceRecordCount - 1 do
               Items.AddChildObject(Node, 'Device Record #' +
@@ -4270,9 +4290,9 @@ begin
 
 {$IFDEF ShowOpenType}
               // open type common table
-              if OptionalTable[OptTableIndex] is TOpenTypeGlyphDefinitionTable then
+              if FFont.Tables[OptTableIndex] is TOpenTypeGlyphDefinitionTable then
                 with TOpenTypeGlyphDefinitionTable
-                  (OptionalTable[OptTableIndex]) do
+                  (FFont.Tables[OptTableIndex]) do
                 begin
                   Items.AddChildObject(Node, 'Class Definition',
                     GlyphClassDefinition);
@@ -4282,118 +4302,103 @@ begin
                 end
               else
                 // embedded bitmap location table
-                if OptionalTable[OptTableIndex] is TPascalTypeEmbeddedBitmapLocationTable
+                if FFont.Tables[OptTableIndex] is TPascalTypeEmbeddedBitmapLocationTable
                 then
                   with TPascalTypeEmbeddedBitmapLocationTable
-                    (OptionalTable[OptTableIndex]) do
+                    (FFont.Tables[OptTableIndex]) do
                     for SubtableIndex := 0 to BitmapSizeTableCount - 1 do
                       Items.AddChildObject(Node,
                         'Table #' + IntToStr(SubtableIndex + 1),
                         BitmapSizeTable[SubtableIndex]);
 
         // bitmap location table
-        if OptionalTable[OptTableIndex] is TPascalTypeBitmapLocationTable then
-          with TPascalTypeBitmapLocationTable(OptionalTable[OptTableIndex]) do
+        if FFont.Tables[OptTableIndex] is TPascalTypeBitmapLocationTable then
+          with TPascalTypeBitmapLocationTable(FFont.Tables[OptTableIndex]) do
             for SubtableIndex := 0 to BitmapSizeTableCount - 1 do
               Items.AddChildObject(Node,
                 'Table #' + IntToStr(SubtableIndex + 1),
                 BitmapSizeTable[SubtableIndex]);
 
         // open type common table
-        if OptionalTable[OptTableIndex] is TCustomOpenTypeCommonTable then
-          with TCustomOpenTypeCommonTable(OptionalTable[OptTableIndex]) do
-          begin
+        if FFont.Tables[OptTableIndex] is TCustomOpenTypeCommonTable then
+        begin
+          CommonTable := TCustomOpenTypeCommonTable(FFont.Tables[OptTableIndex]);
 
-            // script subtable
-            SubNode := Items.AddChildObject(Node, 'Scripts', ScriptListTable);
-            with ScriptListTable do
-              for SubtableIndex := 0 to LanguageSystemCount - 1 do
+          // script subtable
+          SubNode := Items.AddChildObject(Node, 'Scripts', CommonTable.ScriptListTable);
+          with CommonTable.ScriptListTable do
+            for SubtableIndex := 0 to ScriptCount - 1 do
+            begin
+              str := Scripts[SubtableIndex].DisplayName;
+              SubSubNode := Items.AddChildObject(SubNode, str, Scripts[SubtableIndex]);
+
+              // add default language system
+              if Assigned(Scripts[SubtableIndex].DefaultLangSys) then
+                Items.AddChildObject(SubSubNode, '(default)', Scripts[SubtableIndex].DefaultLangSys);
+
+              for SubSubIndex := 0 to Scripts[SubtableIndex].LanguageSystemTableCount - 1 do
               begin
-                str := LanguageSystem[SubtableIndex].DisplayName;
-                SubSubNode := Items.AddChildObject(SubNode, str,
-                  LanguageSystem[SubtableIndex]);
-
-                // add default language system
-                if Assigned(LanguageSystem[SubtableIndex].DefaultLangSys) then
-                  Items.AddChildObject(SubSubNode, '(default)',
-                    LanguageSystem[SubtableIndex].DefaultLangSys);
-
-                for SubSubIndex := 0 to LanguageSystem[SubtableIndex]
-                  .LanguageSystemTableCount - 1 do
-                begin
-                  str := LanguageSystem[SubtableIndex].LanguageSystemTable
-                    [SubSubIndex].DisplayName;
-                  Items.AddChildObject(SubSubNode, str,
-                    LanguageSystem[SubtableIndex].LanguageSystemTable
-                    [SubSubIndex]);
-                end;
-
+                str := Scripts[SubtableIndex].LanguageSystemTable[SubSubIndex].DisplayName;
+                Items.AddChildObject(SubSubNode, str, Scripts[SubtableIndex].LanguageSystemTable[SubSubIndex]);
               end;
 
-            // features subtable
-            SubNode := Items.AddChildObject(Node, 'Features', FeatureListTable);
-            with FeatureListTable do
-              for SubtableIndex := 0 to FeatureCount - 1 do
+            end;
+
+          // features subtable
+          SubNode := Items.AddChildObject(Node, 'Features', CommonTable.FeatureListTable);
+          with CommonTable.FeatureListTable do
+            for SubtableIndex := 0 to FeatureCount - 1 do
+            begin
+              str := 'Feature #' + IntToStr(SubtableIndex + 1);
+
+              if Assigned(Feature[SubtableIndex]) then
+                str := str + ' (' + Feature[SubtableIndex].DisplayName + ')';
+
+              SubSubNode := Items.AddChildObject(SubNode, str,
+                Feature[SubtableIndex]);
+
+              for SubSubIndex := 0 to Feature[SubtableIndex].LookupListCount - 1 do
               begin
-                str := 'Feature #' + IntToStr(SubtableIndex + 1);
-
-                if Assigned(Feature[SubtableIndex]) then
-                  str := str + ' (' + Feature[SubtableIndex].DisplayName + ')';
-
-                SubSubNode := Items.AddChildObject(SubNode, str,
-                  Feature[SubtableIndex]);
-
-                for SubSubIndex := 0 to Feature[SubtableIndex]
-                  .LookupListCount - 1 do
-                begin
-                  str := 'Loopup #' +
-                    IntToStr(Feature[SubtableIndex].LookupList
-                    [SubSubIndex] + 1);
-                  Items.AddChildObject(SubSubNode, str,
-                    LookUpListTable.LookupTable
-                    [Feature[SubtableIndex].LookupList[SubSubIndex]]);
-                end;
+                str := 'Loopup #' +
+                  IntToStr(Feature[SubtableIndex].LookupList[SubSubIndex] + 1);
+                Items.AddChildObject(SubSubNode, str, CommonTable.LookUpListTable.LookupTables[Feature[SubtableIndex].LookupList[SubSubIndex]]);
               end;
+            end;
 
-            // lookups subtable
-            SubNode := Items.AddChildObject(Node, 'Lookups', LookUpListTable);
-            with LookUpListTable do
-              for SubtableIndex := 0 to LookupTableCount - 1 do
+          // lookups subtable
+          SubNode := Items.AddChildObject(Node, 'Lookups', CommonTable.LookUpListTable);
+          with CommonTable.LookUpListTable do
+            for SubtableIndex := 0 to LookupTableCount - 1 do
+            begin
+              str := 'Loopup #' + IntToStr(SubtableIndex + 1);
+              str := str + ' (Type ' +
+                IntToStr(CommonTable.LookUpListTable[SubtableIndex].LookupType) + ')';
+              SubSubNode := Items.AddChildObject(SubNode, str, CommonTable.LookUpListTable[SubtableIndex]);
+
+              for SubSubIndex := 0 to CommonTable.LookUpListTable[SubtableIndex].SubtableCount - 1 do
               begin
-                str := 'Loopup #' + IntToStr(SubtableIndex + 1);
-                str := str + ' (Type ' +
-                  IntToStr(LookupTable[SubtableIndex].LookupType) + ')';
-                SubSubNode := Items.AddChildObject(SubNode, str,
-                  LookupTable[SubtableIndex]);
-
-                for SubSubIndex := 0 to LookupTable[SubtableIndex]
-                  .SubtableCount - 1 do
-                begin
-                  str := 'Table #' + IntToStr(SubSubIndex + 1);
-                  if LookupTable[SubtableIndex].Subtable[SubSubIndex] is TCustomOpenTypeCoverageTable
-                  then
-                    case TCustomOpenTypeCoverageTable
-                      (LookupTable[SubtableIndex].Subtable[SubSubIndex])
-                      .Format of
-                      cfList:
-                        str := str + ' (List)';
-                      cfRange:
-                        str := str + ' (Range)';
-                    end;
-
-                  Items.AddChildObject(SubSubNode, str,
-                    LookupTable[SubtableIndex].Subtable[SubSubIndex]);
-                end;
+                str := 'Table #' + IntToStr(SubSubIndex + 1);
+(*
+                if CommonTable.LookUpListTable[SubtableIndex].Subtables[SubSubIndex] is TCustomOpenTypeCoverageTable then
+                  case TCustomOpenTypeCoverageTable(CommonTable.LookUpListTable[SubtableIndex].Subtables[SubSubIndex]).Format of
+                    cfList:
+                      str := str + ' (List)';
+                    cfRange:
+                      str := str + ' (Range)';
+                  end;
+*)
+                Items.AddChildObject(SubSubNode, str, CommonTable.LookUpListTable[SubtableIndex].Subtables[SubSubIndex]);
               end;
-          end
+            end;
+        end
         else
 {$ENDIF}
           // glyph data table
-          if OptionalTable[OptTableIndex] is TTrueTypeFontGlyphDataTable then
-            with TTrueTypeFontGlyphDataTable(OptionalTable[OptTableIndex]) do
+          if FFont.Tables[OptTableIndex] is TTrueTypeFontGlyphDataTable then
+            with TTrueTypeFontGlyphDataTable(FFont.Tables[OptTableIndex]) do
               for SubtableIndex := 0 to GlyphDataCount - 1 do
               begin
-                with PostscriptTable.PostscriptV2Table do
+                with FFont.PostscriptTable.PostscriptV2Table do
                   SubNode := Items.AddChildObject(Node,
                     'Glyph #' + IntToStr(SubtableIndex + 1) + ' (' +
                     GlyphIndexToString(SubtableIndex) + ')',

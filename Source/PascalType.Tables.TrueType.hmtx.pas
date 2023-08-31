@@ -75,7 +75,7 @@ type
     procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    property HorizontalMetric[Index: Integer]: THorizontalMetric read GetHorizontalMetric;
+    property HorizontalMetric[Index: Integer]: THorizontalMetric read GetHorizontalMetric; default;
     property HorizontalMetricCount: Integer read GetHorizontalMetricCount;
   end;
 

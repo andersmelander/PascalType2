@@ -380,7 +380,6 @@ object FormTTF: TFormTTF
       Caption = '&Help'
       object MenuItemAbout: TMenuItem
         Caption = '&About'
-        OnClick = MenuItemAboutClick
       end
     end
   end

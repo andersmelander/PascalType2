@@ -77,7 +77,7 @@ type
 
     property DefaultLangSys: TCustomOpenTypeLanguageSystemTable read FDefaultLangSys write SetDefaultLangSys;
     property LanguageSystemTableCount: Integer read GetLanguageSystemTableCount;
-    property LanguageSystemTable[Index: Integer]: TCustomOpenTypeLanguageSystemTable read GetLanguageSystemTable;
+    property LanguageSystemTable[Index: Integer]: TCustomOpenTypeLanguageSystemTable read GetLanguageSystemTable; default;
   end;
 
   TOpenTypeScriptTableClass = class of TCustomOpenTypeScriptTable;
@@ -122,7 +122,7 @@ type
     function FindScript(const ATableType: TTableType; FallbackToDefault: boolean = False): TCustomOpenTypeScriptTable;
 
     property ScriptCount: Integer read GetScriptCount;
-    property Scripts[Index: Integer]: TCustomOpenTypeScriptTable read GetScript;
+    property Scripts[Index: Integer]: TCustomOpenTypeScriptTable read GetScript; default;
   end;
 
 
