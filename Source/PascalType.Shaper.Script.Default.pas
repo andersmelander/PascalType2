@@ -186,8 +186,12 @@ var
   i: integer;
   First: integer;
   Last: integer;
+  AddedFrac, AddedNumr, AddedDnom: boolean;
 begin
   // Enable contextual fractions
+  AddedFrac := False;
+  AddedNumr := False;
+  AddedDnom := False;
   i := 0;
   while (i < AGlyphs.Count) do
   begin
@@ -199,6 +203,7 @@ begin
       // Apply numerator
       while (First > 0) and (PascalTypeUnicode.IsDigit(AGlyphs[First-1].CodePoints[0])) do
       begin
+        AddedNumr := True;
         AGlyphs[First-1].Features.Add('numr');
         AGlyphs[First-1].Features.Add('frac');
         Dec(First);
@@ -207,18 +212,27 @@ begin
       // Apply denominator
       while (Last < AGlyphs.Count) and (PascalTypeUnicode.IsDigit(AGlyphs[Last].CodePoints[0])) do
       begin
+        AddedDnom := True;
         AGlyphs[Last].Features.Add('dnom');
         AGlyphs[Last].Features.Add('frac');
         Inc(Last);
       end;
 
       // Apply fraction slash
+      AddedFrac := True;
       AGlyphs[i].Features.Add('frac');
 
       i := Last;
     end else
       Inc(i);
   end;
+
+  if (AddedFrac) then
+    AGlyphs.Features.Add('frac');
+  if (AddedNumr) then
+    AGlyphs.Features.Add('frac');
+  if (AddedDnom) then
+    AGlyphs.Features.Add('frac');
 end;
 
 function TPascalTypeDefaultShaper.NeedUnicodeComposition: boolean;

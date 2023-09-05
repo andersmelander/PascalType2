@@ -125,12 +125,16 @@ type
     procedure Remove(const ATag: TTableName); overload; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
     function Contains(const ATag: TTableName): boolean; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
     function IndexOf(const ATag: TTableName): integer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+    procedure Assign(const AFeatures: TPascalTypeFeatures); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+    procedure Clear; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
     function GetEnumerator: TEnumerator<TTableName>; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   public
     property Count: integer read GetCount;
     property Tags[Index: integer]: TTableName read GetTag; default;
+    property Tags[const ATag: TTableName]: boolean read Contains; default;
   end;
 
+  PPascalTypeFeatures = ^TPascalTypeFeatures;
 
 type
   TPascalTypeDirection = (dirDefault, dirLeftToRight, dirRightToLeft, dirTopDown);
@@ -1812,6 +1816,11 @@ begin
   SetLength(FTags, Size);
 end;
 
+procedure TPascalTypeFeatures.Assign(const AFeatures: TPascalTypeFeatures);
+begin
+  FTags := Copy(AFeatures.FTags);
+end;
+
 function TPascalTypeFeatures.BinarySearch(const ATag: TTableName; var AIndex: integer; ASize: integer): boolean;
 var
   L, H: Integer;
@@ -1860,7 +1869,7 @@ begin
     if (FeatureIndex > High(AFeatures.FTags)) then
       Cmp := -1
     else
-      Cmp := Compare(ATags.FTags[TagIndex], AFeatures.FTags[FeatureIndex]);
+      Cmp := Compare(AFeatures.FTags[FeatureIndex], ATags.FTags[TagIndex]);
 
     if (Cmp = 0) then
     begin
@@ -1912,6 +1921,11 @@ class operator TPascalTypeFeatures.Add(const ATags: TTableNames; const AFeatures
 begin
   Result := AFeatures;
   Result.Add(ATags);
+end;
+
+procedure TPascalTypeFeatures.Clear;
+begin
+  SetLength(FTags, 0);
 end;
 
 class function TPascalTypeFeatures.Compare(const A, B: TTableName): integer;

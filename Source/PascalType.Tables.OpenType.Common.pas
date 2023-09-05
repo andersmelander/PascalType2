@@ -76,6 +76,8 @@ type
     function GetLookupTableClass(ALookupType: Word): TOpenTypeLookupTableClass; virtual; abstract;
     function GetSubTableClass(ASubFormat: Word): TOpenTypeLookupSubTableClass; virtual; abstract;
 
+    function GetAvailableFeatures(const Script, Language: TTableType): TPascalTypeFeatures;
+
     property Version: TFixedPoint read FVersion write SetVersion;
     property ScriptListTable: TOpenTypeScriptListTable read FScriptListTable;
     property FeatureListTable: TOpenTypeFeatureListTable read FFeatureListTable;
@@ -90,7 +92,8 @@ implementation
 
 uses
   SysUtils,
-  PascalType.ResourceStrings;
+  PascalType.ResourceStrings,
+  PascalType.Tables.OpenType.LanguageSystem;
 
 //------------------------------------------------------------------------------
 //
@@ -112,6 +115,35 @@ begin
   FreeAndNil(FFeatureListTable);
   FreeAndNil(FLookupListTable);
   inherited;
+end;
+
+function TCustomOpenTypeCommonTable.GetAvailableFeatures(const Script, Language: TTableType): TPascalTypeFeatures;
+var
+  ScriptTable: TCustomOpenTypeScriptTable;
+  LanguageSystem: TCustomOpenTypeLanguageSystemTable;
+  i: integer;
+  FeatureTable: TCustomOpenTypeFeatureTable;
+begin
+  Result := nil;
+
+  // Get script, fallback to default
+  ScriptTable := ScriptListTable.FindScript(Script, True);
+
+  if (ScriptTable = nil) then
+    Exit;
+
+  // Get language system, fallback to default
+  LanguageSystem := ScriptTable.FindLanguageSystem(Language, True);
+
+  if (LanguageSystem = nil) then
+    Exit;
+
+  // Create list of features that applies to the specified script and language
+  for i := 0 to LanguageSystem.FeatureIndexCount-1 do
+  begin
+    FeatureTable := FeatureListTable.Feature[LanguageSystem.FeatureIndex[i]];
+    Result.Add(FeatureTable.TableType);
+  end;
 end;
 
 function TCustomOpenTypeCommonTable.IsExtensionLookupType(LookupType: Word): boolean;

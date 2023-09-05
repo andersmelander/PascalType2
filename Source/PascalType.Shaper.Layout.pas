@@ -70,7 +70,7 @@ type
   private
   protected
     function GetAvailableFeatures: TPascalTypeFeatures; virtual;
-    procedure Setup(var AGlyphs: TPascalTypeGlyphString); virtual;
+    procedure Setup(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString); virtual;
     procedure Reset; virtual;
     procedure ExecuteSubstitution(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString);
     procedure ExecutePositioning(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString);
@@ -212,7 +212,7 @@ begin
     exit;
 
 
-  Setup(AGlyphs);
+  Setup(APlan, AGlyphs);
 
 
   (*
@@ -234,8 +234,9 @@ begin
   AGlyphs.HideDefaultIgnorables;
 end;
 
-procedure TCustomPascalTypeLayoutEngine.Setup(var AGlyphs: TPascalTypeGlyphString);
+procedure TCustomPascalTypeLayoutEngine.Setup(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString);
 begin
+  AGlyphs.Features.Assign(APlan.GlobalFeatures);
 end;
 
 procedure TCustomPascalTypeLayoutEngine.ExecuteSubstitution(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString);
@@ -282,7 +283,7 @@ begin
 *)
 
   // Apply old-style TrueType/AAT kerning table if kerning is eabled in features but GPOS didn't have a kern lookup.
-  if (not AAppliedFeatures.Contains('kern')) and (Font.GetTableByTableName('kern') <> nil) then
+  if (AGlyphs.Features.Contains('kern')) and (not AAppliedFeatures.Contains('kern')) and (Font.GetTableByTableName('kern') <> nil) then
   begin
     ApplyKerning(AGlyphs);
     AAppliedFeatures.Add('kern');

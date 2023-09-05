@@ -10,6 +10,7 @@ uses
   PascalType.Tables,
   PascalType.FontFace,
   PascalType.FontFace.SFNT,
+  PascalType.Shaper.Plan,
   PascalType.Renderer,
   PascalType.Painter,
   PascalType.Painter.GDI,
@@ -19,7 +20,7 @@ uses
 {$I ..\..\Source\PT_Compiler.inc}
 
 {$define IMAGE32} // Define to include Image32 text output
-{$define RASTERIZER_GDI} // Define to include GDI rasterizer
+{-$define RASTERIZER_GDI} // Define to include GDI rasterizer
 {$define WIN_ANTIALIAS} // Define to have Windows TextOut anti-aliased
 
 type
@@ -29,13 +30,7 @@ type
   end;
 
   TFmRenderDemo = class(TForm)
-    ComboBoxFont: TComboBox;
-    ComboBoxFontSize: TComboBox;
-    EditText: TEdit;
-    LabelFont: TLabel;
-    LabelFontSize: TLabel;
-    LabelText: TLabel;
-    GridPanel1: TGridPanel;
+    GridPanelSamples: TGridPanel;
     PanelGDI: TPanel;
     PaintBox1: TPaintBox;
     PaintBoxWindows: TPaintBox;
@@ -48,14 +43,27 @@ type
     PanelImage32: TPanel;
     PaintBox4: TPaintBox;
     PaintBoxImage32: TPaintBox;
-    ComboBoxTestCase: TComboBox;
-    Label1: TLabel;
     ActionList: TActionList;
     ActionColor: TAction;
     PopupMenu: TPopupMenu;
     MenuItemColor: TMenuItem;
     ActionPaintPoints: TAction;
     Paintcurvecontrolpoints1: TMenuItem;
+    N1: TMenuItem;
+    ActionFeaturesClear: TAction;
+    Clearallfeatures1: TMenuItem;
+    FlowPanelFeatures: TFlowPanel;
+    PanelTop: TPanel;
+    LabelText: TLabel;
+    EditText: TEdit;
+    Label1: TLabel;
+    ComboBoxTestCase: TComboBox;
+    LabelFont: TLabel;
+    ComboBoxFont: TComboBox;
+    LabelFontSize: TLabel;
+    ComboBoxFontSize: TComboBox;
+    PanelMain: TPanel;
+    SplitterFeatures: TSplitter;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -69,7 +77,8 @@ type
     procedure PaintBox1Paint(Sender: TObject);
     procedure ComboBoxTestCaseChange(Sender: TObject);
     procedure ActionColorExecute(Sender: TObject);
-    procedure ActionPaintPointsExecute(Sender: TObject);
+    procedure ActionGenericExecute(Sender: TObject);
+    procedure ActionFeaturesClearExecute(Sender: TObject);
   private
     FFontFace: TPascalTypeFontFace;
     FRenderer: TPascalTypeRenderer;
@@ -83,14 +92,19 @@ type
     FLanguage: TTableType;
     FScript: TTableType;
     FDirection: TPascalTypeDirection;
+    FHasAvailableFeatures: boolean;
+    FFeatures: TPascalTypeShaperFeatures;
+    FPlannedFeatures: TPascalTypeFeatures;
     procedure FontScannedHandler(Sender: TObject; const FontFileName: string; Font: TCustomPascalTypeFontFacePersistent);
     procedure SetText(const Value: string);
     procedure SetFontSize(const Value: Integer);
     procedure SetFontName(const Value: string);
+    procedure ButtonFeatureClick(Sender: TObject);
   protected
     procedure FontNameChanged; virtual;
     procedure FontSizeChanged; virtual;
     procedure TextChanged; virtual;
+    procedure UpdateAvailableFeatures;
   public
     property Text: string read FText write SetText;
     property FontSize: Integer read FFontSize write SetFontSize;
@@ -110,6 +124,7 @@ implementation
 uses
   Math,
   Types,
+  System.UITypes,
 {$ifdef IMAGE32}
   Img32,
   Img32.Text,
@@ -122,7 +137,10 @@ uses
   PascalType.Platform.Windows,
   PascalType.Shaper,
   PascalType.Shaper.Script.Default,
-  PascalType.GlyphString;
+  PascalType.GlyphString,
+  PascalType.Tables.OpenType.Feature,
+  PascalType.Tables.OpenType.Common,
+  RenderDemo.Controls.FeatureButton;
 
 type
   TTestCase = record
@@ -189,18 +207,21 @@ begin
 {$endif IMAGE32}
 {$ifndef RASTERIZER_GDI}
   PanelPascalTypeGDI.Free;
-  GridPanel1.RowCollection.Items[1].Free;
-  GridPanel1.RowCollection.EquallySplitPercentuals;
+  GridPanelSamples.RowCollection.Items[1].Free;
+  GridPanelSamples.RowCollection.EquallySplitPercentuals;
 {$endif RASTERIZER_GDI}
+
+  FFeatures := TPascalTypeShaperFeatures.Create;
 
   FFontFace := TPascalTypeFontFace.Create;
 
   // create rasterizers
   FRenderer := TPascalTypeRenderer.Create;
   FRenderer.FontFace := FFontFace;
+  FRenderer.PixelPerInch := Screen.PixelsPerInch;
 
   // set initial properties
-  FFontSize := StrToIntDef(ComboBoxFontSize.Text, 36);
+  FontSize := StrToIntDef(ComboBoxFontSize.Text, 36);
 
   FFontScanner := TFontNameScanner.Create;
   FFontScanner.OnFontScanned := FontScannedHandler;
@@ -222,6 +243,7 @@ begin
   FFontScanner.Terminate;
   FFontScanner.WaitFor;
   FFontScanner.Free;
+  FFeatures.Free;
 
   FUserFontScanner.Terminate;
   FUserFontScanner.WaitFor;
@@ -231,6 +253,28 @@ end;
 procedure TFmRenderDemo.FormShow(Sender: TObject);
 begin
   Text := EditText.Text;
+end;
+
+procedure TFmRenderDemo.ButtonFeatureClick(Sender: TObject);
+var
+  Tag: TTableType;
+  State: TFeatureButtonState;
+begin
+  Tag := TFeatureButton(Sender).Tag;
+  State := TFeatureButton(Sender).State;
+
+  case State of
+    fbsNone:
+      FFeatures.Remove(Tag.AsAnsiChar);
+
+    fbsEnabled:
+      FFeatures[Tag.AsAnsiChar] := True;
+
+    fbsDisabled:
+      FFeatures[Tag.AsAnsiChar] := False;
+  end;
+
+  Invalidate;
 end;
 
 procedure TFmRenderDemo.PaintBox1Paint(Sender: TObject);
@@ -246,7 +290,7 @@ begin
   StrCopy(lf.lfFaceName, 'Arial');
 
   TPaintBox(Sender).Canvas.Font.Handle := CreateFontIndirect(lf);
-  TPaintBox(Sender).Canvas.TextOut(0, TPaintBox(Sender).Height, TPanel(TPaintBox(Sender).Parent).Caption);
+  TPaintBox(Sender).Canvas.TextOut(4, TPaintBox(Sender).Height-4, TPanel(TPaintBox(Sender).Parent).Caption);
 end;
 
 procedure TFmRenderDemo.PaintBoxGDIPaint(Sender: TObject);
@@ -282,6 +326,7 @@ var
   Shaper: TPascalTypeShaper;
   UTF32: TPascalTypeCodePoints;
   ShapedText: TPascalTypeGlyphString;
+  Tag: PascalType.Types.TTableName;
 begin
   Canvas := TPaintBox(Sender).Canvas;
 
@@ -307,9 +352,8 @@ begin
       // Get a shaper that can handle the script
       Shaper := TPascalTypeShaper.CreateShaper(FFontFace, Script);
       try
-        // TODO : Test only. Enable 'liga' optional feature for test purpose
-        Shaper.Features['liga'] := True;
-        Shaper.Features.EnableAll := True; // TODO : This currently does nothing
+        for Tag in FFeatures do
+          Shaper.Features[Tag] := FFeatures[Tag];
 
         Shaper.Language := FLanguage;
         Shaper.Script := Script;
@@ -367,7 +411,7 @@ begin
     try
       Font := TFontCache.Create(FontReader);
       try
-        Font.FontHeight :=  _DPIAware(FFontSize * 97 div 72);
+        Font.FontHeight :=  _DPIAware(FFontSize * 96 div 72);
 
         Font.InvertY := True;
 
@@ -406,13 +450,12 @@ begin
   Canvas.Font.Color := clBlack;
 {$ifdef WIN_ANTIALIAS}
   lf := Default(TLogFont);
-  lf.lfHeight := -MulDiv(FFontSize, Canvas.Font.PixelsPerInch, 72);
+  lf.lfHeight := -_DPIAware(FFontSize * 96 div 72);
+//  lf.lfHeight := -MulDiv(FFontSize, Canvas.Font.PixelsPerInch, 72);
   lf.lfWeight := FW_NORMAL;
   lf.lfCharSet := Font.Charset;
   StrPLCopy(lf.lfFaceName, FFontName, LF_FACESIZE);
   lf.lfQuality := ANTIALIASED_QUALITY;
-//  lf.lfQuality := CLEARTYPE_QUALITY;
-//  lf.lfQuality := CLEARTYPE_NATURAL_QUALITY;
   lf.lfOutPrecision := OUT_TT_ONLY_PRECIS;
   lf.lfClipPrecision := CLIP_DEFAULT_PRECIS;
   lf.lfPitchAndFamily := DEFAULT_PITCH;
@@ -433,6 +476,125 @@ end;
 procedure TFmRenderDemo.TextChanged;
 begin
   Invalidate;
+  FHasAvailableFeatures := False;
+end;
+
+type
+  TPascalTypeShaperCracker = class(TPascalTypeShaper);
+
+procedure TFmRenderDemo.UpdateAvailableFeatures;
+var
+  Script: TTableType;
+  UTF32: TPascalTypeCodePoints;
+  Table: TCustomOpenTypeCommonTable;
+  AvailableFeatures: TPascalTypeFeatures;
+  Tag: PascalType.Types.TTableName;
+  i: integer;
+  FeatureTableClass: TOpenTypeFeatureTableClass;
+  FeatureButton: TFeatureButton;
+  Shaper: TPascalTypeShaper;
+  Plan: TPascalTypeShapingPlan;
+  DummyGlyphs: TPascalTypeGlyphString;
+  DummyFeatures: TPascalTypeShaperFeatures;
+begin
+  if (FHasAvailableFeatures) then
+    exit;
+  FHasAvailableFeatures := True;
+
+  // Detect script from input text if it hasn't been explicitly specified.
+  Script := FScript;
+  if (Script.AsCardinal = 0) then
+  begin
+    UTF32 := PascalTypeUnicode.UTF16ToUTF32(FText);
+    Script := TPascalTypeShaper.DetectScript(UTF32);
+  end;
+
+  // Get available features from GPOS and GSUB tables
+  AvailableFeatures := [];
+  Table := FFontFace.GetTableByTableType('GSUB') as TCustomOpenTypeCommonTable;
+  if (Table <> nil) then
+    AvailableFeatures := AvailableFeatures + Table.GetAvailableFeatures(Script, FLanguage);
+
+  Table := FFontFace.GetTableByTableType('GPOS') as TCustomOpenTypeCommonTable;
+  if (Table <> nil) then
+    AvailableFeatures := AvailableFeatures + Table.GetAvailableFeatures(Script, FLanguage);
+
+  // If we do not have a 'kern' lookup, but we have an old-style kern table, then
+  // we indicate that we are able to apply the 'kern' feature.
+  if (not AvailableFeatures.Contains('kern')) and (FFontFace.GetTableByTableType('kern') <> nil) then
+    AvailableFeatures.Add('kern');
+
+  // Feature menuitems are marked with Tag<>0. Get rid of the old ones
+  for i := PopupMenu.Items.Count-1 downto 0 do
+    if (PopupMenu.Items[i].Tag <> 0) then
+      PopupMenu.Items[i].Free;
+  for i := FlowPanelFeatures.ControlCount-1 downto 0 do
+    FlowPanelFeatures.Controls[i].Free;
+
+  // Intersect the existing feature selection with the available ones
+  for Tag in FFeatures do
+    if (not AvailableFeatures[Tag]) then
+      FFeatures.Remove(Tag);
+
+  // Create a shaping plan so we can get access to the default plan features
+  Shaper := TPascalTypeShaper.CreateShaper(FFontFace, Script);
+  try
+    Plan := TPascalTypeShaperCracker(Shaper).CreateShapingPlan;
+    try
+      DummyGlyphs := Shaper.TextToGlyphs('');
+      try
+        DummyFeatures := TPascalTypeShaperFeatures.Create;
+        try
+
+          TPascalTypeShaperCracker(Shaper).SetupPlan(Plan, DummyGlyphs, DummyFeatures);
+          FPlannedFeatures.Assign(Plan.GlobalFeatures);
+
+        finally
+          DummyFeatures.Free;
+        end;
+
+      finally
+        DummyGlyphs.Free;
+      end;
+    finally
+      Plan.Free;
+    end;
+  finally
+    Shaper.Free;
+  end;
+
+  // Create menuitem for available features
+  for Tag in AvailableFeatures do
+  begin
+    FeatureButton := TFeatureButton.Create(Self);
+
+    FeatureButton.Font.Size := 13;
+    if (Tag in FPlannedFeatures) then
+      FeatureButton.Font.Style := [TFontStyle.fsBold];
+
+    FeatureButton.Margins.Left := 2;
+    FeatureButton.Margins.Right := 2;
+    FeatureButton.Margins.Top := 2;
+    FeatureButton.Margins.Bottom := 2;
+    FeatureButton.AlignWithMargins := True;
+
+    FeatureButton.Tag := Tag;
+    FeatureButton.Caption := string(Tag);
+    FeatureTableClass := FindFeatureByType(TTableType(Tag));
+    if (FeatureTableClass <> nil) then
+      FeatureButton.Hint := FeatureTableClass.DisplayName;
+    if (FFeatures.HasValue(Tag)) then
+    begin
+      if (FFeatures[Tag]) then
+        FeatureButton.State := fbsEnabled
+      else
+        FeatureButton.State := fbsDisabled;
+    end else
+      FeatureButton.State := fbsNone;
+
+    FeatureButton.Parent := FlowPanelFeatures;
+    FeatureButton.OnClick := ButtonFeatureClick;
+  end;
 end;
 
 procedure TFmRenderDemo.FontNameChanged;
@@ -447,16 +609,16 @@ begin
       FFontFilename := FFontArray[FontIndex].FileName;
       FFontFace.LoadFromFile(FFontFilename);
 
-      FRenderer.FontSize := 0; // TODO : We need to force a recalc of the scale. Changing the font doesn't notify the rasterizer.
-      FRenderer.FontSize := _DPIAware(FFontSize);
-
       Break;
     end;
+
+  FHasAvailableFeatures := False;
+  UpdateAvailableFeatures;
 end;
 
 procedure TFmRenderDemo.FontSizeChanged;
 begin
-  FRenderer.FontSize := _DPIAware(FFontSize);
+  FRenderer.FontSize := FFontSize;
   Invalidate;
 end;
 
@@ -496,7 +658,15 @@ begin
     FRenderer.Options := FRenderer.Options - [roColorize];
 end;
 
-procedure TFmRenderDemo.ActionPaintPointsExecute(Sender: TObject);
+procedure TFmRenderDemo.ActionFeaturesClearExecute(Sender: TObject);
+begin
+  FFeatures.Clear;
+  FHasAvailableFeatures := False;
+  UpdateAvailableFeatures;
+  Invalidate;
+end;
+
+procedure TFmRenderDemo.ActionGenericExecute(Sender: TObject);
 begin
   Invalidate;
 end;
@@ -528,6 +698,7 @@ begin
   FScript := TestCase.Script;
   FDirection := TestCase.Direction;
 
+  FHasAvailableFeatures := False;
   Invalidate;
 end;
 

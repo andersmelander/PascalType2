@@ -183,9 +183,11 @@ type
     FDirection: TPascalTypeDirection;
     FScript: TTableType;
     FAlternateIndex: integer;
+    FFeatures: TPascalTypeFeatures;
     function GetGlyph(Index: integer): TPascalTypeGlyph;
     function GetCount: integer;
     function GetDirection: TPascalTypeDirection;
+    function GetFeatures: PPascalTypeFeatures;
   protected
     function GetGlyphClassID(AGlyph: TPascalTypeGlyph): integer; virtual;
     function GetMarkAttachmentType(AGlyph: TPascalTypeGlyph): integer; virtual;
@@ -235,6 +237,10 @@ type
     property Language: TTableType read FLanguage write FLanguage;
     property Direction: TPascalTypeDirection read GetDirection write FDirection;
     property AlternateIndex: integer read FAlternateIndex write FAlternateIndex;
+
+    // Features enabled for the string during shaping. Only used during shaping.
+    // Note that the property is a pointer. This is so we can access the feature list by reference instead of by value.
+    property Features: PPascalTypeFeatures read GetFeatures;
   end;
 
 
@@ -632,6 +638,11 @@ end;
 function TPascalTypeGlyphString.GetEnumerator: TEnumerator<TPascalTypeGlyph>;
 begin
   Result := FGlyphs.GetEnumerator;
+end;
+
+function TPascalTypeGlyphString.GetFeatures: PPascalTypeFeatures;
+begin
+  Result := @FFeatures;
 end;
 
 function TPascalTypeGlyphString.GetGlyph(Index: integer): TPascalTypeGlyph;

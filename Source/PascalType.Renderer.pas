@@ -73,7 +73,7 @@ type
 type
   TPascalTypeRenderOptions = set of (roPoints, roFill, roStroke, roColorize);
 
-  TPascalTypeRenderer = class(TInterfacedPersistent)
+  TPascalTypeRenderer = class(TInterfacedPersistent, IPascalTypeFontFaceNotification)
   strict private
     class var
       FDebugRectSize: Single;
@@ -87,8 +87,11 @@ type
     class property DebugRectColor: Cardinal read FDebugRectColor write FDebugRectColor;
     class property DebugCircleColor: Cardinal read FDebugCircleColor write FDebugCircleColor;
     class property DebugGlyphPalette: TArray<Cardinal> read FDebugGlyphPalette write FDebugGlyphPalette;
+  strict private type
+    TRenderFlags = set of (rfNeedScalerX, rfNeedScalerY);
   strict private
     FOptions: TPascalTypeRenderOptions;
+    FFlags: TRenderFlags;
     FFontFace: TPascalTypeFontFace;
     FFontHeight: Integer;
     FPixelPerInchX: Integer;
@@ -96,15 +99,20 @@ type
     FScalerX: TScaleType;
     FScalerY: TScaleType;
     procedure SetFontSize(const Value: Integer);
+    function GetFontSize: Integer;
+    function GetPixelPerInch: Integer;
+    procedure SetPixelPerInch(const Value: Integer);
     procedure SetPixelPerInchX(const Value: Integer);
     procedure SetPixelPerInchY(const Value: Integer);
     procedure SetFontHeight(const Value: Integer);
-    function GetFontSize: Integer;
     procedure SetFontFace(const Value: TPascalTypeFontFace);
-    function GetPixelPerInch: Integer;
-    procedure SetPixelPerInch(const Value: Integer);
+    function GetScalerX: TScaleType;
+    function GetScalerY: TScaleType;
+  private
+    // IPascalTypeFontFaceNotification
+    procedure FontFaceNotification(Sender: TCustomPascalTypeFontFacePersistent; Notification: TFontFaceNotification);
   protected
-    procedure CalculateScaler;
+    procedure RecalculateScaler;
     procedure CalculateScalerX;
     procedure CalculateScalerY;
 
@@ -118,9 +126,10 @@ type
     procedure FontHeightChanged; virtual;
     procedure PixelPerInchXChanged; virtual;
     procedure PixelPerInchYChanged; virtual;
+    procedure FontChanged;
 
-    property ScalerX: TScaleType read FScalerX;
-    property ScalerY: TScaleType read FScalerY;
+    property ScalerX: TScaleType read GetScalerX;
+    property ScalerY: TScaleType read GetScalerY;
 
   protected
     procedure RenderGlyph(GlyphIndex: Integer; const Painter: IPascalTypePainter; const Cursor: TFloatPoint);
@@ -197,10 +206,15 @@ begin
   if (FFontFace = Value) then
     exit;
 
+  if (FFontFace <> nil) then
+    FFontFace.Unsubscribe(Self);
+
   FFontFace := Value;
 
-  // calculate font depenent variables
-  CalculateScaler;
+  if (FFontFace <> nil) then
+    FFontFace.Subscribe(Self);
+
+  RecalculateScaler;
 end;
 
 procedure TPascalTypeRenderer.PixelPerInchXChanged;
@@ -567,21 +581,40 @@ begin
 {$ENDIF}
 end;
 
-procedure TPascalTypeRenderer.FontHeightChanged;
+procedure TPascalTypeRenderer.FontChanged;
 begin
-  CalculateScaler;
+  RecalculateScaler;
 end;
 
-procedure TPascalTypeRenderer.CalculateScaler;
+procedure TPascalTypeRenderer.FontFaceNotification(Sender: TCustomPascalTypeFontFacePersistent; Notification: TFontFaceNotification);
 begin
+  case Notification of
+    fnDestroy:
+      FontFace := nil;
+
+    fnChanged:
+      RecalculateScaler;
+  end;
+end;
+
+procedure TPascalTypeRenderer.FontHeightChanged;
+begin
+  RecalculateScaler;
+end;
+
+procedure TPascalTypeRenderer.RecalculateScaler;
+begin
+  Include(FFlags, rfNeedScalerX);
+  Include(FFlags, rfNeedScalerY);
   CalculateScalerX;
   CalculateScalerY;
 end;
 
 procedure TPascalTypeRenderer.CalculateScalerX;
 begin
+  Exclude(FFlags, rfNeedScalerX);
 {$IFDEF UseFloatingPoint}
-  if (FFontFace.HeaderTable <> nil) then // We might get called before font has been loaded
+  if (FFontFace <> nil) and (FFontFace.HeaderTable <> nil) then // We might get called before font has been assigned/loaded
     FScalerX := Abs(FFontHeight / FFontFace.HeaderTable.UnitsPerEm)
   else
     FScalerX := 1.0;
@@ -590,8 +623,9 @@ end;
 
 procedure TPascalTypeRenderer.CalculateScalerY;
 begin
+  Exclude(FFlags, rfNeedScalerY);
 {$IFDEF UseFloatingPoint}
-  if (FFontFace.HeaderTable <> nil) then // We might get called before font has been loaded
+  if (FFontFace <> nil) and (FFontFace.HeaderTable <> nil) then // We might get called before font has been assigned/loaded
     FScalerY := Abs(FFontHeight / FFontFace.HeaderTable.UnitsPerEm)
   else
     FScalerY := 1.0;
@@ -628,6 +662,20 @@ end;
 function TPascalTypeRenderer.GetPixelPerInch: Integer;
 begin
   Result := (FPixelPerInchX + FPixelPerInchY) div 2;
+end;
+
+function TPascalTypeRenderer.GetScalerX: TScaleType;
+begin
+  if (rfNeedScalerX in FFlags) then
+    CalculateScalerX;
+  Result := FScalerX;
+end;
+
+function TPascalTypeRenderer.GetScalerY: TScaleType;
+begin
+  if (rfNeedScalerY in FFlags) then
+    CalculateScalerY;
+  Result := FScalerY;
 end;
 
 procedure TPascalTypeRenderer.SetFontSize(const Value: Integer);

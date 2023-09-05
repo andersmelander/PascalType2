@@ -506,7 +506,7 @@ end;
 function TCustomPascalTypePainterCanvas32.GetColor: Cardinal;
 begin
   if (FBrush <> nil) then
-    Result := (WinColor(FBrush.FillColor) and $00FFFFFF) or (FBrush.FillColor and $FF000000)
+    Result := Cardinal(WinColor(FBrush.FillColor) and $00FFFFFF) or Cardinal(FBrush.FillColor and $FF000000)
   else
     Result := $FF000000;
 end;

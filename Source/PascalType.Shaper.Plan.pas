@@ -61,6 +61,7 @@ type
     FEnableAll: boolean;
     function GetFeatureEnabled(const AKey: TTableName): boolean;
     procedure SetFeatureEnabled(const AKey: TTableName; const Value: boolean);
+    function GetFeatureValue(const AKey: TTableName): Variant;
   protected
     FOnChanged: TNotifyEvent;
     property OnChanged: TNotifyEvent read FOnChanged write FOnChanged;
@@ -68,9 +69,16 @@ type
   public
     constructor Create;
     destructor Destroy; override;
+
     function GetEnumerator: TEnumerator<TTableName>;
+
     function IsEnabled(const AKey: TTableName; ADefault: boolean): boolean;
+    function HasValue(const AKey: TTableName): boolean;
+    procedure Clear;
+    procedure Remove(const AKey: TTableName);
+
     property Enabled[const AKey: TTableName]: boolean read GetFeatureEnabled write SetFeatureEnabled; default;
+    property Values[const AKey: TTableName]: Variant read GetFeatureValue;
     property EnableAll: boolean read FEnableAll write FEnableAll;
   end;
 
@@ -190,6 +198,9 @@ type
 //------------------------------------------------------------------------------
 
 implementation
+
+uses
+  Variants;
 
 //------------------------------------------------------------------------------
 //
@@ -407,6 +418,11 @@ begin
     FOnChanged(Self);
 end;
 
+procedure TPascalTypeShaperFeatures.Clear;
+begin
+  FFeatures.Clear;
+end;
+
 constructor TPascalTypeShaperFeatures.Create;
 begin
   inherited Create;
@@ -429,10 +445,30 @@ begin
   Result := IsEnabled(AKey, FEnableAll);
 end;
 
+function TPascalTypeShaperFeatures.GetFeatureValue(const AKey: TTableName): Variant;
+var
+  Value: boolean;
+begin
+  if (FFeatures.TryGetValue(AKey, Value)) then
+    Result := Value
+  else
+    Result := Null;
+end;
+
+function TPascalTypeShaperFeatures.HasValue(const AKey: TTableName): boolean;
+begin
+  Result := FFeatures.ContainsKey(AKey);
+end;
+
 function TPascalTypeShaperFeatures.IsEnabled(const AKey: TTableName; ADefault: boolean): boolean;
 begin
   if (not FFeatures.TryGetValue(AKey, Result)) then
     Result := ADefault;
+end;
+
+procedure TPascalTypeShaperFeatures.Remove(const AKey: TTableName);
+begin
+  FFeatures.Remove(AKey);
 end;
 
 procedure TPascalTypeShaperFeatures.SetFeatureEnabled(const AKey: TTableName; const Value: boolean);

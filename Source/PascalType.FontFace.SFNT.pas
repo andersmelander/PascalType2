@@ -730,14 +730,21 @@ end;
 
 procedure TCustomPascalTypeFontFace.Clear;
 begin
-  FTableLookup.Clear;
-  FTables.Clear;
+  BeginUpdate;
+  try
+    FTableLookup.Clear;
+    FTables.Clear;
 
-  FHeaderTable := nil;
-  FHorizontalHeader := nil;
-  FMaximumProfile := nil;
-  FNameTable := nil;
-  FPostScriptTable := nil;
+    FHeaderTable := nil;
+    FHorizontalHeader := nil;
+    FMaximumProfile := nil;
+    FNameTable := nil;
+    FPostScriptTable := nil;
+
+    Changed;
+  finally
+    EndUpdate;
+  end;
 end;
 
 procedure TCustomPascalTypeFontFace.Loaded;
@@ -781,33 +788,41 @@ var
 const
   Preload: array of TTableName = ['head', 'maxp', 'loca'];
 begin
-  Clear;
-
-  DirectoryTable := TPascalTypeDirectoryTable.Create(FRootTable);
+  BeginUpdate;
   try
-    DirectoryTable.LoadFromStream(Stream, Stream.Size);
 
-    FVersion := DirectoryTable.Version;
+    Clear;
 
-    // Directory table has been read, notify
-    DirectoryTableLoaded(DirectoryTable);
+    DirectoryTable := TPascalTypeDirectoryTable.Create(FRootTable);
+    try
+      DirectoryTable.LoadFromStream(Stream, Stream.Size);
 
-    // Preload tables that other tables depend on
-    for i := 0 to High(Preload) do
-    begin
-      Index := DirectoryTable.IndexOfTableEntry(Preload[i]);
-      if (Index <> -1) then
-        LoadTableFromStream(Stream, DirectoryTable.TableList[Index]);
+      FVersion := DirectoryTable.Version;
+
+      // Directory table has been read, notify
+      DirectoryTableLoaded(DirectoryTable);
+
+      // Preload tables that other tables depend on
+      for i := 0 to High(Preload) do
+      begin
+        Index := DirectoryTable.IndexOfTableEntry(Preload[i]);
+        if (Index <> -1) then
+          LoadTableFromStream(Stream, DirectoryTable.TableList[Index]);
+      end;
+
+      LoadTablesFromStream(Stream, DirectoryTable.TableList);
+
+    finally
+      DirectoryTable.Free;
     end;
 
-    LoadTablesFromStream(Stream, DirectoryTable.TableList);
+    // Verify required tables and map table shortcuts
+    Loaded;
 
+    Changed;
   finally
-    DirectoryTable.Free;
+    EndUpdate;
   end;
-
-  // Verify required tables and map table shortcuts
-  Loaded;
 end;
 
 {$IFDEF ChecksumTest}

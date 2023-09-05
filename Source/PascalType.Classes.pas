@@ -67,12 +67,6 @@ type
     function GetTableByTableClass(TableClass: TCustomPascalTypeNamedTableClass): TCustomPascalTypeNamedTable;
   end;
 
-  IPascalTypeFontFaceChange = interface(IUnknown)
-    ['{4C10BAEF-04DB-42D0-9A6C-5FE155E80AEB}']
-    procedure Changed;
-  end;
-
-
   TCustomPascalTypeTable = class abstract(TInterfacedPersistent)
   private
     FParent: TCustomPascalTypeTable;
@@ -95,18 +89,6 @@ type
     property FontFace: IPascalTypeFontFace read GetFontFace;
   end;
   TPascalTypeTableClass = class of TCustomPascalTypeTable;
-
-
-  TXCustomPascalTypeInterfaceTable = class(TCustomPascalTypeTable)
-  private
-    FFontFace: IPascalTypeFontFace;
-  protected
-    procedure Changed; override;
-    property FontFace: IPascalTypeFontFace read FFontFace;
-  public
-    constructor Create(const AFontFace: IPascalTypeFontFace); reintroduce; overload; virtual;
-  end;
-  TXCustomPascalTypeInterfaceTableClass = class of TXCustomPascalTypeInterfaceTable;
 
 
   TCustomPascalTypeNamedTable = class(TCustomPascalTypeTable)
@@ -309,21 +291,6 @@ begin
   // nothing here yet
 end;
 
-
-{ TXCustomPascalTypeInterfaceTable }
-
-procedure TXCustomPascalTypeInterfaceTable.Changed;
-begin
-  inherited;
-  // if FFontFace is IPascalTypeFontFaceChange
-  // then (FFontFace as IPascalTypeFontFaceChange).Changed;
-end;
-
-constructor TXCustomPascalTypeInterfaceTable.Create(const AFontFace: IPascalTypeFontFace);
-begin
-  inherited Create;
-  FFontFace := AFontFace;
-end;
 
 { TCustomPascalTypeNamedTable }
 

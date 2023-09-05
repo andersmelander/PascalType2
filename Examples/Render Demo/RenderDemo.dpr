@@ -89,7 +89,8 @@ uses
   PascalType.Tables.TrueType.name in '..\..\Source\PascalType.Tables.TrueType.name.pas',
   PascalType.Tables.TrueType.maxp in '..\..\Source\PascalType.Tables.TrueType.maxp.pas',
   PascalType.Tables.TrueType.post in '..\..\Source\PascalType.Tables.TrueType.post.pas',
-  PascalType.Painter in '..\..\Source\PascalType.Painter.pas';
+  PascalType.Painter in '..\..\Source\PascalType.Painter.pas',
+  RenderDemo.Controls.FeatureButton in 'RenderDemo.Controls.FeatureButton.pas';
 
 {$R *.res}
 

@@ -53,7 +53,11 @@ type
   protected
     class function GetDisplayName: string; virtual; abstract;
   public
-    property DisplayName: string read GetDisplayName; // TODO : Should be a class property
+    // DisplayName should really be a class property but since that's impossible to
+    // implement using a virtual getter, we have made it a class function instead.
+    // TODO : Rename GetDisplayName->DisplayName
+    // property DisplayName: string read GetDisplayName;
+    class function DisplayName: string;
   end;
 
   TCustomOpenTypeVersionedNamedTable = class(TCustomPascalTypeNamedTable)
@@ -491,5 +495,12 @@ begin
   Changed;
 end;
 
+
+{ TCustomOpenTypeNamedTable }
+
+class function TCustomOpenTypeNamedTable.DisplayName: string;
+begin
+  Result := GetDisplayName;
+end;
 
 end.

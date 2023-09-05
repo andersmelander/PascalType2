@@ -53,7 +53,7 @@ type
     FGPOSProcessor: TCustomPascalTypeOpenTypeProcessor;
   protected
     function GetAvailableFeatures: TPascalTypeFeatures; override;
-    procedure Setup(var AGlyphs: TPascalTypeGlyphString); override;
+    procedure Setup(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString); override;
     procedure Reset; override;
     function ApplySubstitution(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString): TPascalTypeFeatures; override;
     function ApplyPositioning(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString): TPascalTypeFeatures; override;
@@ -91,7 +91,7 @@ begin
   inherited;
 end;
 
-procedure TPascalTypeOpenTypeLayoutEngine.Setup(var AGlyphs: TPascalTypeGlyphString);
+procedure TPascalTypeOpenTypeLayoutEngine.Setup(APlan: TPascalTypeShapingPlan; var AGlyphs: TPascalTypeGlyphString);
 begin
   inherited;
 

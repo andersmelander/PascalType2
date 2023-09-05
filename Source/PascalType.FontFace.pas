@@ -38,27 +38,49 @@ uses
   Classes,
   SysUtils,
   Types,
+  Generics.Collections,
   PascalType.Types,
   PascalType.Classes,
   PascalType.Tables.TrueType.Directory,
   PascalType.Tables;
 
 type
+  TCustomPascalTypeFontFacePersistent = class;
+
+  TFontFaceNotification = (fnDestroy, fnChanged);
+
+  IPascalTypeFontFaceNotification = interface
+    ['{6494D33F-B6D0-4598-B2F5-3C4A37053235}']
+    procedure FontFaceNotification(Sender: TCustomPascalTypeFontFacePersistent; Notification: TFontFaceNotification);
+  end;
+
   // TODO : This class can most likely be rolled into the derived class
   // TCustomPascalTypeFontFace since we will probably only ever have that one derived class.
-  TCustomPascalTypeFontFacePersistent = class abstract(TInterfacedPersistent, IStreamPersist, IPascalTypeFontFaceChange)
+  TCustomPascalTypeFontFacePersistent = class abstract(TInterfacedPersistent, IStreamPersist)
   private
+    FUpdateCount: integer;
+    FModified: boolean;
     FOnChanged: TNotifyEvent;
+    FSubscribers: TList<IPascalTypeFontFaceNotification>;
   protected
-    // IPascalTypeFontFaceChange
     procedure Changed; virtual;
+    property Modified: boolean read FModified;
 
+    procedure Notify(Notification: TFontFaceNotification);
   public
     // IStreamPersist
     procedure LoadFromStream(Stream: TStream); virtual; abstract;
     procedure SaveToStream(Stream: TStream); virtual; abstract;
 
   public
+    destructor Destroy; override;
+
+    procedure Subscribe(const Subscriber: IPascalTypeFontFaceNotification);
+    procedure Unsubscribe(const Subscriber: IPascalTypeFontFaceNotification);
+
+    procedure BeginUpdate;
+    procedure EndUpdate;
+
     procedure LoadFromFile(FileName: TFileName);
     procedure SaveToFile(FileName: TFileName);
 
@@ -70,18 +92,45 @@ type
     // case that to TCustomPascalTypeLayoutEngine.
     function CreateLayoutEngine: TObject; virtual; abstract;
 
-    // TODO : Needs multicast. FontFace can be shared among rasterizers
-//    property OnChanged: TNotifyEvent read FOnChanged;
+    property OnChanged: TNotifyEvent read FOnChanged;
   end;
 
 implementation
 
 { TCustomPascalTypeFontFace }
 
+procedure TCustomPascalTypeFontFacePersistent.BeginUpdate;
+begin
+  Inc(FUpdateCount);
+end;
+
+procedure TCustomPascalTypeFontFacePersistent.EndUpdate;
+begin
+  if (FUpdateCount = 1) and (FModified) then
+  begin
+    Notify(fnChanged);
+
+    if Assigned(FOnChanged) then
+      FOnChanged(Self);
+
+    FModified := False;
+  end;
+  Dec(FUpdateCount);
+end;
+
 procedure TCustomPascalTypeFontFacePersistent.Changed;
 begin
-  if Assigned(FOnChanged) then
-    FOnChanged(Self);
+  BeginUpdate;
+  FModified := True;
+  EndUpdate;
+end;
+
+destructor TCustomPascalTypeFontFacePersistent.Destroy;
+begin
+  Notify(fnDestroy);
+  FreeAndNil(FSubscribers);
+
+  inherited;
 end;
 
 procedure TCustomPascalTypeFontFacePersistent.LoadFromFile(FileName: TFileName);
@@ -89,12 +138,30 @@ var
   Stream: TStream;
 begin
   // TODO : TBufferedFileStream doesn't exist in older versions of Delphi
-  Stream := TBufferedFileStream.Create(FileName, fmOpenRead or fmShareDenyNone);
+  BeginUpdate;
   try
-    LoadFromStream(Stream);
+    Stream := TBufferedFileStream.Create(FileName, fmOpenRead or fmShareDenyNone);
+    try
+      LoadFromStream(Stream);
+    finally
+      Stream.Free;
+    end;
+
+    Changed;
   finally
-    Stream.Free;
+    EndUpdate;
   end;
+end;
+
+procedure TCustomPascalTypeFontFacePersistent.Notify(Notification: TFontFaceNotification);
+var
+  i: integer;
+begin
+  if (FSubscribers = nil) then
+    exit;
+
+  for i := FSubscribers.Count-1 downto 0 do
+    FSubscribers[i].FontFaceNotification(Self, Notification);
 end;
 
 procedure TCustomPascalTypeFontFacePersistent.SaveToFile(FileName: TFileName);
@@ -106,10 +173,26 @@ begin
   else
     Stream := TFileStream.Create(FileName, fmOpenWrite);
   try
+
     SaveToStream(Stream);
+
   finally
     Stream.Free;
   end;
+end;
+
+procedure TCustomPascalTypeFontFacePersistent.Subscribe(const Subscriber: IPascalTypeFontFaceNotification);
+begin
+  if (FSubscribers = nil) then
+    FSubscribers := TList<IPascalTypeFontFaceNotification>.Create;
+
+  FSubscribers.Add(Subscriber);
+end;
+
+procedure TCustomPascalTypeFontFacePersistent.Unsubscribe(const Subscriber: IPascalTypeFontFaceNotification);
+begin
+  if (FSubscribers <> nil) then
+    FSubscribers.Remove(Subscriber);
 end;
 
 end.
