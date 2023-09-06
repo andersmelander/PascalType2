@@ -233,6 +233,7 @@ procedure TPascalTypeDefaultPanoseTable.LoadFromStream(Stream: TStream; Size: Ca
 begin
   // read family type frem stream prior to any other data
   Stream.Read(FFamilyType, 1);
+  Stream.Seek(-1, soFromCurrent);
 
   inherited;
 end;
@@ -240,7 +241,8 @@ end;
 procedure TPascalTypeDefaultPanoseTable.SaveToStream(Stream: TStream);
 begin
   // write family type frem stream prior to any other data
-  Stream.Write(FFamilyType, 1);
+  // Stream.Write(FFamilyType, 1);
+  // Family type is poart of the 10 bytes written below
 
   inherited;
 end;

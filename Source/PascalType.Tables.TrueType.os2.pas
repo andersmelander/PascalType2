@@ -562,12 +562,12 @@ type
   private
     FVersion               : Word;       // table version number (set to 0)
     FAverageCharacterWidth : SmallInt;   // average weighted advance width of lower case letters and space
-    FWeight                : Word;       // visual weight (degree of blackness or thickness) of stroke in glyphs
-    FWidthType             : Word;       // relative change from the normal aspect ratio (width to height ratio) as specified by a font designer for the glyphs in the font
-    FFontEmbeddingFlags    : Word;       // characteristics and properties of this font (set undefined bits to zero)
+    FWeightClass           : Word;       // visual weight (degree of blackness or thickness) of stroke in glyphs
+    FWidthClass            : Word;       // relative change from the normal aspect ratio (width to height ratio) as specified by a font designer for the glyphs in the font
+    FTypeFlags             : Word;       // characteristics and properties of this font (set undefined bits to zero)
     FSubscriptSizeX        : SmallInt;   // recommended horizontal size in pixels for subscripts
     FSubscriptSizeY        : SmallInt;   // recommended vertical size in pixels for subscripts
-    FSubScriptOffsetX      : SmallInt;   // recommended horizontal offset for subscripts
+    FSubscriptOffsetX      : SmallInt;   // recommended horizontal offset for subscripts
     FSubscriptYOffsetY     : SmallInt;   // recommended vertical offset form the baseline for subscripts
     FSuperscriptSizeX      : SmallInt;   // recommended horizontal size in pixels for superscripts
     FSuperscriptSizeY      : SmallInt;   // recommended vertical size in pixels for superscripts
@@ -575,13 +575,13 @@ type
     FSuperscriptOffsetY    : SmallInt;   // recommended vertical offset from the baseline for superscripts
     FStrikeoutSize         : SmallInt;   // width of the strikeout stroke
     FStrikeoutPosition     : SmallInt;   // position of the strikeout stroke relative to the baseline
-    FFontFamilyType        : Word;       // classification of font-family design.
+    FFontFamilyClass       : Word;       // classification of font-family design. Specified as a Int16 in the specs.
     FFontVendorID          : TTableType; // four character identifier for the font vendor
     FFontSelection         : Word;       // 2-byte bit field containing information concerning the nature of the font patterns
     FUnicodeFirstCharIndex : Word;       // The minimum Unicode index in this font.
     FUnicodeLastCharIndex  : Word;       // The maximum Unicode index in this font.
-    FTypographicAscent     : SmallInt;
-    FTypographicDescent    : SmallInt;
+    FTypographicAscender   : SmallInt;
+    FTypographicDescender  : SmallInt;
     FTypographicLineGap    : SmallInt;
     FWindowsAscent         : Word;
     FWindowsDescent        : Word;
@@ -670,18 +670,18 @@ type
     property AddendumTable: TPascalTypeOS2AddendumTable read FAddendumTable write SetAddendumTable;
     property AverageCharacterWidth: SmallInt read FAverageCharacterWidth write SetAverageCharacterWidth;
     property CodePageRange: TPascalTypeOS2CodePageRangeTable read FCodePageRange write SetCodePageRange;
-    property FontEmbeddingFlags: Word read FFontEmbeddingFlags write SetFontEmbeddingFlags;
+    property FontEmbeddingFlags: Word read FTypeFlags write SetFontEmbeddingFlags;
     property FontEmbeddingRights: TOS2FontEmbeddingRights read GetFontEmbeddingRights write SetFontEmbeddingRights;
     property FontFamilyClassID: Byte read GetFontFamilyClassID write SetFontFamilyClassID;
     property FontFamilySubClassID: Byte read GetFontFamilySubClassID write SetFontFamilySubClassID;
-    property FontFamilyType: Word read FFontFamilyType write SetFontFamilyType;
+    property FontFamilyType: Word read FFontFamilyClass write SetFontFamilyType;
     property FontSelection: Word read FFontSelection write SetFontSelection;
     property FontSelectionFlags: TOS2FontSelectionFlags read GetFontSelectionFlags write SetFontSelectionFlags;
     property FontVendorID: TTableType read FFontVendorID write SetFontVendorID;
     property Panose: TCustomPascalTypePanoseTable read FPanose write SetPanose;
     property StrikeoutPosition: SmallInt read FStrikeoutPosition write SetStrikeoutPosition;
     property StrikeoutSize: SmallInt read FStrikeoutSize write SetStrikeoutSize;
-    property SubScriptOffsetX: SmallInt read FSubScriptOffsetX write SetSubScriptOffsetX;
+    property SubScriptOffsetX: SmallInt read FSubscriptOffsetX write SetSubScriptOffsetX;
     property SubscriptOffsetY: SmallInt read FSubscriptYOffsetY write SetSubscriptOffsetY;
     property SubscriptSizeX: SmallInt read FSubscriptSizeX write SetSubscriptSizeX;
     property SubscriptSizeY: SmallInt read FSubscriptSizeY write SetSubscriptSizeY;
@@ -689,17 +689,17 @@ type
     property SuperscriptOffsetY: SmallInt read FSuperscriptOffsetY write SetSuperscriptOffsetY;
     property SuperscriptSizeX: SmallInt read FSuperscriptSizeX write SetSuperscriptXSizeX;
     property SuperscriptSizeY: SmallInt read FSuperscriptSizeY write SetSuperscriptYSizeY;
-    property TypographicAscent: SmallInt read FTypographicAscent write SetTypographicAscent;
-    property TypographicDescent: SmallInt read FTypographicDescent write SetTypographicDescent;
+    property TypographicAscent: SmallInt read FTypographicAscender write SetTypographicAscent;
+    property TypographicDescent: SmallInt read FTypographicDescender write SetTypographicDescent;
     property TypographicLineGap: SmallInt read FTypographicLineGap write SetTypographicLineGap;
     property UnicodeFirstCharacterIndex: Word read FUnicodeFirstCharIndex write SetUnicodeFirstCharIndex;
     property UnicodeLastCharacterIndex: Word read FUnicodeLastCharIndex write SetUnicodeLastCharIndex;
     property UnicodeRange: TPascalTypeUnicodeRangeTable read FUnicodeRangeTable write FUnicodeRangeTable;
     property Version: Word read FVersion write SetVersion;
-    property Weight: Word read FWeight write SetWeight;
+    property Weight: Word read FWeightClass write SetWeight;
     property WeightClass: TOS2WeightClass read GetWeightClass write SetWeightClass;
     property WidthClass: TOS2WidthClass read GetWidthClass write SetWidthClass;
-    property WidthType: Word read FWidthType write SetWidthType;
+    property WidthType: Word read FWidthClass write SetWidthType;
     property WindowsAscent: Word read FWindowsAscent write SetWindowsAscent;
     property WindowsDescent: Word read FWindowsDescent write SetWindowsDescent;
   end;
@@ -739,18 +739,15 @@ end;
 
 procedure TPascalTypeUnicodeRangeTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 16 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 16 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read range from stream
-    FUnicodeRange[0] := BigEndianValue.ReadCardinal(Stream);
-    FUnicodeRange[1] := BigEndianValue.ReadCardinal(Stream);
-    FUnicodeRange[2] := BigEndianValue.ReadCardinal(Stream);
-    FUnicodeRange[3] := BigEndianValue.ReadCardinal(Stream);
-  end;
+  // read range from stream
+  FUnicodeRange[0] := BigEndianValue.ReadCardinal(Stream);
+  FUnicodeRange[1] := BigEndianValue.ReadCardinal(Stream);
+  FUnicodeRange[2] := BigEndianValue.ReadCardinal(Stream);
+  FUnicodeRange[3] := BigEndianValue.ReadCardinal(Stream);
 end;
 
 procedure TPascalTypeUnicodeRangeTable.SaveToStream(Stream: TStream);
@@ -1870,41 +1867,22 @@ end;
 
 procedure TPascalTypeOS2AddendumTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 begin
-  // check (minimum) table size
   if Stream.Position + 5*SizeOf(Word) > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-  // read x-Height
   FXHeight := BigEndianValue.ReadSmallInt(Stream);
-
-  // read capital height
   FCapHeight := BigEndianValue.ReadSmallInt(Stream);
-
-  // read default character
   FDefaultChar := BigEndianValue.ReadWord(Stream);
-
-  // read break character
   FBreakChar := BigEndianValue.ReadWord(Stream);
-
-  // read max. context
   FMaxContext := BigEndianValue.ReadWord(Stream);
 end;
 
 procedure TPascalTypeOS2AddendumTable.SaveToStream(Stream: TStream);
 begin
-  // write x-Height
   BigEndianValue.WriteSmallInt(Stream, FXHeight);
-
-  // write capital height
   BigEndianValue.WriteSmallInt(Stream, FCapHeight);
-
-  // write default character
   BigEndianValue.WriteWord(Stream, FDefaultChar);
-
-  // write break character
   BigEndianValue.WriteWord(Stream, FBreakChar);
-
-  // write max. context
   BigEndianValue.WriteWord(Stream, FMaxContext);
 end;
 
@@ -1987,8 +1965,8 @@ end;
 constructor TPascalTypeOS2Table.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
-  FWeight := 400;
-  FWidthType := 5;
+  FWeightClass := 400;
+  FWidthClass := 5;
   FPanose := TPascalTypeDefaultPanoseTable.Create;
   FUnicodeRangeTable := TPascalTypeUnicodeRangeTable.Create;
 end;
@@ -2009,12 +1987,12 @@ begin
   begin
     FVersion := TPascalTypeOS2Table(Source).FVersion;
     FAverageCharacterWidth := TPascalTypeOS2Table(Source).FAverageCharacterWidth;
-    FWeight := TPascalTypeOS2Table(Source).FWeight;
-    FWidthType := TPascalTypeOS2Table(Source).FWidthType;
-    FFontEmbeddingFlags := TPascalTypeOS2Table(Source).FFontEmbeddingFlags;
+    FWeightClass := TPascalTypeOS2Table(Source).FWeightClass;
+    FWidthClass := TPascalTypeOS2Table(Source).FWidthClass;
+    FTypeFlags := TPascalTypeOS2Table(Source).FTypeFlags;
     FSubscriptSizeX := TPascalTypeOS2Table(Source).FSubscriptSizeX;
     FSubscriptSizeY := TPascalTypeOS2Table(Source).FSubscriptSizeY;
-    FSubScriptOffsetX := TPascalTypeOS2Table(Source).FSubScriptOffsetX;
+    FSubscriptOffsetX := TPascalTypeOS2Table(Source).FSubscriptOffsetX;
     FSubscriptYOffsetY := TPascalTypeOS2Table(Source).FSubscriptYOffsetY;
     FSuperscriptSizeX := TPascalTypeOS2Table(Source).FSuperscriptSizeX;
     FSuperscriptSizeY := TPascalTypeOS2Table(Source).FSuperscriptSizeY;
@@ -2022,13 +2000,13 @@ begin
     FSuperscriptOffsetY := TPascalTypeOS2Table(Source).FSuperscriptOffsetY;
     FStrikeoutSize := TPascalTypeOS2Table(Source).FStrikeoutSize;
     FStrikeoutPosition := TPascalTypeOS2Table(Source).FStrikeoutPosition;
-    FFontFamilyType := TPascalTypeOS2Table(Source).FFontFamilyType;
+    FFontFamilyClass := TPascalTypeOS2Table(Source).FFontFamilyClass;
     FFontVendorID := TPascalTypeOS2Table(Source).FFontVendorID;
     FFontSelection := TPascalTypeOS2Table(Source).FFontSelection;
     FUnicodeFirstCharIndex := TPascalTypeOS2Table(Source).FUnicodeFirstCharIndex;
     FUnicodeLastCharIndex := TPascalTypeOS2Table(Source).FUnicodeLastCharIndex;
-    FTypographicAscent := TPascalTypeOS2Table(Source).FTypographicAscent;
-    FTypographicDescent := TPascalTypeOS2Table(Source).FTypographicDescent;
+    FTypographicAscender := TPascalTypeOS2Table(Source).FTypographicAscender;
+    FTypographicDescender := TPascalTypeOS2Table(Source).FTypographicDescender;
     FTypographicLineGap := TPascalTypeOS2Table(Source).FTypographicLineGap;
     FWindowsAscent := TPascalTypeOS2Table(Source).FWindowsAscent;
     FWindowsDescent := TPascalTypeOS2Table(Source).FWindowsDescent;
@@ -2041,17 +2019,17 @@ end;
 
 function TPascalTypeOS2Table.GetFontEmbeddingRights: TOS2FontEmbeddingRights;
 begin
-  Result := FontEmbeddingFlagsToRights(FFontEmbeddingFlags);
+  Result := FontEmbeddingFlagsToRights(FTypeFlags);
 end;
 
 function TPascalTypeOS2Table.GetFontFamilyClassID: Byte;
 begin
-  Result := FFontFamilyType shr 8;
+  Result := FFontFamilyClass shr 8;
 end;
 
 function TPascalTypeOS2Table.GetFontFamilySubClassID: Byte;
 begin
-  Result := FFontFamilyType and $FF;
+  Result := FFontFamilyClass and $FF;
 end;
 
 function TPascalTypeOS2Table.GetFontSelectionFlags: TOS2FontSelectionFlags;
@@ -2071,78 +2049,42 @@ end;
 {$ENDIF}
 procedure TPascalTypeOS2Table.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
-  PanoseFamilyKind : Byte;
+  PanoseFamilyKind: Byte;
   PanoseFamilyClass: TPascalTypePanoseClass;
 {$IFDEF AmbigiousExceptions}
   HorizontalHeader: TPascalTypeHorizontalHeaderTable;
 {$ENDIF}
 begin
-  // check (minimum) table size
   if Stream.Position + 68 > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-  // read version
+  inherited;
+
   FVersion := BigEndianValue.ReadWord(Stream);
 
-  // check version
-(*
+  (*
+  Version check removed. Even though we don't support newer versions, we
+  can still read the parts we support. The format is forward compatible.
+  *)
 
-Version check disabled. Even though we don't support newer versions, we
-can still read the parts we support. The format is forward compatible.
-
-  if not(FVersion in [0..3]) then
-    raise EPascalTypeError.Create(RCStrUnsupportedVersion);
-*)
-
-  // read average horizontal character width
-  FAverageCharacterWidth := BigEndianValue.ReadWord(Stream);
-
-  // read weight
-  FWeight := BigEndianValue.ReadWord(Stream);
-
-  // read width type
-  FWidthType := BigEndianValue.ReadWord(Stream);
-
-  // read font embedding right flags
-  FFontEmbeddingFlags := BigEndianValue.ReadWord(Stream);
-
-  // read SubscriptSizeX
-  FSubscriptSizeX := BigEndianValue.ReadWord(Stream);
-
-  // read SubscriptSizeY
-  FSubscriptSizeY := BigEndianValue.ReadWord(Stream);
-
-  // read SubScriptOffsetX
-  FSubScriptOffsetX := BigEndianValue.ReadWord(Stream);
-
-  // read SubscriptOffsetX
-  FSubscriptYOffsetY := BigEndianValue.ReadWord(Stream);
-
-  // read SuperscriptSizeX
-  FSuperscriptSizeX := BigEndianValue.ReadWord(Stream);
-
-  // read SuperscriptSizeY
-  FSuperscriptSizeY := BigEndianValue.ReadWord(Stream);
-
-  // read SuperscriptOffsetX
-  FSuperscriptOffsetX := BigEndianValue.ReadWord(Stream);
-
-  // read SuperscriptOffsetY
-  FSuperscriptOffsetY := BigEndianValue.ReadWord(Stream);
-
-  // read StrikeoutSize
-  FStrikeoutSize := BigEndianValue.ReadWord(Stream);
-
-  // read StrikeoutPosition
-  FStrikeoutPosition := BigEndianValue.ReadWord(Stream);
-
-  // read font family type
-  FFontFamilyType := BigEndianValue.ReadWord(Stream);
-
-  // read panose
-  Stream.Read(PanoseFamilyKind, 1);
+  FAverageCharacterWidth := BigEndianValue.ReadSmallInt(Stream);
+  FWeightClass := BigEndianValue.ReadWord(Stream);
+  FWidthClass := BigEndianValue.ReadWord(Stream);
+  FTypeFlags := BigEndianValue.ReadWord(Stream);
+  FSubscriptSizeX := BigEndianValue.ReadSmallInt(Stream);
+  FSubscriptSizeY := BigEndianValue.ReadSmallInt(Stream);
+  FSubscriptOffsetX := BigEndianValue.ReadSmallInt(Stream);
+  FSubscriptYOffsetY := BigEndianValue.ReadSmallInt(Stream);
+  FSuperscriptSizeX := BigEndianValue.ReadSmallInt(Stream);
+  FSuperscriptSizeY := BigEndianValue.ReadSmallInt(Stream);
+  FSuperscriptOffsetX := BigEndianValue.ReadSmallInt(Stream);
+  FSuperscriptOffsetY := BigEndianValue.ReadSmallInt(Stream);
+  FStrikeoutSize := BigEndianValue.ReadSmallInt(Stream);
+  FStrikeoutPosition := BigEndianValue.ReadSmallInt(Stream);
+  FFontFamilyClass := BigEndianValue.ReadWord(Stream); // Note: Int16 in the specs.
 
   // find panose family class by type
+  PanoseFamilyKind := BigEndianValue.ReadByte(Stream);
   PanoseFamilyClass := FindPascalTypePanoseByType(PanoseFamilyKind);
 
   if (PanoseFamilyClass = nil) then
@@ -2150,22 +2092,14 @@ can still read the parts we support. The format is forward compatible.
 
   if (FPanose = nil) or (FPanose.ClassType <> PanoseFamilyClass) then
   begin
-    // free old panose object
     FreeAndNil(FPanose);
-
-    // create new panose object
     FPanose := PanoseFamilyClass.Create;
   end;
 
-  // rewind current position to read the family type as well
   Stream.Seek(-1, soFromCurrent);
-  // load panose object from stream
   FPanose.LoadFromStream(Stream);
 
-  // read unicode range
   FUnicodeRangeTable.LoadFromStream(Stream);
-
-  // read font vendor identification
   Stream.Read(FFontVendorID, SizeOf(FFontVendorID));
 
   // read font selection flags
@@ -2173,12 +2107,12 @@ can still read the parts we support. The format is forward compatible.
     Versions 0 to 3:
     Only bit 0 (italic) to bit 6 (regular) are assigned.
     Bits 7 to 15 are reserved and must be set to 0.
-    Applications should ignore bits 7 to 15 in a font that has a version 0 to version 3 OS/2 table.
+    Applications should ignore bits 7 to 15 in a font that has a version 0-3 table.
 
     Version 4 to 5:
     Bits 7 to 9 were defined in version 4 (OpenType 1.5).
     Bits 10 to 15 are reserved and must be set to 0.
-    Applications should ignore bits 10 to 15 in a font that has a version 4 or version 5 OS/2 table.
+    Applications should ignore bits 10 to 15 in a font that has a version 4-5 table.
   *)
   FFontSelection := BigEndianValue.ReadWord(Stream);
   case FVersion of
@@ -2188,31 +2122,32 @@ can still read the parts we support. The format is forward compatible.
     4..5:
       FFontSelection := FFontSelection and $03FF;
   end;
-{$IFDEF AmbigiousExceptions}
-  if (FFontSelection and $8000 <> 0) then
-    raise EPascalTypeError.CreateFmt(RCStrReservedValueError, [FFontSelection])
-{$ENDIF};
 
-  // read UnicodeFirstCharacterIndex
   FUnicodeFirstCharIndex := BigEndianValue.ReadWord(Stream);
-
-  // read UnicodeLastCharacterIndex
   FUnicodeLastCharIndex := BigEndianValue.ReadWord(Stream);
 
-  // read TypographicAscent
-  FTypographicAscent := BigEndianValue.ReadWord(Stream);
-
-  // read TypographicDescent
-  FTypographicDescent := BigEndianValue.ReadWord(Stream);
-
-  // read TypographicLineGap
-  FTypographicLineGap := BigEndianValue.ReadWord(Stream);
-
-  // read WindowsAscent
-  FWindowsAscent := BigEndianValue.ReadWord(Stream);
-
-  // read WindowsDescent
-  FWindowsDescent := BigEndianValue.ReadWord(Stream);
+  (*
+  Note: Documentation for OS/2 version 0 in Apple’s TrueType Reference Manual stops
+  at the usLastCharIndex field and does not include the last five fields of the
+  table as it was defined by Microsoft. Some legacy TrueType fonts may have been
+  built with a shortened version 0 OS/2 table. Applications should check the table
+  length for a version 0 OS/2 table before reading these fields.
+  *)
+  if (FVersion > 0) or (Size > 68) or (Size = 0) then
+  begin
+    FTypographicAscender := BigEndianValue.ReadSmallInt(Stream);
+    FTypographicDescender := BigEndianValue.ReadSmallInt(Stream);
+    FTypographicLineGap := BigEndianValue.ReadSmallInt(Stream);
+    FWindowsAscent := BigEndianValue.ReadWord(Stream);
+    FWindowsDescent := BigEndianValue.ReadWord(Stream);
+  end else
+  begin
+    FTypographicAscender := 0;
+    FTypographicDescender := 0;
+    FTypographicLineGap := 0;
+    FWindowsAscent := 0;
+    FWindowsDescent := 0;
+  end;
 
 {$IFDEF AmbigiousExceptions}
   HorizontalHeader := TPascalTypeHorizontalHeaderTable(FontFace.GetTableByTableName('hhea'));
@@ -2224,16 +2159,15 @@ can still read the parts we support. The format is forward compatible.
 
     if fsfUseTypoMetrics in FontSelectionFlags then
     begin
-      if Abs(HorizontalHeader.Ascent) <> Abs(FTypographicAscent) then
+      if Abs(HorizontalHeader.Ascent) <> Abs(FTypographicAscender) then
         raise EPascalTypeError.Create(RCStrErrorAscender);
 
-      if Abs(HorizontalHeader.Descent) <> Abs(FTypographicDescent) then
+      if Abs(HorizontalHeader.Descent) <> Abs(FTypographicDescender) then
         raise EPascalTypeError.Create(RCStrErrorDescender);
 
       if Abs(HorizontalHeader.LineGap) <> Abs(FTypographicLineGap) then
         raise EPascalTypeError.Create(RCStrErrorLineGap);
-    end
-    else
+    end else
     begin
       // TODO : Handle WindowsAscender/Descender errors as warnings
       // These errors are very commons so the checks has been disabled for now
@@ -2246,18 +2180,13 @@ can still read the parts we support. The format is forward compatible.
   end;
 {$ENDIF}
 
-  // eventually load further tables
-  if Version > 0 then
+  if (Version >= 1) then
   begin
-    // check if codepage range exists
     if (FCodePageRange = nil) then
       FCodePageRange := TPascalTypeOS2CodePageRangeTable.Create;
-
-    // load codepage range from stream
     FCodePageRange.LoadFromStream(Stream);
 
-    // eventually load addendum table
-    if Version >= 2 then
+    if (Version >= 2) then
     begin
       // check if addendum table exists
       if (FAddendumTable = nil) then
@@ -2267,6 +2196,12 @@ can still read the parts we support. The format is forward compatible.
       FAddendumTable.LoadFromStream(Stream);
     end;
   end;
+
+  if (Version < 1) then
+    FreeAndNil(FCodePageRange);
+
+  if (Version < 2) then
+    FreeAndNil(FAddendumTable);
 end;
 {$IFDEF R_PLUS}
 {$RANGECHECKS ON}
@@ -2275,96 +2210,41 @@ end;
 
 procedure TPascalTypeOS2Table.SaveToStream(Stream: TStream);
 begin
-  // write version
+  inherited;
   BigEndianValue.WriteWord(Stream, FVersion);
-
-  // write average horizontal character width
-  BigEndianValue.WriteWord(Stream, FAverageCharacterWidth);
-
-  // write weight
-  BigEndianValue.WriteWord(Stream, FWeight);
-
-  // write width class
-  BigEndianValue.WriteWord(Stream, FWidthType);
-
-  // write font embedding rights
-  BigEndianValue.WriteWord(Stream, FFontEmbeddingFlags);
-
-  // write SubscriptSizeX
-  BigEndianValue.WriteWord(Stream, FSubscriptSizeX);
-
-  // write SubscriptSizeY
-  BigEndianValue.WriteWord(Stream, FSubscriptSizeY);
-
-  // write SubScriptOffsetX
-  BigEndianValue.WriteWord(Stream, FSubScriptOffsetX);
-
-  // write SubscriptOffsetX
-  BigEndianValue.WriteWord(Stream, FSubscriptYOffsetY);
-
-  // write SuperscriptSizeX
-  BigEndianValue.WriteWord(Stream, FSuperscriptSizeX);
-
-  // write SuperscriptSizeY
-  BigEndianValue.WriteWord(Stream, FSuperscriptSizeY);
-
-  // write SuperscriptOffsetX
-  BigEndianValue.WriteWord(Stream, FSuperscriptOffsetX);
-
-  // write SuperscriptOffsetY
-  BigEndianValue.WriteWord(Stream, FSuperscriptOffsetY);
-
-  // write StrikeoutSize
-  BigEndianValue.WriteWord(Stream, FStrikeoutSize);
-
-  // write StrikeoutPosition
-  BigEndianValue.WriteWord(Stream, FStrikeoutPosition);
-
-  // write font family type
-  BigEndianValue.WriteWord(Stream, FFontFamilyType);
-
-  // write panose
+  BigEndianValue.WriteSmallInt(Stream, FAverageCharacterWidth);
+  BigEndianValue.WriteWord(Stream, FWeightClass);
+  BigEndianValue.WriteWord(Stream, FWidthClass);
+  BigEndianValue.WriteWord(Stream, FTypeFlags);
+  BigEndianValue.WriteSmallInt(Stream, FSubscriptSizeX);
+  BigEndianValue.WriteSmallInt(Stream, FSubscriptSizeY);
+  BigEndianValue.WriteSmallInt(Stream, FSubscriptOffsetX);
+  BigEndianValue.WriteSmallInt(Stream, FSubscriptYOffsetY);
+  BigEndianValue.WriteSmallInt(Stream, FSuperscriptSizeX);
+  BigEndianValue.WriteSmallInt(Stream, FSuperscriptSizeY);
+  BigEndianValue.WriteSmallInt(Stream, FSuperscriptOffsetX);
+  BigEndianValue.WriteSmallInt(Stream, FSuperscriptOffsetY);
+  BigEndianValue.WriteSmallInt(Stream, FStrikeoutSize);
+  BigEndianValue.WriteSmallInt(Stream, FStrikeoutPosition);
+  BigEndianValue.WriteWord(Stream, FFontFamilyClass); // Note: Int16 in the specs
   FPanose.SaveToStream(Stream);
-
-  // write unicode range
   FUnicodeRangeTable.SaveToStream(Stream);
-
-  // read font vendor identification
-  Stream.Write(FFontVendorID, 4);
-
-  // write font selection
+  Stream.Write(FFontVendorID, SizeOf(FFontVendorID));
   BigEndianValue.WriteWord(Stream, FFontSelection);
-
-  // write UnicodeFirstCharacterIndex
   BigEndianValue.WriteWord(Stream, FUnicodeFirstCharIndex);
-
-  // write UnicodeLastCharacterIndex
   BigEndianValue.WriteWord(Stream, FUnicodeLastCharIndex);
-
-  // write TypographicAscent
-  BigEndianValue.WriteWord(Stream, FTypographicAscent);
-
-  // write TypographicDescent
-  BigEndianValue.WriteWord(Stream, FTypographicDescent);
-
-  // write TypographicLineGap
-  BigEndianValue.WriteWord(Stream, FTypographicLineGap);
-
-  // write WindowsAscent
+  BigEndianValue.WriteSmallInt(Stream, FTypographicAscender);
+  BigEndianValue.WriteSmallInt(Stream, FTypographicDescender);
+  BigEndianValue.WriteSmallInt(Stream, FTypographicLineGap);
   BigEndianValue.WriteWord(Stream, FWindowsAscent);
-
-  // write WindowsDescent
   BigEndianValue.WriteWord(Stream, FWindowsDescent);
 
-  // eventually write code page range and addendum table
   if (FVersion > 0) then
   begin
-    // check if code page range has been set and eventually save to stream
     if (FCodePageRange = nil) then
       raise EPascalTypeError.Create(RCStrCodePageRangeTableUndefined);
     FCodePageRange.SaveToStream(Stream);
 
-    // check if addendum table has been set and eventually save to stream
     if Version >= 2 then
     begin
       if (FAddendumTable = nil) then
@@ -2376,7 +2256,7 @@ end;
 
 function TPascalTypeOS2Table.GetWeightClass: TOS2WeightClass;
 begin
-  case FWeight div 100 of
+  case FWeightClass div 100 of
     1:
       Result := wcThin;
 
@@ -2410,7 +2290,7 @@ end;
 
 function TPascalTypeOS2Table.GetWidthClass: TOS2WidthClass;
 begin
-  case FWidthType of
+  case FWidthClass of
     1:
       Result := wcUltraCondensed;
     2:
@@ -2500,9 +2380,9 @@ end;
 
 procedure TPascalTypeOS2Table.SetFontEmbeddingFlags(const Value: Word);
 begin
-  if FFontEmbeddingFlags <> Value then
+  if FTypeFlags <> Value then
   begin
-    FFontEmbeddingFlags := Value;
+    FTypeFlags := Value;
     FontEmbeddingRightsChanged;
   end;
 end;
@@ -2511,7 +2391,7 @@ procedure TPascalTypeOS2Table.SetFontEmbeddingRights(const Value: TOS2FontEmbedd
 begin
   if FontEmbeddingRights <> Value then
   begin
-    FFontEmbeddingFlags := FontEmbeddingRightsToFlags(Value);
+    FTypeFlags := FontEmbeddingRightsToFlags(Value);
     FontEmbeddingRightsChanged;
   end;
 end;
@@ -2520,7 +2400,7 @@ procedure TPascalTypeOS2Table.SetFontFamilyClassID(const Value: Byte);
 begin
   if FontFamilyClassID <> Value then
   begin
-    FFontFamilyType := (FFontFamilyType and $FF) or (Value shl 8);
+    FFontFamilyClass := (FFontFamilyClass and $FF) or (Value shl 8);
     FontFamilyChanged;
   end;
 end;
@@ -2529,34 +2409,34 @@ procedure TPascalTypeOS2Table.SetFontFamilySubClassID(const Value: Byte);
 begin
   if FontFamilySubClassID <> Value then
   begin
-    FFontFamilyType := (FFontFamilyType and $FF00) or Value;
+    FFontFamilyClass := (FFontFamilyClass and $FF00) or Value;
     FontFamilyChanged;
   end;
 end;
 
 procedure TPascalTypeOS2Table.SetFontFamilyType(const Value: Word);
 begin
-  if FFontFamilyType <> Value then
+  if FFontFamilyClass <> Value then
   begin
-    FFontFamilyType := Value;
+    FFontFamilyClass := Value;
     FontFamilyChanged;
   end;
 end;
 
 procedure TPascalTypeOS2Table.SetTypographicAscent(const Value: SmallInt);
 begin
-  if FTypographicAscent <> Value then
+  if FTypographicAscender <> Value then
   begin
-    FTypographicAscent := Value;
+    FTypographicAscender := Value;
     TypographicAscentChanged;
   end;
 end;
 
 procedure TPascalTypeOS2Table.SetTypographicDescent(const Value: SmallInt);
 begin
-  if FTypographicDescent <> Value then
+  if FTypographicDescender <> Value then
   begin
-    FTypographicDescent := Value;
+    FTypographicDescender := Value;
     TypographicDescentChanged;
   end;
 end;
@@ -2595,16 +2475,16 @@ begin
 
   if WidthClass <> Value then
   begin
-    FWidthType := Word(Value);
+    FWidthClass := Word(Value);
     WidthTypeChanged;
   end;
 end;
 
 procedure TPascalTypeOS2Table.SetWidthType(const Value: Word);
 begin
-  if FWidthType <> Value then
+  if FWidthClass <> Value then
   begin
-    FWidthType := Value;
+    FWidthClass := Value;
     WidthTypeChanged;
   end;
 end;
@@ -2656,9 +2536,9 @@ end;
 
 procedure TPascalTypeOS2Table.SetSubScriptOffsetX(const Value: SmallInt);
 begin
-  if FSubScriptOffsetX <> Value then
+  if FSubscriptOffsetX <> Value then
   begin
-    FSubScriptOffsetX := Value;
+    FSubscriptOffsetX := Value;
     SubScriptOffsetXChanged;
   end;
 end;
@@ -2737,9 +2617,9 @@ end;
 
 procedure TPascalTypeOS2Table.SetWeight(const Value: Word);
 begin
-  if FWeight <> Value then
+  if FWeightClass <> Value then
   begin
-    FWeight := Value;
+    FWeightClass := Value;
     WeightChanged;
   end;
 end;
@@ -2751,7 +2631,7 @@ begin
 
   if WeightClass <> Value then
   begin
-    FWeight := Word(Value);
+    FWeightClass := Word(Value);
     WeightChanged;
   end;
 end;
