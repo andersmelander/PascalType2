@@ -133,10 +133,6 @@ object FmRenderDemo: TFmRenderDemo
     BevelOuter = bvNone
     ShowCaption = False
     TabOrder = 1
-    ExplicitLeft = 4
-    ExplicitTop = 60
-    ExplicitWidth = 777
-    ExplicitHeight = 329
     object SplitterFeatures: TSplitter
       Left = 185
       Top = 0
@@ -197,10 +193,6 @@ object FmRenderDemo: TFmRenderDemo
         end>
       ShowCaption = False
       TabOrder = 0
-      ExplicitLeft = -123
-      ExplicitTop = -64
-      ExplicitWidth = 900
-      ExplicitHeight = 393
       object PanelGDI: TPanel
         AlignWithMargins = True
         Left = 0
@@ -216,8 +208,6 @@ object FmRenderDemo: TFmRenderDemo
         Caption = 'GDI TextOut'
         ShowCaption = False
         TabOrder = 0
-        ExplicitWidth = 900
-        ExplicitHeight = 97
         object PaintBox1: TPaintBox
           Left = 705
           Top = 0
@@ -256,8 +246,6 @@ object FmRenderDemo: TFmRenderDemo
         Caption = 'PascalType GDI'
         ShowCaption = False
         TabOrder = 1
-        ExplicitTop = 99
-        ExplicitWidth = 900
         object PaintBox2: TPaintBox
           Left = 705
           Top = 0
@@ -295,8 +283,6 @@ object FmRenderDemo: TFmRenderDemo
         Caption = 'PascalType Graphics32'
         ShowCaption = False
         TabOrder = 2
-        ExplicitTop = 197
-        ExplicitWidth = 900
         object PaintBox3: TPaintBox
           Left = 705
           Top = 0
@@ -334,9 +320,6 @@ object FmRenderDemo: TFmRenderDemo
         Caption = 'Image32'
         ShowCaption = False
         TabOrder = 3
-        ExplicitTop = 296
-        ExplicitWidth = 900
-        ExplicitHeight = 97
         object PaintBox4: TPaintBox
           Left = 705
           Top = 0
@@ -389,16 +372,59 @@ object FmRenderDemo: TFmRenderDemo
       Caption = 'Clear all features'
       OnExecute = ActionFeaturesClearExecute
     end
+    object ActionPaintMetrics: TAction
+      AutoCheck = True
+      Caption = 'Draw metrics'
+      OnExecute = ActionGenericExecute
+    end
   end
   object PopupMenu: TPopupMenu
     Left = 452
     Top = 224
+    object MenuItemRenderer: TMenuItem
+      Caption = 'Renderers'
+      object MenuItemRendererGDI: TMenuItem
+        AutoCheck = True
+        Caption = 'GDI TextOut'
+        Checked = True
+        OnClick = MenuItemRendererClick
+      end
+      object MenuItemRendererPascalTypeGDI: TMenuItem
+        Tag = 1
+        AutoCheck = True
+        Caption = 'PascalType GDI renderer'
+        OnClick = MenuItemRendererClick
+      end
+      object MenuItemRendererPascalTypeGraphics32: TMenuItem
+        Tag = 2
+        AutoCheck = True
+        Caption = 'PascalType Graphics32 renderer'
+        Checked = True
+        OnClick = MenuItemRendererClick
+      end
+      object MenuItemRendererImage32: TMenuItem
+        Tag = 3
+        AutoCheck = True
+        Caption = 'Image32 DrawText'
+        Checked = True
+        OnClick = MenuItemRendererClick
+      end
+    end
+    object N2: TMenuItem
+      Caption = '-'
+    end
     object MenuItemColor: TMenuItem
       Action = ActionColor
       AutoCheck = True
+      Caption = 'Colorize individual glyphs'
     end
     object Paintcurvecontrolpoints1: TMenuItem
       Action = ActionPaintPoints
+      AutoCheck = True
+      Caption = 'Draw curve control points'
+    end
+    object Drawglyphmetrics1: TMenuItem
+      Action = ActionPaintMetrics
       AutoCheck = True
     end
     object N1: TMenuItem
@@ -406,6 +432,7 @@ object FmRenderDemo: TFmRenderDemo
     end
     object Clearallfeatures1: TMenuItem
       Action = ActionFeaturesClear
+      Caption = 'Reset all features'
     end
   end
 end

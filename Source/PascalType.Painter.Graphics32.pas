@@ -58,10 +58,12 @@ type
   TCustomPascalTypePainterCanvas32 = class abstract(TInterfacedObject, IPascalTypePainter)
   private
     FCanvas: TCustomPath;
-    FBrush: TSolidBrush;
+    FFillBrush: TSolidBrush;
+    FStrokeBrush: TStrokeBrush;
   protected
     property Canvas: TCustomPath read FCanvas;
-    property Brush: TSolidBrush read FBrush;
+    property FillBrush: TSolidBrush read FFillBrush;
+    property StrokeBrush: TStrokeBrush read FStrokeBrush;
   protected
     // IPascalTypePainter
     procedure BeginUpdate;
@@ -71,7 +73,7 @@ type
     procedure EndGlyph;
 
     procedure BeginPath;
-    procedure EndPath;
+    procedure EndPath(AClose: boolean);
 
     procedure MoveTo(const p: TFloatPoint);
     procedure LineTo(const p: TFloatPoint);
@@ -82,9 +84,11 @@ type
 
     procedure SetColor(Color: Cardinal);
     function GetColor: Cardinal;
+    procedure SetStrokeColor(Color: Cardinal);
+    function GetStrokeColor: Cardinal;
 
   protected
-    constructor Create(ACanvas: TCustomPath; ABrush: TSolidBrush = nil);
+    constructor Create(ACanvas: TCustomPath; AFillBrush: TSolidBrush = nil; AStrokeBrush: TStrokeBrush = nil);
   public
   end;
 
@@ -99,7 +103,7 @@ type
 type
   TPascalTypePainterCanvas32 = class(TCustomPascalTypePainterCanvas32)
   public
-    constructor Create(ACanvas: TCustomPath; ABrush: TSolidBrush = nil);
+    constructor Create(ACanvas: TCustomPath; AFillBrush: TSolidBrush = nil; AStrokeBrush: TStrokeBrush = nil);
   end;
 
 
@@ -453,18 +457,19 @@ end;
 //              TCustomPascalTypePainterCanvas32
 //
 //------------------------------------------------------------------------------
-constructor TPascalTypePainterCanvas32.Create(ACanvas: TCustomPath; ABrush: TSolidBrush);
+constructor TPascalTypePainterCanvas32.Create(ACanvas: TCustomPath; AFillBrush: TSolidBrush = nil; AStrokeBrush: TStrokeBrush = nil);
 begin
-  inherited Create(ACanvas, ABrush);
+  inherited Create(ACanvas, AFillBrush, AStrokeBrush);
 end;
 
 { TCustomPascalTypePainterCanvas32 }
 
-constructor TCustomPascalTypePainterCanvas32.Create(ACanvas: TCustomPath; ABrush: TSolidBrush);
+constructor TCustomPascalTypePainterCanvas32.Create(ACanvas: TCustomPath; AFillBrush: TSolidBrush; AStrokeBrush: TStrokeBrush);
 begin
   inherited Create;
   FCanvas := ACanvas;
-  FBrush := ABrush;
+  FFillBrush := AFillBrush;
+  FStrokeBrush := AStrokeBrush;
 end;
 
 procedure TCustomPascalTypePainterCanvas32.BeginGlyph;
@@ -482,9 +487,9 @@ begin
 
 end;
 
-procedure TCustomPascalTypePainterCanvas32.EndPath;
+procedure TCustomPascalTypePainterCanvas32.EndPath(AClose: boolean);
 begin
-  Canvas.EndPath(True);
+  Canvas.EndPath(AClose);
 end;
 
 procedure TCustomPascalTypePainterCanvas32.BeginUpdate;
@@ -499,14 +504,34 @@ end;
 
 procedure TCustomPascalTypePainterCanvas32.SetColor(Color: Cardinal);
 begin
-  if (FBrush <> nil) then
-    FBrush.FillColor := (Color32(TColor(Color and $00FFFFFF)) and $00FFFFFF) or (Color and $FF000000);
+  if (FFillBrush <> nil) then
+  begin
+    FFillBrush.FillColor := (Color32(TColor(Color and $00FFFFFF)) and $00FFFFFF) or (Color and $FF000000);
+    FFillBrush.Visible := (FFillBrush.FillColor and $FF000000 <> 0);
+  end;
 end;
 
 function TCustomPascalTypePainterCanvas32.GetColor: Cardinal;
 begin
-  if (FBrush <> nil) then
-    Result := Cardinal(WinColor(FBrush.FillColor) and $00FFFFFF) or Cardinal(FBrush.FillColor and $FF000000)
+  if (FFillBrush <> nil) then
+    Result := Cardinal(WinColor(FFillBrush.FillColor) and $00FFFFFF) or Cardinal(FFillBrush.FillColor and $FF000000)
+  else
+    Result := $FF000000;
+end;
+
+procedure TCustomPascalTypePainterCanvas32.SetStrokeColor(Color: Cardinal);
+begin
+  if (FStrokeBrush <> nil) then
+  begin
+    FStrokeBrush.FillColor := (Color32(TColor(Color and $00FFFFFF)) and $00FFFFFF) or (Color and $FF000000);
+    FStrokeBrush.Visible := (FStrokeBrush.FillColor and $FF000000 <> 0);
+  end;
+end;
+
+function TCustomPascalTypePainterCanvas32.GetStrokeColor: Cardinal;
+begin
+  if (FStrokeBrush <> nil) then
+    Result := Cardinal(WinColor(FStrokeBrush.FillColor) and $00FFFFFF) or Cardinal(FStrokeBrush.FillColor and $FF000000)
   else
     Result := $FF000000;
 end;
@@ -549,29 +574,22 @@ end;
 constructor TPascalTypePainterBitmap32.Create(ABitmap32: TBitmap32);
 var
   BrushFill: TSolidBrush;
-{$ifdef STROKE_PATH}
   BrushStroke: TStrokeBrush;
-{$endif STROKE_PATH}
 begin
   FCanvas32 := TCanvas32.Create(ABitmap32);
 
-{$ifdef FILL_PATH}
   BrushFill := FCanvas32.Brushes.Add(TSolidBrush) as TSolidBrush;
   BrushFill.FillColor := clBlack32;
   BrushFill.FillMode := pfNonZero;
-{$else  FILL_PATH}
-  BrushFill := nil;
-{$endif FILL_PATH}
 
-{$ifdef STROKE_PATH}
   BrushStroke := FCanvas32.Brushes.Add(TStrokeBrush) as TStrokeBrush;
-  BrushStroke.FillColor := clTrRed32;
+  BrushStroke.FillColor := 0;
   BrushStroke.StrokeWidth := 1;
   BrushStroke.JoinStyle := jsMiter;
   BrushStroke.EndStyle := esButt;
-{$endif STROKE_PATH}
+  BrushStroke.Visible := False;
 
-  inherited Create(FCanvas32, BrushFill);
+  inherited Create(FCanvas32, BrushFill, BrushStroke);
 end;
 
 destructor TPascalTypePainterBitmap32.Destroy;

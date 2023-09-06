@@ -71,7 +71,7 @@ type
 // A class that knows how to render a glyph
 //------------------------------------------------------------------------------
 type
-  TPascalTypeRenderOptions = set of (roPoints, roFill, roStroke, roColorize);
+  TPascalTypeRenderOptions = set of (roPoints, roFill, roStroke, roColorize, roMetrics);
 
   TPascalTypeRenderer = class(TInterfacedPersistent, IPascalTypeFontFaceNotification)
   strict private
@@ -80,12 +80,14 @@ type
       FDebugCircleRadius: Single;
       FDebugRectColor: Cardinal;
       FDebugCircleColor: Cardinal;
+      FDebugMetricsColor: Cardinal;
       FDebugGlyphPalette: TArray<Cardinal>;
   public
     class property DebugRectSize: Single read FDebugRectSize write FDebugRectSize;
     class property DebugCircleRadius: Single read FDebugCircleRadius write FDebugCircleRadius;
     class property DebugRectColor: Cardinal read FDebugRectColor write FDebugRectColor;
     class property DebugCircleColor: Cardinal read FDebugCircleColor write FDebugCircleColor;
+    class property DebugMetricsColor: Cardinal read FDebugMetricsColor write FDebugMetricsColor;
     class property DebugGlyphPalette: TArray<Cardinal> read FDebugGlyphPalette write FDebugGlyphPalette;
   strict private type
     TRenderFlags = set of (rfHasScalerX, rfHasScalerY, rfHasMetrics);
@@ -188,6 +190,7 @@ begin
   FDebugRectSize := 2.0;
   FDebugCircleColor := Cardinal(clRed) or $A0000000;
   FDebugRectColor := Cardinal(clBlue) or $A0000000;
+  FDebugMetricsColor := Cardinal(clSkyBlue) or $B0000000;
   FDebugGlyphPalette := [$FF233BC2, $FF529cc7, $FF52DAEA, $FF3CC003, $FFBE9A57, $FFD76E97];
 end;
 
@@ -237,7 +240,7 @@ begin
   Painter.BeginPath;
   Painter.SetColor(FDebugCircleColor);
   Painter.Circle(p, DebugCircleRadius);
-  Painter.EndPath;
+  Painter.EndPath(True);
 end;
 
 procedure TPascalTypeRenderer.RenderDebugRect(const Painter: IPascalTypePainter; const p: TFloatPoint);
@@ -250,7 +253,7 @@ begin
   r.BottomRight := p;
   r.Inflate(DebugRectSize, DebugRectSize);
   Painter.Rectangle(r);
-  Painter.EndPath;
+  Painter.EndPath(True);
 end;
 
 type
@@ -422,7 +425,7 @@ begin
     end;
 
     if (not (roPoints in FOptions)) then
-      Painter.EndPath;
+      Painter.EndPath(True);
   end;
 
   if (not (roPoints in FOptions)) then
@@ -467,6 +470,23 @@ begin
 end;
 
 procedure TPascalTypeRenderer.RenderShapedText(ShapedText: TPascalTypeGlyphString; const Painter: IPascalTypePainter; var X, Y: TRenderFloat);
+
+  procedure DrawLineHorizontal(X1, X2, Y: TRenderFloat);
+  var
+    p: TFloatPoint;
+  begin
+    Painter.BeginPath;
+
+    p.X := X1;
+    p.Y := Y;
+    Painter.MoveTo(p);
+
+    p.X := X2;
+    Painter.LineTo(p);
+
+    Painter.EndPath(False);
+  end;
+
 var
   Cursor: TFloatPoint;
   SaveColor: Cardinal;
@@ -497,6 +517,19 @@ begin
     else
     if (not (roPoints in FOptions)) then
       Painter.EndUpdate;
+  end;
+
+  if (roMetrics in FOptions) then
+  begin
+    Painter.StrokeColor := DebugMetricsColor;
+
+    // Base line/ascent
+    DrawLineHorizontal(X, Cursor.X, Ascent * ScalerY);
+
+    // Descent
+    DrawLineHorizontal(X, Cursor.X, (Ascent+Descent) * ScalerY);
+
+    Painter.StrokeColor := 0;
   end;
 
   X := Cursor.X;

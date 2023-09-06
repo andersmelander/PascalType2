@@ -68,7 +68,7 @@ type
     procedure EndGlyph;
 
     procedure BeginPath;
-    procedure EndPath;
+    procedure EndPath(AClose: boolean);
 
     procedure MoveTo(const p: TFloatPoint);
     procedure LineTo(const p: TFloatPoint);
@@ -79,8 +79,11 @@ type
 
     procedure SetColor(Color: Cardinal);
     function GetColor: Cardinal;
+    procedure SetStrokeColor(Color: Cardinal);
+    function GetStrokeColor: Cardinal;
 
     property Color: Cardinal read GetColor write SetColor;
+    property StrokeColor: Cardinal read GetStrokeColor write SetStrokeColor;
   end;
 
 implementation

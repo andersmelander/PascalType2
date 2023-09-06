@@ -66,7 +66,7 @@ type
     procedure EndGlyph;
 
     procedure BeginPath;
-    procedure EndPath;
+    procedure EndPath(AClose: boolean);
 
     procedure MoveTo(const p: TFloatPoint);
     procedure LineTo(const p: TFloatPoint);
@@ -77,6 +77,8 @@ type
 
     procedure SetColor(Color: Cardinal);
     function GetColor: Cardinal;
+    procedure SetStrokeColor(Color: Cardinal);
+    function GetStrokeColor: Cardinal;
 
   public
     constructor Create(ACanvas: TCanvas);
@@ -119,9 +121,10 @@ procedure TPascalTypePainterGDI.BeginPath;
 begin
 end;
 
-procedure TPascalTypePainterGDI.EndPath;
+procedure TPascalTypePainterGDI.EndPath(AClose: boolean);
 begin
-  Windows.CloseFigure(FCanvas.Handle);
+  if (AClose) then
+    Windows.CloseFigure(FCanvas.Handle);
 end;
 
 procedure TPascalTypePainterGDI.BeginUpdate;
@@ -140,6 +143,16 @@ end;
 function TPascalTypePainterGDI.GetColor: Cardinal;
 begin
   Result := Cardinal(Canvas.Brush.Color) or $FF000000;
+end;
+
+procedure TPascalTypePainterGDI.SetStrokeColor(Color: Cardinal);
+begin
+  Canvas.Pen.Color := Color and $00FFFFFF;
+end;
+
+function TPascalTypePainterGDI.GetStrokeColor: Cardinal;
+begin
+  Result := Cardinal(Canvas.Pen.Color) or $FF000000;
 end;
 
 procedure TPascalTypePainterGDI.Circle(const p: TFloatPoint; Radius: TRenderFloat);

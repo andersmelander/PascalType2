@@ -64,6 +64,14 @@ type
     ComboBoxFontSize: TComboBox;
     PanelMain: TPanel;
     SplitterFeatures: TSplitter;
+    ActionPaintMetrics: TAction;
+    Drawglyphmetrics1: TMenuItem;
+    MenuItemRenderer: TMenuItem;
+    MenuItemRendererPascalTypeGDI: TMenuItem;
+    MenuItemRendererGDI: TMenuItem;
+    MenuItemRendererPascalTypeGraphics32: TMenuItem;
+    MenuItemRendererImage32: TMenuItem;
+    N2: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -79,6 +87,7 @@ type
     procedure ActionColorExecute(Sender: TObject);
     procedure ActionGenericExecute(Sender: TObject);
     procedure ActionFeaturesClearExecute(Sender: TObject);
+    procedure MenuItemRendererClick(Sender: TObject);
   private
     FFontFace: TPascalTypeFontFace;
     FRenderer: TPascalTypeRenderer;
@@ -200,16 +209,15 @@ procedure TFmRenderDemo.FormCreate(Sender: TObject);
 var
   TestCase: TTestCase;
 begin
+  GridPanelSamples.RowCollection.Items[MenuItemRendererPascalTypeGDI.Tag].SizeStyle := ssAbsolute;
+  GridPanelSamples.RowCollection.Items[MenuItemRendererPascalTypeGDI.Tag].Value := 0;
+  GridPanelSamples.RowCollection.EquallySplitPercentuals;
 {$ifndef IMAGE32}
   PanelImage32.Free;
   GridPanel1.RowCollection.Items[3].Free;
   GridPanel1.RowCollection.EquallySplitPercentuals;
+  MenuItemRendererImage32.Free;
 {$endif IMAGE32}
-{$ifndef RASTERIZER_GDI}
-  PanelPascalTypeGDI.Free;
-  GridPanelSamples.RowCollection.Items[1].Free;
-  GridPanelSamples.RowCollection.EquallySplitPercentuals;
-{$endif RASTERIZER_GDI}
 
   FFeatures := TPascalTypeShaperFeatures.Create;
 
@@ -253,6 +261,19 @@ end;
 procedure TFmRenderDemo.FormShow(Sender: TObject);
 begin
   Text := EditText.Text;
+end;
+
+procedure TFmRenderDemo.MenuItemRendererClick(Sender: TObject);
+begin
+  if (TMenuItem(Sender).Checked) then
+  begin
+    GridPanelSamples.RowCollection.Items[TMenuItem(Sender).Tag].SizeStyle := ssPercent;
+  end else
+  begin
+    GridPanelSamples.RowCollection.Items[TMenuItem(Sender).Tag].SizeStyle := ssAbsolute;
+    GridPanelSamples.RowCollection.Items[TMenuItem(Sender).Tag].Value := 0;
+  end;
+  GridPanelSamples.RowCollection.EquallySplitPercentuals;
 end;
 
 procedure TFmRenderDemo.ButtonFeatureClick(Sender: TObject);
@@ -327,6 +348,7 @@ var
   UTF32: TPascalTypeCodePoints;
   ShapedText: TPascalTypeGlyphString;
   Tag: PascalType.Types.TTableName;
+  SaveOptions: TPascalTypeRenderOptions;
 begin
   Canvas := TPaintBox(Sender).Canvas;
 
@@ -362,15 +384,21 @@ begin
         ShapedText := Shaper.Shape(UTF32);
         try
 
+          if (ActionPaintMetrics.Checked) then
+            FRenderer.Options := FRenderer.Options + [roMetrics]
+          else
+            FRenderer.Options := FRenderer.Options - [roMetrics];
+
           FRenderer.RenderShapedText(ShapedText, Painter);
 
           if (ActionPaintPoints.Checked) then
           begin
-            FRenderer.Options := FRenderer.Options + [roPoints];
+            SaveOptions := FRenderer.Options;
+            FRenderer.Options := FRenderer.Options + [roPoints] - [roMetrics];
 
             FRenderer.RenderShapedText(ShapedText, Painter);
 
-            FRenderer.Options := FRenderer.Options - [roPoints];
+            FRenderer.Options := SaveOptions;
           end;
         finally
           ShapedText.Free;
