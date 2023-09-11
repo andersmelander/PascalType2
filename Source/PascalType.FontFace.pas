@@ -38,6 +38,10 @@ uses
   Classes,
   SysUtils,
   Types,
+{$ifdef MSWINDOWS}
+  Windows,
+  Graphics,
+{$endif MSWINDOWS}
   Generics.Collections,
   PascalType.Types,
   PascalType.Classes,
@@ -81,8 +85,13 @@ type
     procedure BeginUpdate;
     procedure EndUpdate;
 
-    procedure LoadFromFile(FileName: TFileName);
-    procedure SaveToFile(FileName: TFileName);
+    procedure LoadFromFile(const FileName: TFileName);
+    procedure SaveToFile(const FileName: TFileName);
+
+{$ifdef MSWINDOWS}
+    procedure LoadFromFont(AHandle: HFont); overload;
+    procedure LoadFromFont(AFont: TFont); overload;
+{$endif MSWINDOWS}
 
     // CreateLayoutEngine creates a layout engine specific to the font technology
     // handled by this font class.
@@ -133,7 +142,7 @@ begin
   inherited;
 end;
 
-procedure TCustomPascalTypeFontFacePersistent.LoadFromFile(FileName: TFileName);
+procedure TCustomPascalTypeFontFacePersistent.LoadFromFile(const FileName: TFileName);
 var
   Stream: TStream;
 begin
@@ -153,6 +162,142 @@ begin
   end;
 end;
 
+{$ifdef MSWINDOWS}
+(* Seemed like a good idea... but performs horribly!
+type
+  TWindowsFontStream = class(TStream)
+  private
+    FDC: HDC;
+    FSize: DWORD;
+    FPosition: NativeInt;
+  public
+    constructor Create(AHandle: HFont);
+    destructor Destroy; override;
+
+    function Read(var Buffer; Count: Longint): Longint; override;
+    function Seek(const Offset: Int64; Origin: TSeekOrigin): Int64; override;
+  end;
+
+constructor TWindowsFontStream.Create(AHandle: HFont);
+begin
+  inherited Create;
+
+  FDC := Windows.CreateCompatibleDC(0);
+  try
+    if (Windows.SelectObject(FDC, AHandle) = 0) then
+      RaiseLastOSError;
+
+    FSize := Windows.GetFontData(FDC, 0, 0, nil, 0);
+    if (FSize = Windows.GDI_ERROR) then
+      RaiseLastOSError;
+
+  except
+    DeleteDC(FDC);
+    FDC := 0;
+    raise;
+  end;
+end;
+
+destructor TWindowsFontStream.Destroy;
+begin
+  if (FDC <> 0) then
+    DeleteDC(FDC);
+
+  inherited;
+end;
+
+function TWindowsFontStream.Read(var Buffer; Count: Longint): Longint;
+var
+  Res: DWORD;
+begin
+  if (FPosition >= 0) and (Count >= 0) then
+  begin
+    if (FSize - FPosition > 0) then
+    begin
+      if (FSize > Count + FPosition) then
+        Result := Count
+      else
+        Result := FSize - FPosition;
+
+      Res := Windows.GetFontData(FDC, 0, FPosition, @Buffer, Count);
+
+      if (Res = Windows.GDI_ERROR) then
+        RaiseLastOSError;
+
+      Inc(FPosition, Result);
+      Exit;
+    end;
+  end;
+  Result := 0;
+end;
+
+function TWindowsFontStream.Seek(const Offset: Int64; Origin: TSeekOrigin): Int64;
+begin
+  case Origin of
+    soBeginning:
+      FPosition := Offset;
+
+    soCurrent:
+      Inc(FPosition, Offset);
+
+    soEnd:
+      FPosition := FSize + Offset;
+  end;
+  Result := FPosition;
+end;
+*)
+
+type
+  TWindowsFontStream = class(TMemoryStream)
+  public
+    constructor Create(AHandle: HFont);
+  end;
+
+constructor TWindowsFontStream.Create(AHandle: HFont);
+var
+  DC: HDC;
+  Size: DWORD;
+begin
+  inherited Create;
+
+  DC := Windows.CreateCompatibleDC(0);
+  try
+    if (Windows.SelectObject(DC, AHandle) = 0) then
+      RaiseLastOSError;
+
+    Size := Windows.GetFontData(DC, 0, 0, nil, 0);
+    if (Size = Windows.GDI_ERROR) then
+      RaiseLastOSError;
+
+    SetSize(Size);
+
+    Size := Windows.GetFontData(DC, 0, 0, Memory, Size);
+    if (Size = Windows.GDI_ERROR) then
+      RaiseLastOSError;
+
+  finally
+    DeleteDC(DC);
+  end;
+end;
+
+procedure TCustomPascalTypeFontFacePersistent.LoadFromFont(AHandle: HFont);
+var
+  Stream: TStream;
+begin
+  Stream := TWindowsFontStream.Create(AHandle);
+  try
+    LoadFromStream(Stream);
+  finally
+    Stream.Free;
+  end;
+end;
+
+procedure TCustomPascalTypeFontFacePersistent.LoadFromFont(AFont: TFont);
+begin
+  LoadFromFont(AFont.Handle);
+end;
+{$endif MSWINDOWS}
+
 procedure TCustomPascalTypeFontFacePersistent.Notify(Notification: TFontFaceNotification);
 var
   i: integer;
@@ -164,7 +309,7 @@ begin
     FSubscribers[i].FontFaceNotification(Self, Notification);
 end;
 
-procedure TCustomPascalTypeFontFacePersistent.SaveToFile(FileName: TFileName);
+procedure TCustomPascalTypeFontFacePersistent.SaveToFile(const FileName: TFileName);
 var
   Stream: TStream;
 begin
