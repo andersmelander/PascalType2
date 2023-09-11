@@ -183,10 +183,6 @@ begin
 end;
 
 procedure TPascalTypeBitmapLineMetrics.LoadFromStream(Stream: TStream; Size: Cardinal);
-{$IFDEF AmbigiousExceptions}
-var
-  Value8: Byte;
-{$ENDIF}
 begin
   inherited;
 
@@ -204,18 +200,8 @@ begin
   Stream.Read(FMaxBeforeBL, 1);
   Stream.Read(FMinAfterBL, 1);
 
-{$IFDEF AmbigiousExceptions}
-  // read horizontal metrics padding
-  Stream.Read(Value8, 1);
-  if Value8 <> 0 then
-    raise EPascalTypeError.Create(RCStrPaddingByteError);
-
-  Stream.Read(Value8, 1);
-  if Value8 <> 0 then
-    raise EPascalTypeError.Create(RCStrPaddingByteError);
-{$ELSE}
+  // Skip padding
   Stream.Seek(2, soCurrent);
-{$ENDIF}
 end;
 
 procedure TPascalTypeBitmapLineMetrics.SaveToStream(Stream: TStream);
