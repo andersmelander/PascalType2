@@ -636,6 +636,10 @@ var
   i: integer;
   Iterator: TPascalTypeGlyphGlyphIterator;
 begin
+  // Lookup can be empty in which case we consider it a match. See issue #49
+  if (Length(LookupRecords) = 0) then
+    Exit(True);
+
   Result := False;
 
   LookupList := LookupTable.LookupList;
@@ -653,7 +657,6 @@ begin
 
     // Recursively apply until one matches
     if (Lookup.Apply(Iterator)) then
-      // TODO : FontKit doesn't break the loop here
       Exit(True);
   end;
   // TODO : FontKit doesn't increment the iterator (hence the const param). I believe that is wrong.
