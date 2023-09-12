@@ -230,9 +230,9 @@ begin
   if (AddedFrac) then
     AGlyphs.Features.Add('frac');
   if (AddedNumr) then
-    AGlyphs.Features.Add('frac');
+    AGlyphs.Features.Add('numr');
   if (AddedDnom) then
-    AGlyphs.Features.Add('frac');
+    AGlyphs.Features.Add('dnom');
 end;
 
 function TPascalTypeDefaultShaper.NeedUnicodeComposition: boolean;
