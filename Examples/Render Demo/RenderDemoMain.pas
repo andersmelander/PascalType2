@@ -164,7 +164,7 @@ type
 const
   TestCases: array[0..19] of TTestCase = (
     (Name: 'Default'; FontName: 'Arial'; Text: 'PascalType Render Demo'),
-    (Name: 'GSUB, Single, Single/frac'; FontName: 'Cascadia Mono Regular'; Text: '123/456! ½ 8'#$2044'9'),
+    (Name: 'GSUB, Single, Single/frac'; FontName: 'Calibri'; Text: '123'#$2044'456! ½ 1/2 1'#$2044'2 12 OS/2'),
     (Name: 'GSUB, Single, List'; FontName: 'Candara'; Script: (AsAnsiChar: 'latn'); Text: #$0386#$038C#$038E#$038F), // Script is detected as "grek" (Greek) but font appears to have problems with that
 //    (Name: 'GSUB, Single, List'; FontName: 'Candara'; Text: #$0386#$038C#$038E#$038F), // Script is detected as grek but font appears to have problems with that
     (Name: 'GSUB, Ligature'; FontName: 'Arabic Typesetting'; Text: 'ff fi ffi ft fft'),
@@ -227,6 +227,8 @@ begin
   FRenderer := TPascalTypeRenderer.Create;
   FRenderer.FontFace := FFontFace;
   FRenderer.PixelPerInch := Screen.PixelsPerInch;
+  FRenderer.HorizontalOrigin := hoZero;
+  FRenderer.VerticalOrigin := voZero;
 
   // set initial properties
   FontSize := StrToIntDef(ComboBoxFontSize.Text, 36);

@@ -71,7 +71,33 @@ type
 // A class that knows how to render a glyph
 //------------------------------------------------------------------------------
 type
+  TPascalTypeFontMetric = record
+    Origin: TFloatPoint;                // Offset of origin.
+    Baseline: TRenderFloat;             // Base line. All the following are relative to to this value.
+    Ascender: TRenderFloat;             // Ascender. Relative to baseline.
+    Descender: TRenderFloat;            // Descender.
+    XHeight: TRenderFloat;              // Height of minors.
+    CapHeight: TRenderFloat;            // Height of majors.
+    LineGap: TRenderFLoat;              // Line gap.
+  end;
+
+type
   TPascalTypeRenderOptions = set of (roPoints, roFill, roStroke, roColorize, roMetrics);
+
+  TPascalTypeRenderVerticalOrigin = (
+    voZero,                     // The normal baseline is used. Top of glyphs might be clipped.
+    voAuto,                     // The baseline is adjusted based on glyph path points. Clipping will not occur.
+    voTight,                    // The baseline is adjusted based on the font bounding box. Clipping should not occur.
+    voCenter,                   // The baseline is shifted down half a line gap.
+    voCustom                    // User specified origin value is used.
+  );
+
+  TPascalTypeRenderHorizontalOrigin = (
+    hoZero,                     // First glyph starts at X=0. Left side of glyphs might be clipped.
+    hoAuto,                     // First glyph is positioned so leftmost glyph path point start at x=0. Left side of glyph will not be clipped.
+    hoTight,                    // First glyph is positioned so left side bearing starts at X=0. Left side of glyph should not be clipped.
+    hoCustom                    // User specified origin value is used.
+  );
 
   TPascalTypeRenderer = class(TInterfacedPersistent, IPascalTypeFontFaceNotification)
   strict private
@@ -80,14 +106,16 @@ type
       FDebugCircleRadius: Single;
       FDebugRectColor: Cardinal;
       FDebugCircleColor: Cardinal;
-      FDebugMetricsColor: Cardinal;
+      FDebugFontMetricsColor: Cardinal;
+      FDebugGlyphMetricsColor: Cardinal;
       FDebugGlyphPalette: TArray<Cardinal>;
   public
     class property DebugRectSize: Single read FDebugRectSize write FDebugRectSize;
     class property DebugCircleRadius: Single read FDebugCircleRadius write FDebugCircleRadius;
     class property DebugRectColor: Cardinal read FDebugRectColor write FDebugRectColor;
     class property DebugCircleColor: Cardinal read FDebugCircleColor write FDebugCircleColor;
-    class property DebugMetricsColor: Cardinal read FDebugMetricsColor write FDebugMetricsColor;
+    class property DebugFontMetricsColor: Cardinal read FDebugFontMetricsColor write FDebugFontMetricsColor;
+    class property DebugGlyphMetricsColor: Cardinal read FDebugGlyphMetricsColor write FDebugGlyphMetricsColor;
     class property DebugGlyphPalette: TArray<Cardinal> read FDebugGlyphPalette write FDebugGlyphPalette;
   strict private type
     TRenderFlags = set of (rfHasScalerX, rfHasScalerY, rfHasMetrics);
@@ -100,7 +128,10 @@ type
     FPixelPerInchY: Integer;
     FScalerX: TScaleType;
     FScalerY: TScaleType;
-    FAscent, FDescent: integer;
+    FVerticalOrigin: TPascalTypeRenderVerticalOrigin;
+    FHorizontalOrigin: TPascalTypeRenderHorizontalOrigin;
+    FFontMetrics: TPascalTypeFontMetric;
+    FCustomOrigin: TFloatPoint;
     procedure SetFontSize(const Value: Integer);
     function GetFontSize: Integer;
     function GetPixelPerInch: Integer;
@@ -109,21 +140,22 @@ type
     procedure SetPixelPerInchY(const Value: Integer);
     procedure SetFontHeight(const Value: Integer);
     procedure SetFontFace(const Value: TPascalTypeFontFace);
+    procedure SetHorizontalOrigin(const Value: TPascalTypeRenderHorizontalOrigin);
+    procedure SetVerticalOrigin(const Value: TPascalTypeRenderVerticalOrigin);
+    procedure SetHorizontalOriginValue(const Value: TRenderFloat);
+    procedure SetVerticalOriginValue(const Value: TRenderFloat);
+    function GetHorizontalOriginValue: TRenderFloat;
+    function GetVerticalOriginValue: TRenderFloat;
     function GetScalerX: TScaleType;
     function GetScalerY: TScaleType;
-    function GetAscent: integer;
-    function GetDescent: integer;
+    function GetFontMetrics: TPascalTypeFontMetric;
   private
     // IPascalTypeFontFaceNotification
     procedure FontFaceNotification(Sender: TCustomPascalTypeFontFacePersistent; Notification: TFontFaceNotification);
   protected
-    procedure RecalculateScaler;
     procedure CalculateScalerX;
     procedure CalculateScalerY;
     procedure CalculateMetrics;
-
-    function RoundedScaleX(Value: Integer): Integer;
-    function RoundedScaleY(Value: Integer): Integer;
 
     function GetGlyphMetric(GlyphIndex: Integer): TGlyphMetric;
     function GetAdvanceWidth(GlyphIndex: Integer): TScaleType;
@@ -136,8 +168,7 @@ type
 
     property ScalerX: TScaleType read GetScalerX;
     property ScalerY: TScaleType read GetScalerY;
-    property Ascent: integer read GetAscent;
-    property Descent: integer read GetDescent;
+    property FontMetrics: TPascalTypeFontMetric read GetFontMetrics;
   protected
     procedure RenderGlyph(GlyphIndex: Integer; const Painter: IPascalTypePainter; const Cursor: TFloatPoint);
     procedure RenderGlyphPath(const GlyphPath: TPascalTypePath; const Painter: IPascalTypePainter; const Cursor: TFloatPoint);
@@ -159,6 +190,10 @@ type
     procedure RenderShapedGlyph(AGlyph: TPascalTypeGlyph; const Painter: IPascalTypePainter; var X, Y: TRenderFloat);
 
     property Options: TPascalTypeRenderOptions read FOptions write FOptions;
+    property VerticalOrigin: TPascalTypeRenderVerticalOrigin read FVerticalOrigin write SetVerticalOrigin;
+    property HorizontalOrigin: TPascalTypeRenderHorizontalOrigin read FHorizontalOrigin write SetHorizontalOrigin;
+    property VerticalOriginValue: TRenderFloat read GetVerticalOriginValue write SetVerticalOriginValue;
+    property HorizontalOriginValue: TRenderFloat read GetHorizontalOriginValue write SetHorizontalOriginValue;
 
     property FontFace: TPascalTypeFontFace read FFontFace write SetFontFace; // TODO : This ought to be TCustomPascalTypeFontFace
     property FontHeight: Integer read FFontHeight write SetFontHeight default -11;
@@ -190,7 +225,8 @@ begin
   FDebugRectSize := 2.0;
   FDebugCircleColor := Cardinal(clRed) or $A0000000;
   FDebugRectColor := Cardinal(clBlue) or $A0000000;
-  FDebugMetricsColor := Cardinal(clSkyBlue) or $B0000000;
+  FDebugFontMetricsColor := Cardinal(clSkyBlue) or $B0000000;
+  FDebugGlyphMetricsColor := Cardinal(clGreen) or $B0000000;
   FDebugGlyphPalette := [$FF233BC2, $FF529cc7, $FF52DAEA, $FF3CC003, $FFBE9A57, $FFD76E97];
 end;
 
@@ -303,8 +339,8 @@ begin
   if (Length(GlyphPath) = 0) then
     exit;
 
-  Origin.X := Cursor.X;
-  Origin.Y := Cursor.Y + Ascent * ScalerY;
+  Origin.X := Cursor.X + FontMetrics.Origin.X;
+  Origin.Y := Cursor.Y + FontMetrics.Origin.Y + FontMetrics.Baseline;
 
   if (not (roPoints in FOptions)) then
     Painter.BeginGlyph;
@@ -449,7 +485,7 @@ begin
 {$ifdef Inverse_Y_axis}
   Cursor.Y := Y - ScalerY * AGlyph.YOffset;
 {$else Inverse_Y_axis}
-  Cursor.Y := Y + ScalerY * Glyph.YOffset;
+  Cursor.Y := Y + ScalerY * AGlyph.YOffset;
 {$endif Inverse_Y_axis}
 
   // Rasterize glyph
@@ -470,21 +506,63 @@ begin
 end;
 
 procedure TPascalTypeRenderer.RenderShapedText(ShapedText: TPascalTypeGlyphString; const Painter: IPascalTypePainter; var X, Y: TRenderFloat);
+var
+  OriginX: TRenderFloat;
 
-  procedure DrawLineHorizontal(X1, X2, Y: TRenderFloat);
-  var
-    p: TFloatPoint;
+  function FloatPoint(X, Y: TRenderFloat): TFloatPoint;
+  begin
+    Result.X := X;
+    Result.Y := Y;
+  end;
+
+  procedure DrawLineHorizontal(X1, X2, Y: TRenderFloat; const Caption: string = '');
   begin
     Painter.BeginPath;
 
-    p.X := X1;
-    p.Y := Y;
-    Painter.MoveTo(p);
-
-    p.X := X2;
-    Painter.LineTo(p);
+    Painter.MoveTo(FloatPoint(X1, Y));
+    Painter.LineTo(FloatPoint(X2, Y));
 
     Painter.EndPath(False);
+  end;
+
+  procedure DrawGlyphMetrics;
+  var
+    Cursor: TFloatPoint;
+    StartX, StartY: TRenderFloat;
+    i: integer;
+    Glyph: TPascalTypeGlyph;
+  begin
+    Cursor.X := X + FontMetrics.Origin.X + OriginX;
+    Cursor.Y := Y + FontMetrics.Origin.Y + FontMetrics.Baseline;
+
+    for i := 0 to ShapedText.Count-1 do
+    begin
+      Glyph := ShapedText[i];
+
+      // Position glyph relative to cursor
+      StartX := Cursor.X + ScalerX * Glyph.XOffset;
+    {$ifdef Inverse_Y_axis}
+      StartY := Cursor.Y - ScalerY * Glyph.YOffset;
+    {$else Inverse_Y_axis}
+      StartY := Cursor.Y + ScalerY * Glyph.YOffset;
+    {$endif Inverse_Y_axis}
+
+      Painter.BeginPath;
+      Painter.MoveTo(FloatPoint(StartX, StartY-5));
+      Painter.LineTo(FloatPoint(StartX, StartY));
+      Painter.LineTo(FloatPoint(StartX+5, StartY));
+      Painter.EndPath(False);
+
+      // Advance cursor
+      Cursor.X := Cursor.X + ScalerX * Glyph.XAdvance;
+      Cursor.Y := Cursor.Y + ScalerY * Glyph.YAdvance;
+
+      Painter.BeginPath;
+      Painter.MoveTo(FloatPoint(Cursor.X-5, Cursor.Y));
+      Painter.LineTo(Cursor);
+      Painter.LineTo(FloatPoint(Cursor.X, Cursor.Y+5));
+      Painter.EndPath(False);
+    end;
   end;
 
 var
@@ -492,8 +570,21 @@ var
   SaveColor: Cardinal;
   i: integer;
 begin
+  if (ShapedText.Count = 0) then
+    exit;
+
   Cursor.X := X;
   Cursor.Y := Y;
+
+  if (FHorizontalOrigin = hoTight) and (FontFace.HorizontalMetrics <> nil) then
+  begin
+    // If 'hmtx' table contains fewer entries that there are glyphs, then the last
+    // entry repeats.
+    i := Min(ShapedText[0].GlyphID, FontFace.HorizontalMetrics.HorizontalMetricCount-1);
+    OriginX := -FontFace.HorizontalMetrics[i].Bearing * ScalerX;
+    Cursor.X := Cursor.X + OriginX;
+  end else
+    OriginX := 0;
 
   SaveColor := 0;
   if (roColorize in FOptions) then
@@ -521,15 +612,38 @@ begin
 
   if (roMetrics in FOptions) then
   begin
-    Painter.StrokeColor := DebugMetricsColor;
+    SaveColor := Painter.Color;
+    Painter.Color := 0;
+    Painter.StrokeColor := DebugFontMetricsColor;
+//    Painter.BeginUpdate;
 
-    // Base line/ascent
-    DrawLineHorizontal(X, Cursor.X, Ascent * ScalerY);
+    // Baseline
+    DrawLineHorizontal(X, Cursor.X, FontMetrics.Origin.Y + FontMetrics.Baseline, 'baseline');
 
-    // Descent
-    DrawLineHorizontal(X, Cursor.X, (Ascent+Descent) * ScalerY);
+    // Ascentder
+    if (FontMetrics.Baseline <> FontMetrics.Ascender) then
+      DrawLineHorizontal(X, Cursor.X, FontMetrics.Origin.Y + FontMetrics.Baseline - FontMetrics.Ascender, 'ascender height');
 
+    // Descender
+    DrawLineHorizontal(X, Cursor.X, FontMetrics.Origin.Y + FontMetrics.Baseline + FontMetrics.Descender, 'descender depth');
+
+    // LineGap
+    if (FontMetrics.LineGap <> 0) then
+      DrawLineHorizontal(X, Cursor.X, FontMetrics.Origin.Y + FontMetrics.Baseline + FontMetrics.LineGap, 'Line gap');
+
+    // Lower- and uppercase heights
+    if (FontMetrics.XHeight <> 0) then
+      DrawLineHorizontal(X, Cursor.X, FontMetrics.Origin.Y + FontMetrics.Baseline - FontMetrics.XHeight, 'x-height');
+    if (FontMetrics.CapHeight <> 0) then
+      DrawLineHorizontal(X, Cursor.X, FontMetrics.Origin.Y + FontMetrics.Baseline - FontMetrics.CapHeight, 'cap height');
+
+    // Glyph metrics
+    Painter.StrokeColor := DebugGlyphMetricsColor;
+    DrawGlyphMetrics;
+
+//    Painter.EndUpdate;
     Painter.StrokeColor := 0;
+    Painter.Color := SaveColor
   end;
 
   X := Cursor.X;
@@ -599,27 +713,10 @@ begin
   Y := Cursor.Y;
 end;
 
-function TPascalTypeRenderer.RoundedScaleX(Value: Integer): Integer;
-begin
-{$IFDEF UseFloatingPoint}
-  Result := Round(Value * ScalerX);
-{$ELSE}
-  Result := Int64(Value shl 6 * ScalerX) shr 6;
-{$ENDIF}
-end;
-
-function TPascalTypeRenderer.RoundedScaleY(Value: Integer): Integer;
-begin
-{$IFDEF UseFloatingPoint}
-  Result := Round(Value * ScalerY);
-{$ELSE}
-  Result := Int64(Value shl 6 * ScalerY) shr 6;
-{$ENDIF}
-end;
-
 procedure TPascalTypeRenderer.FontChanged;
 begin
-  RecalculateScaler;
+  Exclude(FFlags, rfHasScalerX);
+  Exclude(FFlags, rfHasScalerY);
   Exclude(FFlags, rfHasMetrics);
 end;
 
@@ -636,41 +733,88 @@ end;
 
 procedure TPascalTypeRenderer.FontHeightChanged;
 begin
-  RecalculateScaler;
-end;
-
-procedure TPascalTypeRenderer.RecalculateScaler;
-begin
   Exclude(FFlags, rfHasScalerX);
   Exclude(FFlags, rfHasScalerY);
-  CalculateScalerX;
-  CalculateScalerY;
+  Exclude(FFlags, rfHasMetrics);
 end;
 
 procedure TPascalTypeRenderer.CalculateMetrics;
+var
+  LineGap: TRenderFLoat;
 begin
+  if (rfHasMetrics in FFlags) then
+    exit;
   Include(FFlags, rfHasMetrics);
+
+  FFontMetrics := Default(TPascalTypeFontMetric);
 
   if (FontFace.OS2Table <> nil) then
   begin
     if (fsfUseTypoMetrics in FontFace.OS2Table.FontSelectionFlags) then
     begin
-      FAscent := FontFace.OS2Table.TypographicAscent;
-      FDescent := -FontFace.OS2Table.TypographicDescent;
+      FFontMetrics.Baseline := FontFace.OS2Table.TypographicAscent * ScalerY;
+      FFontMetrics.Descender := -FontFace.OS2Table.TypographicDescent * ScalerY;
     end else
     begin
-      FAscent := FontFace.OS2Table.WindowsAscent;
-      FDescent := FontFace.OS2Table.WindowsDescent;
+      FFontMetrics.Baseline := FontFace.OS2Table.WindowsAscent * ScalerY;
+      FFontMetrics.Descender := FontFace.OS2Table.WindowsDescent * ScalerY;
+    end;
+
+    FFontMetrics.Ascender := Min(FontFace.OS2Table.TypographicAscent, FontFace.OS2Table.WindowsAscent) * ScalerY;
+
+    if (FontFace.OS2Table.AddendumTable <> nil) then
+    begin
+      FFontMetrics.XHeight := FontFace.OS2Table.AddendumTable.XHeight * ScalerY;
+      FFontMetrics.CapHeight := FontFace.OS2Table.AddendumTable.CapHeight * ScalerY;
     end;
   end else
   if (FontFace.HorizontalHeader <> nil) then
   begin
-    FAscent := FontFace.HorizontalHeader.Ascent;
-    FDescent := -FontFace.HorizontalHeader.Descent;
+    FFontMetrics.Baseline := FontFace.HorizontalHeader.Ascent * ScalerY;
+    FFontMetrics.Ascender := FFontMetrics.Baseline;
+    FFontMetrics.Descender := -FontFace.HorizontalHeader.Descent * ScalerY;
   end else
   begin
-    FAscent := FontFace.HeaderTable.YMax;
-    FDescent := -FontFace.HeaderTable.YMin;
+    FFontMetrics.Baseline := FontFace.HeaderTable.YMax * ScalerY;
+    FFontMetrics.Ascender := FFontMetrics.Baseline;
+    FFontMetrics.Descender := -FontFace.HeaderTable.YMin * ScalerY;
+  end;
+
+  if (FontFace.OS2Table <> nil) and (fsfUseTypoMetrics in FontFace.OS2Table.FontSelectionFlags) then
+  begin
+    LineGap := FontFace.OS2Table.TypographicLineGap * ScalerY;
+    FFontMetrics.LineGap := FFontMetrics.Descender + LineGap;
+  end else
+  if (FontFace.HorizontalHeader <> nil) then
+  begin
+    LineGap := FontFace.HorizontalHeader.LineGap * ScalerY;
+    FFontMetrics.LineGap := FFontMetrics.Descender + LineGap;
+  end else
+    LineGap := 0;
+
+  case FVerticalOrigin of
+    voAuto:
+      // TODO : Doesn't really work. We will need to examine the individual glyphs.
+      // FFontMetrics.Origin.Y := Max(FontFace.OS2Table.TypographicAscent, FontFace.OS2Table.WindowsAscent) * ScalerY - FFontMetrics.Ascent;
+      ; // TODO : Not implemented
+
+    voTight:
+      FFontMetrics.Origin.Y := FontFace.HeaderTable.YMax * ScalerY - FFontMetrics.Baseline;
+
+    voCenter:
+      // The following is based on https://glyphsapp.com/learn/vertical-metrics#g-the-webfontstrategy-2019
+      FFontMetrics.Origin.Y := LineGap / 2;
+
+    voCustom:
+      FFontMetrics.Origin.Y := FCustomOrigin.Y;
+  end;
+
+  case FHorizontalOrigin of
+    hoAuto:
+      ; // TODO : Not implemented
+
+    hoCustom:
+      FFontMetrics.Origin.X := FCustomOrigin.X;
   end;
 end;
 
@@ -701,18 +845,11 @@ begin
   Result := ScalerX * FontFace.GetAdvanceWidth(GlyphIndex);
 end;
 
-function TPascalTypeRenderer.GetAscent: integer;
+function TPascalTypeRenderer.GetFontMetrics: TPascalTypeFontMetric;
 begin
   if (not (rfHasMetrics in FFlags)) then
     CalculateMetrics;
-  Result := FAscent;
-end;
-
-function TPascalTypeRenderer.GetDescent: integer;
-begin
-  if (not (rfHasMetrics in FFlags)) then
-    CalculateMetrics;
-  Result := FDescent;
+  Result := FFontMetrics;
 end;
 
 function TPascalTypeRenderer.GetFontSize: Integer;
@@ -730,6 +867,11 @@ begin
   Result.HorizontalMetric.Bearing := ScalerX * TrueTypeGlyphMetric.HorizontalMetric.AdvanceWidth;
   Result.VerticalMetric.AdvanceHeight := ScalerY * TrueTypeGlyphMetric.VerticalMetric.AdvanceHeight;
   Result.VerticalMetric.TopSideBearing := ScalerY * TrueTypeGlyphMetric.VerticalMetric.TopSideBearing;
+end;
+
+function TPascalTypeRenderer.GetHorizontalOriginValue: TRenderFloat;
+begin
+  Result := FontMetrics.Origin.X;
 end;
 
 function TPascalTypeRenderer.GetKerning(Last, Next: Integer): TScaleType;
@@ -756,9 +898,29 @@ begin
   Result := FScalerY;
 end;
 
+function TPascalTypeRenderer.GetVerticalOriginValue: TRenderFloat;
+begin
+  Result := FontMetrics.Origin.Y;
+end;
+
 procedure TPascalTypeRenderer.SetFontSize(const Value: Integer);
 begin
   FontHeight := -Int64(Value * FPixelPerInchY) div 72;
+end;
+
+procedure TPascalTypeRenderer.SetHorizontalOrigin(const Value: TPascalTypeRenderHorizontalOrigin);
+begin
+  if (FHorizontalOrigin = Value) then
+    exit;
+  FHorizontalOrigin := Value;
+  Exclude(FFlags, rfHasMetrics);
+end;
+
+procedure TPascalTypeRenderer.SetHorizontalOriginValue(const Value: TRenderFloat);
+begin
+  FCustomOrigin.X := Value;
+  FFontMetrics.Origin.X := Value;
+  FHorizontalOrigin := hoCustom;
 end;
 
 procedure TPascalTypeRenderer.SetFontHeight(const Value: Integer);
@@ -795,6 +957,21 @@ begin
     FPixelPerInchY := Value;
     PixelPerInchYChanged;
   end;
+end;
+
+procedure TPascalTypeRenderer.SetVerticalOrigin(const Value: TPascalTypeRenderVerticalOrigin);
+begin
+  if (FVerticalOrigin = Value) then
+    exit;
+  FVerticalOrigin := Value;
+  Exclude(FFlags, rfHasMetrics);
+end;
+
+procedure TPascalTypeRenderer.SetVerticalOriginValue(const Value: TRenderFloat);
+begin
+  FCustomOrigin.Y := Value;
+  FFontMetrics.Origin.Y := Value;
+  FVerticalOrigin := voCustom;
 end;
 
 end.
