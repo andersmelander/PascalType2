@@ -72,7 +72,8 @@ type
 
     function GetEnumerator: TEnumerator<TTableName>;
 
-    function IsEnabled(const AKey: TTableName; ADefault: boolean): boolean;
+    function IsEnabled(const AKey: TTableName): boolean;
+    function IsDisabled(const AKey: TTableName): boolean;
     function HasValue(const AKey: TTableName): boolean;
     procedure Clear;
     procedure Remove(const AKey: TTableName);
@@ -442,7 +443,8 @@ end;
 
 function TPascalTypeShaperFeatures.GetFeatureEnabled(const AKey: TTableName): boolean;
 begin
-  Result := IsEnabled(AKey, FEnableAll);
+  if (not FFeatures.TryGetValue(AKey, Result)) then
+    Result := FEnableAll;
 end;
 
 function TPascalTypeShaperFeatures.GetFeatureValue(const AKey: TTableName): Variant;
@@ -460,10 +462,14 @@ begin
   Result := FFeatures.ContainsKey(AKey);
 end;
 
-function TPascalTypeShaperFeatures.IsEnabled(const AKey: TTableName; ADefault: boolean): boolean;
+function TPascalTypeShaperFeatures.IsEnabled(const AKey: TTableName): boolean;
 begin
-  if (not FFeatures.TryGetValue(AKey, Result)) then
-    Result := ADefault;
+  Result := (FFeatures.TryGetValue(AKey, Result)) and (Result);
+end;
+
+function TPascalTypeShaperFeatures.IsDisabled(const AKey: TTableName): boolean;
+begin
+  Result := (FFeatures.TryGetValue(AKey, Result)) and (not Result);
 end;
 
 procedure TPascalTypeShaperFeatures.Remove(const AKey: TTableName);

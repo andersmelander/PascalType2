@@ -59,7 +59,7 @@ type
     procedure PlanPreprocessing(AStage: TPascalTypeShapingPlanStage);
     procedure PlanFeatures(AStage: TPascalTypeShapingPlanStage); virtual;
     procedure PlanPostprocessing(AStage: TPascalTypeShapingPlanStage);
-    procedure AssignLocalFeatures(var AGlyphs: TPascalTypeGlyphString); virtual;
+    procedure AssignLocalFeatures(AFeatures: TPascalTypeShaperFeatures; var AGlyphs: TPascalTypeGlyphString); virtual;
   end;
 
 
@@ -159,7 +159,7 @@ begin
   AssignGlobalFeatures;
 
   // Assign "some" features to "some" glyphs
-  AssignLocalFeatures(AGlyphs);
+  AssignLocalFeatures(AFeatures, AGlyphs);
 end;
 
 procedure TPascalTypeDefaultShaper.PlanPreprocessing(AStage: TPascalTypeShapingPlanStage);
@@ -181,7 +181,7 @@ begin
   AStage.Add(HorizontalFeatures);
 end;
 
-procedure TPascalTypeDefaultShaper.AssignLocalFeatures(var AGlyphs: TPascalTypeGlyphString);
+procedure TPascalTypeDefaultShaper.AssignLocalFeatures(AFeatures: TPascalTypeShaperFeatures; var AGlyphs: TPascalTypeGlyphString);
 var
   i: integer;
   First: integer;

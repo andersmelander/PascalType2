@@ -89,7 +89,7 @@ type
     function ZeroMarkWidths: TZeroMarkWidths; override;
     function NeedUnicodeComposition: boolean; override;
     procedure PlanFeatures(AStage: TPascalTypeShapingPlanStage); override;
-    procedure AssignLocalFeatures(var AGlyphs: TPascalTypeGlyphString); override;
+    procedure AssignLocalFeatures(AFeatures: TPascalTypeShaperFeatures; var AGlyphs: TPascalTypeGlyphString); override;
   end;
 
 
@@ -450,7 +450,7 @@ begin
   Inc(Result);
 end;
 
-procedure TPascalTypeHangulShaper.AssignLocalFeatures(var AGlyphs: TPascalTypeGlyphString);
+procedure TPascalTypeHangulShaper.AssignLocalFeatures(AFeatures: TPascalTypeShaperFeatures; var AGlyphs: TPascalTypeGlyphString);
 var
   StateEntry: TStateEntry;
   Category: THangulCategory;
@@ -458,7 +458,7 @@ var
   CodePoint: TPascalTypeCodePoint;
   i: integer;
 begin
-  inherited AssignLocalFeatures(AGlyphs);
+  inherited AssignLocalFeatures(AFeatures, AGlyphs);
 
   // Apply the state machine to map glyphs to features
   StateEntry.NextState := sStart;

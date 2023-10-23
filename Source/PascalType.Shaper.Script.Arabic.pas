@@ -70,7 +70,7 @@ type
   protected
     function NeedUnicodeComposition: boolean; override;
     procedure PlanFeatures(AStage: TPascalTypeShapingPlanStage); override;
-    procedure AssignLocalFeatures(var AGlyphs: TPascalTypeGlyphString); override;
+    procedure AssignLocalFeatures(AFeatures: TPascalTypeShaperFeatures; var AGlyphs: TPascalTypeGlyphString); override;
   end;
 
 
@@ -237,7 +237,7 @@ begin
   Stage.Add(FeatureMSET);
 end;
 
-procedure TPascalTypeArabicShaper.AssignLocalFeatures(var AGlyphs: TPascalTypeGlyphString);
+procedure TPascalTypeArabicShaper.AssignLocalFeatures(AFeatures: TPascalTypeShaperFeatures; var AGlyphs: TPascalTypeGlyphString);
 var
   Actions: TArray<TTableType>;
   State: TState;
@@ -247,7 +247,7 @@ var
   ShapingClass: TShapingClass;
   StateEntry: TStateEntry;
 begin
-  inherited AssignLocalFeatures(AGlyphs);
+  inherited AssignLocalFeatures(AFeatures, AGlyphs);
 
   // Apply the state machine to map glyphs to features
   SetLength(Actions, AGlyphs.Count);
