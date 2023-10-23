@@ -146,7 +146,7 @@ type
     // Move forward. Skip glyphs that should be ignored. Return new index.
     function Next(AIncrement: integer = 1): integer;
     // Move Backward. Skip glyphs that should be ignored. Return new index.
-    function Previous(AIncrement: integer = -1): integer;
+    function Previous(AIncrement: integer = 1): integer;
 
     // Move forward/backward. Do not skip. Return new index.
     function Step(AIncrement: integer = 1): integer;
