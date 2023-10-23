@@ -186,16 +186,35 @@ var
   i: integer;
   First: integer;
   Last: integer;
+  UseSlash: boolean;
   AddedFrac, AddedNumr, AddedDnom: boolean;
 begin
   // Enable contextual fractions
+  // See: https://www.unicode.org/versions/Unicode12.0.0/ch06.pdf
+  (*
+  Fraction Slash.
+  U+2044 fraction slash is used between digits to form numeric fractions, such
+  as 2/3 and 3/9. The standard form of a fraction built using the fraction slash
+  is defined as follows: any sequence of one or more decimal digits (General
+  Category = Nd), followed by the fraction slash, followed by any sequence of
+  one or more decimal digits. Such a fraction should be displayed as a unit,
+  such as � or [3/4]. The precise choice of display can depend on additional
+  formatting information.
+  *)
+
+  if (AFeatures.IsDisabled('frac')) then
+    exit;
+
+  // If 'frac' is explicitly enabled, we will also apply it to regular slash
+  UseSlash := AFeatures.IsEnabled('frac');
+
   AddedFrac := False;
   AddedNumr := False;
   AddedDnom := False;
   i := 0;
   while (i < AGlyphs.Count) do
   begin
-    if (AGlyphs[i].CodePoints[0] = $002F) or (AGlyphs[i].CodePoints[0] = $2044) then // slash or fraction slash
+    if (AGlyphs[i].CodePoints[0] = $2044) or (UseSlash and (AGlyphs[i].CodePoints[0] = $002F)) then
     begin
       First := i;
       Last := i + 1;
