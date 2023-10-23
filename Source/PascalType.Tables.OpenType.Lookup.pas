@@ -116,6 +116,7 @@ type
     procedure LookupFlagsChanged; virtual;
     procedure MarkFilteringSetChanged; virtual;
     function GetSubTableClass(ASubFormat: Word): TOpenTypeLookupSubTableClass; virtual; abstract;
+    function GetUseReverseDirection: boolean; virtual;
   public
     constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
@@ -133,6 +134,8 @@ type
     property LookupType: Word read FLookupType;
     property LookupFlags: Word read FLookupFlags write SetLookupFlags;
     property MarkFilteringSet: Word read FMarkFilteringSet write SetMarkFilteringSet;
+    // See: TCustomPascalTypeOpenTypeProcessor.ApplyLookups
+    property UseReverseDirection: boolean read GetUseReverseDirection;
 
     property SubTableCount: Integer read GetSubTableCount;
     property SubTables[Index: Integer]: TCustomOpenTypeLookupSubTable read GetSubTable; default;
@@ -391,6 +394,11 @@ end;
 function TCustomOpenTypeLookupTable.GetSubTableCount: Integer;
 begin
   Result := FSubTableList.Count;
+end;
+
+function TCustomOpenTypeLookupTable.GetUseReverseDirection: boolean;
+begin
+  Result := False;
 end;
 
 procedure TCustomOpenTypeLookupTable.SetLookupFlags(const Value: Word);

@@ -565,7 +565,7 @@ type
     gpMarkToLigatureAttachment = 5, // Attach a combining mark to a ligature
     gpMarkToMarkAttachment     = 6, // Attach a combining mark to another mark
     gpContextPositioning       = 7, // Position one or more glyphs in context
-    gpChainedContext           = 8, // positioning 	Position one or more glyphs in chained context
+    gpChainedContext           = 8, // Position one or more glyphs in chained context
     gpExtensionPositioning     = 9  // Extension mechanism for other positionings
   );
 

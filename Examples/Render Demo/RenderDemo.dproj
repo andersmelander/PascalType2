@@ -219,6 +219,7 @@
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Positioning.ChainedContext.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Shaper.Script.Arabic.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Substitution.Alternate.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.Substitution.ReverseChainedContext.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Shaper.Script.Hangul.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.head.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.TrueType.name.pas"/>

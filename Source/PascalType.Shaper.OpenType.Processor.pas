@@ -164,6 +164,7 @@ var
   LookupTable: TCustomOpenTypeLookupTable;
   GlyphIterator: TPascalTypeGlyphGlyphIterator;
   Handled: boolean;
+  ReverseDirection: boolean;
 begin
   Result := nil;
 
@@ -199,10 +200,18 @@ begin
 
       GlyphIterator.Reset(LookupTable.LookupFlags);
 
+      // This is a bit of a hack; The Reverse Chained Context Coverage substitution
+      // lookup needs to process glyphs in reverse order, from the end to the start.
+      ReverseDirection := LookupTable.UseReverseDirection;
+
+      if (ReverseDirection) then
+        GlyphIterator.Index := AGlyphs.Count-1;
+
       // For each glyph...
       while (not GlyphIterator.EOF) do
       begin
         Handled := False;
+
         // If the glyph is tagged with the feature...
         if (GlyphIterator.Glyph.Features.Contains(LookupItem.FeatureTag)) then
           // For each lookup sub-table, apply the lookup until one of them succeeds
@@ -219,7 +228,10 @@ begin
   {$ifdef ApplyIncrements}
         if (not Handled) then
   {$endif ApplyIncrements}
-          GlyphIterator.Next;
+          if (ReverseDirection) then
+            GlyphIterator.Previous
+          else
+            GlyphIterator.Next;
       end;
     end;
 

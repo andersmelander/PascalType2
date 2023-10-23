@@ -84,6 +84,7 @@ uses
   PascalType.Tables.OpenType.Positioning.ChainedContext in '..\..\Source\PascalType.Tables.OpenType.Positioning.ChainedContext.pas',
   PascalType.Shaper.Script.Arabic in '..\..\Source\PascalType.Shaper.Script.Arabic.pas',
   PascalType.Tables.OpenType.Substitution.Alternate in '..\..\Source\PascalType.Tables.OpenType.Substitution.Alternate.pas',
+  PascalType.Tables.OpenType.Substitution.ReverseChainedContext in '..\..\Source\PascalType.Tables.OpenType.Substitution.ReverseChainedContext.pas',
   PascalType.Shaper.Script.Hangul in '..\..\Source\PascalType.Shaper.Script.Hangul.pas',
   PascalType.Tables.TrueType.head in '..\..\Source\PascalType.Tables.TrueType.head.pas',
   PascalType.Tables.TrueType.name in '..\..\Source\PascalType.Tables.TrueType.name.pas',
