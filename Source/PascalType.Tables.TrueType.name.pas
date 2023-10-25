@@ -51,7 +51,7 @@ type
     FEncodingID: Word; // Platform-specific encoding identifier.
     FLanguageID: Word; // Language identifier.
     FNameID    : TNameID; // Name identifiers.
-    FNameString: WideString;
+    FNameString: string;
     function GetEncodingIDAsWord: Word;
     procedure SetEncodingIDAsWord(const Value: Word);
   protected
@@ -68,7 +68,7 @@ type
     procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
 
-    property Name: WideString read FNameString;
+    property Name: string read FNameString;
     property NameID: TNameID read FNameID;
     property PlatformID: TPlatformID read GetPlatformID;
     property LanguageID: Word read FLanguageID;
@@ -178,6 +178,8 @@ type
 
     procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
+
+    function TryGetName(NameID: TNameID; PreferredPlatform: TPlatformID; PreferredLanguage: Word; var Name: string; const ADefault: string = ''): boolean;
 
     property Format: Word read FFormat write SetFormat;
     property NameSubTableCount: Word read GetNameSubTableCount;
@@ -500,6 +502,21 @@ begin
     FFormat := Value;
     FormatChanged;
   end;
+end;
+
+function TPascalTypeNameTable.TryGetName(NameID: TNameID; PreferredPlatform: TPlatformID; PreferredLanguage: Word; var Name: string; const ADefault: string): boolean;
+begin
+  Result := False;
+  Name := ADefault;
+
+  for var SubTable in FNameSubTables do
+    if (SubTable.PlatformID = PreferredPlatform) then
+      if (SubTable.NameID = NameID) then
+      begin
+        Name := SubTable.Name;
+        if (SubTable.LanguageID = PreferredLanguage) then
+          Exit(True);
+      end;
 end;
 
 procedure TPascalTypeNameTable.FormatChanged;

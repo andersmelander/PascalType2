@@ -101,7 +101,7 @@ type
     // case that to TCustomPascalTypeLayoutEngine.
     function CreateLayoutEngine: TObject; virtual; abstract;
 
-    property OnChanged: TNotifyEvent read FOnChanged;
+    property OnChanged: TNotifyEvent read FOnChanged write FOnChanged;
   end;
 
 implementation

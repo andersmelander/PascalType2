@@ -104,8 +104,10 @@ type
   strict protected const
 {$IFDEF MSWINDOWS}
     PreferredPlatform = piMicrosoft; // This is strange. Why wouldn't we always prefer Unicode?
+    PreferredLanguage = 1033;
 {$ELSE}
     PreferredPlatform = piUnicode;
+    PreferredLanguage = 3;
 {$ENDIF}
   strict protected type
     TTableList = TObjectList<TCustomPascalTypeNamedTable>;
@@ -126,12 +128,12 @@ type
     FNameTable: TPascalTypeNameTable;
     FPostScriptTable: TPascalTypePostscriptTable;
   private
-    function GetFontName: WideString; // TODO : Get rid of WideString
+    function GetFontName: string;
     function GetFontStyle: TFontStyles;
-    function GetFontFamilyName: WideString;
-    function GetFontSubFamilyName: WideString;
-    function GetFontVersion: WideString;
-    function GetUniqueIdentifier: WideString;
+    function GetFontFamilyName: string;
+    function GetFontSubFamilyName: string;
+    function GetFontVersion: string;
+    function GetUniqueIdentifier: string;
     function GetTable(Index: integer): TCustomPascalTypeNamedTable;
     function GetTableCount: Integer;
   protected
@@ -186,12 +188,12 @@ type
     property PostScriptTable: TPascalTypePostscriptTable read FPostScriptTable;
 
     // Basic font properties
-    property FontFamilyName: WideString read GetFontFamilyName;
-    property FontName: WideString read GetFontName;
+    property FontFamilyName: string read GetFontFamilyName;
+    property FontName: string read GetFontName;
     property FontStyle: TFontStyles read GetFontStyle;
-    property FontSubFamilyName: WideString read GetFontSubFamilyName;
-    property FontVersion: WideString read GetFontVersion;
-    property UniqueIdentifier: WideString read GetUniqueIdentifier;
+    property FontSubFamilyName: string read GetFontSubFamilyName;
+    property FontVersion: string read GetFontVersion;
+    property UniqueIdentifier: string read GetUniqueIdentifier;
   end;
 
 
@@ -600,94 +602,31 @@ begin
   end;
 end;
 
-function TCustomPascalTypeFontFace.GetFontFamilyName: WideString;
-var
-  i: Integer;
+function TCustomPascalTypeFontFace.GetFontFamilyName: string;
 begin
-  for i := 0 to FNameTable.NameSubTableCount - 1 do
-    if (FNameTable.NameSubTable[i].PlatformID = PreferredPlatform) and (FNameTable.NameSubTable[i].NameID = niFamily) then
-    begin
-      Result := FNameTable.NameSubTable[i].Name;
-      Exit;
-    end;
-
-  Result := '';
+  if (not FNameTable.TryGetName(niTypographicFamily, PreferredPlatform, PreferredLanguage, Result)) then
+    FNameTable.TryGetName(niFamily, PreferredPlatform, PreferredLanguage, Result, Result);
 end;
 
-function TCustomPascalTypeFontFace.GetFontSubFamilyName: WideString;
-var
-  i: Integer;
+function TCustomPascalTypeFontFace.GetFontSubFamilyName: string;
 begin
-  for i := 0 to FNameTable.NameSubTableCount - 1 do
-    if (FNameTable.NameSubTable[i].PlatformID = PreferredPlatform) and (FNameTable.NameSubTable[i].NameID = niSubfamily) then
-    begin
-      Result := FNameTable.NameSubTable[i].Name;
-{$IFDEF MSWINDOWS}
-      if FNameTable.NameSubTable[i].LanguageID = 1033 then
-        Exit;
-{$ELSE}
-      Exit;
-{$ENDIF}
-    end;
-
-  Result := '';
+  if (not FNameTable.TryGetName(niTypographicSubfamily, PreferredPlatform, PreferredLanguage, Result)) then
+    FNameTable.TryGetName(niSubfamily, PreferredPlatform, PreferredLanguage, Result, Result);
 end;
 
-function TCustomPascalTypeFontFace.GetFontVersion: WideString;
-var
-  i: Integer;
+function TCustomPascalTypeFontFace.GetFontVersion: string;
 begin
-  for i := 0 to FNameTable.NameSubTableCount - 1 do
-    if (FNameTable.NameSubTable[i].PlatformID = PreferredPlatform) and (FNameTable.NameSubTable[i].NameID = niVersion) then
-    begin
-      Result := FNameTable.NameSubTable[i].Name;
-{$IFDEF MSWINDOWS}
-      if FNameTable.NameSubTable[i].LanguageID = 1033 then
-        Exit;
-{$ELSE}
-      Exit;
-{$ENDIF}
-    end;
-
-  Result := '';
+  FNameTable.TryGetName(niVersion, PreferredPlatform, PreferredLanguage, Result);
 end;
 
-function TCustomPascalTypeFontFace.GetUniqueIdentifier: WideString;
-var
-  i: Integer;
+function TCustomPascalTypeFontFace.GetUniqueIdentifier: string;
 begin
-  for i := 0 to FNameTable.NameSubTableCount - 1 do
-    if (FNameTable.NameSubTable[i].PlatformID = PreferredPlatform) and (FNameTable.NameSubTable[i].NameID = niUniqueIdentifier) then
-    begin
-      Result := FNameTable.NameSubTable[i].Name;
-{$IFDEF MSWINDOWS}
-      if FNameTable.NameSubTable[i].LanguageID = 1033 then
-        Exit;
-{$ELSE}
-      Exit;
-{$ENDIF}
-    end;
-
-  Result := '';
+  FNameTable.TryGetName(niUniqueIdentifier, PreferredPlatform, PreferredLanguage, Result);
 end;
 
-function TCustomPascalTypeFontFace.GetFontName: WideString;
-var
-  i: Integer;
+function TCustomPascalTypeFontFace.GetFontName: string;
 begin
-  for i := 0 to FNameTable.NameSubTableCount - 1 do
-    if (FNameTable.NameSubTable[i].PlatformID = PreferredPlatform) and (FNameTable.NameSubTable[i].NameID = niFullName) then
-    begin
-      Result := FNameTable.NameSubTable[i].Name;
-{$IFDEF MSWINDOWS}
-      if FNameTable.NameSubTable[i].LanguageID = 1033 then
-        Exit;
-{$ELSE}
-      Exit;
-{$ENDIF}
-    end;
-
-  Result := '';
+  FNameTable.TryGetName(niFullName, PreferredPlatform, PreferredLanguage, Result);
 end;
 
 function TCustomPascalTypeFontFace.GetFontStyle: TFontStyles;

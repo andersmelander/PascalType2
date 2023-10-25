@@ -548,12 +548,15 @@ type
     niLicenseInformation = 14,
     niReserved = 15,
     niPreferredFamily = 16,
+    niTypographicFamily = 16,
     niPreferredSubfamily = 17,
+    niTypographicSubfamily = 17,
     niCompatibleFull = 18,
     niSampleText = 19,
     niFutureExpansion,
     niFontSpecific
   );
+
 
   // GPOS lookup Types
   TGlyphPositioning = (

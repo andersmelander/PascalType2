@@ -480,6 +480,9 @@ procedure TPascalTypeRenderer.RenderShapedGlyph(AGlyph: TPascalTypeGlyph; const 
 var
   Cursor: TFloatPoint;
 begin
+  if (FontFace = nil) then
+    exit;
+
   // Position glyph relative to cursor
   Cursor.X := X + ScalerX * AGlyph.XOffset;
 {$ifdef Inverse_Y_axis}
@@ -570,6 +573,9 @@ var
   SaveColor: Cardinal;
   i: integer;
 begin
+  if (FontFace = nil) then
+    exit;
+
   if (ShapedText.Count = 0) then
     exit;
 
@@ -667,6 +673,9 @@ var
   GlyphMetric: TGlyphMetric;
   SaveColor: Cardinal;
 begin
+  if (FontFace = nil) then
+    exit;
+
   Cursor.X := X;
   Cursor.Y := Y;
 
