@@ -56,17 +56,8 @@ uses
 //------------------------------------------------------------------------------
 type
   TPascalTypeArabicShaper = class(TPascalTypeDefaultShaper)
-  private type
-    TShapingClass = (
-      scNon_Joining       = 0,
-      scLeft_Joining      = 1,
-      scRight_Joining     = 2,
-      scDual_Joining      = 3, // = scJoin_Causing
-      scALAPH             = 4,
-      scDALATH_RISH       = 5,
-      scTransparent       = 6);
   private
-    function GetShapingClass(ACodePoint: TPascalTypeCodePoint): TShapingClass;
+    function GetShapingClass(ACodePoint: TPascalTypeCodePoint): ArabicShapingClasses.TShapingClass;
   protected
     function NeedUnicodeComposition: boolean; override;
     procedure PlanFeatures(AStage: TPascalTypeShapingPlanStage); override;
@@ -110,7 +101,7 @@ type
     NextState: TState;
   end;
 
-  TStateEntries = array[TPascalTypeArabicShaper.TShapingClass.scNon_Joining..TPascalTypeArabicShaper.TShapingClass.scDALATH_RISH] of TStateEntry;
+  TStateEntries = array[ArabicShapingClasses.TShapingClass.scNon_Joining..ArabicShapingClasses.TShapingClass.scDALATH_RISH] of TStateEntry;
   TStateMachine = array[TState] of TStateEntries;
 
 const
@@ -141,75 +132,6 @@ const
     ((PreviousAction: None;   CurrentAction: None;   NextState: 0),  (PreviousAction: None;   CurrentAction: 'isol'; NextState: 2),  (PreviousAction: None;   CurrentAction: 'isol'; NextState: 1),  (PreviousAction: None;   CurrentAction: 'isol'; NextState: 2),  (PreviousAction: None;   CurrentAction: 'fin3'; NextState: 5),  (PreviousAction: None;   CurrentAction: 'isol'; NextState: 6))
   );
 
-//------------------------------------------------------------------------------
-//
-// Trie containing the data from ArabicShaping.txt in the Unicode database.
-//
-//------------------------------------------------------------------------------
-var
-  ArabicShapingClasses: TUnicodeTrieEx<TPascalTypeArabicShaper.TShapingClass>;
-
-procedure LoadArabicShapingClasses;
-var
-  ResourceStream: TStream;
-  Stream: TStream;
-  Reader: TBinaryReader;
-  i, Size: Integer;
-  ClassValue: TPascalTypeArabicShaper.TShapingClass;
-  RangeStart: TPascalTypeCodePoint;
-  RangeStop: TPascalTypeCodePoint;
-  CodePoint: TPascalTypeCodePoint;
-begin
-  ArabicShapingClasses.Loaded := True;
-
-  ResourceStream := TResourceStream.Create(HInstance, 'ARABSHAPING', 'UNICODEDATA');
-
-{$if defined(UNICODE_RAW_DATA) or not defined(UNICODE_ZLIB_DATA)}
-  Stream := ResourceStream;
-{$elseif defined(UNICODE_ZLIB_DATA)}
-  try
-
-    Stream := TDecompressionStream.Create(ResourceStream, 15, True);
-
-  except
-    ResourceStream.Free;
-    raise;
-  end;
-{$ifend}
-
-  Reader := TBinaryReader.Create(Stream, nil, True);
-  try
-    RangeStart := Default(TPascalTypeCodePoint);
-    RangeStop := Default(TPascalTypeCodePoint);
-
-    while Stream.Position < Stream.Size do
-    begin
-      // 1) Determine which class is stored here
-      ClassValue := TPascalTypeArabicShaper.TShapingClass(Reader.ReadByte);
-
-      // 2) Determine how many ranges are assigned to this class
-      Size := Reader.ReadByte;
-      if (Size = 0) then
-        continue;
-
-      for i := 0 to Size - 1 do
-      begin
-        // 3) Read start and stop code of each range
-        Stream.ReadBuffer(RangeStart, 3);
-        Stream.ReadBuffer(RangeStop, 3);
-        Assert(RangeStart < $1000000);
-        Assert(RangeStop < $1000000);
-
-        // 4) Put this class in every of the code points just loaded
-        for CodePoint := RangeStart to RangeStop do
-          ArabicShapingClasses[CodePoint] := ClassValue;
-      end;
-    end;
-    // Assert(Stream.Position = Stream.Size);
-  finally
-    Reader.Free;
-  end;
-end;
 
 //------------------------------------------------------------------------------
 //
@@ -244,7 +166,7 @@ var
   PreviousIndex: integer;
   i: integer;
   Glyph: TPascalTypeGlyph;
-  ShapingClass: TShapingClass;
+  ShapingClass: ArabicShapingClasses.TShapingClass;
   StateEntry: TStateEntry;
 begin
   inherited AssignLocalFeatures(AFeatures, AGlyphs);
@@ -281,14 +203,14 @@ begin
       AGlyphs[i].Features.Add(Actions[i]);
 end;
 
-function TPascalTypeArabicShaper.GetShapingClass(ACodePoint: TPascalTypeCodePoint): TShapingClass;
+function TPascalTypeArabicShaper.GetShapingClass(ACodePoint: TPascalTypeCodePoint): ArabicShapingClasses.TShapingClass;
 var
   Category: TCharacterCategories;
 begin
-  if (not ArabicShapingClasses.Loaded) then
-    LoadArabicShapingClasses;
+  if (not ArabicShapingClasses.Trie.Loaded) then
+    ArabicShapingClasses.Load;
 
-  if (ArabicShapingClasses.TryGetValue(ACodePoint, Result)) and (Result > Low(Result)) then
+  if (ArabicShapingClasses.Trie.TryGetValue(ACodePoint, Result)) and (Result > Low(Result)) then
     Exit(Pred(Result));
 
   Category := PascalTypeUnicode.GetCategory(ACodePoint);

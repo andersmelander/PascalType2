@@ -1,4 +1,4 @@
-unit TestUnicode;
+unit TestUnicodeNormalization;
 
 interface
 
@@ -19,7 +19,7 @@ type
     NFKD: TPascalTypeCodePoints;
   end;
 
-  TTestPascalTypeUnicode = class(TTestCase)
+  TTestPascalTypeUnicodeNormalization = class(TTestCase)
   strict private
     FTestCases: TList<TUnicodeTestCase>;
   public
@@ -32,12 +32,12 @@ type
 
 implementation
 
-{ TTestPascalTypeUnicode }
+{ TTestPascalTypeUnicodeNormalization }
 
 const
   sUnicodeDataFolder = '..\..\..\Source\Unicode\UCD';
 
-procedure TTestPascalTypeUnicode.SetUp;
+procedure TTestPascalTypeUnicodeNormalization.SetUp;
 
   function HexToCardinal(const Hex: string): TPascalTypeCodePoint;
   begin
@@ -104,13 +104,13 @@ begin
   end;
 end;
 
-procedure TTestPascalTypeUnicode.TearDown;
+procedure TTestPascalTypeUnicodeNormalization.TearDown;
 begin
   FTestCases.Free;
   inherited;
 end;
 
-procedure TTestPascalTypeUnicode.TestCompose;
+procedure TTestPascalTypeUnicodeNormalization.TestCompose;
 
   function CodePointsToString(const CodePoints: TPascalTypeCodePoints): string;
   begin
@@ -164,7 +164,7 @@ begin
   Check(Failed = 0);
 end;
 
-procedure TTestPascalTypeUnicode.TestDecompose;
+procedure TTestPascalTypeUnicodeNormalization.TestDecompose;
 
   function CodePointsToString(const CodePoints: TPascalTypeCodePoints): string;
   begin
@@ -215,5 +215,5 @@ end;
 
 
 initialization
-  RegisterTest(TTestPascalTypeUnicode.Suite);
+  RegisterTest(TTestPascalTypeUnicodeNormalization.Suite);
 end.

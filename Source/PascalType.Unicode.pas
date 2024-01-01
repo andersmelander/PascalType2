@@ -1110,7 +1110,46 @@ type
   end;
 
 //------------------------------------------------------------------------------
+//
+//              Arabic Shaping classes
+//
 //------------------------------------------------------------------------------
+// Trie containing the data from ArabicShaping.txt in the Unicode database.
+//------------------------------------------------------------------------------
+type
+  ArabicShapingClasses = record
+  public type
+    TShapingClass = (
+      scNon_Joining       = 0,
+      scLeft_Joining      = 1,
+      scRight_Joining     = 2,
+      scDual_Joining      = 3, // = scJoin_Causing
+      scALAPH             = 4,
+      scDALATH_RISH       = 5,
+      scTransparent       = 6);
+  public
+    class var Trie: TUnicodeTrieEx<TShapingClass>;
+
+    class procedure Load; static;
+  end;
+
+//------------------------------------------------------------------------------
+//
+//              Unicode resource type and names
+//
+//------------------------------------------------------------------------------
+const
+  sUnicodeResourceType          = 'UNICODEDATA';
+
+  sUnicodeResourceCategories    = 'CATEGORIES';
+  sUnicodeResourceCase          = 'CASE';
+  sUnicodeResourceDecomposition = 'DECOMPOSITION';
+  sUnicodeResourceComposition   = 'COMPOSITION';
+  sUnicodeResourceCombining     = 'COMBINING';
+  sUnicodeResourceArabShaping   = 'ARABSHAPING';
+  sUnicodeResourceScripts       = 'SCRIPTS';
+  sUnicodeResourceNumbers       = 'NUMBERS';
+
 //------------------------------------------------------------------------------
 
 implementation
@@ -1129,8 +1168,6 @@ uses
 {$ifend}
   System.Classes;
 
-const
-  ResourceType = 'UNICODEDATA';
 
 //------------------------------------------------------------------------------
 //
@@ -1290,7 +1327,7 @@ begin
     exit;
   UnicodeCategories.Loaded := True;
 
-  ResourceStream := TResourceStream.Create(HInstance, 'CATEGORIES', ResourceType);
+  ResourceStream := TResourceStream.Create(HInstance, 'CATEGORIES', sUnicodeResourceType);
 
 {$if defined(UNICODE_RAW_DATA)}
   Stream := ResourceStream;
@@ -2308,7 +2345,7 @@ begin
     exit;
   Scripts.Loaded := True;
 
-  ResourceStream := TResourceStream.Create(HInstance, 'SCRIPTS', ResourceType);
+  ResourceStream := TResourceStream.Create(HInstance, 'SCRIPTS', sUnicodeResourceType);
 
 {$if defined(UNICODE_RAW_DATA)}
   Stream := ResourceStream;
@@ -2786,7 +2823,7 @@ begin
     exit;
   CCCs.Loaded := True;
 
-  ResourceStream := TResourceStream.Create(HInstance, 'COMBINING', ResourceType);
+  ResourceStream := TResourceStream.Create(HInstance, 'COMBINING', sUnicodeResourceType);
 
 {$if defined(UNICODE_RAW_DATA)}
   Stream := ResourceStream;
@@ -2934,7 +2971,7 @@ begin
     exit;
   CanonicalDecompositions.Loaded := True;
 
-  ResourceStream := TResourceStream.Create(HInstance, 'DECOMPOSITION', ResourceType);
+  ResourceStream := TResourceStream.Create(HInstance, 'DECOMPOSITION', sUnicodeResourceType);
 
 {$if defined(UNICODE_RAW_DATA)}
   Stream := ResourceStream;
@@ -3218,7 +3255,7 @@ begin
   CanonicalCompositionLookup := TDictionary<TUnicodeCompositionPair, TPascalTypeCodePoint>.Create;
   CompatibleCompositionLookup := TDictionary<TUnicodeCompositionPair, TPascalTypeCodePoint>.Create;
 
-  ResourceStream := TResourceStream.Create(HInstance, 'COMPOSITION', ResourceType);
+  ResourceStream := TResourceStream.Create(HInstance, 'COMPOSITION', sUnicodeResourceType);
 
 {$if defined(UNICODE_RAW_DATA)}
   Stream := ResourceStream;
@@ -3512,6 +3549,77 @@ begin
   end;
 end;
 
+
+//------------------------------------------------------------------------------
+//
+//              Arabic Shaping classes
+//
+//------------------------------------------------------------------------------
+class procedure ArabicShapingClasses.Load;
+var
+  ResourceStream: TStream;
+  Stream: TStream;
+  Reader: TBinaryReader;
+  i, Size: Integer;
+  ClassValue: TShapingClass;
+  RangeStart: TPascalTypeCodePoint;
+  RangeStop: TPascalTypeCodePoint;
+  CodePoint: TPascalTypeCodePoint;
+begin
+  if (Trie.Loaded) then
+    exit;
+  Trie.Loaded := True;
+
+  ResourceStream := TResourceStream.Create(HInstance, sUnicodeResourceArabShaping, sUnicodeResourceType);
+
+{$if defined(UNICODE_RAW_DATA) or not defined(UNICODE_ZLIB_DATA)}
+  Stream := ResourceStream;
+{$elseif defined(UNICODE_ZLIB_DATA)}
+  try
+
+    Stream := TDecompressionStream.Create(ResourceStream, 15, True);
+
+  except
+    ResourceStream.Free;
+    raise;
+  end;
+{$ifend}
+
+  Reader := TBinaryReader.Create(Stream, nil, True);
+  try
+    // Zero the high byte of the 3 byte values
+    RangeStart := Default(TPascalTypeCodePoint);
+    RangeStop := Default(TPascalTypeCodePoint);
+
+    while Stream.Position < Stream.Size do
+    begin
+      // 1) Determine which class is stored here
+      ClassValue := TShapingClass(Reader.ReadByte);
+
+      // 2) Determine how many ranges are assigned to this class
+      Size := Reader.ReadByte;//Cardinal;
+      if (Size = 0) then
+        continue;
+
+      for i := 0 to Size - 1 do
+      begin
+        // 3) Read start and stop code of each range
+        Stream.ReadBuffer(RangeStart, 3);
+        Stream.ReadBuffer(RangeStop, 3);
+
+        Assert(RangeStart <= PascalTypeUnicode.MaximumUTF16);
+        Assert(RangeStop <= PascalTypeUnicode.MaximumUTF16);
+        Assert(RangeStart <= RangeStop);
+
+        // 4) Put this class in every of the code points just loaded
+        for CodePoint := RangeStart to RangeStop do
+          Trie[CodePoint] := ClassValue;
+      end;
+    end;
+  finally
+    Reader.Free;
+  end;
+end;
 
 initialization
 finalization
