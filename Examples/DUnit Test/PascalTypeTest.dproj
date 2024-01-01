@@ -107,7 +107,8 @@
         <RcCompile Include="..\..\Resource\Default.rc">
             <Form>Default.res</Form>
         </RcCompile>
-        <DCCReference Include="TestUnicode.pas"/>
+        <DCCReference Include="TestUnicodeNormalization.pas"/>
+        <DCCReference Include="TestUnicodeArabicShaping.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
