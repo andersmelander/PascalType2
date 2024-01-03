@@ -91,11 +91,13 @@ begin
 *)
   var Reader := TStreamReader.Create(TPath.Combine(sUnicodeDataFolder, sArabicShapingFileName), TEncoding.UTF8);
   try
+    var LineNumber := 0;
 
     while (not Reader.EndOfStream) do
     begin
       // # Unicode; Schematic Name; Joining Type; Joining Group
 
+      Inc(LineNumber);
       var Line := Reader.ReadLine.Trim;
       if (Line = '') or (Line.StartsWith('#')) then
         continue;
@@ -109,30 +111,30 @@ begin
 
       var JoiningType: Char := Columns[2].Trim[1];
 
-      var ShapingClassValue: Byte := 0;
+      var ShapingClassValue: ArabicShapingClasses.TShapingClass := scUnassigned;
 
       if (JoiningType = 'R') then
       begin
         var JoiningGroup := Columns[3].Trim;
         if (JoiningGroup = 'ALAPH') then
-          ShapingClassValue := 5
+          ShapingClassValue := scALAPH
         else
         if (JoiningGroup = 'DALATH RISH') then
-          ShapingClassValue := 6;
+          ShapingClassValue := scDALATH_RISH;
       end;
 
-      if (ShapingClassValue = 0) then
+      if (ShapingClassValue = scUnassigned) then
         case JoiningType of
-          'U': ShapingClassValue := 1; // Non_Joining
-          'L': ShapingClassValue := 2; // Left_Joining
-          'R': ShapingClassValue := 3; // Right_Joining
-          'D': ShapingClassValue := 4; // Dual_Joining
-          'C': ShapingClassValue := 4; // Join_Causing
-          'T': ShapingClassValue := 7; // Transparent
+          'U': ShapingClassValue := scNon_Joining; // Non_Joining
+          'L': ShapingClassValue := scLeft_Joining; // Left_Joining
+          'R': ShapingClassValue := scRight_Joining; // Right_Joining
+          'D': ShapingClassValue := scDual_Joining; // Dual_Joining
+          'C': ShapingClassValue := scDual_Joining; // Join_Causing
+          'T': ShapingClassValue := scTransparent; // Transparent
         end;
 
-      if (ShapingClassValue <> 0) then
-        CheckEquals(ShapingClassValue, Ord(ArabicShapingClasses.Trie.Values[Code]));
+      if (ShapingClassValue <> scUnassigned) then
+        CheckEquals(Ord(ShapingClassValue), Ord(ArabicShapingClasses.Trie.Values[Code]), Format('Line #%d', [LineNumber]));
     end;
 
   finally

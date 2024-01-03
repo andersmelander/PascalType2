@@ -23,6 +23,12 @@
         <CfgParent>Base</CfgParent>
         <Base>true</Base>
     </PropertyGroup>
+    <PropertyGroup Condition="('$(Platform)'=='Win32' and '$(Cfg_1)'=='true') or '$(Cfg_1_Win32)'!=''">
+        <Cfg_1_Win32>true</Cfg_1_Win32>
+        <CfgParent>Cfg_1</CfgParent>
+        <Cfg_1>true</Cfg_1>
+        <Base>true</Base>
+    </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Debug' or '$(Cfg_2)'!=''">
         <Cfg_2>true</Cfg_2>
         <CfgParent>Base</CfgParent>
@@ -47,21 +53,26 @@
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
         <Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
         <Icns_MainIcns>$(BDS)\bin\delphi_PROJECTICNS.icns</Icns_MainIcns>
-        <DCC_ExeOutput>.\</DCC_ExeOutput>
-        <DCC_DcuOutput>.\lib</DCC_DcuOutput>
-        <DCC_UnitSearchPath>..\..\..\..\JEDI\jcl\jcl\source\common;..\..\..\..\JEDI\jcl\jcl\source\include;..\..\..\..\JEDI\jcl\jcl\source\windows;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_ExeOutput>..\</DCC_ExeOutput>
+        <DCC_DcuOutput>..\lib</DCC_DcuOutput>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
         <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
         <BT_BuildType>Debug</BT_BuildType>
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=;ProgramID=com.embarcadero.$(MSBuildProjectName)</VerInfo_Keys>
         <VerInfo_Locale>1033</VerInfo_Locale>
+        <Manifest_File>(None)</Manifest_File>
+        <AppDPIAwarenessMode>none</AppDPIAwarenessMode>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
         <DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
         <DCC_DebugInformation>0</DCC_DebugInformation>
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
         <DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
+        <VerInfo_Locale>1033</VerInfo_Locale>
+        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=;ProgramID=com.embarcadero.$(MSBuildProjectName)</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
@@ -73,9 +84,8 @@
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
         <VerInfo_Locale>1033</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=;ProgramID=com.embarcadero.$(MSBuildProjectName)</VerInfo_Keys>
-        <Manifest_File>(None)</Manifest_File>
-        <AppDPIAwarenessMode>none</AppDPIAwarenessMode>
-        <Debugger_RunParams>/all /verbose /source:..\UCD /target:..\..\PascalType.Unicode.rc</Debugger_RunParams>
+        <Manifest_File>..\(None)</Manifest_File>
+        <Debugger_RunParams>/all /verbose /pause /source:..\UCD /target:..\..\PascalType.Unicode.rc</Debugger_RunParams>
         <DCC_MapFile>3</DCC_MapFile>
         <DCC_Inlining>off</DCC_Inlining>
     </PropertyGroup>
@@ -83,7 +93,21 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="..\..\PascalType.Unicode.pas"/>
+        <DCCReference Include="..\..\..\PascalType.Unicode.pas"/>
+        <DCCReference Include="PascalType.Unicode.Builder.CharacterSet.pas"/>
+        <DCCReference Include="PascalType.Unicode.Builder.ResourceWriter.pas"/>
+        <DCCReference Include="PascalType.Unicode.Builder.Common.pas"/>
+        <DCCReference Include="PascalType.Unicode.Builder.PropertyValueAliases.pas"/>
+        <DCCReference Include="PascalType.Unicode.Builder.Logger.pas"/>
+        <DCCReference Include="PascalType.Unicode.Builder.CaseMapping.pas"/>
+        <DCCReference Include="PascalType.Unicode.Builder.ArabicShaping.pas"/>
+        <DCCReference Include="PascalType.Unicode.Builder.Decomposition.pas"/>
+        <DCCReference Include="PascalType.Unicode.Builder.Numbers.pas"/>
+        <DCCReference Include="PascalType.Unicode.Builder.Categories.pas"/>
+        <DCCReference Include="PascalType.Unicode.Builder.Scripts.pas"/>
+        <DCCReference Include="PascalType.Unicode.Builder.PropList.pas"/>
+        <DCCReference Include="PascalType.Unicode.Builder.DerivedNormalizationProps.pas"/>
+        <DCCReference Include="PascalType.Unicode.Builder.UnicodeData.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

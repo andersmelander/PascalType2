@@ -633,6 +633,8 @@ var
 begin
   Invalidate;
 
+  FFontFilename := '';
+
   for FontIndex := 0 to High(FFontArray) do
     if FFontArray[FontIndex].FullFontName = FFontName then
     begin
@@ -644,6 +646,9 @@ begin
 
   FHasAvailableFeatures := False;
   UpdateAvailableFeatures;
+
+  if (FFontFilename = '') then
+    ShowMessageFmt('Selected font not found: %s', [FFontName]);
 end;
 
 procedure TFmRenderDemo.FontSizeChanged;

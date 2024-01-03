@@ -793,7 +793,7 @@ type
       UCS4Replacement: Char     = #$FFFD;
       UCS4ReplacementCodePoint  = $0000FFFD;
       MaximumUCS2               = $0000FFFF;
-      MaximumUTF16              = $0010FFFF;
+      MaximumUTF16              = $0010FFFF; // Max Unicode code point
       MaximumUCS4               = $7FFFFFFF;
 
       MaxHighSurrogate          = $DBFF;
@@ -1086,6 +1086,7 @@ type
     class function IsTone(ACodePoint: TPascalTypeCodePoint): Boolean; static;
   end;
 
+
 //------------------------------------------------------------------------------
 //
 //              Trie data structure
@@ -1109,6 +1110,7 @@ type
     property Loaded: boolean read FLoaded write FLoaded;
   end;
 
+
 //------------------------------------------------------------------------------
 //
 //              Arabic Shaping classes
@@ -1120,18 +1122,20 @@ type
   ArabicShapingClasses = record
   public type
     TShapingClass = (
-      scNon_Joining       = 0,
-      scLeft_Joining      = 1,
-      scRight_Joining     = 2,
-      scDual_Joining      = 3, // = scJoin_Causing
-      scALAPH             = 4,
-      scDALATH_RISH       = 5,
-      scTransparent       = 6);
+      scUnassigned        = 0,
+      scNon_Joining       = 1,
+      scLeft_Joining      = 2,
+      scRight_Joining     = 3,
+      scDual_Joining      = 4, // = scJoin_Causing
+      scALAPH             = 5,
+      scDALATH_RISH       = 6,
+      scTransparent       = 7);
   public
     class var Trie: TUnicodeTrieEx<TShapingClass>;
 
     class procedure Load; static;
   end;
+
 
 //------------------------------------------------------------------------------
 //
@@ -1327,7 +1331,7 @@ begin
     exit;
   UnicodeCategories.Loaded := True;
 
-  ResourceStream := TResourceStream.Create(HInstance, 'CATEGORIES', sUnicodeResourceType);
+  ResourceStream := TResourceStream.Create(HInstance, sUnicodeResourceCategories, sUnicodeResourceType);
 
 {$if defined(UNICODE_RAW_DATA)}
   Stream := ResourceStream;
@@ -1344,16 +1348,17 @@ begin
 
   Reader := TBinaryReader.Create(Stream, nil, True);
   try
+    // Zero the high byte of the 3 byte values
     RangeStart := Default(TPascalTypeCodePoint);
     RangeStop := Default(TPascalTypeCodePoint);
 
     while (Stream.Position < Stream.Size) do
     begin
       // 1) Read category
-      Stream.Read(Category, SizeOf(Category));
+      Category := TCharacterCategory(Reader.ReadByte);
 
       // 2) Read size of ranges, and ranges
-      Stream.Read(Size, SizeOf(Size));
+      Size := Reader.ReadCardinal;
       if (Size = 0) then
         continue;
 
@@ -1361,8 +1366,10 @@ begin
       begin
         Stream.ReadBuffer(RangeStart, 3);
         Stream.ReadBuffer(RangeStop, 3);
-        Assert(RangeStart < $1000000);
-        Assert(RangeStop < $1000000);
+
+        Assert(RangeStart <= PascalTypeUnicode.MaximumUTF16);
+        Assert(RangeStop <= PascalTypeUnicode.MaximumUTF16);
+        Assert(RangeStart <= RangeStop);
 
         // 3) Go through every range and add the current category to each code point
         for CodePoint := RangeStart to RangeStop do
@@ -1380,7 +1387,7 @@ end;
 
 class function PascalTypeUnicode.GetCategory(ACodePoint: TPascalTypeCodePoint): TCharacterCategories;
 begin
-  Assert(ACodePoint < $1000000);
+  Assert(ACodePoint <= PascalTypeUnicode.MaximumUTF16);
 
   if not UnicodeCategories.Loaded then
     LoadUnicodeCategories;
@@ -2345,7 +2352,7 @@ begin
     exit;
   Scripts.Loaded := True;
 
-  ResourceStream := TResourceStream.Create(HInstance, 'SCRIPTS', sUnicodeResourceType);
+  ResourceStream := TResourceStream.Create(HInstance, sUnicodeResourceScripts, sUnicodeResourceType);
 
 {$if defined(UNICODE_RAW_DATA)}
   Stream := ResourceStream;
@@ -2362,6 +2369,7 @@ begin
 
   Reader := TBinaryReader.Create(Stream, nil, True);
   try
+    // Zero the high byte of the 3 byte values
     RangeStart := Default(TPascalTypeCodePoint);
     RangeStop := Default(TPascalTypeCodePoint);
 
@@ -2369,11 +2377,12 @@ begin
 
     while Stream.Position < Stream.Size do
     begin
-      // 1) Determine which script  is stored here
+      // 1) Determine which script is stored here
       Script := TUnicodeScript(Reader.ReadByte);
+      Assert(Script <= High(TUnicodeScript));
 
       // 2) Determine how many ranges are assigned to this script
-      Size := Reader.ReadByte;
+      Size := Reader.ReadCardinal;
       if (Size = 0) then
         continue;
 
@@ -2382,8 +2391,10 @@ begin
         // 3) Read start and stop code of each range
         Stream.ReadBuffer(RangeStart, 3);
         Stream.ReadBuffer(RangeStop, 3);
-        Assert(RangeStart < $1000000);
-        Assert(RangeStop < $1000000);
+
+        Assert(RangeStart <= PascalTypeUnicode.MaximumUTF16);
+        Assert(RangeStop <= PascalTypeUnicode.MaximumUTF16);
+        Assert(RangeStart <= RangeStop);
 
         // 4) Put this script in every of the code points just loaded
         for CodePoint := RangeStart to RangeStop do
@@ -2398,7 +2409,7 @@ end;
 
 class function PascalTypeUnicode.GetScript(ACodePoint: TPascalTypeCodePoint): TUnicodeScript;
 begin
-  Assert(ACodePoint < $1000000);
+  Assert(ACodePoint <= PascalTypeUnicode.MaximumUTF16);
 
   if (not Scripts.Loaded) then
     LoadScripts;
@@ -2823,7 +2834,7 @@ begin
     exit;
   CCCs.Loaded := True;
 
-  ResourceStream := TResourceStream.Create(HInstance, 'COMBINING', sUnicodeResourceType);
+  ResourceStream := TResourceStream.Create(HInstance, sUnicodeResourceCombining, sUnicodeResourceType);
 
 {$if defined(UNICODE_RAW_DATA)}
   Stream := ResourceStream;
@@ -2840,6 +2851,7 @@ begin
 
   Reader := TBinaryReader.Create(Stream, nil, True);
   try
+    // Zero the high byte of the 3 byte values
     RangeStart := Default(TPascalTypeCodePoint);
     RangeStop := Default(TPascalTypeCodePoint);
 
@@ -2849,7 +2861,7 @@ begin
       CCC := Reader.ReadByte;
 
       // 2) Determine how many ranges are assigned to this class
-      Size := Reader.ReadByte;
+      Size := Reader.ReadCardinal;
       if (Size = 0) then
         continue;
 
@@ -2858,8 +2870,10 @@ begin
         // 3) Read start and stop code of each range
         Stream.ReadBuffer(RangeStart, 3);
         Stream.ReadBuffer(RangeStop, 3);
-        Assert(RangeStart < $1000000);
-        Assert(RangeStop < $1000000);
+
+        Assert(RangeStart <= PascalTypeUnicode.MaximumUTF16);
+        Assert(RangeStop <= PascalTypeUnicode.MaximumUTF16);
+        Assert(RangeStart <= RangeStop);
 
         // 4) Put this class in every of the code points just loaded
         for CodePoint := RangeStart to RangeStop do
@@ -2874,7 +2888,7 @@ end;
 
 class function PascalTypeUnicode.CanonicalCombiningClass(ACodePoint: TPascalTypeCodePoint): Cardinal;
 begin
-  Assert(ACodePoint < $1000000);
+  Assert(ACodePoint <= PascalTypeUnicode.MaximumUTF16);
 
   if (not CCCs.Loaded) then
     LoadCCCs;
@@ -2971,7 +2985,7 @@ begin
     exit;
   CanonicalDecompositions.Loaded := True;
 
-  ResourceStream := TResourceStream.Create(HInstance, 'DECOMPOSITION', sUnicodeResourceType);
+  ResourceStream := TResourceStream.Create(HInstance, sUnicodeResourceDecomposition, sUnicodeResourceType);
 
 {$if defined(UNICODE_RAW_DATA)}
   Stream := ResourceStream;
@@ -2994,7 +3008,7 @@ begin
     for i := 0 to Size - 1 do
     begin
       Stream.ReadBuffer(CodePoint, 3);
-      Assert(CodePoint < $1000000);
+      Assert(CodePoint <= PascalTypeUnicode.MaximumUTF16);
 
       Size := Reader.ReadByte;
       if Size > 0 then
@@ -3017,6 +3031,8 @@ begin
         for j := 0 to Size - 1 do
         begin
           Stream.ReadBuffer(CodePoint, 3);
+          Assert(CodePoint <= PascalTypeUnicode.MaximumUTF16);
+
           Decomposition^[j] := CodePoint;
         end;
       end;
@@ -3194,7 +3210,7 @@ begin
 
   for CodePoint in Codes do
   begin
-    Assert(CodePoint < $1000000);
+    Assert(CodePoint <= PascalTypeUnicode.MaximumUTF16);
 
     // Prefilter on composite only
     if (Assigned(Filter)) and (not Filter(CodePoint, 0)) then
@@ -3255,7 +3271,7 @@ begin
   CanonicalCompositionLookup := TDictionary<TUnicodeCompositionPair, TPascalTypeCodePoint>.Create;
   CompatibleCompositionLookup := TDictionary<TUnicodeCompositionPair, TPascalTypeCodePoint>.Create;
 
-  ResourceStream := TResourceStream.Create(HInstance, 'COMPOSITION', sUnicodeResourceType);
+  ResourceStream := TResourceStream.Create(HInstance, sUnicodeResourceComposition, sUnicodeResourceType);
 
 {$if defined(UNICODE_RAW_DATA)}
   Stream := ResourceStream;
@@ -3272,10 +3288,12 @@ begin
 
   Reader := TBinaryReader.Create(Stream, nil, True);
   try
-    Size := Reader.ReadInteger;
+    Size := Reader.ReadCardinal;
 
+{$if RTLVersion > 33.00}
     CanonicalCompositionLookup.Capacity := Size;
     CompatibleCompositionLookup.Capacity := Size;
+{$ifend}
 
     Composite := Default(TPascalTypeCodePoint);
     Pair := Default(TUnicodeCompositionPair);
@@ -3288,8 +3306,13 @@ begin
       if (Size = 2) then
       begin
         Canonical := (TCompatibilityFormattingTag(Reader.ReadByte) = cftCanonical);
+
         Stream.ReadBuffer(Pair.First, 3);
         Stream.ReadBuffer(Pair.Second, 3);
+
+        Assert(Pair.First <= PascalTypeUnicode.MaximumUTF16);
+        Assert(Pair.Second <= PascalTypeUnicode.MaximumUTF16);
+
         if (Canonical) then
           CanonicalCompositionLookup.Add(Pair, Composite)
         else
@@ -3597,9 +3620,10 @@ begin
       ClassValue := TShapingClass(Reader.ReadByte);
 
       // 2) Determine how many ranges are assigned to this class
-      Size := Reader.ReadByte;//Cardinal;
+      Size := Reader.ReadCardinal;
       if (Size = 0) then
         continue;
+
 
       for i := 0 to Size - 1 do
       begin
