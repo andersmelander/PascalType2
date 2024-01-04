@@ -72,6 +72,7 @@ type
     MenuItemRendererPascalTypeGraphics32: TMenuItem;
     MenuItemRendererImage32: TMenuItem;
     N2: TMenuItem;
+    ButtonLoad: TButton;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -88,6 +89,7 @@ type
     procedure ActionGenericExecute(Sender: TObject);
     procedure ActionFeaturesClearExecute(Sender: TObject);
     procedure MenuItemRendererClick(Sender: TObject);
+    procedure ButtonLoadClick(Sender: TObject);
   private
     FFontFace: TPascalTypeFontFace;
     FRenderer: TPascalTypeRenderer;
@@ -110,9 +112,10 @@ type
     procedure SetFontName(const Value: string);
     procedure ButtonFeatureClick(Sender: TObject);
   protected
-    procedure FontNameChanged; virtual;
-    procedure FontSizeChanged; virtual;
-    procedure TextChanged; virtual;
+    procedure LoadFont(Filename: string); // not "const" on purpose
+    procedure FontNameChanged;
+    procedure FontSizeChanged;
+    procedure TextChanged;
     procedure UpdateAvailableFeatures;
   public
     property Text: string read FText write SetText;
@@ -131,9 +134,10 @@ implementation
 {$R *.dfm}
 
 uses
-  Math,
-  Types,
+  System.Math,
+  System.Types,
   System.UITypes,
+  System.IOUtils,
 {$ifdef IMAGE32}
   Img32,
   Img32.Text,
@@ -298,6 +302,24 @@ begin
   end;
 
   Invalidate;
+end;
+
+procedure TFmRenderDemo.ButtonLoadClick(Sender: TObject);
+begin
+  var Folder := '';
+  var Filename := '';
+
+  if (FFontFilename <> '') then
+  begin
+    Folder := TPath.GetDirectoryName(FFontFilename);
+    Filename := TPath.GetFileName(FFontFilename);
+  end;
+
+  if (Folder = '') then
+    Folder := TPath.GetDirectoryName(Application.ExeName);
+
+  if (PromptForFileName(Filename, '*.ttf', '', 'Select font file', Folder)) then
+    LoadFont(Filename);
 end;
 
 procedure TFmRenderDemo.PaintBox1Paint(Sender: TObject);
@@ -627,28 +649,45 @@ begin
   end;
 end;
 
+procedure TFmRenderDemo.LoadFont(Filename: string);
+begin
+  Invalidate;
+  FFontFilename := '';
+  FHasAvailableFeatures := False;
+  try
+
+    try
+      FFontFace.LoadFromFile(FileName);
+      FFontFilename := FileName;
+
+    except
+      on E: Exception do
+        Application.ShowException(E);
+    end;
+
+  finally
+    UpdateAvailableFeatures;
+  end;
+
+  if (FFontFilename = '') then
+    ShowMessageFmt('Unable to load specified font file: %s', [FileName]);
+end;
+
 procedure TFmRenderDemo.FontNameChanged;
 var
   FontIndex : Integer;
 begin
   Invalidate;
-
   FFontFilename := '';
 
   for FontIndex := 0 to High(FFontArray) do
     if FFontArray[FontIndex].FullFontName = FFontName then
     begin
-      FFontFilename := FFontArray[FontIndex].FileName;
-      FFontFace.LoadFromFile(FFontFilename);
-
-      Break;
+      LoadFont(FFontArray[FontIndex].FileName);
+      exit;
     end;
 
-  FHasAvailableFeatures := False;
-  UpdateAvailableFeatures;
-
-  if (FFontFilename = '') then
-    ShowMessageFmt('Selected font not found: %s', [FFontName]);
+  ShowMessageFmt('Selected font not found: %s', [FFontName]);
 end;
 
 procedure TFmRenderDemo.FontSizeChanged;

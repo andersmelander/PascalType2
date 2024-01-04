@@ -33,21 +33,21 @@ object FmRenderDemo: TFmRenderDemo
     object LabelText: TLabel
       Left = 8
       Top = 11
-      Width = 31
+      Width = 30
       Height = 20
       Caption = 'Text:'
     end
     object Label1: TLabel
-      Left = 447
-      Top = 12
-      Width = 63
+      Left = 427
+      Top = 10
+      Width = 62
       Height = 20
       Anchors = [akTop, akRight]
       Caption = 'Test case:'
     end
     object LabelFont: TLabel
-      Left = 660
-      Top = 11
+      Left = 640
+      Top = 9
       Width = 32
       Height = 20
       Anchors = [akTop, akRight]
@@ -64,7 +64,7 @@ object FmRenderDemo: TFmRenderDemo
     object EditText: TEdit
       Left = 44
       Top = 8
-      Width = 397
+      Width = 377
       Height = 28
       Anchors = [akLeft, akTop, akRight]
       TabOrder = 0
@@ -72,8 +72,8 @@ object FmRenderDemo: TFmRenderDemo
       OnChange = EditTextChange
     end
     object ComboBoxTestCase: TComboBox
-      Left = 512
-      Top = 8
+      Left = 492
+      Top = 6
       Width = 137
       Height = 28
       Anchors = [akTop, akRight]
@@ -82,8 +82,8 @@ object FmRenderDemo: TFmRenderDemo
       OnChange = ComboBoxTestCaseChange
     end
     object ComboBoxFont: TComboBox
-      Left = 698
-      Top = 8
+      Left = 678
+      Top = 6
       Width = 111
       Height = 28
       Anchors = [akTop, akRight]
@@ -122,6 +122,16 @@ object FmRenderDemo: TFmRenderDemo
         '96'
         '128'
         '256')
+    end
+    object ButtonLoad: TButton
+      Left = 790
+      Top = 6
+      Width = 28
+      Height = 28
+      Anchors = [akTop, akRight]
+      Caption = #8230
+      TabOrder = 4
+      OnClick = ButtonLoadClick
     end
   end
   object PanelMain: TPanel
