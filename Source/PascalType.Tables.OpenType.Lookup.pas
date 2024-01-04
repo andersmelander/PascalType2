@@ -267,7 +267,7 @@ var
   IsExtension: boolean;
   PosFormat: Word;
   Offset: Cardinal;
-  LookupIndex: Word;
+  i: integer;
   SubTableType: Word;
   SubTableOffsets: array of Word;
   SubTable: TCustomOpenTypeLookupSubTable;
@@ -284,15 +284,15 @@ begin
   SetLength(SubTableOffsets, BigEndianValue.ReadWord(Stream));
 
   // Read lookup list index offsets
-  for LookupIndex := 0 to High(SubTableOffsets) do
-    SubTableOffsets[LookupIndex] := BigEndianValue.ReadWord(Stream);
+  for i := 0 to High(SubTableOffsets) do
+    SubTableOffsets[i] := BigEndianValue.ReadWord(Stream);
 
   if (FLookupFlags and USE_MARK_FILTERING_SET <> 0) then
     FMarkFilteringSet := BigEndianValue.ReadWord(Stream);
 
-  for LookupIndex := 0 to High(SubTableOffsets) do
+  for i := 0 to High(SubTableOffsets) do
   begin
-    LookupPos := StartPos + SubTableOffsets[LookupIndex];
+    LookupPos := StartPos + SubTableOffsets[i];
     Stream.Position := LookupPos;
 
     // Lookup is a an extension.
@@ -537,7 +537,7 @@ procedure TOpenTypeLookupListTable.LoadFromStream(Stream: TStream; Size: Cardina
 var
   StartPos: Int64;
   SavePos: Int64;
-  LookupIndex: Integer;
+  i: Integer;
   LookupTableOffsets: array of Word;
   LookupTable: TCustomOpenTypeLookupTable;
   LookupType: Word;
@@ -555,15 +555,15 @@ begin
   SetLength(LookupTableOffsets, BigEndianValue.ReadWord(Stream));
 
   // read offsets
-  for LookupIndex := 0 to High(LookupTableOffsets) do
-    LookupTableOffsets[LookupIndex] := BigEndianValue.ReadWord(Stream);
+  for i := 0 to High(LookupTableOffsets) do
+    LookupTableOffsets[i] := BigEndianValue.ReadWord(Stream);
 
   FLookupList.Clear;
 
-  for LookupIndex := 0 to High(LookupTableOffsets) do
+  for i := 0 to High(LookupTableOffsets) do
   begin
     // set position to start of lookup table
-    Stream.Position := StartPos + LookupTableOffsets[LookupIndex];
+    Stream.Position := StartPos + LookupTableOffsets[i];
 
     // We peek ahead into the stream to determine the lookup table class in order to
     // support extension lookups. For extension lookup types the actual lookup type
