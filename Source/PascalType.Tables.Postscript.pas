@@ -1278,7 +1278,7 @@ begin
             Value := (Data[0] shl 8) or Data[1];
 
             Operands[High(Operands)] := TPascalTypePostscriptOperandSmallInt.Create;
-            TPascalTypePostscriptOperandSmallInt(Operands[High(Operands)]).Value := Value;
+            TPascalTypePostscriptOperandSmallInt(Operands[High(Operands)]).Value := SmallInt(Value);
           end;
         29:
           begin
