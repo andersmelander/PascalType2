@@ -242,6 +242,7 @@ end;
 
 destructor TPascalTypeRenderer.Destroy;
 begin
+  FontFace := nil; // Unsubscribes
   inherited;
 end;
 
