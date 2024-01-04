@@ -73,7 +73,6 @@ type
   protected
     procedure Changed; virtual;
     function GetFontFace: IPascalTypeFontFace; virtual;
-//    constructor CreateHidden;
   public
     constructor Create(AParent: TCustomPascalTypeTable = nil); virtual;
 
@@ -130,6 +129,10 @@ type
     class procedure Read<T>(AStream: TStream; var Buffer; Count: integer); overload;
     class procedure Write<T>(AStream: TStream; const Buffer: T); overload;
     class procedure Write<T>(AStream: TStream; const Buffer; Count: integer); overload;
+
+    // String
+    class function ReadAnsiString(AStream: TStream): AnsiString; overload;
+    class procedure WriteAnsiString(AStream: TStream; const s: AnsiString); overload;
 
     // 8 bit
     class function ReadByte(AStream: TStream): Byte; overload;
@@ -345,6 +348,13 @@ begin
   end;
 end;
 
+class procedure EndianValue.WriteAnsiString(AStream: TStream; const s: AnsiString);
+begin
+  WriteByte(AStream, Length(s));
+  if (s <> '') then
+    AStream.Write(s[1], Length(s));
+end;
+
 class procedure EndianValue.WriteByte(AStream: TStream; AValue: Byte);
 begin
   Write(AStream, AValue);
@@ -437,6 +447,16 @@ begin
     raise EPascalTypeStremReadError.Create(RCStrStreamReadError);
 {$ENDIF}
   Process(Buffer, Buffer, ReadSize, SizeOf(T));
+end;
+
+class function EndianValue.ReadAnsiString(AStream: TStream): AnsiString;
+var
+  Size: Byte;
+begin
+  Size := ReadByte(AStream);
+  SetLength(Result, Size);
+  if (Size > 0) then
+    AStream.Read(Result[1], Size);
 end;
 
 class procedure EndianValue.Read<T>(AStream: TStream; var Buffer: T);

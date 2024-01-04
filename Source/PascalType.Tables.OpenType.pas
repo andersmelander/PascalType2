@@ -193,7 +193,7 @@ begin
     raise EPascalTypeError.Create(RCStrTableIncomplete);
 
   // read version
-  FVersion.Fixed := BigEndianValue.ReadCardinal(Stream);
+  FVersion.Fixed := BigEndianValue.ReadInteger(Stream);
 end;
 
 procedure TCustomOpenTypeVersionedNamedTable.SaveToStream(Stream: TStream);

@@ -53,6 +53,7 @@ resourcestring
   RCStrHeaderFlagError = 'Header flag error';
   RCStrHorizontalHeaderReserved = 'Horizontal Header Reserved Value <> 0';
   RCStrIndexOutOfBounds = 'Index out of bounds (%d)';
+  RCStrValueOutOfBounds = 'Value out of bounds (%d)';
   RCStrInvalidInstruction = 'Invalid Instruction';
   RCStrLocationOffsetError = 'Location offsets must be in ascending order!';
   RCStrNoCharacterMapTable = 'Character map table not found!';

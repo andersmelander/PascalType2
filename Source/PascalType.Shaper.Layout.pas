@@ -98,6 +98,7 @@ implementation
 
 uses
   System.Math,
+  System.SysUtils,
 {$ifdef DEBUG}
   WinApi.Windows,
 {$endif DEBUG}
@@ -155,14 +156,11 @@ begin
       if (KerningSubTable.IsCrossStream) then
         continue;
 
-      case KerningSubTable.Version of
-        0:
-          if (not KerningSubTable.IsHorizontal) then
-            continue;
-
-      else
+      if (not KerningSubTable.IsHorizontal) then
         continue;
-      end;
+
+      if (KerningSubTable.IsVertical) or (KerningSubTable.IsVariation) then
+        continue;
 
       // TODO : GetKerningValue should return a boolean indicating match/no-match
       Delta := KerningSubTable.FormatTable.GetKerningValue(AGlyphs[i].GlyphID, AGlyphs[i+1].GlyphID);
@@ -282,7 +280,7 @@ begin
   end;
 *)
 
-  // Apply old-style TrueType/AAT kerning table if kerning is eabled in features but GPOS didn't have a kern lookup.
+  // Apply old-style TrueType/AAT kerning table if kerning is enabled in features but GPOS didn't have a kern lookup.
   if (AGlyphs.Features.Contains('kern')) and (not AAppliedFeatures.Contains('kern')) and (Font.GetTableByTableName('kern') <> nil) then
   begin
     ApplyKerning(AGlyphs);

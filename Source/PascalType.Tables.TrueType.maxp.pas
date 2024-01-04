@@ -191,7 +191,7 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read version
-  FVersion.Fixed := BigEndianValue.ReadCardinal(Stream);
+  FVersion.Fixed := BigEndianValue.ReadInteger(Stream);
 
   if (Version.Fixed <> $00010000) and (Version.Fixed <> $00005000) then
     raise EPascalTypeError.Create(RCStrUnsupportedVersion);

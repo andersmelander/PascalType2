@@ -532,7 +532,7 @@ type
     FFeatureArray: array of TFeatureSubtableRecord;
     procedure SetDefaultFlags(const Value: Cardinal);
     function GetFeatureCount: Cardinal;
-    function GetFeature(Index: Cardinal): TFeatureSubtableRecord;
+    function GetFeature(Index: integer): TFeatureSubtableRecord;
   protected
     procedure DefaultFlagsChanged; virtual;
   public
@@ -543,7 +543,7 @@ type
 
     property DefaultFlags: Cardinal read FDefaultFlags write SetDefaultFlags;
     property FeatureCount: Cardinal read GetFeatureCount;
-    property Feature[Index: Cardinal]: TFeatureSubtableRecord read GetFeature;
+    property Feature[AIndex: integer]: TFeatureSubtableRecord read GetFeature;
   end;
 
   // not entirely implemented, for more details see
@@ -605,6 +605,8 @@ type
   public
     procedure Assign(Source: TPersistent); override;
 
+    procedure Clear;
+
     procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
@@ -635,10 +637,8 @@ type
     procedure SaveToStream(Stream: TStream); override;
 
     property Format: Word read FFormat write SetFormat;
-    property Horizontal: TPascalTypeTrackingDataTable read FHorizontal
-      write SetHorizontal;
-    property Vertical: TPascalTypeTrackingDataTable read FVertical
-      write SetVertical;
+    property Horizontal: TPascalTypeTrackingDataTable read FHorizontal write SetHorizontal;
+    property Vertical: TPascalTypeTrackingDataTable read FVertical write SetVertical;
   end;
 
   // table 'Zapf'
@@ -759,23 +759,16 @@ begin
 end;
 
 procedure TCustomPascalTypeNamedVersionTable.LoadFromStream(Stream: TStream; Size: Cardinal);
-var
-  Value32: Cardinal;
 begin
   inherited;
 
-  with Stream do
-  begin
-    if Position + 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  if Stream.Position + 4 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read version
-    Read(Value32, SizeOf(TFixedPoint));
-    FVersion.Fixed := Swap32(Value32);
+  FVersion.Fixed := BigEndianValue.ReadInteger(Stream);
 
-    if Version.Value < 1 then
-      raise EPascalTypeError.Create(RCStrUnsupportedVersion);
-  end;
+  if Version.Value < 1 then
+    raise EPascalTypeError.Create(RCStrUnsupportedVersion);
 end;
 
 procedure TCustomPascalTypeNamedVersionTable.SaveToStream(Stream: TStream);
@@ -853,20 +846,17 @@ var
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 2 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 2 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    Value16 := BigEndianValue.ReadWord(Stream);
-    FPrimaryGlyphIndex := (Value16 and $7FFF);
+  Value16 := BigEndianValue.ReadWord(Stream);
+  FPrimaryGlyphIndex := (Value16 and $7FFF);
 
 {$IFDEF Ambigious Exceptions}
-    if not((Value16 and $8000) <> 0) = IsFormat1) then
-      raise EPascalTypeError.Create('Format mismatch!');
+  if not((Value16 and $8000) <> 0) = IsFormat1) then
+    raise EPascalTypeError.Create('Format mismatch!');
 {$ENDIF}
-  end;
 end;
 
 procedure TCustomPascalTypeAccentAttachmentDescriptionTable.SaveToStream(
@@ -903,33 +893,26 @@ procedure TPascalTypeAccentAttachmentDescriptionFormat0Table.LoadFromStream(Stre
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 2 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 2 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read primary attachment point
-    Read(FPrimaryAttachmentPoint, 1);
+  // read primary attachment point
+  Stream.Read(FPrimaryAttachmentPoint, 1);
 
-    // read secondary info index
-    Read(FSecondaryInfoIndex, 1);
-  end;
+  // read secondary info index
+  Stream.Read(FSecondaryInfoIndex, 1);
 end;
 
-procedure TPascalTypeAccentAttachmentDescriptionFormat0Table.SaveToStream
-  (Stream: TStream);
+procedure TPascalTypeAccentAttachmentDescriptionFormat0Table.SaveToStream(Stream: TStream);
 begin
   inherited;
 
-  with Stream do
-  begin
-    // write primary attachment point
-    Write(FPrimaryAttachmentPoint, 1);
+  // write primary attachment point
+  Stream.Write(FPrimaryAttachmentPoint, 1);
 
-    // write secondary info index
-    Write(FSecondaryInfoIndex, 1);
-  end;
+  // write secondary info index
+  Stream.Write(FSecondaryInfoIndex, 1);
 end;
 
 
@@ -952,15 +935,12 @@ procedure TPascalTypeAccentAttachmentDescriptionFormat1Table.LoadFromStream(Stre
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 2 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 2 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read extension offset
-    FExtensionOffset := BigEndianValue.ReadWord(Stream);
-  end;
+  // read extension offset
+  FExtensionOffset := BigEndianValue.ReadWord(Stream);
 end;
 
 procedure TPascalTypeAccentAttachmentDescriptionFormat1Table.SaveToStream(Stream: TStream);
@@ -993,69 +973,63 @@ end;
 procedure TPascalTypeAccentAttachmentTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
-  GlyphIndex: Cardinal;
+  i: integer;
   DescOffset: Cardinal;
   ExtOffset: Cardinal;
   SecOffset: Cardinal;
   Description: TCustomPascalTypeAccentAttachmentDescriptionTable;
-  Value16: Word;
   Format:  Byte;
 begin
+  // remember start position
+  StartPos := Stream.Position;
+
   inherited;
 
-  with Stream do
-  begin
-    // remember start position
-    StartPos := Position;
+  // read first glyph
+  FFirstAccentGlyphIndex := BigEndianValue.ReadWord(Stream);
 
-    // read first glyph
-    Read(Value16, SizeOf(Word));
-    FFirstAccentGlyphIndex := Swap16(Value16);
-
-    // read last glyph
-    Read(Value16, SizeOf(Word));
-    FLastAccentGlyphIndex := Swap16(Value16);
+  // read last glyph
+  FLastAccentGlyphIndex := BigEndianValue.ReadWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
-    if FLastAccentGlyphIndex < FFirstAccentGlyphIndex then
-      raise EPascalTypeError.Create(RCStrGlyphIndexOrderError);
+  if FLastAccentGlyphIndex < FFirstAccentGlyphIndex then
+    raise EPascalTypeError.Create(RCStrGlyphIndexOrderError);
 {$ENDIF}
-    // read description offset
-    DescOffset := BigEndianValue.ReadCardinal(Stream);
+  // read description offset
+  DescOffset := BigEndianValue.ReadCardinal(Stream);
 
-    // read extension offset
-    ExtOffset := BigEndianValue.ReadCardinal(Stream);
+  // read extension offset
+  ExtOffset := BigEndianValue.ReadCardinal(Stream);
 
-    // read secondary offset
-    SecOffset := BigEndianValue.ReadCardinal(Stream);
+  // read secondary offset
+  SecOffset := BigEndianValue.ReadCardinal(Stream);
 
-    // locate description subtable position
-    Position := StartPos + DescOffset;
-    for GlyphIndex := 0 to (FLastAccentGlyphIndex - FFirstAccentGlyphIndex) - 1 do
-    begin
-      Read(Format, 1);
-      Seek(0, soFromBeginning);
+  // locate description subtable position
+  Stream.Position := StartPos + DescOffset;
+  for i := 0 to (FLastAccentGlyphIndex - FFirstAccentGlyphIndex) - 1 do
+  begin
+    Stream.Read(Format, 1);
+    Stream.Seek(-SizeOf(Byte), soFromCurrent);
 
-      // identify format
-      if (Format and $80) <> 0 then
-        Description := TPascalTypeAccentAttachmentDescriptionFormat0Table.Create
-      else
-        Description := TPascalTypeAccentAttachmentDescriptionFormat1Table.Create;
+    // identify format
+    if (Format and $80) <> 0 then
+      Description := TPascalTypeAccentAttachmentDescriptionFormat0Table.Create
+    else
+      Description := TPascalTypeAccentAttachmentDescriptionFormat1Table.Create;
 
-      // read description from stream
-      Description.LoadFromStream(Stream);
-    end;
-
-    // locate extention subtable position
-    Position := StartPos + ExtOffset;
-
-    // TODO: read extention
-
-    // locate secondary data subtable position
-    Position := StartPos + SecOffset;
-
-    // TODO: read secondary data
+    // read description from stream
+    Description.LoadFromStream(Stream);
   end;
+
+  // locate extention subtable position
+  Stream.Position := StartPos + ExtOffset;
+
+  // TODO: read extention
+
+  // locate secondary data subtable position
+  Stream.Position := StartPos + SecOffset;
+
+  // TODO: read secondary data
 end;
 
 procedure TPascalTypeAccentAttachmentTable.SaveToStream(Stream: TStream);
@@ -1082,36 +1056,36 @@ end;
 
 procedure TPascalTypeAxisVariationSegmentTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
-  PairIndex: Integer;
+  i: Integer;
 begin
   inherited;
 
   // read pair count
   SetLength(FCorrespondenceArray, BigEndianValue.ReadWord(Stream));
 
-  for PairIndex := 0 to High(FCorrespondenceArray) do
+  for i := 0 to High(FCorrespondenceArray) do
   begin
-    FCorrespondenceArray[PairIndex].fromCoord := BigEndianValue.ReadSmallInt(Stream);
-    FCorrespondenceArray[PairIndex].toCoord := BigEndianValue.ReadSmallInt(Stream);
+    FCorrespondenceArray[i].fromCoord := BigEndianValue.ReadSmallInt(Stream);
+    FCorrespondenceArray[i].toCoord := BigEndianValue.ReadSmallInt(Stream);
   end;
 end;
 
 procedure TPascalTypeAxisVariationSegmentTable.SaveToStream(Stream: TStream);
 var
-  PairIndex: Integer;
+  i: Integer;
 begin
   inherited;
 
   // write pair count
   BigEndianValue.WriteWord(Stream, Length(FCorrespondenceArray));
 
-  for PairIndex := 0 to High(FCorrespondenceArray) do
+  for i := 0 to High(FCorrespondenceArray) do
   begin
     // write 'from' coordinate
-    BigEndianValue.WriteSmallInt(Stream, FCorrespondenceArray[PairIndex].fromCoord);
+    BigEndianValue.WriteSmallInt(Stream, FCorrespondenceArray[i].fromCoord);
 
     // write 'to' coordinate
-    BigEndianValue.WriteSmallInt(Stream, FCorrespondenceArray[PairIndex].toCoord);
+    BigEndianValue.WriteSmallInt(Stream, FCorrespondenceArray[i].toCoord);
   end;
 end;
 
@@ -1145,46 +1119,38 @@ end;
 
 procedure TPascalTypeAxisVariationTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
-  Value32: Cardinal;
   AxisCount: Cardinal;
-  AxisIndex: Cardinal;
+  i: integer;
   Segment: TPascalTypeAxisVariationSegmentTable;
 begin
   inherited;
 
-  with Stream do
+  // read axis count
+  AxisCount := BigEndianValue.ReadCardinal(Stream);
+
+  for i := 0 to AxisCount - 1 do
   begin
-    // read axis count
-    Read(Value32, SizeOf(Cardinal));
-    AxisCount := Swap32(Value32);
+    // create segment object
+    // add segment to segment list
+    Segment := FSegments.Add;
 
-    for AxisIndex := 0 to AxisCount - 1 do
-    begin
-      // create segment object
-      // add segment to segment list
-      Segment := FSegments.Add;
-
-      // load segment from stream
-      Segment.LoadFromStream(Stream);
-    end;
+    // load segment from stream
+    Segment.LoadFromStream(Stream);
   end;
 end;
 
 procedure TPascalTypeAxisVariationTable.SaveToStream(Stream: TStream);
 var
-  AxisIndex: Cardinal;
+  i: integer;
 begin
   inherited;
 
   // write axis count
   BigEndianValue.WriteCardinal(Stream, FSegments.Count);
 
-  for AxisIndex := 0 to FSegments.Count - 1 do
-    with TPascalTypeAxisVariationSegmentTable(FSegments[AxisIndex]) do
-    begin
-      // save segment to stream
-      SaveToStream(Stream);
-    end;
+  for i := 0 to FSegments.Count - 1 do
+    // save segment to stream
+    TPascalTypeAxisVariationSegmentTable(FSegments[i]).SaveToStream(Stream);
 end;
 
 
@@ -1199,21 +1165,17 @@ end;
 
 procedure TPascalTypeBaselinePartFormat0Table.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
-  DeltaIndex: Word;
+  i: integer;
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check if table is complete
-    if Position + 64 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check if table is complete
+  if Stream.Position + 64 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read 32 delta values (a value of 0 means no delta ;-)
-    for DeltaIndex := 0 to High(FDeltas) do
-      FDeltas[DeltaIndex] :=
-        BigEndianValue.ReadWord(Stream);
-  end;
+  // read 32 delta values (a value of 0 means no delta ;-)
+  for i := 0 to High(FDeltas) do
+    FDeltas[i] := BigEndianValue.ReadWord(Stream);
 end;
 
 procedure TPascalTypeBaselinePartFormat0Table.SaveToStream(Stream: TStream);
@@ -1279,33 +1241,26 @@ begin
 end;
 
 procedure TPascalTypeBaselineTable.LoadFromStream(Stream: TStream; Size: Cardinal);
-var
-  Value16: Word;
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check if table is complete
-    if Position + 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check if table is complete
+  if Stream.Position + 4 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read format
-    Read(Value16, SizeOf(Word));
-    FFormat := Swap16(Value16);
+  // read format
+  FFormat := BigEndianValue.ReadWord(Stream);
 
-    // read default baseline
-    Read(Value16, SizeOf(Word));
-    FDefaultBaseline := Swap16(Value16);
+  // read default baseline
+  FDefaultBaseline := BigEndianValue.ReadWord(Stream);
 
-    case FFormat of
-      0: FBaselinePart := TPascalTypeBaselinePartFormat0Table.Create;
-      1: FBaselinePart := TPascalTypeBaselinePartFormat1Table.Create;
-      2: raise EPascalTypeNotImplemented.Create(RCStrNotImplemented);
-      3: raise EPascalTypeNotImplemented.Create(RCStrNotImplemented);
-      else
-        raise EPascalTypeError.Create(RCStrUnknownBaselinePart);
-    end;
+  case FFormat of
+    0: FBaselinePart := TPascalTypeBaselinePartFormat0Table.Create;
+    1: FBaselinePart := TPascalTypeBaselinePartFormat1Table.Create;
+    2: raise EPascalTypeNotImplemented.Create(RCStrNotImplemented);
+    3: raise EPascalTypeNotImplemented.Create(RCStrNotImplemented);
+    else
+      raise EPascalTypeError.Create(RCStrUnknownBaselinePart);
   end;
 end;
 
@@ -1355,13 +1310,11 @@ begin
     FBitmapSizeList.Assign(TPascalTypeBitmapLocationTable(Source).FBitmapSizeList);
 end;
 
-function TPascalTypeBitmapLocationTable.GetBitmapSizeTable(Index: Integer)
-: TPascalTypeBitmapSizeTable;
+function TPascalTypeBitmapLocationTable.GetBitmapSizeTable(Index: Integer): TPascalTypeBitmapSizeTable;
 begin
-  if (Index >= 0) and (Index < FBitmapSizeList.Count) then
-    Result := FBitmapSizeList[Index]
-  else
+  if (Index < 0) or (Index >= FBitmapSizeList.Count) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FBitmapSizeList[Index];
 end;
 
 function TPascalTypeBitmapLocationTable.GetBitmapSizeTableCount: Integer;
@@ -1376,35 +1329,30 @@ end;
 
 procedure TPascalTypeBitmapLocationTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
-  Value32: Cardinal;
   BitmapSizeCount: Cardinal;
-  BitmapSizeIndex: Integer;
+  i: Integer;
   BitmapSizeTable: TPascalTypeBitmapSizeTable;
 begin
   inherited;
 
-  with Stream do
+  // read number of BitmapSize tables
+  BitmapSizeCount := BigEndianValue.ReadCardinal(Stream);
+
+  // read bitmap size tables
+  for i := 0 to BitmapSizeCount - 1 do
   begin
-    // read number of BitmapSize tables
-    Read(Value32, SizeOf(Cardinal));
-    BitmapSizeCount := Swap32(Value32);
+    // create bitmap size table
+    // add bitmap size table
+    BitmapSizeTable := FBitmapSizeList.Add;
 
-    // read bitmap size tables
-    for BitmapSizeIndex := 0 to BitmapSizeCount - 1 do
-    begin
-      // create bitmap size table
-      // add bitmap size table
-      BitmapSizeTable := FBitmapSizeList.Add;
-
-      // load bitmap size table
-      BitmapSizeTable.LoadFromStream(Stream);
-    end;
+    // load bitmap size table
+    BitmapSizeTable.LoadFromStream(Stream);
   end;
 end;
 
 procedure TPascalTypeBitmapLocationTable.SaveToStream(Stream: TStream);
 var
-  BitmapSizeIndex: Integer;
+  i: Integer;
 begin
   inherited;
 
@@ -1412,9 +1360,9 @@ begin
   BigEndianValue.WriteCardinal(Stream, FBitmapSizeList.Count);
 
   // write bitmap size tables
-  for BitmapSizeIndex := 0 to FBitmapSizeList.Count - 1 do
+  for i := 0 to FBitmapSizeList.Count - 1 do
     // save bitmap size table to stream
-    FBitmapSizeList[BitmapSizeIndex].SaveToStream(Stream);
+    FBitmapSizeList[i].SaveToStream(Stream);
 end;
 
 
@@ -1457,21 +1405,15 @@ begin
 end;
 
 procedure TCustomPascalTypeTaggedValueTable.LoadFromStream(Stream: TStream; Size: Cardinal);
-var
-  Value32: Cardinal;
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check if table is complete
-    if Position + 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check if table is complete
+  if Stream.Position + 4 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read value
-    Read(Value32, SizeOf(Cardinal));
-    FValue.Fixed := Swap32(Value32);
-  end;
+  // read value
+  FValue.Fixed := BigEndianValue.ReadInteger(Stream);
 end;
 
 procedure TCustomPascalTypeTaggedValueTable.SaveToStream(Stream: TStream);
@@ -1546,8 +1488,7 @@ begin
   Result := 'opsz';
 end;
 
-procedure TPascalTypeOpticalSizeValueTable.SetValue(
-  const Value: TFixedPoint);
+procedure TPascalTypeOpticalSizeValueTable.SetValue(const Value: TFixedPoint);
 begin
   if (FValue.Fract <> Value.Fract) or (FValue.Value <> Value.Value) then
   begin
@@ -1569,8 +1510,7 @@ begin
   Result := FixedPointToNonAlphabeticCode(FValue);
 end;
 
-procedure TPascalTypeNonAlphabeticValueTable.SetCode(
-  const Value: TNonAlphabeticCode);
+procedure TPascalTypeNonAlphabeticValueTable.SetCode(const Value: TNonAlphabeticCode);
 begin
   if (FixedPointToNonAlphabeticCode(FValue) <> Value) then
   begin
@@ -1623,71 +1563,61 @@ end;
 
 procedure TPascalTypeFontDescriptionTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
-  Value32:  Cardinal;
   DescCount: Cardinal;
-  DescIndex: Cardinal;
+  i: integer;
   TagClass: TPascalTypeTaggedValueTableClass;
   Descritor: TCustomPascalTypeTaggedValueTable;
 begin
   inherited;
 
-  with Stream do
+  // check if table is complete
+  if Stream.Position + 4 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  // read description count
+  DescCount := BigEndianValue.ReadCardinal(Stream);
+
+  for i := 0 to DescCount - 1 do
   begin
-    // check if table is complete
-    if Position + 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+    // read tag
+    var Tag := BigEndianValue.ReadCardinal(Stream); // BigEndian?
 
-    // read description count
-    Read(Value32, SizeOf(Cardinal));
-    DescCount := Swap32(Value32);
+    // find description class by tag
+    TagClass := FindDescriptionTagByType(TTableType(Tag));
 
-    for DescIndex := 0 to DescCount - 1 do
+    // read tag
+    if (TagClass <> nil) then
     begin
-      // read tag
-      Read(Value32, SizeOf(Cardinal));
+      // create descriptor
+      Descritor := TagClass.Create;
 
-      // find description class by tag
-      TagClass := FindDescriptionTagByType(TTableType(Value32));
+      // read descriptor from stream
+      Descritor.LoadFromStream(Stream);
 
-      // read tag
-      if (TagClass <> nil) then
-      begin
-        // create descriptor
-        Descritor := TagClass.Create;
-
-        // read descriptor from stream
-        Descritor.LoadFromStream(Stream);
-
-        // add descriptor to descriptor list
-        FDescritors.Add(Descritor);
-      end else
-        Seek(4, soFromCurrent);
-    end;
+      // add descriptor to descriptor list
+      FDescritors.Add(Descritor);
+    end else
+      Stream.Seek(SizeOf(Cardinal), soFromCurrent); // TODO : Why?
   end;
 end;
 
 procedure TPascalTypeFontDescriptionTable.SaveToStream(Stream: TStream);
 var
-  Value32: Cardinal;
-  DescIndex: Cardinal;
+  i: integer;
 begin
   inherited;
 
-  with Stream do
+  // write description count
+  BigEndianValue.WriteCardinal(Stream, FDescritors.Count);
+
+  for i := 0 to FDescritors.Count - 1 do
   begin
-    // write description count
-    BigEndianValue.WriteCardinal(Stream, FDescritors.Count);
+    // write tag
+ASSERT(False); // TODO : Can't access FDescritors[DescIndex].TableType
+//    BigEndianValue.WriteCardinal(Stream, TableType); // TODO : Big endian?
 
-    for DescIndex := 0 to FDescritors.Count - 1 do
-      with FDescritors[DescIndex] do
-      begin
-        // write tag
-        Value32 := Cardinal(TableType);
-        Write(Value32, SizeOf(Cardinal));
-
-        // write descriptor to stream
-        SaveToStream(Stream);
-      end;
+    // write descriptor to stream
+    FDescritors[i].SaveToStream(Stream);
   end;
 end;
 
@@ -1711,27 +1641,24 @@ procedure TPascalTypeAppleFeatureTable.LoadFromStream(Stream: TStream; Size: Car
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check if table is complete
-    if Position + 12 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check if table is complete
+  if Stream.Position + 12 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read feature
-    FFeature := BigEndianValue.ReadWord(Stream);
+  // read feature
+  FFeature := BigEndianValue.ReadWord(Stream);
 
-    // read settings count
-    FNumSettings := BigEndianValue.ReadWord(Stream);
+  // read settings count
+  FNumSettings := BigEndianValue.ReadWord(Stream);
 
-    // read setting table offset
-    FSettingTable := BigEndianValue.ReadCardinal(Stream);
+  // read setting table offset
+  FSettingTable := BigEndianValue.ReadCardinal(Stream);
 
-    // read feature flags
-    FFeatureFlags := BigEndianValue.ReadWord(Stream);
+  // read feature flags
+  FFeatureFlags := BigEndianValue.ReadWord(Stream);
 
-    // read name index
-    FNameIndex := BigEndianValue.ReadSmallInt(Stream);
-  end;
+  // read name index
+  FNameIndex := BigEndianValue.ReadSmallInt(Stream);
 end;
 
 procedure TPascalTypeAppleFeatureTable.SaveToStream(Stream: TStream);
@@ -1771,42 +1698,41 @@ end;
 procedure TPascalTypeFeatureTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   FeatureNameCount: Word;
-  FeatureNameIndex: Word;
+  i: integer;
   AppleFeature: TPascalTypeAppleFeatureTable;
 {$IFDEF AmbigiousExceptions}
-    Value32: Cardinal; Value16: Word;
+  Value32: Cardinal;
+  Value16: Word;
 {$ENDIF}
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check if table is complete
-    if Position + 8 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check if table is complete
+  if Stream.Position + 8 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read feature name count
-    FeatureNameCount := BigEndianValue.ReadWord(Stream);
+  // read feature name count
+  FeatureNameCount := BigEndianValue.ReadWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
-    Read(Value16, SizeOf(Word));
-    if Value16 <> 0 then raise EPascalTypeError.CreateFmt(RCStrReservedValueError, [Swap16(Value16)]);
+  Stream.Read(Value16, SizeOf(Word));
+  if Value16 <> 0 then
+    raise EPascalTypeError.CreateFmt(RCStrReservedValueError, [Swap16(Value16)]);
 
-    Read(Value32, SizeOf(Cardinal));
-    if Value32 <> 0 then raise EPascalTypeError.CreateFmt(RCStrReservedValueError, [Swap32(Value32)]);
+  Stream.Read(Value32, SizeOf(Cardinal));
+  if Value32 <> 0 then
+    raise EPascalTypeError.CreateFmt(RCStrReservedValueError, [Swap32(Value32)]);
 {$ELSE}
-    Seek(6, soFromCurrent);
+  Seek(6, soFromCurrent);
 {$ENDIF}
-    for FeatureNameIndex := 0 to FeatureNameCount - 1 do
-    begin
-      // create apple feature
-      // add feature to list
-      AppleFeature := FFeatures.Add;
+  for i := 0 to FeatureNameCount - 1 do
+  begin
+    // create apple feature
+    // add feature to list
+    AppleFeature := FFeatures.Add;
 
-      // load apple feature from stream
-      AppleFeature.LoadFromStream(Stream);
-    end;
-
+    // load apple feature from stream
+    AppleFeature.LoadFromStream(Stream);
   end;
 end;
 
@@ -1841,10 +1767,9 @@ var
   OffsetToData: Word;
   // Offset in bytes from the beginning of the table to the beginning of the first axis data.
   CountSizePairs: Word; // Axis + instance = 2.
-  AxisIndex: Word;
+  i, j: integer;
   AxisSize:  Word;
   // The number of bytes in each gxFontVariationAxis record. Set to 20 bytes.
-  InstIndex: Word;
   InstSize:  Word;
   // The number of bytes in each gxFontInstance array. InstanceSize = axisCount * sizeof(gxShortFrac).
 begin
@@ -1910,51 +1835,51 @@ begin
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
   // read data
-  for AxisIndex := 0 to High(FVariationAxes) do
+  for i := 0 to High(FVariationAxes) do
   begin
     // read axis tag
-    Stream.Read(FVariationAxes[AxisIndex].AxisTag, SizeOf(TTableType));
+    Stream.Read(FVariationAxes[i].AxisTag, SizeOf(TTableType));
 
     // read minimum style coordinate for the axis
-    FVariationAxes[AxisIndex].MinValue.Fixed := BigEndianValue.ReadCardinal(Stream);
+    FVariationAxes[i].MinValue.Fixed := BigEndianValue.ReadInteger(Stream);
 
     // read default style coordinate for the axis
-    FVariationAxes[AxisIndex].DefaultValue.Fixed := BigEndianValue.ReadCardinal(Stream);
+    FVariationAxes[i].DefaultValue.Fixed := BigEndianValue.ReadInteger(Stream);
 
     // read maximum style coordinate for the axis
-    FVariationAxes[AxisIndex].MaxValue.Fixed := BigEndianValue.ReadCardinal(Stream);
+    FVariationAxes[i].MaxValue.Fixed := BigEndianValue.ReadInteger(Stream);
 
     // read flags (set to 0!)
-    FVariationAxes[AxisIndex].Flags := BigEndianValue.ReadWord(Stream);
+    FVariationAxes[i].Flags := BigEndianValue.ReadWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
     // ambigious axis size check
-    if FVariationAxes[AxisIndex].Flags <> 0 then
+    if FVariationAxes[i].Flags <> 0 then
       raise EPascalTypeError.Create(RCStrReservedValueError);
 {$ENDIF}
     // read name ID
-    FVariationAxes[AxisIndex].NameID := BigEndianValue.ReadWord(Stream);
+    FVariationAxes[i].NameID := BigEndianValue.ReadWord(Stream);
   end;
 
-  for InstIndex := 0 to High(FInstances) do
+  for i := 0 to High(FInstances) do
   begin
     // read name ID
-    FInstances[InstIndex].NameID := BigEndianValue.ReadWord(Stream);
+    FInstances[i].NameID := BigEndianValue.ReadWord(Stream);
 
     // read flags (set to 0!)
-    FInstances[InstIndex].Flags := BigEndianValue.ReadWord(Stream);
+    FInstances[i].Flags := BigEndianValue.ReadWord(Stream);
 
     // set coordinate count
-    SetLength(FInstances[InstIndex].Coordinates, Length(FVariationAxes));
+    SetLength(FInstances[i].Coordinates, Length(FVariationAxes));
 
     // read coordinates
-    for AxisIndex := 0 to High(FVariationAxes) do
-      FInstances[InstIndex].Coordinates[AxisIndex].Fixed := BigEndianValue.ReadCardinal(Stream);
+    for j := 0 to High(FVariationAxes) do
+      FInstances[i].Coordinates[j].Fixed := BigEndianValue.ReadInteger(Stream);
 
     if InstSize = (3*SizeOf(Word) + Length(FVariationAxes) * SizeOf(TFixedPoint)) then
-      FInstances[InstIndex].psNameID := BigEndianValue.ReadWord(Stream)
+      FInstances[i].psNameID := BigEndianValue.ReadWord(Stream)
     else
-      FInstances[InstIndex].psNameID := 0;
+      FInstances[i].psNameID := 0;
   end;
 end;
 
@@ -1984,25 +1909,18 @@ begin
 end;
 
 procedure TPascalTypeGlyphPropertiesTable.LoadFromStream(Stream: TStream; Size: Cardinal);
-var
-  Value16: Word;
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check if table is complete
-    if Position + 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check if table is complete
+  if Stream.Position + 4 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read format
-    Read(Value16, SizeOf(Word));
-    FFormat := Swap16(Value16);
+  // read format
+  FFormat := BigEndianValue.ReadWord(Stream);
 
-    // read default
-    Read(Value16, SizeOf(Word));
-    FDefault := Swap16(Value16);
-  end;
+  // read default
+  FDefault := BigEndianValue.ReadWord(Stream);
 end;
 
 procedure TPascalTypeGlyphPropertiesTable.SaveToStream(Stream: TStream);
@@ -2045,36 +1963,33 @@ procedure TPascalTypeHorizontalStyleTable.LoadFromStream(Stream: TStream; Size: 
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 4 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read extra plain
-    FExtraPlain := BigEndianValue.ReadWord(Stream);
+  // read extra plain
+  FExtraPlain := BigEndianValue.ReadWord(Stream);
 
-    // read extra bold
-    FExtraBold := BigEndianValue.ReadWord(Stream);
+  // read extra bold
+  FExtraBold := BigEndianValue.ReadWord(Stream);
 
-    // read extra italic
-    FExtraItalic := BigEndianValue.ReadWord(Stream);
+  // read extra italic
+  FExtraItalic := BigEndianValue.ReadWord(Stream);
 
-    // read extra underline
-    FExtraUnderline := BigEndianValue.ReadWord(Stream);
+  // read extra underline
+  FExtraUnderline := BigEndianValue.ReadWord(Stream);
 
-    // read extra outline
-    FExtraOutline := BigEndianValue.ReadWord(Stream);
+  // read extra outline
+  FExtraOutline := BigEndianValue.ReadWord(Stream);
 
-    // read extra shadow
-    FExtraShadow := BigEndianValue.ReadWord(Stream);
+  // read extra shadow
+  FExtraShadow := BigEndianValue.ReadWord(Stream);
 
-    // read extra condensed
-    FExtraCondensed := BigEndianValue.ReadWord(Stream);
+  // read extra condensed
+  FExtraCondensed := BigEndianValue.ReadWord(Stream);
 
-    // read extra extended
-    FExtraExtended := BigEndianValue.ReadWord(Stream);
-  end;
+  // read extra extended
+  FExtraExtended := BigEndianValue.ReadWord(Stream);
 end;
 
 procedure TPascalTypeHorizontalStyleTable.SaveToStream(Stream: TStream);
@@ -2146,8 +2061,7 @@ begin
   Changed;
 end;
 
-procedure TPascalTypeHorizontalStyleTable.SetExtraBold(
-  const Value: smallint);
+procedure TPascalTypeHorizontalStyleTable.SetExtraBold(const Value: smallint);
 begin
   if FExtraBold <> Value then
   begin
@@ -2156,8 +2070,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeHorizontalStyleTable.SetExtraCondensed(
-  const Value: smallint);
+procedure TPascalTypeHorizontalStyleTable.SetExtraCondensed(const Value: smallint);
 begin
   if FExtraCondensed <> Value then
   begin
@@ -2166,8 +2079,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeHorizontalStyleTable.SetExtraExtended(
-  const Value: smallint);
+procedure TPascalTypeHorizontalStyleTable.SetExtraExtended(const Value: smallint);
 begin
   if FExtraExtended <> Value then
   begin
@@ -2177,8 +2089,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeHorizontalStyleTable.SetExtraItalic(
-  const Value: smallint);
+procedure TPascalTypeHorizontalStyleTable.SetExtraItalic(const Value: smallint);
 begin
   if FExtraItalic <> Value then
   begin
@@ -2188,8 +2099,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeHorizontalStyleTable.SetExtraOutline(
-  const Value: smallint);
+procedure TPascalTypeHorizontalStyleTable.SetExtraOutline(const Value: smallint);
 begin
   if FExtraOutline <> Value then
   begin
@@ -2199,8 +2109,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeHorizontalStyleTable.SetExtraPlain(
-  const Value: smallint);
+procedure TPascalTypeHorizontalStyleTable.SetExtraPlain(const Value: smallint);
 begin
   if FExtraPlain <> Value then
   begin
@@ -2210,8 +2119,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeHorizontalStyleTable.SetExtraShadow(
-  const Value: smallint);
+procedure TPascalTypeHorizontalStyleTable.SetExtraShadow(const Value: smallint);
 begin
   if FExtraShadow <> Value then
   begin
@@ -2221,8 +2129,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeHorizontalStyleTable.SetExtraUnderline(
-  const Value: smallint);
+procedure TPascalTypeHorizontalStyleTable.SetExtraUnderline(const Value: smallint);
 begin
   if FExtraUnderline <> Value then
   begin
@@ -2291,78 +2198,68 @@ var
   ChainLength:  Cardinal;
   // The length of the chain in bytes, including this header.
   SubtableCount: Word; // The number of subtables in the chain.
-  FeatureIndex: Word;
-  SubtableIndex: Word;
+  i: integer;
 begin
+  // remember start position
+  StartPosition := Stream.Position;
+
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 12 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 12 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // remember start position
-    StartPosition := Position;
+  // read default flags
+  FDefaultFlags := BigEndianValue.ReadCardinal(Stream);
 
-    // read default flags
-    FDefaultFlags := BigEndianValue.ReadCardinal(Stream);
-
-    // read chain length
-    ChainLength := BigEndianValue.ReadCardinal(Stream);
+  // read chain length
+  ChainLength := BigEndianValue.ReadCardinal(Stream);
 
 {$IFDEF AmbigiousExceptions}
-    // check if chain length is a multiple of 4
-    if (ChainLength mod 4) <> 0 then raise EPascalTypeError.Create
-      (RCStrWrongChainLength);
+  // check if chain length is a multiple of 4
+  if (ChainLength mod 4) <> 0 then raise EPascalTypeError.Create
+    (RCStrWrongChainLength);
 {$ENDIF}
-    // read feature entry count
-    SetLength(FFeatureArray, BigEndianValue.ReadWord(Stream));
+  // read feature entry count
+  SetLength(FFeatureArray, BigEndianValue.ReadWord(Stream));
 
-    // read subtable count
-    SubtableCount := BigEndianValue.ReadWord(Stream);
+  // read subtable count
+  SubtableCount := BigEndianValue.ReadWord(Stream);
 
-    for FeatureIndex := 0 to High(FFeatureArray) do
-      with FFeatureArray[FeatureIndex] do
-      begin
-        // read feature type
-        FeatureType := BigEndianValue.ReadWord(Stream);
+  for i := 0 to High(FFeatureArray) do
+  begin
+    // read feature type
+    FFeatureArray[i].FeatureType := BigEndianValue.ReadWord(Stream);
 
-        // read feature setting
-        FeatureSetting := BigEndianValue.ReadWord(Stream);
+    // read feature setting
+    FFeatureArray[i].FeatureSetting := BigEndianValue.ReadWord(Stream);
 
-        // read enable flags
-        EnableFlags := BigEndianValue.ReadCardinal(Stream);
+    // read enable flags
+    FFeatureArray[i].EnableFlags := BigEndianValue.ReadCardinal(Stream);
 
-        // read disable flags
-        DisableFlags := BigEndianValue.ReadCardinal(Stream);
-      end;
+    // read disable flags
+    FFeatureArray[i].DisableFlags := BigEndianValue.ReadCardinal(Stream);
+  end;
 
-    // jump to end of this table
-    Position := StartPosition + ChainLength;
+  // jump to end of this table
+  Stream.Position := StartPosition + ChainLength;
 
-    // read subtables
-    for SubtableIndex := 0 to SubtableCount - 1 do
-    begin
-      // TODO: Read further TPascalTypeGlyphMetamorphosisChainTable properties
-    end;
+  // read subtables
+  for i := 0 to SubtableCount - 1 do
+  begin
+    // TODO: Read further TPascalTypeGlyphMetamorphosisChainTable properties
   end;
 end;
 
-procedure TPascalTypeGlyphMetamorphosisChainTable.SaveToStream(
-  Stream: TStream);
+procedure TPascalTypeGlyphMetamorphosisChainTable.SaveToStream(Stream: TStream);
 begin
   inherited;
 
-  with Stream do
-  begin
-    // write default flags
-    BigEndianValue.WriteCardinal(Stream, FDefaultFlags);
-  end;
+  // write default flags
+  BigEndianValue.WriteCardinal(Stream, FDefaultFlags);
 end;
 
-procedure TPascalTypeGlyphMetamorphosisChainTable.SetDefaultFlags
-  (const Value: Cardinal);
+procedure TPascalTypeGlyphMetamorphosisChainTable.SetDefaultFlags(const Value: Cardinal);
 begin
   if FDefaultFlags <> Value then
   begin
@@ -2386,54 +2283,46 @@ end;
 
 procedure TPascalTypeGlyphMetamorphosisTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
-  Value32:  Cardinal;
-  ChainIndex: Cardinal;
+  i: integer;
   NumChain: Cardinal;
   ChainTable: TPascalTypeGlyphMetamorphosisChainTable;
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 4 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read number of chains
-    Read(Value32, SizeOf(Cardinal));
-    NumChain := Swap32(Value32);
+  // read number of chains
+  NumChain := BigEndianValue.ReadCardinal(Stream);
 
 {$IFDEF AmbigiousExceptions}
-    if NumChain <= 0 then raise EPascalTypeError.Create
-      (RCStrTooFewMetamorphosisChains);
+  if NumChain <= 0 then
+    raise EPascalTypeError.Create(RCStrTooFewMetamorphosisChains);
 {$ENDIF}
-    for ChainIndex := 0 to NumChain - 1 do
-    begin
-      // create chain table
-      // add chain table to lists
-      ChainTable := FChains.Add;
+  for i := 0 to NumChain - 1 do
+  begin
+    // create chain table
+    // add chain table to lists
+    ChainTable := FChains.Add;
 
-      // load chain table from stream
-      ChainTable.LoadFromStream(Stream);
-    end;
+    // load chain table from stream
+    ChainTable.LoadFromStream(Stream);
   end;
 end;
 
 procedure TPascalTypeGlyphMetamorphosisTable.SaveToStream(Stream: TStream);
 var
-  ChainIndex: Cardinal;
+  i: integer;
 begin
   inherited;
 
-  with Stream do
-  begin
-    // write number of chains
-    BigEndianValue.WriteCardinal(Stream, FChains.Count);
+  // write number of chains
+  BigEndianValue.WriteCardinal(Stream, FChains.Count);
 
-    // save chain tables to stream
-    for ChainIndex := 0 to FChains.Count - 1 do
-      FChains[ChainIndex].SaveToStream(Stream);
-  end;
+  // save chain tables to stream
+  for i := 0 to FChains.Count - 1 do
+    FChains[i].SaveToStream(Stream);
 end;
 
 
@@ -2450,17 +2339,14 @@ begin
   end;
 end;
 
-function TPascalTypeExtendedGlyphMetamorphosisChainTable.GetFeature(Index: Cardinal): TFeatureSubtableRecord;
+function TPascalTypeExtendedGlyphMetamorphosisChainTable.GetFeature(Index: integer): TFeatureSubtableRecord;
 begin
-  if (Index < Cardinal(Length(FFeatureArray))) then
-    Result :=
-      FFeatureArray[Index]
-  else
+  if (Index < 0) or (Index > High(FFeatureArray)) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FFeatureArray[Index];
 end;
 
-function TPascalTypeExtendedGlyphMetamorphosisChainTable.GetFeatureCount
-: Cardinal;
+function TPascalTypeExtendedGlyphMetamorphosisChainTable.GetFeatureCount: Cardinal;
 begin
   Result := Length(FFeatureArray);
 end;
@@ -2471,73 +2357,66 @@ var
   ChainLength:  Cardinal;
   // The length of the chain in bytes, including this header.
   SubtableCount: Cardinal; // The number of subtables in the chain.
-  FeatureIndex: Cardinal;
-  SubtableIndex: Cardinal;
+  i: integer;
 begin
+  // remember start position
+  StartPosition := Stream.Position;
+
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 12 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 12 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // remember start position
-    StartPosition := Position;
+  // read default flags
+  FDefaultFlags := BigEndianValue.ReadCardinal(Stream);
 
-    // read default flags
-    FDefaultFlags := BigEndianValue.ReadCardinal(Stream);
-
-    // read chain length
-    ChainLength := BigEndianValue.ReadCardinal(Stream);
+  // read chain length
+  ChainLength := BigEndianValue.ReadCardinal(Stream);
 
 {$IFDEF AmbigiousExceptions}
-    // check if chain length is a multiple of 4
-    if (ChainLength mod 4) <> 0 then raise EPascalTypeError.Create
-      (RCStrWrongChainLength);
+  // check if chain length is a multiple of 4
+  if (ChainLength mod 4) <> 0 then
+    raise EPascalTypeError.Create(RCStrWrongChainLength);
 {$ENDIF}
-    // read feature entry count
-    SetLength(FFeatureArray, BigEndianValue.ReadCardinal(Stream));
+  // read feature entry count
+  SetLength(FFeatureArray, BigEndianValue.ReadCardinal(Stream));
 
-    // read subtable count
-    SubtableCount := BigEndianValue.ReadCardinal(Stream);
+  // read subtable count
+  SubtableCount := BigEndianValue.ReadCardinal(Stream);
 
-    for FeatureIndex := 0 to High(FFeatureArray) do
-      with FFeatureArray[FeatureIndex] do
-      begin
-        // read feature type
-        FeatureType := BigEndianValue.ReadWord(Stream);
+  for i := 0 to High(FFeatureArray) do
+  begin
+    // read feature type
+    FFeatureArray[i].FeatureType := BigEndianValue.ReadWord(Stream);
 
-        // read feature setting
-        FeatureSetting := BigEndianValue.ReadWord(Stream);
+    // read feature setting
+    FFeatureArray[i].FeatureSetting := BigEndianValue.ReadWord(Stream);
 
-        // read enable flags
-        EnableFlags := BigEndianValue.ReadCardinal(Stream);
+    // read enable flags
+    FFeatureArray[i].EnableFlags := BigEndianValue.ReadCardinal(Stream);
 
-        // read disable flags
-        DisableFlags := BigEndianValue.ReadCardinal(Stream);
-      end;
+    // read disable flags
+    FFeatureArray[i].DisableFlags := BigEndianValue.ReadCardinal(Stream);
+  end;
 
-    // jump to end of this table
-    Position := StartPosition + ChainLength;
+  // jump to end of this table
+  Stream.Position := StartPosition + ChainLength;
 
-    // read subtables
-    for SubtableIndex := 0 to SubtableCount - 1 do
-    begin
-      // TODO: Read further TPascalTypeExtendedGlyphMetamorphosisChainTable properties
-    end;
+  // read subtables
+  for i := 0 to SubtableCount - 1 do
+  begin
+    // TODO: Read further TPascalTypeExtendedGlyphMetamorphosisChainTable properties
   end;
 end;
 
-procedure TPascalTypeExtendedGlyphMetamorphosisChainTable.SaveToStream
-  (Stream: TStream);
+procedure TPascalTypeExtendedGlyphMetamorphosisChainTable.SaveToStream(Stream: TStream);
 begin
   inherited;
   raise EPascalTypeNotImplemented.Create(RCStrNotImplemented);
 end;
 
-procedure TPascalTypeExtendedGlyphMetamorphosisChainTable.SetDefaultFlags
-  (const Value: Cardinal);
+procedure TPascalTypeExtendedGlyphMetamorphosisChainTable.SetDefaultFlags(const Value: Cardinal);
 begin
   if FDefaultFlags <> Value then
   begin
@@ -2546,8 +2425,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeExtendedGlyphMetamorphosisChainTable.
-DefaultFlagsChanged;
+procedure TPascalTypeExtendedGlyphMetamorphosisChainTable.DefaultFlagsChanged;
 begin
   Changed;
 end;
@@ -2562,45 +2440,39 @@ end;
 
 procedure TPascalTypeExtendedGlyphMetamorphosisTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
-  Value32:  Cardinal;
-  ChainIndex: Cardinal;
+  i: integer;
   NumChain: Cardinal;
   ChainTable: TPascalTypeExtendedGlyphMetamorphosisChainTable;
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 4 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // check version (should be >= 2.0)
-    if Version.Value < 2 then
-      raise EPascalTypeError.CreateFmt(RCStrWrongMajorVersion, [Version.Value]);
+  // check version (should be >= 2.0)
+  if Version.Value < 2 then
+    raise EPascalTypeError.CreateFmt(RCStrWrongMajorVersion, [Version.Value]);
 
-    // read number of chains
-    Read(Value32, SizeOf(Cardinal));
-    NumChain := Swap32(Value32);
+  // read number of chains
+  NumChain := BigEndianValue.ReadCardinal(Stream);
 
 {$IFDEF AmbigiousExceptions}
-    if NumChain <= 0 then raise EPascalTypeError.Create
-      (RCStrTooFewMetamorphosisChains);
+  if NumChain <= 0 then
+    raise EPascalTypeError.Create(RCStrTooFewMetamorphosisChains);
 {$ENDIF}
-    for ChainIndex := 0 to NumChain - 1 do
-    begin
-      // create chain table
-      // add chain table to lists
-      ChainTable := TPascalTypeExtendedGlyphMetamorphosisChainTable(FChains.Add(TPascalTypeExtendedGlyphMetamorphosisChainTable));
+  for i := 0 to NumChain - 1 do
+  begin
+    // create chain table
+    // add chain table to lists
+    ChainTable := TPascalTypeExtendedGlyphMetamorphosisChainTable(FChains.Add(TPascalTypeExtendedGlyphMetamorphosisChainTable));
 
-      // load chain table from stream
-      ChainTable.LoadFromStream(Stream);
-    end;
+    // load chain table from stream
+    ChainTable.LoadFromStream(Stream);
   end;
 end;
 
-procedure TPascalTypeExtendedGlyphMetamorphosisTable.SaveToStream(
-  Stream: TStream);
+procedure TPascalTypeExtendedGlyphMetamorphosisTable.SaveToStream(Stream: TStream);
 begin
   inherited;
   raise EPascalTypeNotImplemented.Create(RCStrNotImplemented);
@@ -2623,23 +2495,17 @@ begin
 end;
 
 procedure TPascalTypeOpticalBoundsTable.LoadFromStream(Stream: TStream; Size: Cardinal);
-var
-  Value16: Word;
 begin
   inherited;
 
-  with Stream do
-  begin
-    if Position + 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  if Stream.Position + 4 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read format
-    Read(Value16, SizeOf(Word));
-    FFormat := Swap16(Value16);
+  // read format
+  FFormat := BigEndianValue.ReadWord(Stream);
 
-    if not (FFormat in [0..1]) then
-      raise EPascalTypeError.Create(RCStrWrongFormat);
-  end;
+  if not (FFormat in [0..1]) then
+    raise EPascalTypeError.Create(RCStrWrongFormat);
 end;
 
 procedure TPascalTypeOpticalBoundsTable.SaveToStream(Stream: TStream);
@@ -2661,62 +2527,55 @@ begin
   end;
 end;
 
+procedure TPascalTypeTrackingDataTable.Clear;
+begin
+  SetLength(FTrackTable, 0);
+  SetLength(FSizeTable, 0);
+end;
+
 procedure TPascalTypeTrackingDataTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   SizeTableOffset: Cardinal;
-  // Offset from start of the tracking table to the start of the size subtable.
-  RecordIndex: Integer;
+  i: Integer;
 begin
+  // remember start position
+  StartPos := Stream.Position;
+
   inherited;
-  with Stream do
+
+  // check (minimum) table size
+  if Stream.Position + 8 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  SetLength(FTrackTable, BigEndianValue.ReadWord(Stream));
+  SetLength(FSizeTable, BigEndianValue.ReadWord(Stream));
+
+  // Offset from start of the tracking table to the start of the size subtable.
+  SizeTableOffset := BigEndianValue.ReadCardinal(Stream);
+
+  // check (minimum) table size
+//  if Stream.Position + 8 * Length(FTrackTable) + 4 * Length(FSizeTable) > Size then
+//    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  for i := 0 to High(FTrackTable) do
   begin
-    // check (minimum) table size
-    if Position + 8 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-    // remember start position
-    StartPos := Position;
-
-    // read length of track table
-    SetLength(FTrackTable, BigEndianValue.ReadWord(Stream));
-
-    // read length of track table
-    SetLength(FSizeTable, BigEndianValue.ReadWord(Stream));
-
-    // read size table offset
-    SizeTableOffset := BigEndianValue.ReadWord(Stream);
-
-    // check (minimum) table size
-    if Position + 8 * Length(FTrackTable) + 4 * Length(FSizeTable) > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-    for RecordIndex := 0 to High(FTrackTable) do
-      with FTrackTable[RecordIndex] do
-      begin
-        // read track
-        Track.Fixed := BigEndianValue.ReadCardinal(Stream);
-
-        // read name index
-        NameIndex := BigEndianValue.ReadWord(Stream);
+    FTrackTable[i].Track.Fixed := BigEndianValue.ReadInteger(Stream);
+    FTrackTable[i].NameIndex := BigEndianValue.ReadWord(Stream);
 
 {$IFDEF AmbigiousExceptions}
-    if NameIndex <= 256 then raise EPascalTypeError.Create
-      ('NameIndex should be >= 256!');
+    if FTrackTable[i].NameIndex <= 256 then
+      raise EPascalTypeError.Create('NameIndex should be >= 256!');
 {$ENDIF}
-        // read offset
-        Offset := BigEndianValue.ReadWord(Stream);
-      end;
 
-    // locate size table position
-    Position := StartPos + SizeTableOffset;
-
-    for RecordIndex := 0 to High(FSizeTable) do
-    begin
-      // read value
-      FSizeTable[RecordIndex].Fixed := BigEndianValue.ReadCardinal(Stream);
-    end;
+    FTrackTable[i].Offset := BigEndianValue.ReadWord(Stream);
   end;
+
+  // locate size table position
+  Stream.Position := StartPos + SizeTableOffset;
+
+  for i := 0 to High(FSizeTable) do
+    FSizeTable[i].Fixed := BigEndianValue.ReadInteger(Stream);
 end;
 
 procedure TPascalTypeTrackingDataTable.SaveToStream(Stream: TStream);
@@ -2764,46 +2623,47 @@ var
   VertOffset: Word;
   // Offset from start of tracking table to TrackData for vertical text (or 0 if none).
 begin
+  // remember start position
+  StartPos := Stream.Position;
+
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 8 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 8 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // remember start position
-    StartPos := Position;
+  // read format
+  FFormat := BigEndianValue.ReadWord(Stream);
 
-    // read format
-    FFormat := BigEndianValue.ReadWord(Stream);
+  // read horizontal offset
+  HorizOffset := BigEndianValue.ReadWord(Stream);
 
-    // read horizontal offset
-    HorizOffset := BigEndianValue.ReadWord(Stream);
-
-    // read vertical offset
-    VertOffset := BigEndianValue.ReadWord(Stream);
+  // read vertical offset
+  VertOffset := BigEndianValue.ReadWord(Stream);
 
 {$IFDEF AmbigiousException}
-    // read reserved
-    if BigEndianValue.ReadWord(Stream) <> 0 then raise EPascalTypeError.Create
-      (RCStrReservedValueError);
+  // read reserved
+  if BigEndianValue.ReadWord(Stream) <> 0 then
+    raise EPascalTypeError.Create(RCStrReservedValueError);
 {$ELSE}
-    // skip reserved
-    Seek(2, soFromCurrent);
+  // skip reserved
+  Stream.Seek(2, soFromCurrent);
 {$ENDIF}
-    // locate horizontal track table data
-    Position := StartPos + HorizOffset;
 
-    // load horizontal tracking table data from stream
+  // load horizontal tracking table data from stream
+  if (HorizOffset <> 0) then
+  begin
+    Stream.Position := StartPos + HorizOffset;
     FHorizontal.LoadFromStream(Stream);
+  end else
+    FHorizontal.Clear;
 
-    // locate vertical track table data
-    Position := StartPos + VertOffset;
-
-    // load vertical tracking table data from stream
+  if (VertOffset <> 0) then
+  begin
+    Stream.Position := StartPos + VertOffset;
     FVertical.LoadFromStream(Stream);
-  end;
+  end else
+    FVertical.Clear;
 end;
 
 procedure TPascalTypeTrackingTable.SaveToStream(Stream: TStream);
@@ -2821,8 +2681,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeTrackingTable.SetHorizontal(
-  const Value: TPascalTypeTrackingDataTable);
+procedure TPascalTypeTrackingTable.SetHorizontal(const Value: TPascalTypeTrackingDataTable);
 begin
   if FHorizontal <> Value then
   begin
@@ -2831,8 +2690,7 @@ begin
   end;
 end;
 
-procedure TPascalTypeTrackingTable.SetVertical(
-  const Value: TPascalTypeTrackingDataTable);
+procedure TPascalTypeTrackingTable.SetVertical(const Value: TPascalTypeTrackingDataTable);
 begin
   if FVertical <> Value then
   begin
@@ -2873,58 +2731,53 @@ var
   // Byte offset from start of extraInfo to GroupInfo or GroupInfoGroup for this glyph, or 0xFFFFFFFF if none
   FeatOffset: Cardinal;
   // Byte offset from start of extraInfo to FeatureInfo for this glyph, or 0xFFFFFFFF if none
-  UnicodeIndex: Word;
   KindNameCount: Word;
-  KindNameIndex: Word;
+  i: integer;
 begin
   StartPos := Stream.Position;
 
   inherited;
 
-  with Stream do
+  // check (minimum) table size
+  if Stream.Position + 10 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  // read group offset
+  GroupOffset := BigEndianValue.ReadCardinal(Stream);
+
+  // read feature offset
+  FeatOffset := BigEndianValue.ReadCardinal(Stream);
+
+  // read number of 16bit unicode values
+  SetLength(FUnicodeCodePoints, BigEndianValue.ReadWord(Stream));
+
+  // check (minimum) table size
+  if Stream.Position + 2 * Length(FUnicodeCodePoints) > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  // read unicode code points
+  for i := 0 to High(FUnicodeCodePoints) do
+    FUnicodeCodePoints[i] := BigEndianValue.ReadWord(Stream);
+
+  // read kind name count
+  KindNameCount := BigEndianValue.ReadWord(Stream);
+
+  // set length kind names
+  SetLength(FKindNames, KindNameCount);
+
+  for i := 0 to KindNameCount - 1 do
   begin
-    // check (minimum) table size
-    if Position + 10 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-    // read group offset
-    GroupOffset := BigEndianValue.ReadCardinal(Stream);
-
-    // read feature offset
-    FeatOffset := BigEndianValue.ReadCardinal(Stream);
-
-    // read number of 16bit unicode values
-    SetLength(FUnicodeCodePoints, BigEndianValue.ReadWord(Stream));
-
-    // check (minimum) table size
-    if Position + 2 * Length(FUnicodeCodePoints) > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-    // read unicode code points
-    for UnicodeIndex := 0 to High(FUnicodeCodePoints) do
-      FUnicodeCodePoints[UnicodeIndex] := BigEndianValue.ReadWord(Stream);
-
-    // read kind name count
-    KindNameCount := BigEndianValue.ReadWord(Stream);
-
-    // set length kind names
-    SetLength(FKindNames, KindNameCount);
-
-    for KindNameIndex := 0 to KindNameCount - 1 do
-    begin
-      FKindNames[KindNameIndex] := TPascalTypeZapfKindName.Create;
-      FKindNames[KindNameIndex].LoadFromStream(Stream);
-    end;
-
-    // Assert(Position = StartPos + GroupOffset);
-
-    // TODO: Finish implementation of TPascalTypeZapfGlyphInfoTable (see http://developer.apple.com/fonts/TTRefMan/RM06/Chap6Zapf.html)
-    // Dummy asserts to silence compiler hints
-    Assert(FeatOffset <> 0);
-    Assert(GroupOffset <> 0);
-    Assert(StartPos <> 0);
-
+    FKindNames[i] := TPascalTypeZapfKindName.Create;
+    FKindNames[i].LoadFromStream(Stream);
   end;
+
+  // Assert(Position = StartPos + GroupOffset);
+
+  // TODO: Finish implementation of TPascalTypeZapfGlyphInfoTable (see http://developer.apple.com/fonts/TTRefMan/RM06/Chap6Zapf.html)
+  // Dummy asserts to silence compiler hints (not so "dummy" when they fail with valid data...)
+//  Assert(FeatOffset <> 0);
+//  Assert(GroupOffset <> 0);
+//  Assert(StartPos <> 0);
 end;
 
 procedure TPascalTypeZapfGlyphInfoTable.SaveToStream(Stream: TStream);
@@ -2944,34 +2797,21 @@ begin
 end;
 
 procedure TPascalTypeZapfKindNameString.LoadFromStream(Stream: TStream; Size: Cardinal);
-var
-  CharCount: Byte;
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 1 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 1 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read length of string
-    Read(CharCount, 1);
-
-    // set length of name
-    SetLength(FName, CharCount);
-
-    // read string
-    Read(FName[1], CharCount);
-  end;
+  FName := BigEndianValue.ReadAnsiString(Stream);
 end;
 
 procedure TPascalTypeZapfKindNameString.SaveToStream(Stream: TStream);
 begin
   inherited;
 
-  // save string to stream
-  Stream.Write(FName, Length(FName) + 1);
+  BigEndianValue.WriteAnsiString(Stream, FName);
 end;
 
 
@@ -2989,14 +2829,11 @@ procedure TPascalTypeZapfKindNameBinary.LoadFromStream(Stream: TStream; Size: Ca
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 2 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 2 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    Read(FValue, 2);
-  end;
+  Stream.Read(FValue, 2);
 end;
 
 procedure TPascalTypeZapfKindNameBinary.SaveToStream(Stream: TStream);
@@ -3031,6 +2868,7 @@ begin
     // create new kind name object
     FKindName := TPascalTypeZapfKindNameString.Create;
   end;
+
   if (FKindType in [zknCidJapanese..zknDesignerHistoricalNotes]) and
     (not (FKindName is TPascalTypeZapfKindNameString)) then
   begin
@@ -3046,30 +2884,21 @@ procedure TPascalTypeZapfKindName.LoadFromStream(Stream: TStream; Size: Cardinal
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 1 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  if Stream.Position + 1 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read kind type
-    Read(FKindType, 1);
+  Stream.Read(FKindType, 1);
 
-    // eventually free current kind name object
-    FreeAndNil(FKindName);
+  FreeAndNil(FKindName);
 
-    // eventually create kind name object
-    if FKindType in [zknUniversal..zknUniversal] then
-      FKindName :=
-        TPascalTypeZapfKindNameString.Create
-    else if FKindType in [zknCidJapanese..zknDesignerHistoricalNotes] then
-      FKindName :=
-        TPascalTypeZapfKindNameBinary.Create;
+  if FKindType in [zknUniversal..zknUniversal] then
+    FKindName := TPascalTypeZapfKindNameString.Create
+  else
+  if FKindType in [zknCidJapanese..zknDesignerHistoricalNotes] then
+    FKindName := TPascalTypeZapfKindNameBinary.Create;
 
-    // eventually load kind name from stream
-    if (FKindName <> nil) then
-      FKindName.LoadFromStream(Stream);
-  end;
+  if (FKindName <> nil) then
+    FKindName.LoadFromStream(Stream);
 end;
 
 procedure TPascalTypeZapfKindName.SaveToStream(Stream: TStream);
@@ -3079,8 +2908,7 @@ begin
   raise EPascalTypeNotImplemented.Create(RCStrNotImplemented);
 end;
 
-procedure TPascalTypeZapfKindName.SetKindName(
-  const Value: TCustomPascalTypeZapfKindName);
+procedure TPascalTypeZapfKindName.SetKindName(const Value: TCustomPascalTypeZapfKindName);
 begin
   if FKindName <> Value then
   begin
@@ -3100,15 +2928,15 @@ end;
 
 procedure TPascalTypeZapfTable.Assign(Source: TPersistent);
 var
-  GlyphIndex: Integer;
+  i: Integer;
 begin
   inherited;
 
   if Source is TPascalTypeZapfTable then
   begin
     SetLength(FGlyphInfos, Length(TPascalTypeZapfTable(Source).FGlyphInfos));
-    for GlyphIndex := 0 to High(FGlyphInfos) do
-      FGlyphInfos[GlyphIndex].Assign(TPascalTypeZapfTable(Source).FGlyphInfos[GlyphIndex]);
+    for i := 0 to High(FGlyphInfos) do
+      FGlyphInfos[i].Assign(TPascalTypeZapfTable(Source).FGlyphInfos[i]);
   end;
 end;
 
@@ -3119,64 +2947,61 @@ end;
 
 procedure TPascalTypeZapfTable.ClearGlyphInfos;
 var
-  GlyphIndex: Integer;
+  i: Integer;
 begin
-  for GlyphIndex := 0 to High(FGlyphInfos) do
-    FreeAndNil(FGlyphInfos[GlyphIndex]);
+  for i := 0 to High(FGlyphInfos) do
+    FreeAndNil(FGlyphInfos[i]);
 end;
 
 procedure TPascalTypeZapfTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
   MaxProfile: TPascalTypeMaximumProfileTable;
-  GlyphIndex: Integer;
+  i: Integer;
   ExtraInfo: Cardinal; // Offset from start of table to start of extra info space (added to groupOffset and featOffset in GlyphInfo)
   Offsets: array of Cardinal; // Array of offsets, indexed by glyphcode, from start of table to GlyphInfo structure for a glyph
 begin
+  // remember start position
+  StartPos := Stream.Position;
+
   inherited;
-  with Stream do
+
+  // check (minimum) table size
+  if Stream.Position + 4 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  // read extra info offset
+  ExtraInfo := BigEndianValue.ReadCardinal(Stream);
+
+  // get maximum profile table
+  MaxProfile := TPascalTypeMaximumProfileTable(FontFace.GetTableByTableType('maxp'));
+  Assert(MaxProfile <> nil);
+
+  // set length of offset array
+  SetLength(Offsets, MaxProfile.NumGlyphs);
+
+  // read glyph info offsets
+  for i := 0 to High(Offsets) do
+    Offsets[i] := BigEndianValue.ReadCardinal(Stream);
+
+  // set glyph info array length
+  SetLength(FGlyphInfos, Length(Offsets));
+
+  // load glyph info
+  for i := 0 to High(Offsets) do
   begin
-    // check (minimum) table size
-    if Position + 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+    // locate glyph info
+    Stream.Position := StartPos + Offsets[i];
 
-    // remember start position
-    StartPos := Position;
+    // create glyph info table for current glyph index
+    FGlyphInfos[i] := TPascalTypeZapfGlyphInfoTable.Create;
 
-    // read extra info offset
-    ExtraInfo := BigEndianValue.ReadCardinal(Stream);
-
-    // get maximum profile table
-    MaxProfile := TPascalTypeMaximumProfileTable(FontFace.GetTableByTableType('maxp'));
-    Assert(MaxProfile <> nil);
-
-    // set length of offset array
-    SetLength(Offsets, MaxProfile.NumGlyphs);
-
-    // read glyph info offsets
-    for GlyphIndex := 0 to High(Offsets) do
-      Offsets[GlyphIndex] :=
-        BigEndianValue.ReadCardinal(Stream);
-
-    // set glyph info array length
-    SetLength(FGlyphInfos, Length(Offsets));
-
-    // load glyph info
-    for GlyphIndex := 0 to High(Offsets) do
-    begin
-      // locate glyph info
-      Position := StartPos + Offsets[GlyphIndex];
-
-      // create glyph info table for current glyph index
-      FGlyphInfos[GlyphIndex] := TPascalTypeZapfGlyphInfoTable.Create;
-
-      // load glyph info from stream
-      FGlyphInfos[GlyphIndex].LoadFromStream(Stream);
-    end;
-
-    // locate extra info
-    Position := StartPos + ExtraInfo;
+    // load glyph info from stream
+    FGlyphInfos[i].LoadFromStream(Stream);
   end;
+
+  // locate extra info
+  Stream.Position := StartPos + ExtraInfo;
 end;
 
 procedure TPascalTypeZapfTable.SaveToStream(Stream: TStream);
@@ -3189,11 +3014,11 @@ end;
 
 function IsTagRegistered(TableClass: TPascalTypeTaggedValueTableClass): Boolean;
 var
-  TableClassIndex: Integer;
+  i: Integer;
 begin
   Result := False;
-  for TableClassIndex := 0 to High(GDescriptionTagClasses) do
-    if GDescriptionTagClasses[TableClassIndex] = TableClass then
+  for i := 0 to High(GDescriptionTagClasses) do
+    if GDescriptionTagClasses[i] = TableClass then
     begin
       Result := True;
       Exit;
@@ -3203,12 +3028,12 @@ end;
 function CheckDescriptionTagsValid: Boolean;
 var
   TableClassBaseIndex: Integer;
-  TableClassIndex: Integer;
+  i: Integer;
 begin
   Result := True;
   for TableClassBaseIndex := 0 to High(GDescriptionTagClasses) do
-    for TableClassIndex := TableClassBaseIndex + 1 to High(GDescriptionTagClasses) do
-      if GDescriptionTagClasses[TableClassBaseIndex] = GDescriptionTagClasses[TableClassIndex] then
+    for i := TableClassBaseIndex + 1 to High(GDescriptionTagClasses) do
+      if GDescriptionTagClasses[TableClassBaseIndex] = GDescriptionTagClasses[i] then
       begin
         Result := False;
         Exit;
@@ -3222,29 +3047,25 @@ begin
   GDescriptionTagClasses[High(GDescriptionTagClasses)] := TableClass;
 end;
 
-procedure RegisterDescriptionTags(TableClasses:
-  array of TPascalTypeTaggedValueTableClass);
+procedure RegisterDescriptionTags(TableClasses: array of TPascalTypeTaggedValueTableClass);
 var
-  TableClassIndex: Integer;
+  i: Integer;
 begin
-  SetLength(GDescriptionTagClasses, Length(GDescriptionTagClasses) +
-    Length(TableClasses));
-  for TableClassIndex := 0 to High(TableClasses) do
-    GDescriptionTagClasses[Length(GDescriptionTagClasses) -
-      Length(TableClasses) + TableClassIndex] := TableClasses[TableClassIndex];
+  SetLength(GDescriptionTagClasses, Length(GDescriptionTagClasses) + Length(TableClasses));
+  for i := 0 to High(TableClasses) do
+    GDescriptionTagClasses[Length(GDescriptionTagClasses) - Length(TableClasses) + i] := TableClasses[i];
   Assert(CheckDescriptionTagsValid);
 end;
 
-function FindDescriptionTagByType(TableType: TTableType)
-: TPascalTypeTaggedValueTableClass;
+function FindDescriptionTagByType(TableType: TTableType): TPascalTypeTaggedValueTableClass;
 var
-  TableClassIndex: Integer;
+  i: Integer;
 begin
   Result := nil;
-  for TableClassIndex := 0 to High(GDescriptionTagClasses) do
-    if GDescriptionTagClasses[TableClassIndex].GetTableType = TableType then
+  for i := 0 to High(GDescriptionTagClasses) do
+    if GDescriptionTagClasses[i].GetTableType = TableType then
     begin
-      Result := GDescriptionTagClasses[TableClassIndex];
+      Result := GDescriptionTagClasses[i];
       Exit;
     end;
   // raise EPascalTypeError.Create('Unknown Table Class: ' + TableType);

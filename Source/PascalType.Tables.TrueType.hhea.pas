@@ -215,7 +215,7 @@ begin
   if Stream.Position + 32 > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-  FVersion.Fixed := BigEndianValue.ReadCardinal(Stream);
+  FVersion.Fixed := BigEndianValue.ReadInteger(Stream);
 
   // check version
   if not(Version.Value = 1) then
