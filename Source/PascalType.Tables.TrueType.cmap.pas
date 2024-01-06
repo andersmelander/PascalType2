@@ -251,6 +251,7 @@ implementation
 
 uses
   SysUtils,
+  PascalType.Tables.TrueType.CharacterMaps, // Included so we get the classes registered
   PascalType.Tables,
   PascalType.FontFace.SFNT,
   PascalType.Tables.TrueType.os2,

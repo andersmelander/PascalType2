@@ -11,8 +11,12 @@ uses
   TestFramework,
   GUITestRunner,
   TextTestRunner,
-  TestUnicodeNormalization in 'TestUnicodeNormalization.pas',
-  TestUnicodeArabicShaping in 'TestUnicodeArabicShaping.pas';
+  TestUnicode.Normalization in 'TestUnicode.Normalization.pas',
+  TestUnicode.ArabicShaping in 'TestUnicode.ArabicShaping.pas',
+  TestUnicode in 'TestUnicode.pas',
+  TestShaper in 'TestShaper.pas',
+  TestFontFace in 'TestFontFace.pas',
+  TestFontFace.Load in 'TestFontFace.Load.pas';
 
 {$R *.RES}
 

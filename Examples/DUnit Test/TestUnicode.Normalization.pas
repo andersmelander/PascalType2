@@ -1,4 +1,4 @@
-unit TestUnicodeNormalization;
+unit TestUnicode.Normalization;
 
 interface
 
@@ -31,6 +31,9 @@ type
   end;
 
 implementation
+
+uses
+  TestUnicode;
 
 { TTestPascalTypeUnicodeNormalization }
 
@@ -215,5 +218,5 @@ end;
 
 
 initialization
-  RegisterTest(TTestPascalTypeUnicodeNormalization.Suite);
+  TestSuiteUnicode.AddSuite(TTestPascalTypeUnicodeNormalization.Suite);
 end.

@@ -1,4 +1,4 @@
-unit TestUnicodeArabicShaping;
+unit TestUnicode.ArabicShaping;
 
 interface
 
@@ -19,7 +19,8 @@ type
 implementation
 
 uses
-  IOUtils;
+  IOUtils,
+  TestUnicode;
 
 const
   sUnicodeDataFolder = '..\..\..\Source\Unicode\UCD';
@@ -143,5 +144,5 @@ begin
 end;
 
 initialization
-  RegisterTest(TTestPascalTypeUnicodeArabicShaping.Suite);
+  TestSuiteUnicode.AddSuite(TTestPascalTypeUnicodeArabicShaping.Suite);
 end.

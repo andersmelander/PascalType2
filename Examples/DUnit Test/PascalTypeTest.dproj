@@ -107,8 +107,12 @@
         <RcCompile Include="..\..\Resource\Default.rc">
             <Form>Default.res</Form>
         </RcCompile>
-        <DCCReference Include="TestUnicodeNormalization.pas"/>
-        <DCCReference Include="TestUnicodeArabicShaping.pas"/>
+        <DCCReference Include="TestUnicode.Normalization.pas"/>
+        <DCCReference Include="TestUnicode.ArabicShaping.pas"/>
+        <DCCReference Include="TestUnicode.pas"/>
+        <DCCReference Include="TestShaper.pas"/>
+        <DCCReference Include="TestFontFace.pas"/>
+        <DCCReference Include="TestFontFace.Load.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
