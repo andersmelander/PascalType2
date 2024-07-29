@@ -92,7 +92,8 @@ uses
   PascalType.Tables.TrueType.post in '..\..\Source\PascalType.Tables.TrueType.post.pas',
   PascalType.Painter in '..\..\Source\PascalType.Painter.pas',
   RenderDemo.Controls.FeatureButton in 'RenderDemo.Controls.FeatureButton.pas',
-  PascalType.Tables.OpenType.COLR in '..\..\Source\PascalType.Tables.OpenType.COLR.pas';
+  PascalType.Tables.OpenType.COLR in '..\..\Source\PascalType.Tables.OpenType.COLR.pas',
+  PascalType.Tables.OpenType.CPAL in '..\..\Source\PascalType.Tables.OpenType.CPAL.pas';
 
 {$R *.res}
 

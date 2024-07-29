@@ -66,7 +66,7 @@ type
 
   TColorGlyphLayer = record
     GlyphID: TGlyphID;
-    PaletteIndex: Word;
+    PaletteIndex: Word; // FFFF = Use default
   end;
 
 type
@@ -173,7 +173,6 @@ var
 begin
 
   StartPos := Stream.Position;
-
   inherited;
 
   // HEADER
@@ -236,7 +235,6 @@ begin
   // uint16    | firstLayerIndex        | Index(from beginning of the Layer Records) to the layer record. There will be numLayers consecutive entries for this base glyph.
   // uint16    | numLayers              | Number of color layers associated with this glyph.
   // ----------+------------------------+----------------------------------------------------------------------------------------------------
-
   if (baseGlyphRecordsOffset <> 0) then
   begin
     Stream.Position := StartPos + baseGlyphRecordsOffset;
