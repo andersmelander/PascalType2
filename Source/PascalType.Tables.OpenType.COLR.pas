@@ -43,6 +43,7 @@ uses
   Generics.Defaults,
   Classes,
   PascalType.Types,
+  PascalType.Types.Color,
   PascalType.Classes,
   PascalType.Tables,
   PascalType.Tables.OpenType,
@@ -70,7 +71,7 @@ type
   end;
 
 type
-  TOpenTypeColorCOLRTable = class(TCustomOpenTypeNamedTable)
+  TOpenTypeColorCOLRTable = class(TCustomOpenTypeNamedTable, IPascalTypeColorGlyphLookup, IPascalTypeColorGlyphProvider)
   private
     FVersion: Word;
     FGlyphs: TArray<TColorBaseGlyph>;
@@ -80,6 +81,11 @@ type
     function GetGlyphCount: integer;
     function GetLayer(Index: integer): TColorGlyphLayer;
     function GetLayerCount: integer;
+  private
+    // IPascalTypeColorGlyphLookup
+    function GetColorGlyphLookup: IPascalTypeColorGlyphLookup;
+    // IPascalTypeColorGlyphProvider
+    function GetColoredGlyph(GlyphID: TGlyphID; var ColoredGlyphs: TColoredGlyphs): boolean;
   public
     constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
@@ -267,6 +273,51 @@ begin
   end;
 
 end;
+
+//------------------------------------------------------------------------------
+
+function TOpenTypeColorCOLRTable.GetColorGlyphLookup: IPascalTypeColorGlyphLookup;
+begin
+  if (Length(FGlyphs) > 0) then
+    Result := Self
+  else
+    Result := nil;
+end;
+
+type
+  PColorGlyphLayer = ^TColorGlyphLayer;
+
+function TOpenTypeColorCOLRTable.GetColoredGlyph(GlyphID: TGlyphID; var ColoredGlyphs: TColoredGlyphs): boolean;
+var
+  Glyph: TColorBaseGlyph;
+  Index: Integer;
+  i: integer;
+  Layer: PColorGlyphLayer;
+begin
+  Glyph.GlyphID := GlyphID;
+
+  if (not TArray.BinarySearch<TColorBaseGlyph>(FGlyphs, Glyph, Index,
+    TComparer<TColorBaseGlyph>.Construct(
+      function(const A, B: TColorBaseGlyph): integer
+      begin
+        Result := integer(A.GlyphID)-integer(B.GlyphID);
+      end))) then
+    Exit(False);
+
+  Setlength(ColoredGlyphs, FGlyphs[Index].LayerCount);
+  Layer := @FLayers[FGlyphs[Index].FirstLayerIndex];
+
+  for i := 0 to High(ColoredGlyphs) do
+  begin
+    ColoredGlyphs[i].GlyphID := Layer.GlyphID;
+    ColoredGlyphs[i].PaletteIndex := Layer.PaletteIndex;
+    Inc(Layer);
+  end;
+
+  Result := True;
+end;
+
+//------------------------------------------------------------------------------
 
 initialization
 

@@ -43,6 +43,7 @@ uses
   Generics.Defaults,
   Classes,
   PascalType.Types,
+  PascalType.Types.Color,
   PascalType.Classes,
   PascalType.Tables,
   PascalType.Tables.OpenType,
@@ -57,14 +58,6 @@ uses
 //------------------------------------------------------------------------------
 // https://learn.microsoft.com/en-us/typography/opentype/spec/CPAL
 //------------------------------------------------------------------------------
-type
-  TPaletteColor = packed record
-    Blue: Byte;
-    Green: Byte;
-    Red: Byte;
-    Alpha: Byte;
-  end;
-
 {$MINENUMSIZE 4}
 // CPAL version 0 does not have any flags indicating intended usage
 // but by convention, for CPAL version 0, and CPAL version 1 with no
@@ -85,7 +78,7 @@ type
   end;
 
 type
-  TOpenTypeColorCPALTable = class(TCustomOpenTypeNamedTable)
+  TOpenTypeColorCPALTable = class(TCustomOpenTypeNamedTable, IPascalTypeColorLookup, IPascalTypeColorProvider)
   private
     FVersion: Word;
     FColors: TArray<TPaletteColor>;
@@ -97,8 +90,12 @@ type
     function GetColorCount: integer;
     function GetPalette(Index: integer): TColorPalette;
     function GetPaletteCount: integer;
-    function GetPaletteColor(PaletteIndex, ColorIndex: integer): TPaletteColor;
     function GetColorName(Index: integer): integer;
+  private
+    // IPascalTypeColorProvider
+    function GetColorLookup: IPascalTypeColorLookup;
+    // IPascalTypeColorLookup
+    function GetPaletteColor(PaletteIndex, ColorIndex: integer): TPaletteColor;
   public
     constructor Create(AParent: TCustomPascalTypeTable); override;
     destructor Destroy; override;
@@ -188,14 +185,6 @@ end;
 function TOpenTypeColorCPALTable.GetColorName(Index: integer): integer;
 begin
   Result := FColorNames[Index];
-end;
-
-//------------------------------------------------------------------------------
-
-function TOpenTypeColorCPALTable.GetPaletteColor(PaletteIndex, ColorIndex: integer): TPaletteColor;
-begin
-  var FirstIndex := FPalettes[PaletteIndex].FirstColorIndex;
-  Result := FColors[FirstIndex + ColorIndex];
 end;
 
 //------------------------------------------------------------------------------
@@ -334,6 +323,27 @@ begin
     Setlength(FColorNames, 0);
 
 end;
+
+//------------------------------------------------------------------------------
+
+function TOpenTypeColorCPALTable.GetColorLookup: IPascalTypeColorLookup;
+begin
+  if (Length(FColors) > 0) then
+    Result := Self
+  else
+    Result := nil;
+end;
+
+function TOpenTypeColorCPALTable.GetPaletteColor(PaletteIndex, ColorIndex: integer): TPaletteColor;
+begin
+  Assert(ColorIndex <> -1);
+  Assert(ColorIndex <> $FFFF);
+
+  var FirstIndex := FPalettes[PaletteIndex].FirstColorIndex;
+  Result := FColors[FirstIndex + ColorIndex];
+end;
+
+//------------------------------------------------------------------------------
 
 initialization
 

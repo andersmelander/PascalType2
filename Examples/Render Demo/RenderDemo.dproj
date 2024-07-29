@@ -229,6 +229,7 @@
         <DCCReference Include="RenderDemo.Controls.FeatureButton.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.COLR.pas"/>
         <DCCReference Include="..\..\Source\PascalType.Tables.OpenType.CPAL.pas"/>
+        <DCCReference Include="..\..\Source\PascalType.Types.Color.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

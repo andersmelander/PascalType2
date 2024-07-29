@@ -93,7 +93,8 @@ uses
   PascalType.Painter in '..\..\Source\PascalType.Painter.pas',
   RenderDemo.Controls.FeatureButton in 'RenderDemo.Controls.FeatureButton.pas',
   PascalType.Tables.OpenType.COLR in '..\..\Source\PascalType.Tables.OpenType.COLR.pas',
-  PascalType.Tables.OpenType.CPAL in '..\..\Source\PascalType.Tables.OpenType.CPAL.pas';
+  PascalType.Tables.OpenType.CPAL in '..\..\Source\PascalType.Tables.OpenType.CPAL.pas',
+  PascalType.Types.Color in '..\..\Source\PascalType.Types.Color.pas';
 
 {$R *.res}
 
