@@ -229,6 +229,7 @@ implementation
 uses
   Math,
   SysUtils,
+  PascalType.Unicode,
   PascalType.Tables.TrueType.glyf,
   PascalType.Tables.OpenType.COLR,
   PascalType.Tables.OpenType.CPAL,
@@ -534,8 +535,16 @@ end;
 procedure TPascalTypeRenderer.RenderShapedGlyph(AGlyph: TPascalTypeGlyph; const Painter: IPascalTypePainter; var X, Y: TRenderFloat);
 var
   Cursor: TFloatPoint;
+const
+  cNotDef = 0;
 begin
   if (FontFace = nil) then
+    exit;
+
+  // Ignore Emoji variantion selector that was substituted to .notdef
+  // Works around issue rendering #$263A#$FE0F with Twemoji font.
+  if (AGlyph.GlyphID = cNotDef) and (AGlyph.IsSubstituted) and (Length(AGlyph.CodePoints) = 1) and
+    (PascalTypeUnicode.IsVariationSelector(AGlyph.CodePoints[0])) then
     exit;
 
   // Position glyph relative to cursor
