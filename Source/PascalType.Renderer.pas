@@ -859,8 +859,18 @@ begin
 
   FFontMetrics := Default(TPascalTypeFontMetric);
 
+{$define OS2_METRICS}
+{-$define OS2_TYPOGRAPHIC_METRICS}
+
+{$ifndef OS2_METRICS}
+  {$undef OS2_TYPOGRAPHIC_METRICS}
+{$endif}
+
+
+{$ifdef OS2_METRICS}
   if (FontFace.OS2Table <> nil) then
   begin
+{$ifdef OS2_TYPOGRAPHIC_METRICS}
     if (fsfUseTypoMetrics in FontFace.OS2Table.FontSelectionFlags) then
     begin
       FFontMetrics.Baseline := FontFace.OS2Table.TypographicAscent * ScalerY;
@@ -870,8 +880,13 @@ begin
       FFontMetrics.Baseline := FontFace.OS2Table.WindowsAscent * ScalerY;
       FFontMetrics.Descender := FontFace.OS2Table.WindowsDescent * ScalerY;
     end;
-
     FFontMetrics.Ascender := Min(FontFace.OS2Table.TypographicAscent, FontFace.OS2Table.WindowsAscent) * ScalerY;
+
+{$else}
+    FFontMetrics.Ascender := FontFace.OS2Table.WindowsAscent * ScalerY;
+    FFontMetrics.Descender := FontFace.OS2Table.WindowsDescent * ScalerY;
+    FFontMetrics.Baseline := FFontMetrics.Ascender;
+{$endif}
 
     if (FontFace.OS2Table.AddendumTable <> nil) then
     begin
@@ -879,23 +894,26 @@ begin
       FFontMetrics.CapHeight := FontFace.OS2Table.AddendumTable.CapHeight * ScalerY;
     end;
   end else
+{$endif}
   if (FontFace.HorizontalHeader <> nil) then
   begin
-    FFontMetrics.Baseline := FontFace.HorizontalHeader.Ascent * ScalerY;
-    FFontMetrics.Ascender := FFontMetrics.Baseline;
+    FFontMetrics.Ascender := FontFace.HorizontalHeader.Ascent * ScalerY;
     FFontMetrics.Descender := -FontFace.HorizontalHeader.Descent * ScalerY;
+    FFontMetrics.Baseline := FFontMetrics.Ascender;
   end else
   begin
-    FFontMetrics.Baseline := FontFace.HeaderTable.YMax * ScalerY;
-    FFontMetrics.Ascender := FFontMetrics.Baseline;
+    FFontMetrics.Ascender := FontFace.HeaderTable.YMax * ScalerY;
     FFontMetrics.Descender := -FontFace.HeaderTable.YMin * ScalerY;
+    FFontMetrics.Baseline := FFontMetrics.Ascender;
   end;
 
+{$ifdef OS2_TYPOGRAPHIC_METRICS}
   if (FontFace.OS2Table <> nil) and (fsfUseTypoMetrics in FontFace.OS2Table.FontSelectionFlags) then
   begin
     LineGap := FontFace.OS2Table.TypographicLineGap * ScalerY;
     FFontMetrics.LineGap := FFontMetrics.Descender + LineGap;
   end else
+{$endif}
   if (FontFace.HorizontalHeader <> nil) then
   begin
     LineGap := FontFace.HorizontalHeader.LineGap * ScalerY;
