@@ -462,6 +462,8 @@ begin
 
   Image := TImage32.Create(nil);
   try
+    Image.AntiAliased := True;
+
     FontReader := FontManager.LoadFromFile(FFontFilename);
     try
       Font := TFontCache.Create(FontReader);
@@ -472,7 +474,7 @@ begin
 
         Image.SetSize(TPaintBox(Sender).Width, TPaintBox(Sender).Height, clWhite32);
 
-        Img32.Text.DrawText(Image, 0, Font.Ascent, FText, Font, clBlack32, True);
+        Img32.Text.DrawText(Image, 0, Font.Ascent, FText, Font, clBlack32);
 
         Image.CopyToDc(Canvas.Handle, 0, 0, False);
 
