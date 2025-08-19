@@ -652,6 +652,8 @@ begin
     FeatureButton.Parent := FlowPanelFeatures;
     FeatureButton.OnClick := ButtonFeatureClick;
   end;
+
+  FlowPanelFeatures.Realign;
 end;
 
 procedure TFmRenderDemo.LoadFont(Filename: string);
