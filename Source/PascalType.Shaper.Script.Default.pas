@@ -1,4 +1,4 @@
-unit PascalType.Shaper.Script.Default;
+﻿unit PascalType.Shaper.Script.Default;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -211,15 +211,21 @@ begin
   AddedFrac := False;
   AddedNumr := False;
   AddedDnom := False;
-  i := 0;
-  while (i < AGlyphs.Count) do
+  i := 1; // Skip first - It must be a digit
+  while (i < AGlyphs.Count-1) do // Skip last - It must be a digit
   begin
-    if (AGlyphs[i].CodePoints[0] = $2044) or (UseSlash and (AGlyphs[i].CodePoints[0] = $002F)) then
+    if
+      // Digit
+      (PascalTypeUnicode.IsDigit(AGlyphs[i-1].CodePoints[0])) and
+      // Slash
+      ((AGlyphs[i].CodePoints[0] = $2044) or (UseSlash and (AGlyphs[i].CodePoints[0] = $002F))) and
+      // Digit
+      (PascalTypeUnicode.IsDigit(AGlyphs[i+1].CodePoints[0])) then
     begin
       First := i;
       Last := i + 1;
 
-      // Apply numerator
+      // Apply numerator to digits before slash
       while (First > 0) and (PascalTypeUnicode.IsDigit(AGlyphs[First-1].CodePoints[0])) do
       begin
         AddedNumr := True;
@@ -228,7 +234,7 @@ begin
         Dec(First);
       end;
 
-      // Apply denominator
+      // Apply denominator to digits after slash
       while (Last < AGlyphs.Count) and (PascalTypeUnicode.IsDigit(AGlyphs[Last].CodePoints[0])) do
       begin
         AddedDnom := True;
@@ -257,7 +263,8 @@ end;
 function TPascalTypeDefaultShaper.NeedUnicodeComposition: boolean;
 begin
   // Most OpenType fonts appear to work best with decomposed Unicode.
-  // Also, Harfbuff by default works on decomposed Unicode.
+  // Also, Harfbuzz by default works on decomposed Unicode.
+  // TODO : I believe Harfbuzz has now been changed to work on composed Unicode; Investigate.
   // TODO : This decision belongs in the Layout Engine
   Result := False;
 end;
