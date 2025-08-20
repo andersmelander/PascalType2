@@ -474,17 +474,17 @@ end;
 
 procedure TCustomPascalTypePainterCanvas32.BeginGlyph;
 begin
-  BeginUpdate;
+  Canvas.BeginUpdate;
 end;
 
 procedure TCustomPascalTypePainterCanvas32.EndGlyph;
 begin
-  EndUpdate;
+  Canvas.EndUpdate;
 end;
 
 procedure TCustomPascalTypePainterCanvas32.BeginPath;
 begin
-
+  //
 end;
 
 procedure TCustomPascalTypePainterCanvas32.EndPath(AClose: boolean);
@@ -494,12 +494,13 @@ end;
 
 procedure TCustomPascalTypePainterCanvas32.BeginUpdate;
 begin
-  Canvas.BeginUpdate;
+  // Do not batch canvas at this level; We need to be able to render each path independently for color/layer support
+  // Canvas.BeginUpdate;
 end;
 
 procedure TCustomPascalTypePainterCanvas32.EndUpdate;
 begin
-  Canvas.EndUpdate;
+  // Canvas.EndUpdate;
 end;
 
 procedure TCustomPascalTypePainterCanvas32.SetColor(Color: Cardinal);

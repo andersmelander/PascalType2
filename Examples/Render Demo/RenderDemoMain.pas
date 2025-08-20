@@ -166,7 +166,7 @@ type
   end;
 
 const
-  TestCases: array[0..19] of TTestCase = (
+  TestCases: array[0..21] of TTestCase = (
     (Name: 'Default'; FontName: 'Arial'; Text: 'PascalType Render Demo'),
     (Name: 'GSUB, Single, Single/frac'; FontName: 'Calibri'; Text: '123'#$2044'456! ½ 1/2 1'#$2044'2 12 OS/2'),
     (Name: 'GSUB, Single, List'; FontName: 'Candara'; Script: (AsAnsiChar: 'latn'); Text: #$0386#$038C#$038E#$038F), // Script is detected as "grek" (Greek) but font appears to have problems with that
@@ -188,7 +188,9 @@ const
     (Name: 'Script: Arabic'; FontName: 'Arabic Typesetting'; Text: 'إِنَّ ٱلَّذِينَ كَفَرُوا۟ سَوَآءٌ عَلَيْهِمْ ءَأَنذَرْتَهُمْ أَمْ لَمْ تُنذِرْهُمْ'),
     (Name: 'Script: Hangul'; FontName: 'Arial Unicode MS'; Text: '모든 인류 구성원의 천부의 존엄성과 동등하고 양도할 수 없는 권리를 인정하는'),
     (Name: 'Unicode normalization'; FontName: 'Arial'; Text: 'æøåÆØÅ'),
-    (Name: 'Composite glyphs'; FontName: 'Segoe UI'; Text: '½äâåéò')
+    (Name: 'Composite glyphs'; FontName: 'Segoe UI'; Text: '½äâåéò'),
+    (Name: 'Color emojis'; FontName: 'Segoe UI Emoji'; Text: ':-) + variation'#$263A#$FE0F' Another :-)'#$1f60a' Brown Thumbs-up'#$1f44d#$1f3ff' Mind blown'#$1f92f' <3'#$2764#$FE0F' Duck'#$1F986),
+    (Name: 'Baseline'; FontName: 'Leipzig'; Text: ' '+#$EA64#$E050#$E051#$E052#$E053#$E054#$E055)
   );
 
 var
@@ -233,6 +235,7 @@ begin
   FRenderer.PixelPerInch := Screen.PixelsPerInch;
   FRenderer.HorizontalOrigin := hoZero;
   FRenderer.VerticalOrigin := voZero;
+  FRenderer.Options := [roColor];
 
   // set initial properties
   FontSize := StrToIntDef(ComboBoxFontSize.Text, 36);
@@ -459,6 +462,8 @@ begin
 
   Image := TImage32.Create(nil);
   try
+    Image.AntiAliased := True;
+
     FontReader := FontManager.LoadFromFile(FFontFilename);
     try
       Font := TFontCache.Create(FontReader);
@@ -469,7 +474,7 @@ begin
 
         Image.SetSize(TPaintBox(Sender).Width, TPaintBox(Sender).Height, clWhite32);
 
-        Img32.Text.DrawText(Image, 0, Ceil(Font.LineHeight), FText, Font, clBlack32, True);
+        Img32.Text.DrawText(Image, 0, Font.Ascent, FText, Font, clBlack32);
 
         Image.CopyToDc(Canvas.Handle, 0, 0, False);
 

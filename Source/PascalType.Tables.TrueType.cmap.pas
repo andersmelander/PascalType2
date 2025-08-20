@@ -620,15 +620,38 @@ end;
 
 function TPascalTypeCharacterMapTable.GetGlyphByCharacter(ACodePoint: TPascalTypeCodePoint): Integer;
 
-  function FindPlatformMap(PlatformID: TPlatformID): TCustomPascalTypeCharacterMapDirectory;
+  function FindMap(PlatformID: TPlatformID; EncodingID: Word): TCustomPascalTypeCharacterMapDirectory;
   begin
     for Result in FMaps do
-      if (Result.PlatformID = PlatformID) and (Result.CharacterMap.Format in [0,2,4,6,12]) then
+      // TODO : Why filter on Result.CharacterMap.Format ?
+      if (Result.PlatformID = PlatformID) and (Result.EncodingID = EncodingID) and (Result.CharacterMap.Format in [0,2,4,6,12]) then
         exit;
     Result := nil;
   end;
 
-// var
+const
+  MapSearchOrder: array[0..8] of record
+    PlatformID: TPlatformID;
+    EncodingID: Word;
+    Symbol: boolean;
+  end = (
+    // The following search order mimics that of Harfbuzz
+    // 32-bit
+    (PlatformID: piMicrosoft; EncodingID: 10; Symbol: False),
+    (PlatformID: piUnicode;   EncodingID: 6;  Symbol: False),
+    (PlatformID: piUnicode;   EncodingID: 4;  Symbol: False),
+    // 16-bit
+    (PlatformID: piMicrosoft; EncodingID: 1;  Symbol: False),
+    (PlatformID: piUnicode;   EncodingID: 3;  Symbol: False),
+    (PlatformID: piUnicode;   EncodingID: 2;  Symbol: False),
+    (PlatformID: piUnicode;   EncodingID: 1;  Symbol: False),
+    (PlatformID: piUnicode;   EncodingID: 0;  Symbol: False),
+    // Symbol
+    (PlatformID: piMicrosoft; EncodingID: 0;  Symbol: True)
+  );
+
+var
+  i: integer;
 //  Map: TCustomPascalTypeCharacterMapDirectory;
 begin
   if (FBestCharacterMap = nil) then
@@ -636,30 +659,14 @@ begin
     if (FMaps = nil) then
       Exit(0);
 
-    // TODO : Is font contains a symbol map then it is a symbol font and we should prefer the symbol map.
-    // TODO : Prefer 32-bit encoding over 16-bit; Prioritized map type list should be passed to FindPlatformMap:
-    (* Pairs are: (Platform, Encoding)
-      FindPlatformMap(piUnicode, [
-        // 32-bit
-        (piMicrosoft, 10),
-        (piUnicode, 6),
-        (piUnicode, 4),
-
-        // 16-bit
-        (piMicrosoft, 1),
-        (piUnicode, 3),
-        (piUnicode, 2),
-        (piUnicode, 1),
-        (piUnicode, 0)
-      ]);
-    *)
-
-    // Prefer Unicode
-    FBestCharacterMap := FindPlatformMap(piUnicode);
-
-    // Fall back to Windows
-    if (FBestCharacterMap = nil) then
-      FBestCharacterMap := FindPlatformMap(piMicrosoft);
+    // TODO : If font contains a symbol map then it is a symbol font and we should prefer the symbol map.
+    // DONE : Prefer 32-bit encoding over 16-bit; Prioritized map type list should be passed to FindMap:
+    for i := 0 to High(MapSearchOrder) do
+    begin
+      FBestCharacterMap := FindMap(MapSearchOrder[i].PlatformID, MapSearchOrder[i].EncodingID);
+      if (FBestCharacterMap <> nil) then
+        break;
+    end;
 
     // If everything fails, just get one that we can handle
 // TODO : Handle encoding

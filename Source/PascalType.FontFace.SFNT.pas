@@ -671,6 +671,8 @@ procedure TCustomPascalTypeFontFace.Clear;
 begin
   BeginUpdate;
   try
+    Notify(fnClear);
+
     FTableLookup.Clear;
     FTables.Clear;
 

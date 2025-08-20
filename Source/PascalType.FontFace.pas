@@ -51,7 +51,7 @@ uses
 type
   TCustomPascalTypeFontFacePersistent = class;
 
-  TFontFaceNotification = (fnDestroy, fnChanged);
+  TFontFaceNotification = (fnDestroy, fnClear, fnChanged);
 
   IPascalTypeFontFaceNotification = interface
     ['{6494D33F-B6D0-4598-B2F5-3C4A37053235}']

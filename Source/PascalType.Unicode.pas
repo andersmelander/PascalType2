@@ -2713,6 +2713,8 @@ end;
 //
 //------------------------------------------------------------------------------
 class function PascalTypeUnicode.IsDefaultIgnorable(ACodePoint: TPascalTypeCodePoint): boolean;
+var
+  Plane, Page: Byte;
 begin
   (* From HarfBuzz
    *
@@ -2755,29 +2757,50 @@ begin
    * E01F0..E0FFF  # Cn [3600] <reserved-E01F0>..<reserved-E0FFF>
    *)
 
-  case (ACodePoint shr 16) and $FF of // Plane
+  Plane := (ACodePoint shr 16) and $FF;
+
+  case Plane of
 
     $00: // BMP
-      case (ACodePoint shr 8) and $FF of // Page
+      begin
+        Page := (ACodePoint shr 8) and $FF;
 
-        $00: Result := (ACodePoint = $00AD);
-        $03: Result := (ACodePoint = $034F);
-        $06: Result := (ACodePoint = $061C);
-        $17: Result := (ACodePoint >= $17B4) and (ACodePoint <= $17B5);
-        $18: Result := (ACodePoint >= $180B) and (ACodePoint <= $180E);
-        $20: Result := ((ACodePoint >= $200B) and (ACodePoint <= $200F)) or ((ACodePoint >= $202A) and (ACodePoint <= $202E)) or ((ACodePoint >= $2060) and (ACodePoint <= $206F));
-        $FE: Result := (ACodePoint >= $FE00) and (ACodePoint <= $FE0F) or (ACodePoint = $FEFF);
-        $FF: Result := (ACodePoint >= $FFF0) and (ACodePoint <= $FFF8);
+        case Page of // Page
 
-      else
-        Result := False;
+          // SOFT HYPHEN
+          $00: Result := (ACodePoint = $00AD);
+
+          // COMBINING GRAPHEME JOINER
+          $03: Result := (ACodePoint = $034F);
+
+          // ARABIC LETTER MARK
+          $06: Result := (ACodePoint = $061C);
+
+          // KHMER VOWEL INHERENT AQ..KHMER VOWEL INHERENT AA
+          $17: Result := (ACodePoint >= $17B4) and (ACodePoint <= $17B5);
+
+          // MONGOLIAN FREE VARIATION SELECTOR ONE..MONGOLIAN FREE VARIATION SELECTOR THREE
+          $18: Result := (ACodePoint >= $180B) and (ACodePoint <= $180E);
+
+          // ZERO WIDTH SPACE..RIGHT-TO-LEFT MARK, LEFT-TO-RIGHT EMBEDDING..RIGHT-TO-LEFT OVERRIDE, LEFT-TO-RIGHT ISOLATE..NOMINAL DIGIT SHAPES
+          $20: Result := ((ACodePoint >= $200B) and (ACodePoint <= $200F)) or ((ACodePoint >= $202A) and (ACodePoint <= $202E)) or ((ACodePoint >= $2060) and (ACodePoint <= $206F));
+
+          // VARIATION SELECTOR-1..VARIATION SELECTOR-16, ZERO WIDTH NO-BREAK SPACE
+          $FE: Result := ((ACodePoint >= $FE00) and (ACodePoint <= $FE0F)) or (ACodePoint = $FEFF);
+
+          // <reserved-FFF0>..<reserved-FFF8>
+          $FF: Result := (ACodePoint >= $FFF0) and (ACodePoint <= $FFF8);
+
+        else
+          Result := False;
+        end;
       end;
 
-    $01:
-      Result := ((ACodePoint >= $1BCA0) and (ACodePoint <= $1BCA3)) or ((ACodePoint >= $1D173) and (ACodePoint <= $1D17A));
+    // SHORTHAND FORMAT LETTER OVERLAP..SHORTHAND FORMAT UP STEP, MUSICAL SYMBOL BEGIN BEAM..MUSICAL SYMBOL END PHRASE
+    $01: Result := ((ACodePoint >= $1BCA0) and (ACodePoint <= $1BCA3)) or ((ACodePoint >= $1D173) and (ACodePoint <= $1D17A));
 
-    $0E:
-      Result := (ACodePoint >= $E0000) and (ACodePoint <= $E0FFF);
+    // LANGUAGE TAG, TAG SPACE..CANCEL TAG, VARIATION SELECTOR-17..VARIATION SELECTOR-256
+    $0E: Result := (ACodePoint >= $E0000) and (ACodePoint <= $E0FFF);
 
   else
     Result := False;

@@ -40,6 +40,7 @@ uses
   Classes,
   Graphics,
   PascalType.Types,
+  PascalType.Types.Color,
   PascalType.Classes,
   PascalType.GlyphString,
   PascalType.Painter,
@@ -82,7 +83,15 @@ type
   end;
 
 type
-  TPascalTypeRenderOptions = set of (roPoints, roFill, roStroke, roColorize, roMetrics);
+  TPascalTypeRenderOption = (
+    roColor,                            // Enable font color features
+    roPoints,                           // Display curve control points
+    roFill,                             // Fill shapes
+    roStroke,                           // Stroke shapes
+    roColorize,                         // Colorize glyphs
+    roMetrics                           // Display glyph metrics
+  );
+  TPascalTypeRenderOptions = set of TPascalTypeRenderOption;
 
   TPascalTypeRenderVerticalOrigin = (
     voZero,                     // The normal baseline is used. Top of glyphs might be clipped.
@@ -118,7 +127,12 @@ type
     class property DebugGlyphMetricsColor: Cardinal read FDebugGlyphMetricsColor write FDebugGlyphMetricsColor;
     class property DebugGlyphPalette: TArray<Cardinal> read FDebugGlyphPalette write FDebugGlyphPalette;
   strict private type
-    TRenderFlags = set of (rfHasScalerX, rfHasScalerY, rfHasMetrics);
+    TRenderFlags = set of (
+      rfHasScalerX,
+      rfHasScalerY,
+      rfHasMetrics,
+      rfHasColor
+    );
   strict private
     FOptions: TPascalTypeRenderOptions;
     FFlags: TRenderFlags;
@@ -132,6 +146,8 @@ type
     FHorizontalOrigin: TPascalTypeRenderHorizontalOrigin;
     FFontMetrics: TPascalTypeFontMetric;
     FCustomOrigin: TFloatPoint;
+    FColorGlyphLookup: IPascalTypeColorGlyphLookup;
+    FColorLookup: IPascalTypeColorLookup;
     procedure SetFontSize(const Value: Integer);
     function GetFontSize: Integer;
     function GetPixelPerInch: Integer;
@@ -164,6 +180,7 @@ type
     procedure FontHeightChanged; virtual;
     procedure PixelPerInchXChanged; virtual;
     procedure PixelPerInchYChanged; virtual;
+    procedure FontChanging;
     procedure FontChanged;
 
     property ScalerX: TScaleType read GetScalerX;
@@ -211,7 +228,11 @@ implementation
 
 uses
   Math,
+  SysUtils,
+  PascalType.Unicode,
   PascalType.Tables.TrueType.glyf,
+  PascalType.Tables.OpenType.COLR,
+  PascalType.Tables.OpenType.CPAL,
   PascalType.ResourceStrings;
 
 //------------------------------------------------------------------------------
@@ -472,7 +493,41 @@ end;
 procedure TPascalTypeRenderer.RenderGlyph(GlyphIndex: Integer; const Painter: IPascalTypePainter; const Cursor: TFloatPoint);
 var
   GlyphPath: TPascalTypePath;
+  ColoredGlyphs: TColoredGlyphs;
+  i: integer;
+  SaveColor: Cardinal;
+  ColorABGR: TPaletteColor;
 begin
+  // Look for a color glyph with the specified GlyphID
+  if (FColorGlyphLookup <> nil) and FColorGlyphLookup.GetColoredGlyph(GlyphIndex, ColoredGlyphs) then
+  begin
+    SaveColor := Painter.Color;
+
+    for i := 0 to High(ColoredGlyphs) do
+    begin
+      if (ColoredGlyphs[i].PaletteIndex <> -1) then
+      begin
+        // Resolve layer color using palette #0
+        // TODO : Select palette based on lighness of default color
+        ColorABGR := FColorLookup.GetPaletteColor(0, ColoredGlyphs[i].PaletteIndex);
+        if (ColorABGR.Alpha = 0) then
+          continue;
+
+        Painter.Color := (ColorABGR.ARGB and $FF00FF00) or ((ColorABGR.ARGB and $00FF0000) shr 16) or ((ColorABGR.ARGB and $000000FF) shl 16);
+      end else
+        // Use default color
+        Painter.Color := SaveColor;
+
+      // TODO : Recurse? Specs doesn't state if we should do this.
+      // RenderGlyph(ColoredGlyphs[i].GlyphID, Painter, Cursor);
+      GlyphPath := FontFace.GetGlyphPath(ColoredGlyphs[i].GlyphID);
+      RenderGlyphPath(GlyphPath, Painter, Cursor);
+    end;
+
+    Painter.Color := SaveColor;
+    exit;
+  end;
+
   GlyphPath := FontFace.GetGlyphPath(GlyphIndex);
   RenderGlyphPath(GlyphPath, Painter, Cursor);
 end;
@@ -480,8 +535,16 @@ end;
 procedure TPascalTypeRenderer.RenderShapedGlyph(AGlyph: TPascalTypeGlyph; const Painter: IPascalTypePainter; var X, Y: TRenderFloat);
 var
   Cursor: TFloatPoint;
+const
+  cNotDef = 0;
 begin
   if (FontFace = nil) then
+    exit;
+
+  // Ignore Emoji variantion selector that was substituted to .notdef
+  // Works around issue rendering #$263A#$FE0F with Twemoji font.
+  if (AGlyph.GlyphID = cNotDef) and (AGlyph.IsSubstituted) and (Length(AGlyph.CodePoints) = 1) and
+    (PascalTypeUnicode.IsVariationSelector(AGlyph.CodePoints[0])) then
     exit;
 
   // Position glyph relative to cursor
@@ -573,12 +636,31 @@ var
   Cursor: TFloatPoint;
   SaveColor: Cardinal;
   i: integer;
+  Table: TCustomPascalTypeNamedTable;
+  ColorGlyphProvider: IPascalTypeColorGlyphProvider;
+  ColorProvider: IPascalTypeColorProvider;
 begin
   if (FontFace = nil) then
     exit;
 
   if (ShapedText.Count = 0) then
     exit;
+
+  if (rfHasColor in FFlags) and (FColorGlyphLookup = nil) then
+  begin
+    Table := FFontFace.GetTableByTableType('COLR');
+    if (Supports(Table, IPascalTypeColorGlyphProvider, ColorGlyphProvider)) then
+      FColorGlyphLookup := ColorGlyphProvider.GetColorGlyphLookup;
+
+    if (FColorGlyphLookup <> nil) and (FColorLookup = nil) then
+    begin
+      Table := FFontFace.GetTableByTableType('CPAL');
+      if (Supports(Table, IPascalTypeColorProvider, ColorProvider)) then
+        FColorLookup := ColorProvider.GetColorLookup
+      else
+        FColorGlyphLookup := nil; // Can't support color glyphs without any colors
+    end;
+  end;
 
   Cursor.X := X;
   Cursor.Y := Y;
@@ -728,13 +810,32 @@ begin
   Exclude(FFlags, rfHasScalerX);
   Exclude(FFlags, rfHasScalerY);
   Exclude(FFlags, rfHasMetrics);
+
+  if (roColor in FOptions) and (FFontFace <> nil) and (FFontFace.ContainsTable('COLR')) then
+    Include(FFlags, rfHasColor);
+end;
+
+procedure TPascalTypeRenderer.FontChanging;
+begin
+  Exclude(FFlags, rfHasScalerX);
+  Exclude(FFlags, rfHasScalerY);
+  Exclude(FFlags, rfHasMetrics);
+  Exclude(FFlags, rfHasColor);
+  FColorGlyphLookup := nil;
+  FColorLookup := nil;
 end;
 
 procedure TPascalTypeRenderer.FontFaceNotification(Sender: TCustomPascalTypeFontFacePersistent; Notification: TFontFaceNotification);
 begin
   case Notification of
     fnDestroy:
-      FontFace := nil;
+      begin
+        FontChanging;
+        FontFace := nil;
+      end;
+
+    fnClear:
+      FontChanging;
 
     fnChanged:
       FontChanged;
@@ -758,8 +859,18 @@ begin
 
   FFontMetrics := Default(TPascalTypeFontMetric);
 
+{$define OS2_METRICS}
+{-$define OS2_TYPOGRAPHIC_METRICS}
+
+{$ifndef OS2_METRICS}
+  {$undef OS2_TYPOGRAPHIC_METRICS}
+{$endif}
+
+
+{$ifdef OS2_METRICS}
   if (FontFace.OS2Table <> nil) then
   begin
+{$ifdef OS2_TYPOGRAPHIC_METRICS}
     if (fsfUseTypoMetrics in FontFace.OS2Table.FontSelectionFlags) then
     begin
       FFontMetrics.Baseline := FontFace.OS2Table.TypographicAscent * ScalerY;
@@ -769,8 +880,13 @@ begin
       FFontMetrics.Baseline := FontFace.OS2Table.WindowsAscent * ScalerY;
       FFontMetrics.Descender := FontFace.OS2Table.WindowsDescent * ScalerY;
     end;
-
     FFontMetrics.Ascender := Min(FontFace.OS2Table.TypographicAscent, FontFace.OS2Table.WindowsAscent) * ScalerY;
+
+{$else}
+    FFontMetrics.Ascender := FontFace.OS2Table.WindowsAscent * ScalerY;
+    FFontMetrics.Descender := FontFace.OS2Table.WindowsDescent * ScalerY;
+    FFontMetrics.Baseline := FFontMetrics.Ascender;
+{$endif}
 
     if (FontFace.OS2Table.AddendumTable <> nil) then
     begin
@@ -778,23 +894,26 @@ begin
       FFontMetrics.CapHeight := FontFace.OS2Table.AddendumTable.CapHeight * ScalerY;
     end;
   end else
+{$endif}
   if (FontFace.HorizontalHeader <> nil) then
   begin
-    FFontMetrics.Baseline := FontFace.HorizontalHeader.Ascent * ScalerY;
-    FFontMetrics.Ascender := FFontMetrics.Baseline;
+    FFontMetrics.Ascender := FontFace.HorizontalHeader.Ascent * ScalerY;
     FFontMetrics.Descender := -FontFace.HorizontalHeader.Descent * ScalerY;
+    FFontMetrics.Baseline := FFontMetrics.Ascender;
   end else
   begin
-    FFontMetrics.Baseline := FontFace.HeaderTable.YMax * ScalerY;
-    FFontMetrics.Ascender := FFontMetrics.Baseline;
+    FFontMetrics.Ascender := FontFace.HeaderTable.YMax * ScalerY;
     FFontMetrics.Descender := -FontFace.HeaderTable.YMin * ScalerY;
+    FFontMetrics.Baseline := FFontMetrics.Ascender;
   end;
 
+{$ifdef OS2_TYPOGRAPHIC_METRICS}
   if (FontFace.OS2Table <> nil) and (fsfUseTypoMetrics in FontFace.OS2Table.FontSelectionFlags) then
   begin
     LineGap := FontFace.OS2Table.TypographicLineGap * ScalerY;
     FFontMetrics.LineGap := FFontMetrics.Descender + LineGap;
   end else
+{$endif}
   if (FontFace.HorizontalHeader <> nil) then
   begin
     LineGap := FontFace.HorizontalHeader.LineGap * ScalerY;
