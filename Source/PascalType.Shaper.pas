@@ -308,6 +308,12 @@ function TPascalTypeShaper.NeedUnicodeComposition: boolean;
 begin
   // TODO : This decision belongs in the Layout Engine
   // Harfbuzz by default doesn't compose
+
+  // TODO : I believe Harfbuzz has now been changed to work on composed Unicode; Investigate.
+  // See:
+  // - Issue #56 Shape composed or decomposed Unicode
+  //   https://gitlab.com/anders.bo.melander/pascaltype2/-/issues/56
+
   Result := False;
 end;
 
@@ -413,6 +419,9 @@ begin
   (*
   ** Unicode composition (optional)
   *)
+  // TODO : If the font doesn't contain one or both of the decomposed
+  // codepoints but does contain the composed codepoint, should we
+  // fall back to composing the particular pair?
   if (NeedUnicodeComposition) then
   begin
     Result := PascalTypeUnicode.Compose(Result, CompositionFilter);

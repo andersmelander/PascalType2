@@ -262,10 +262,16 @@ end;
 
 function TPascalTypeDefaultShaper.NeedUnicodeComposition: boolean;
 begin
+  // TODO : This decision belongs in the Layout Engine
+
   // Most OpenType fonts appear to work best with decomposed Unicode.
   // Also, Harfbuzz by default works on decomposed Unicode.
+
   // TODO : I believe Harfbuzz has now been changed to work on composed Unicode; Investigate.
-  // TODO : This decision belongs in the Layout Engine
+  // See:
+  // - Issue #56 Shape composed or decomposed Unicode
+  //   https://gitlab.com/anders.bo.melander/pascaltype2/-/issues/56
+
   Result := False;
 end;
 

@@ -3356,8 +3356,8 @@ var
 
   procedure AddCodePoint(const ACodePoint: TPascalTypeCodePoint);
   begin
-    if Length(Result) < (OutputSize+1) then
-      SetLength(Result, (OutputSize+1) * 2);
+    if (Length(Result) < OutputSize + 1) then
+      SetLength(Result, (OutputSize + 1) * 2);
     Result[OutputSize] := ACodePoint;
     Inc(OutputSize);
   end;
