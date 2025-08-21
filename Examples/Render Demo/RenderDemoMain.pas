@@ -103,7 +103,9 @@ type
     FLanguage: TTableType;
     FScript: TTableType;
     FDirection: TPascalTypeDirection;
+    FUpdateCount: integer;
     FHasAvailableFeatures: boolean;
+    FAvailableFeaturesScript: TTableType;
     FFeatures: TPascalTypeShaperFeatures;
     FPlannedFeatures: TPascalTypeFeatures;
     procedure FontScannedHandler(Sender: TObject; const FontFileName: string; Font: TCustomPascalTypeFontFacePersistent);
@@ -112,10 +114,13 @@ type
     procedure SetFontName(const Value: string);
     procedure ButtonFeatureClick(Sender: TObject);
   protected
-    procedure LoadFont(Filename: string); // not "const" on purpose
+    procedure LoadFont(const Filename: string);
     procedure FontNameChanged;
     procedure FontSizeChanged;
     procedure TextChanged;
+    procedure BeginUpdate;
+    procedure EndUpdate;
+    procedure InvalidateFeatures;
     procedure UpdateAvailableFeatures;
   public
     property Text: string read FText write SetText;
@@ -171,7 +176,7 @@ const
     (Name: 'GSUB, Single, Single/frac'; FontName: 'Calibri'; Text: '123'#$2044'456! ½ 1/2 1'#$2044'2 12 OS/2'),
     (Name: 'GSUB, Single, List'; FontName: 'Candara'; Script: (AsAnsiChar: 'latn'); Text: #$0386#$038C#$038E#$038F), // Script is detected as "grek" (Greek) but font appears to have problems with that
 //    (Name: 'GSUB, Single, List'; FontName: 'Candara'; Text: #$0386#$038C#$038E#$038F), // Script is detected as grek but font appears to have problems with that
-    (Name: 'GSUB, Ligature'; FontName: 'Arabic Typesetting'; Text: 'ff fi ffi ft fft'),
+    (Name: 'GSUB, Ligature'; FontName: 'Calibri'; Text: 'ff fi ffi ft fft'),
     (Name: 'GSUB, Multiple'; FontName: 'Microsoft Sans Serif'; Script: (AsAnsiChar: 'thai'); Text: #$0E01#$0E33#$0E44#$0E23' '#$0E19#$0E33),
     (Name: 'GSUB, Chained, Simple'; FontName: 'Monoid Regular'; Text: ' _/¯\_/¯\_'),
     (Name: 'GSUB, Chained, Class'; FontName: 'Segoe UI Variable'; Text: 'i¨ j¨ i´'),
@@ -272,6 +277,13 @@ begin
   Text := EditText.Text;
 end;
 
+procedure TFmRenderDemo.InvalidateFeatures;
+begin
+  BeginUpdate;
+  FHasAvailableFeatures := False;
+  EndUpdate;
+end;
+
 procedure TFmRenderDemo.MenuItemRendererClick(Sender: TObject);
 begin
   if (TMenuItem(Sender).Checked) then
@@ -283,6 +295,11 @@ begin
     GridPanelSamples.RowCollection.Items[TMenuItem(Sender).Tag].Value := 0;
   end;
   GridPanelSamples.RowCollection.EquallySplitPercentuals;
+end;
+
+procedure TFmRenderDemo.BeginUpdate;
+begin
+  Inc(FUpdateCount);
 end;
 
 procedure TFmRenderDemo.ButtonFeatureClick(Sender: TObject);
@@ -532,8 +549,8 @@ end;
 
 procedure TFmRenderDemo.TextChanged;
 begin
-  Invalidate;
-  FHasAvailableFeatures := False;
+  BeginUpdate;
+  EndUpdate; // Checks for change in sccript
 end;
 
 type
@@ -542,7 +559,6 @@ type
 procedure TFmRenderDemo.UpdateAvailableFeatures;
 var
   Script: TTableType;
-  UTF32: TPascalTypeCodePoints;
   Table: TCustomOpenTypeCommonTable;
   AvailableFeatures: TPascalTypeFeatures;
   Tag: PascalType.Types.TTableName;
@@ -554,17 +570,7 @@ var
   DummyGlyphs: TPascalTypeGlyphString;
   DummyFeatures: TPascalTypeShaperFeatures;
 begin
-  if (FHasAvailableFeatures) then
-    exit;
-  FHasAvailableFeatures := True;
-
-  // Detect script from input text if it hasn't been explicitly specified.
-  Script := FScript;
-  if (Script.AsCardinal = 0) then
-  begin
-    UTF32 := PascalTypeUnicode.UTF16ToUTF32(FText);
-    Script := TPascalTypeShaper.DetectScript(UTF32);
-  end;
+  Script := FAvailableFeaturesScript;
 
   // Get available features from GPOS and GSUB tables
   AvailableFeatures := [];
@@ -581,17 +587,12 @@ begin
   if (not AvailableFeatures.Contains('kern')) and (FFontFace.GetTableByTableType('kern') <> nil) then
     AvailableFeatures.Add('kern');
 
-  // Feature menuitems are marked with Tag<>0. Get rid of the old ones
-  for i := PopupMenu.Items.Count-1 downto 0 do
-    if (PopupMenu.Items[i].Tag <> 0) then
-      PopupMenu.Items[i].Free;
-  for i := FlowPanelFeatures.ControlCount-1 downto 0 do
-    FlowPanelFeatures.Controls[i].Free;
-
   // Intersect the existing feature selection with the available ones
+  (* Why?
   for Tag in FFeatures do
     if (not AvailableFeatures[Tag]) then
       FFeatures.Remove(Tag);
+  *)
 
   // Create a shaping plan so we can get access to the default plan features
   Shaper := TPascalTypeShaper.CreateShaper(FFontFace, Script);
@@ -620,7 +621,11 @@ begin
     Shaper.Free;
   end;
 
-  // Create menuitem for available features
+  // Get rid of old feature buttons before we create the new ones
+  for i := FlowPanelFeatures.ControlCount-1 downto 0 do
+    FlowPanelFeatures.Controls[i].Free;
+
+  // Create buttons for available features
   for Tag in AvailableFeatures do
   begin
     FeatureButton := TFeatureButton.Create(Self);
@@ -640,6 +645,7 @@ begin
     FeatureTableClass := FindFeatureByType(TTableType(Tag));
     if (FeatureTableClass <> nil) then
       FeatureButton.Hint := FeatureTableClass.DisplayName;
+
     if (FFeatures.HasValue(Tag)) then
     begin
       if (FFeatures[Tag]) then
@@ -656,14 +662,12 @@ begin
   FlowPanelFeatures.Realign;
 end;
 
-procedure TFmRenderDemo.LoadFont(Filename: string);
+procedure TFmRenderDemo.LoadFont(const Filename: string);
 begin
-  Invalidate;
   FFontFilename := '';
-  FHasAvailableFeatures := False;
   try
-
     try
+
       FFontFace.LoadFromFile(FileName);
       FFontFilename := FileName;
 
@@ -673,7 +677,7 @@ begin
     end;
 
   finally
-    UpdateAvailableFeatures;
+    InvalidateFeatures;
   end;
 
   if (FFontFilename = '') then
@@ -684,7 +688,6 @@ procedure TFmRenderDemo.FontNameChanged;
 var
   FontIndex : Integer;
 begin
-  Invalidate;
   FFontFilename := '';
 
   for FontIndex := 0 to High(FFontArray) do
@@ -725,8 +728,8 @@ procedure TFmRenderDemo.SetText(const Value: string);
 begin
   if FText <> Value then
   begin
-   FText := Value;
-   TextChanged;
+    FText := Value;
+    TextChanged;
   end;
 end;
 
@@ -742,9 +745,7 @@ end;
 procedure TFmRenderDemo.ActionFeaturesClearExecute(Sender: TObject);
 begin
   FFeatures.Clear;
-  FHasAvailableFeatures := False;
-  UpdateAvailableFeatures;
-  Invalidate;
+  InvalidateFeatures;
 end;
 
 procedure TFmRenderDemo.ActionGenericExecute(Sender: TObject);
@@ -772,20 +773,51 @@ begin
 
   TestCase := TestCases[TComboBox(Sender).ItemIndex];
 
-  EditText.Text := TestCase.Text;
-  ComboBoxFont.Text := TestCase.FontName;
-  FontName := TestCase.FontName;
-  FLanguage := TestCase.Language;
-  FScript := TestCase.Script;
-  FDirection := TestCase.Direction;
+  BeginUpdate;
+  try
 
-  FHasAvailableFeatures := False;
-  Invalidate;
+    EditText.Text := TestCase.Text;
+    ComboBoxFont.Text := TestCase.FontName;
+    FontName := TestCase.FontName;
+    FLanguage := TestCase.Language;
+    FScript := TestCase.Script;
+    FDirection := TestCase.Direction;
+
+  finally
+    EndUpdate;
+  end;
 end;
 
 procedure TFmRenderDemo.EditTextChange(Sender: TObject);
 begin
   Text := EditText.Text;
+end;
+
+procedure TFmRenderDemo.EndUpdate;
+var
+  Script: TTableType;
+  UTF32: TPascalTypeCodePoints;
+begin
+  if (FUpdateCount = 1) then
+  begin
+    // Detect script from input text if it hasn't been explicitly specified.
+    Script := FScript;
+    if (Script.AsCardinal = 0) then
+    begin
+      UTF32 := PascalTypeUnicode.UTF16ToUTF32(FText);
+      Script := TPascalTypeShaper.DetectScript(UTF32);
+    end;
+
+    if (not FHasAvailableFeatures) or (Script <> FAvailableFeaturesScript) then
+    begin
+      FHasAvailableFeatures := True;
+      FAvailableFeaturesScript := Script;
+
+      UpdateAvailableFeatures;
+      Invalidate;
+    end;
+  end;
+  Dec(FUpdateCount);
 end;
 
 procedure TFmRenderDemo.FontScannedHandler(Sender: TObject; const FontFileName: string;
