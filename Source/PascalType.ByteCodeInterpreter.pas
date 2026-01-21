@@ -41,7 +41,7 @@ uses
   PascalType.Tables;
 
 procedure ByteCodeToStrings(ByteCodeStream: TStream; Strings: TStrings);
-function ByteCodeToString(ByteCode: array of Byte): string;
+function ByteCodeToString(const ByteCode: array of Byte): string;
 
 implementation
 
@@ -181,25 +181,28 @@ begin
     end;
 end;
 
-function ByteCodeToString(ByteCode: array of Byte): string;
-var
-  MS: TMemoryStream;
-  SL: TStringList;
-begin
-  MS := TMemoryStream.Create;
-  try
-    MS.Read(ByteCode[0], Length(ByteCode));
+type
+  TExternalMemoryStream = class(TCustomMemoryStream);
 
-    SL := TStringList.Create;
+function ByteCodeToString(const ByteCode: array of Byte): string;
+var
+  Stream: TStream;
+  Strings: TStrings;
+begin
+  Stream := TExternalMemoryStream.Create;
+  try
+    TExternalMemoryStream(Stream).SetPointer(@ByteCode[0], Length(ByteCode));
+
+    Strings := TStringList.Create;
     try
-      ByteCodeToStrings(MS, SL);
-      Result := SL.Text;
+      ByteCodeToStrings(Stream, Strings);
+      Result := Strings.Text;
     finally
-      SL.Free;
+      Strings.Free;
     end;
 
   finally
-    MS.Free;
+    Stream.Free;
   end;
 end;
 
