@@ -615,7 +615,7 @@ var
   Value: UInt24;
 begin
   ReadUInt24(AStream, Value);
-  Result := Value[2] or (Value[1] shl 8) or (Value[0] shl 16);
+  Result := Value[0] or (Value[1] shl 8) or (Value[2] shl 16);
 end;
 
 end.
