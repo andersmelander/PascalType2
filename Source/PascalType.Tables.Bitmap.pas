@@ -160,8 +160,7 @@ type
     procedure SaveToStream(Stream: TStream); override;
 
     property BitmapScaleTableCount: Integer read GetBitmapScaleTableCount;
-    property BitmapScaleTable[Index: Integer]: TPascalTypeBitmapScaleTable
-      read GetBitmapScaleTable;
+    property BitmapScaleTable[Index: Integer]: TPascalTypeBitmapScaleTable read GetBitmapScaleTable;
   end;
 
 implementation
@@ -566,7 +565,7 @@ end;
 
 procedure TPascalTypeEmbeddedBitmapScalingTable.SaveToStream(Stream: TStream);
 var
-  BitmapScaleIndex: Integer;
+  i: Integer;
 begin
   inherited;
 
@@ -576,11 +575,9 @@ begin
     BigEndianValue.WriteCardinal(Stream, FBitmapScaleList.Count);
 
     // write bitmap size tables
-    for BitmapScaleIndex := 0 to FBitmapScaleList.Count - 1 do
-    begin
+    for i := 0 to FBitmapScaleList.Count - 1 do
       // save bitmap size table to stream
-      TPascalTypeBitmapScaleTable(FBitmapScaleList).SaveToStream(Stream);
-    end;
+      FBitmapScaleList[i].SaveToStream(Stream);
   end;
 end;
 
