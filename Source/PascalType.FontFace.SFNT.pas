@@ -291,21 +291,17 @@ uses
   PascalType.Shaper.Layout.OpenType,
   PascalType.ResourceStrings;
 
-function CalculateCheckSum(Data: Pointer; Size: Integer): Cardinal; overload;
+function CalculateCheckSum(Data: Pointer; Count: Integer): Cardinal; overload;
 {$IFDEF PUREPASCAL}
-var
-  I: Integer;
 begin
-  Result := Swap32(PCardinal(Data)^);
-  Inc(PCardinal(Data));
-
-  // read subsequent cardinals
-  for I := 1 to Size - 1 do
+  Result := 0;
+  while (Count > 0) do
   begin
 {$IFOPT Q+}{$DEFINE Q_PLUS}{$OVERFLOWCHECKS OFF}{$ENDIF}
     Result := Result + Swap32(PCardinal(Data)^);
 {$IFDEF Q_PLUS}{$OVERFLOWCHECKS ON}{$UNDEF Q_PLUS}{$ENDIF}
     Inc(PCardinal(Data));
+    Dec(Count);
   end;
 {$ELSE}
 asm
@@ -333,59 +329,37 @@ asm
 end;
 
 function CalculateCheckSum(Stream: TStream; Size: Cardinal): Cardinal; overload;
-var
-  I    : Integer;
 begin
   // Ensure that at least one cardinal is in the stream
-  if Size < 4 then
+  if (Size < 4) then
     Exit(0);
 
+  Assert(Size <= (Stream.Size - Stream.Position));
+
   // set position to beginning of the stream
-//  Stream.Seek(0, soFromBeginning);
+//  Stream.Position := 0;
 
-  Assert(Size mod 4 = 0);
-
-  if Stream is TMemoryStream then
-    Result := CalculateCheckSum(TMemoryStream(Stream).Memory, Size div 4)
-  else
+  if (Stream is TMemoryStream) then
   begin
-    // read first cardinal
-    Result := BigEndianValue.ReadCardinal(Stream);
+    Result := CalculateCheckSum(PByte(TMemoryStream(Stream).Memory) + Stream.Position, Size div SizeOf(Cardinal))
+  end else
+  begin
+    Result := 0;
 
     // read subsequent cardinals
-    for I := 1 to (Size div 4) - 1 do
+    while (Size >= SizeOf(Cardinal)) do
     begin
 {$IFOPT Q+}{$DEFINE Q_PLUS}{$OVERFLOWCHECKS OFF}{$ENDIF}
       Result := Result + BigEndianValue.ReadCardinal(Stream);
 {$IFDEF Q_PLUS}{$OVERFLOWCHECKS ON}{$UNDEF Q_PLUS}{$ENDIF}
+      Dec(Size, SizeOf(Cardinal));
     end;
   end;
 end;
 
-function CalculateHeadCheckSum(Stream: TMemoryStream): Cardinal;
-var
-  I    : Integer;
+function CalculateCheckSum(Stream: TStream): Cardinal; overload;
 begin
-  with Stream do
-  begin
-    // ensure that at least one cardinal is in the stream
-    if Size < 4 then
-      Exit(0);
-
-    // set position to beginning of the stream
-    Seek(0, soFromBeginning);
-
-    // read first cardinal
-    Result := BigEndianValue.ReadCardinal(Stream);
-
-    // read subsequent cardinals
-    for I := 1 to (Size div 4) - 1 do
-    begin
-      if I = 2 then
-        Continue;
-      Result := Result + BigEndianValue.ReadCardinal(Stream);
-    end;
-  end;
+  Result := CalculateCheckSum(Stream, Stream.Size-Stream.Position);
 end;
 
 
@@ -1296,11 +1270,12 @@ begin
         DirectoryTable.TableList[TableIndex].Length := MemoryStream.Size;
 
         // extend to a modulo 4 size
+        // TODO : Bad idea; The memory isn't cleared
         MemoryStream.Size := 4 * ((DirectoryTable.TableList[TableIndex].Length + 3) div 4);
 
         // calculate checksum
         MemoryStream.Position := 0;
-        DirectoryTable.TableList[TableIndex].Checksum := CalculateCheckSum(MemoryStream, MemoryStream.Size);
+        DirectoryTable.TableList[TableIndex].Checksum := CalculateCheckSum(MemoryStream, MemoryStream.Size div SizeOf(Cardinal));
 
         // copy streams
         MemoryStream.Position := 0;
