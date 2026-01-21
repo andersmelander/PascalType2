@@ -35,12 +35,25 @@ interface
 {$I PT_Compiler.inc}
 
 uses
+  Generics.Collections,
   Classes,
   SysUtils,
   PascalType.Types,
   PascalType.Classes,
   PascalType.Tables;
 
+//------------------------------------------------------------------------------
+//
+//              TPascalTypeCompactFontFormatTable
+//
+//------------------------------------------------------------------------------
+// CFF — Compact Font Format (Version 1)
+//------------------------------------------------------------------------------
+// https://learn.microsoft.com/en-us/typography/opentype/spec/cff
+//------------------------------------------------------------------------------
+// Adobe Technical Note #5176: “The Compact Font Format Specification,”:
+// http://partners.adobe.com/public/developer/en/font/5176.CFF.pdf
+//------------------------------------------------------------------------------
 type
   TCustomPascalTypePostscriptIndexTable = class(TCustomPascalTypeTable)
   protected
@@ -83,10 +96,11 @@ type
     property StringCount: Integer read GetStringCount;
   end;
 
-  TCustomPascalTypePostscriptDictOperator = class(TPersistent)
+  TCustomPascalTypePostscriptDictOperator = class abstract(TPersistent)
   protected
     class function GetOperator: Byte; virtual; abstract;
   public
+    constructor Create; virtual; // Must be virtual!
     procedure Assign(Source: TPersistent); override;
 
     property DictOperator: Byte read GetOperator;
@@ -94,31 +108,34 @@ type
 
   TPascalTypePostscriptDictOperatorClass = class of TCustomPascalTypePostscriptDictOperator;
 
-  TCustomPascalTypePostscriptDictOperand = class(TPersistent)
+  TCustomPascalTypePostscriptDictOperand = class abstract(TPersistent)
   protected
     function GetAsInteger: Integer; virtual; abstract;
     function GetAsString: string; virtual; abstract;
     function GetAsSingle: Single; virtual; abstract;
   public
+    constructor Create; virtual; // Must be virtual!
     property AsInteger: Integer read GetAsInteger;
     property AsSingle : Single read GetAsSingle;
     property AsString : string read GetAsString;
   end;
 
+  TPascalTypePostscriptDictOperandClass = class of TCustomPascalTypePostscriptDictOperand;
+
   TPascalTypePostscriptDictPair = class(TPersistent)
   private
-    FOperands    : array of TCustomPascalTypePostscriptDictOperand;
+    FOperands: array of TCustomPascalTypePostscriptDictOperand;
     FDictOperator: TCustomPascalTypePostscriptDictOperator;
     function GetOperand(Index: Integer): TCustomPascalTypePostscriptDictOperand;
     function GetOperandCount: Integer;
-    procedure ClearOperands;
+    procedure Clear;
   protected
   public
     destructor Destroy; override;
 
     procedure Assign(Source: TPersistent); override;
 
-    procedure AddOperand(Operand: TCustomPascalTypePostscriptDictOperand);
+    function AddOperand(AOperandClass: TPascalTypePostscriptDictOperandClass): TCustomPascalTypePostscriptDictOperand;
 
     property DictOperator: TCustomPascalTypePostscriptDictOperator read FDictOperator write FDictOperator;
     property OperandCount: Integer read GetOperandCount;
@@ -127,10 +144,13 @@ type
 
   TPascalTypePostscriptDictDataTable = class(TCustomPascalTypeTable)
   private
-    FData: array of TPascalTypePostscriptDictPair;
+    FData: TObjectList<TPascalTypePostscriptDictPair>;
   protected
     function GetStringIndex(const Index: Integer): Integer;
   public
+    constructor Create(AParent: TCustomPascalTypeTable = nil); override;
+    destructor Destroy; override;
+
     procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
@@ -1037,57 +1057,65 @@ end;
 
 { TPascalTypePostscriptDictPair }
 
-procedure TPascalTypePostscriptDictPair.AddOperand(Operand: TCustomPascalTypePostscriptDictOperand);
+destructor TPascalTypePostscriptDictPair.Destroy;
 begin
-  if Operand = nil then
+  Clear;
+  inherited;
+end;
+
+function TPascalTypePostscriptDictPair.AddOperand(AOperandClass: TPascalTypePostscriptDictOperandClass): TCustomPascalTypePostscriptDictOperand;
+begin
+  if (AOperandClass = nil) then
     raise EPascalTypeError.Create(RCStrNoOperandSpecified);
 
-  SetLength(FOperands, Length(FOperands) + 1);
+  Result := AOperandClass.Create;
+  try
 
-  FOperands[High(FOperands)] := Operand;
+    SetLength(FOperands, Length(FOperands) + 1);
+    FOperands[High(FOperands)] := Result;
+
+  except
+    Result.Free;
+    raise;
+  end;
 end;
 
 procedure TPascalTypePostscriptDictPair.Assign(Source: TPersistent);
 var
   OpIndex: Integer;
 begin
-  if Source is Self.ClassType then
+  if Source is TPascalTypePostscriptDictPair then
   begin
+    Clear;
+
     SetLength(FOperands, Length(TPascalTypePostscriptDictPair(Source).FOperands));
     for OpIndex := 0 to High(FOperands) do
     begin
-      // TODO : Do we need a virtual constructor here?
-      FOperands[OpIndex] := TCustomPascalTypePostscriptDictOperand(TPascalTypePostscriptDictPair(Source).FOperands[OpIndex].ClassType.Create);
+      FOperands[OpIndex] := TPascalTypePostscriptDictOperandClass(TPascalTypePostscriptDictPair(Source).FOperands[OpIndex].ClassType).Create;
       FOperands[OpIndex].Assign(TPascalTypePostscriptDictPair(Source).FOperands[OpIndex]);
     end;
 
-    FDictOperator := TCustomPascalTypePostscriptDictOperator(TPascalTypePostscriptDictPair(Source).FDictOperator.ClassType.Create);
+    FDictOperator := TPascalTypePostscriptDictOperatorClass(TPascalTypePostscriptDictPair(Source).FDictOperator.ClassType).Create;
     FDictOperator.Assign(TPascalTypePostscriptDictPair(Source).FDictOperator);
   end else
     inherited;
 end;
 
-procedure TPascalTypePostscriptDictPair.ClearOperands;
+procedure TPascalTypePostscriptDictPair.Clear;
 var
-  OperandIndex: Integer;
+  i: Integer;
 begin
-  for OperandIndex := 0 to High(FOperands) do
-    FreeAndNil(FOperands[OperandIndex]);
+  FreeAndNil(FDictOperator);
+
+  for i := 0 to High(FOperands) do
+    FreeAndNil(FOperands[i]);
 end;
 
-destructor TPascalTypePostscriptDictPair.Destroy;
+function TPascalTypePostscriptDictPair.GetOperand(Index: Integer): TCustomPascalTypePostscriptDictOperand;
 begin
-  ClearOperands;
-  inherited;
-end;
-
-function TPascalTypePostscriptDictPair.GetOperand(Index: Integer)
-  : TCustomPascalTypePostscriptDictOperand;
-begin
-  if (Index >= 0) and (Index < Length(FOperands)) then
-    Result := FOperands[Index]
-  else
+  if (Index < 0) or (Index > High(FOperands)) then
     raise EPascalTypeError.CreateFmt(RCStrIndexOutOfBounds, [Index]);
+  Result := FOperands[Index];
 end;
 
 function TPascalTypePostscriptDictPair.GetOperandCount: Integer;
@@ -1098,42 +1126,66 @@ end;
 
 { TPascalTypePostscriptDictDataTable }
 
-procedure TPascalTypePostscriptDictDataTable.Assign(Source: TPersistent);
+constructor TPascalTypePostscriptDictDataTable.Create(AParent: TCustomPascalTypeTable);
 begin
   inherited;
+
+  FData := TObjectList<TPascalTypePostscriptDictPair>.Create;
+end;
+
+destructor TPascalTypePostscriptDictDataTable.Destroy;
+begin
+  FData.Free;
+  inherited;
+end;
+
+procedure TPascalTypePostscriptDictDataTable.Assign(Source: TPersistent);
+var
+  SourceItem: TPascalTypePostscriptDictPair;
+  NewItem: TPascalTypePostscriptDictPair;
+begin
+  inherited;
+
   if Source is TPascalTypePostscriptDictDataTable then
-    FData := TPascalTypePostscriptDictDataTable(Source).FData;
+  begin
+    FData.Clear;
+    FData.Capacity := TPascalTypePostscriptDictDataTable(Source).FData.Count;
+    for SourceItem in TPascalTypePostscriptDictDataTable(Source).FData do
+    begin
+      NewItem := TPascalTypePostscriptDictPair.Create;
+      FData.Add(NewItem);
+      NewItem.Assign(SourceItem);
+    end;
+  end;
 end;
 
 procedure TPascalTypePostscriptDictDataTable.Clear;
 begin
-  SetLength(FData, 0);
+  FData.Clear;
 end;
 
 function TPascalTypePostscriptDictDataTable.GetStringIndex(const Index: Integer): Integer;
 var
-  DictIndex: Integer;
+  Item: TPascalTypePostscriptDictPair;
 begin
-  for DictIndex := 0 to High(FData) do
-    with FData[DictIndex] do
-      if (DictOperator <> nil) then
-        if DictOperator.GetOperator = Index then
-          if OperandCount > 0 then
-          begin
-            Result := Operand[0].AsInteger;
-            Exit;
-          end;
+  for Item in FData do
+    if (Item.DictOperator <> nil) and (Item.DictOperator.GetOperator = Index) then
+      if (Item.OperandCount > 0) then
+      begin
+        Result := Item.Operand[0].AsInteger;
+        Exit;
+      end;
+
   raise EPascalTypeError.Create('String index not found');
 end;
 
 procedure TPascalTypePostscriptDictDataTable.LoadFromStream(Stream: TStream; Size: Cardinal);
 var
   StartPos: Int64;
-  DictOp  : TCustomPascalTypePostscriptDictOperator;
-  Operands: array of TCustomPascalTypePostscriptDictOperand;
-  OpIndex : Integer;
-  Data    : array [0..3] of Byte;
-  Value   : Integer;
+  Item: TPascalTypePostscriptDictPair;
+  DictOperator  : TCustomPascalTypePostscriptDictOperator;
+  DictOperand: TCustomPascalTypePostscriptDictOperand;
+  Value   : Byte;
   str     : string;
   Nibble  : Byte;
   Token   : Byte;
@@ -1142,165 +1194,126 @@ begin
 
   inherited;
 
-  // initialize DictOp variable
-  DictOp := nil;
+  (*
+    DICT Data
+    Font dictionary data comprising key-value pairs is represented
+    in a compact tokenized format that is similar to that used to
+    represent Type 1 charstrings. Dictionary keys are encoded as 1-
+    or 2-byte operators and dictionary values are encoded as
+    variable-size numeric operands that represent either integer or
+    real values. An operator is preceded by the operand(s) that
+    specify its value. A DICT is simply a sequence of
+    operand(s)/operator bytes concatenated together.
+  *)
+
+  DictOperator := nil;
+  Item := nil;
   try
+
+    // We are assuming that the layout of the data stream is (in EBNF)
+    //   Pair   ::= { Operand } Operator
+    //   Stream ::= { Pair }
 
     while (Stream.Position-StartPos < Size) do
     begin
-      // read token
-      Stream.Read(Token, 1);
+      Token := BigEndianValue.ReadByte(Stream);
 
-      // eventually increase value list length
-      if Token in [28..30, 32..254] then
-        SetLength(Operands, Length(Operands) + 1);
+      if (Item = nil) then
+        Item := TPascalTypePostscriptDictPair.Create;
 
-      // eventually free operator
-      FreeAndNil(DictOp);
-
-      // read element data
       case Token of
-        0:
-          begin
-            // Version
-            DictOp := TPascalTypePostscriptVersionOperator.Create;
-          end;
-        1:
-          begin
-            // Notice
-            DictOp := TPascalTypePostscriptNoticeOperator.Create;
-          end;
-        2:
-          begin
-            // FullName
-            DictOp := TPascalTypePostscriptFullNameOperator.Create;
-          end;
-        3:
-          begin
-            // FamilyName
-            DictOp := TPascalTypePostscriptFamilyNameOperator.Create;
-          end;
-        4:
-          begin
-            // Weight
-            DictOp := TPascalTypePostscriptWeightOperator.Create;
-          end;
-        5:
-          begin
-            // FontBBox
-            DictOp := TPascalTypePostscriptFontBBoxOperator.Create;
-          end;
-        6:
-          begin
-            // BlueValues
-            DictOp := TPascalTypePostscriptBlueValuesOperator.Create;
-          end;
-        7:
-          begin
-            // OtherBlues
-            DictOp := TPascalTypePostscriptOtherBluesOperator.Create;
-          end;
-        8:
-          begin
-            // FamilyBlues
-            DictOp := TPascalTypePostscriptFamilyBluesOperator.Create;
-          end;
-        9:
-          begin
-            // FamilyOtherBlues
-            DictOp := TPascalTypePostscriptFamilyOtherBluesOperator.Create;
-          end;
-        10:
-          begin
-            // StdHW
-            DictOp := TPascalTypePostscriptStdHWOperator.Create;
-          end;
-        11:
-          begin
-            // StdVW
-            DictOp := TPascalTypePostscriptStdVWOperator.Create;
-          end;
-        12:
-          begin
-            // escape
-            Stream.Read(Data[0], 1);
-            DictOp := TPascalTypePostscriptEscapeOperator.Create;
-            TPascalTypePostscriptEscapeOperator(DictOp).OpCode := Data[0];
-          end;
-        13:
-          begin
-            // UniqueID
-            DictOp := TPascalTypePostscriptUniqueIDOperator.Create;
-          end;
-        14:
-          begin
-            // XUID
-            DictOp := TPascalTypePostscriptXUIDOperator.Create;
-          end;
-        15:
-          begin
-            // charset
-            DictOp := TPascalTypePostscriptCharsetOperator.Create;
-          end;
-        16:
-          begin
-            // Encoding
-            DictOp := TPascalTypePostscriptEncodingOperator.Create;
-          end;
-        17:
-          begin
-            // CharStrings
-            DictOp := TPascalTypePostscriptCharStringOperator.Create;
-          end;
-        18:
-          begin
-            // Private
-            DictOp := TPascalTypePostscriptPrivateOperator.Create;
-          end;
-        19:
-          begin
-            // Subrs
-            DictOp := TPascalTypePostscriptSubrsOperator.Create;
-          end;
-        20:
-          begin
-            // defaultWidthX
-            DictOp := TPascalTypePostscriptDefaultWidthXOperator.Create;
-          end;
-        21:
-          begin
-            // nominalWidthX
-            DictOp := TPascalTypePostscriptNominalWidthXOperator.Create;
-          end;
-        28:
-          begin
-            Stream.Read(Data[0], 2);
-            Value := (Data[0] shl 8) or Data[1];
+        0: // Version
+          DictOperator := TPascalTypePostscriptVersionOperator.Create;
 
-            Operands[High(Operands)] := TPascalTypePostscriptOperandSmallInt.Create;
-            TPascalTypePostscriptOperandSmallInt(Operands[High(Operands)]).Value := SmallInt(Value);
-          end;
-        29:
-          begin
-            Stream.Read(Data[0], 4);
-            Value := (Data[0] shl 24) or (Data[1] shl 16) or (Data[2] shl 8) or Data[3];
+        1: // Notice
+          DictOperator := TPascalTypePostscriptNoticeOperator.Create;
 
-            Operands[High(Operands)] := TPascalTypePostscriptOperandInteger.Create;
-            TPascalTypePostscriptOperandInteger(Operands[High(Operands)]).Value := Value;
-          end;
-        30:
-          begin
-            // BCD (real number)
+        2: // FullName
+          DictOperator := TPascalTypePostscriptFullNameOperator.Create;
 
+        3: // FamilyName
+          DictOperator := TPascalTypePostscriptFamilyNameOperator.Create;
+
+        4: // Weight
+          DictOperator := TPascalTypePostscriptWeightOperator.Create;
+
+        5: // FontBBox
+          DictOperator := TPascalTypePostscriptFontBBoxOperator.Create;
+
+        6: // BlueValues
+          DictOperator := TPascalTypePostscriptBlueValuesOperator.Create;
+
+        7: // OtherBlues
+          DictOperator := TPascalTypePostscriptOtherBluesOperator.Create;
+
+        8: // FamilyBlues
+          DictOperator := TPascalTypePostscriptFamilyBluesOperator.Create;
+
+        9: // FamilyOtherBlues
+          DictOperator := TPascalTypePostscriptFamilyOtherBluesOperator.Create;
+
+        10: // StdHW
+          DictOperator := TPascalTypePostscriptStdHWOperator.Create;
+
+        11: // StdVW
+          DictOperator := TPascalTypePostscriptStdVWOperator.Create;
+
+        12: // escape
+          begin
+            DictOperator := TPascalTypePostscriptEscapeOperator.Create;
+            TPascalTypePostscriptEscapeOperator(DictOperator).OpCode := BigEndianValue.ReadByte(Stream);
+          end;
+
+        13: // UniqueID
+          DictOperator := TPascalTypePostscriptUniqueIDOperator.Create;
+
+        14: // XUID
+          DictOperator := TPascalTypePostscriptXUIDOperator.Create;
+
+        15: // charset
+          DictOperator := TPascalTypePostscriptCharsetOperator.Create;
+
+        16: // Encoding
+          DictOperator := TPascalTypePostscriptEncodingOperator.Create;
+
+        17: // CharStrings
+          DictOperator := TPascalTypePostscriptCharStringOperator.Create;
+
+        18: // Private
+          DictOperator := TPascalTypePostscriptPrivateOperator.Create;
+
+        19: // Subrs
+          DictOperator := TPascalTypePostscriptSubrsOperator.Create;
+
+        20: // defaultWidthX
+          DictOperator := TPascalTypePostscriptDefaultWidthXOperator.Create;
+
+        21: // nominalWidthX
+          DictOperator := TPascalTypePostscriptNominalWidthXOperator.Create;
+
+        28: // Small Integer
+          begin
+            DictOperand := Item.AddOperand(TPascalTypePostscriptOperandSmallInt);
+            TPascalTypePostscriptOperandSmallInt(DictOperand).Value := BigEndianValue.ReadSmallInt(Stream);
+          end;
+
+        29: // Integer
+          begin
+            DictOperand := Item.AddOperand(TPascalTypePostscriptOperandInteger);
+            TPascalTypePostscriptOperandInteger(DictOperand).Value := BigEndianValue.ReadInteger(Stream);
+          end;
+
+        30: // BCD (real number)
+          begin
             // reset string
             str := '';
 
             repeat
               // read two nibbles
-              Stream.Read(Data[0], 1);
+              Value := BigEndianValue.ReadByte(Stream);
 
               // get first nibble
-              Nibble := Data[0] shr 4;
+              Nibble := Value shr 4;
 
               case Nibble of
                 0..9:
@@ -1320,7 +1333,7 @@ begin
               end;
 
               // get second nibble
-              Nibble := Data[0] and $F;
+              Nibble := Value and $F;
 
               case Nibble of
                 0..9:
@@ -1341,73 +1354,55 @@ begin
 
             until (Nibble = $F);
 
-            Operands[High(Operands)] := TPascalTypePostscriptOperandBCD.Create;
-            TPascalTypePostscriptOperandBCD(Operands[High(Operands)]).Value := str;
+            DictOperand := Item.AddOperand(TPascalTypePostscriptOperandBCD);
+            TPascalTypePostscriptOperandBCD(DictOperand).Value := str;
           end;
+
         32..246:
           begin
-            Value := Token - 139;
-
-            Operands[High(Operands)] := TPascalTypePostscriptOperandShortInt.Create;
-            TPascalTypePostscriptOperandShortInt(Operands[High(Operands)]).Value := Value;
+            DictOperand := Item.AddOperand(TPascalTypePostscriptOperandShortInt);
+            TPascalTypePostscriptOperandShortInt(DictOperand).Value := Token - 139;
           end;
+
         247..250:
           begin
-            Stream.Read(Data[0], 1);
-            Value := (Token - 247) shl 8 + Data[0] + 108;
-
-            Operands[High(Operands)] := TPascalTypePostscriptOperandComposite.Create;
-            TPascalTypePostscriptOperandComposite(Operands[High(Operands)]).Value := Value;
+            DictOperand := Item.AddOperand(TPascalTypePostscriptOperandComposite);
+            Value := BigEndianValue.ReadByte(Stream);
+            TPascalTypePostscriptOperandComposite(DictOperand).Value := (Token - 247) shl 8 + Value + 108;
           end;
+
         251..254:
           begin
-            Stream.Read(Data[0], 1);
-            Value := -(Token - 251) shl 8 - Data[0] - 108;
-
-            Operands[High(Operands)] := TPascalTypePostscriptOperandComposite.Create;
-            TPascalTypePostscriptOperandComposite(Operands[High(Operands)]).Value := Value;
+            DictOperand := Item.AddOperand(TPascalTypePostscriptOperandComposite);
+            Value := BigEndianValue.ReadByte(Stream);
+            TPascalTypePostscriptOperandComposite(DictOperand).Value := -(Token - 251) shl 8 - Value - 108;
           end;
+
       else
         raise EPascalTypeError.Create(RCStrCFFErrorWrongToken);
       end;
 
-      if Token in [0..21] then
+      if (DictOperator <> nil) then
       begin
-        // add element
-        SetLength(FData, Length(FData) + 1);
+        // Transfer ownership of operator to item
+        Item.DictOperator := DictOperator;
+        DictOperator := nil;
 
-        // assign value
-        FData[High(FData)] := TPascalTypePostscriptDictPair.Create;
-
-        // assign dict operator
-        FData[High(FData)].DictOperator := DictOp;
-        DictOp := nil; // Ownership has been transferred
-
-        // assign operands
-        for OpIndex := 0 to High(Operands) do
-          FData[High(FData)].AddOperand(Operands[OpIndex]);
-
-        // reset operand list length to zero
-        SetLength(Operands, 0);
+        // Transfer ownership of item to list
+        FData.Add(Item);
+        Item := nil;
       end;
     end;
 
-
   finally
-    for OpIndex := 0 to High(Operands) do
-      Operands[OpIndex].Free;
-    DictOp.Free;
+    Item.Free;
+    DictOperator.Free;
   end;
 end;
 
 procedure TPascalTypePostscriptDictDataTable.SaveToStream(Stream: TStream);
 begin
   inherited;
-
-  with Stream do
-  begin
-
-  end;
 
   raise EPascalTypeError.Create(RCStrNotImplemented);
 end;
@@ -2042,6 +2037,10 @@ end;
 
 { TCustomPascalTypePostscriptDictOperator }
 
+constructor TCustomPascalTypePostscriptDictOperator.Create;
+begin
+end;
+
 procedure TCustomPascalTypePostscriptDictOperator.Assign(Source: TPersistent);
 begin
   if Source is TCustomPascalTypePostscriptDictOperator then
@@ -2053,6 +2052,12 @@ begin
       inherited
   end else
     inherited;
+end;
+
+{ TCustomPascalTypePostscriptDictOperand }
+
+constructor TCustomPascalTypePostscriptDictOperand.Create;
+begin
 end;
 
 initialization

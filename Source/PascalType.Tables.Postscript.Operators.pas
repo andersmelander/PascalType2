@@ -43,138 +43,117 @@ uses
   PascalType.Tables.Postscript;
 
 type
-  TPascalTypePostscriptVersionOperator = class
-    (TCustomPascalTypePostscriptDictOperator)
+  TPascalTypePostscriptVersionOperator = class(TCustomPascalTypePostscriptDictOperator)
   protected
     class function GetOperator: Byte; override;
   end;
 
-  TPascalTypePostscriptNoticeOperator = class
-    (TCustomPascalTypePostscriptDictOperator)
+  TPascalTypePostscriptNoticeOperator = class(TCustomPascalTypePostscriptDictOperator)
   protected
     class function GetOperator: Byte; override;
   end;
 
-  TPascalTypePostscriptFullNameOperator = class
-    (TCustomPascalTypePostscriptDictOperator)
+  TPascalTypePostscriptFullNameOperator = class(TCustomPascalTypePostscriptDictOperator)
   protected
     class function GetOperator: Byte; override;
   end;
 
-  TPascalTypePostscriptFamilyNameOperator = class
-    (TCustomPascalTypePostscriptDictOperator)
+  TPascalTypePostscriptFamilyNameOperator = class(TCustomPascalTypePostscriptDictOperator)
   protected
     class function GetOperator: Byte; override;
   end;
 
-  TPascalTypePostscriptWeightOperator = class
-    (TCustomPascalTypePostscriptDictOperator)
+  TPascalTypePostscriptWeightOperator = class(TCustomPascalTypePostscriptDictOperator)
   protected
     class function GetOperator: Byte; override;
   end;
 
-  TPascalTypePostscriptFontBBoxOperator = class
-    (TCustomPascalTypePostscriptDictOperator)
+  TPascalTypePostscriptFontBBoxOperator = class(TCustomPascalTypePostscriptDictOperator)
   protected
     class function GetOperator: Byte; override;
   end;
 
-  TPascalTypePostscriptBlueValuesOperator = class
-    (TCustomPascalTypePostscriptDictOperator)
+  TPascalTypePostscriptBlueValuesOperator = class(TCustomPascalTypePostscriptDictOperator)
   protected
     class function GetOperator: Byte; override;
   end;
 
-  TPascalTypePostscriptOtherBluesOperator = class
-    (TCustomPascalTypePostscriptDictOperator)
+  TPascalTypePostscriptOtherBluesOperator = class(TCustomPascalTypePostscriptDictOperator)
   protected
     class function GetOperator: Byte; override;
   end;
 
-  TPascalTypePostscriptFamilyBluesOperator = class
-    (TCustomPascalTypePostscriptDictOperator)
+  TPascalTypePostscriptFamilyBluesOperator = class(TCustomPascalTypePostscriptDictOperator)
   protected
     class function GetOperator: Byte; override;
   end;
 
-  TPascalTypePostscriptFamilyOtherBluesOperator = class
-    (TCustomPascalTypePostscriptDictOperator)
+  TPascalTypePostscriptFamilyOtherBluesOperator = class(TCustomPascalTypePostscriptDictOperator)
   protected
     class function GetOperator: Byte; override;
   end;
 
-  TPascalTypePostscriptStdHWOperator = class
-    (TCustomPascalTypePostscriptDictOperator)
+  TPascalTypePostscriptStdHWOperator = class(TCustomPascalTypePostscriptDictOperator)
   protected
     class function GetOperator: Byte; override;
   end;
 
-  TPascalTypePostscriptStdVWOperator = class
-    (TCustomPascalTypePostscriptDictOperator)
+  TPascalTypePostscriptStdVWOperator = class(TCustomPascalTypePostscriptDictOperator)
   protected
     class function GetOperator: Byte; override;
   end;
 
-  TPascalTypePostscriptEscapeOperator = class
-    (TCustomPascalTypePostscriptDictOperator)
+  TPascalTypePostscriptEscapeOperator = class(TCustomPascalTypePostscriptDictOperator)
   private
     FOpCode: Byte;
   protected
     class function GetOperator: Byte; override;
   public
+    procedure Assign(Source: TPersistent); override;
     property Opcode: Byte read FOpCode write FOpCode;
   end;
 
-  TPascalTypePostscriptUniqueIDOperator = class
-    (TCustomPascalTypePostscriptDictOperator)
+  TPascalTypePostscriptUniqueIDOperator = class(TCustomPascalTypePostscriptDictOperator)
   protected
     class function GetOperator: Byte; override;
   end;
 
-  TPascalTypePostscriptXUIDOperator = class
-    (TCustomPascalTypePostscriptDictOperator)
+  TPascalTypePostscriptXUIDOperator = class(TCustomPascalTypePostscriptDictOperator)
   protected
     class function GetOperator: Byte; override;
   end;
 
-  TPascalTypePostscriptCharsetOperator = class
-    (TCustomPascalTypePostscriptDictOperator)
+  TPascalTypePostscriptCharsetOperator = class(TCustomPascalTypePostscriptDictOperator)
   protected
     class function GetOperator: Byte; override;
   end;
 
-  TPascalTypePostscriptEncodingOperator = class
-    (TCustomPascalTypePostscriptDictOperator)
+  TPascalTypePostscriptEncodingOperator = class(TCustomPascalTypePostscriptDictOperator)
   protected
     class function GetOperator: Byte; override;
   end;
 
-  TPascalTypePostscriptCharStringOperator = class
-    (TCustomPascalTypePostscriptDictOperator)
+  TPascalTypePostscriptCharStringOperator = class(TCustomPascalTypePostscriptDictOperator)
   protected
     class function GetOperator: Byte; override;
   end;
 
-  TPascalTypePostscriptPrivateOperator = class
-    (TCustomPascalTypePostscriptDictOperator)
+  TPascalTypePostscriptPrivateOperator = class(TCustomPascalTypePostscriptDictOperator)
   protected
     class function GetOperator: Byte; override;
   end;
 
-  TPascalTypePostscriptSubrsOperator = class
-    (TCustomPascalTypePostscriptDictOperator)
+  TPascalTypePostscriptSubrsOperator = class(TCustomPascalTypePostscriptDictOperator)
   protected
     class function GetOperator: Byte; override;
   end;
 
-  TPascalTypePostscriptDefaultWidthXOperator = class
-    (TCustomPascalTypePostscriptDictOperator)
+  TPascalTypePostscriptDefaultWidthXOperator = class(TCustomPascalTypePostscriptDictOperator)
   protected
     class function GetOperator: Byte; override;
   end;
 
-  TPascalTypePostscriptNominalWidthXOperator = class
-    (TCustomPascalTypePostscriptDictOperator)
+  TPascalTypePostscriptNominalWidthXOperator = class(TCustomPascalTypePostscriptDictOperator)
   protected
     class function GetOperator: Byte; override;
   end;
@@ -266,6 +245,14 @@ begin
 end;
 
 { TPascalTypePostscriptEscapeOperator }
+
+procedure TPascalTypePostscriptEscapeOperator.Assign(Source: TPersistent);
+begin
+  if Source is TPascalTypePostscriptEscapeOperator then
+    FOpCode := TPascalTypePostscriptEscapeOperator(Source).FOpCode
+  else
+    inherited;
+end;
 
 class function TPascalTypePostscriptEscapeOperator.GetOperator: Byte;
 begin
