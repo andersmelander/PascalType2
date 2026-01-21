@@ -403,7 +403,12 @@ begin
 end;
 
 destructor TOpenTypePositioningSubTableChainedContextClass.Destroy;
+var
+  Part: TContextPart;
 begin
+  for Part := Low(FClassDefinitions) to High(FClassDefinitions) do
+    FClassDefinitions[Part].Free;
+
   inherited;
 end;
 
@@ -414,6 +419,9 @@ begin
   inherited;
   if Source is TOpenTypePositioningSubTableChainedContextClass then
   begin
+    for Part := Low(FClassDefinitions) to High(FClassDefinitions) do
+      FreeAndNil(FClassDefinitions[Part]);
+
     FSequenceRules := Copy(TOpenTypePositioningSubTableChainedContextClass(Source).FSequenceRules);
     // Assignment via property setter makes a copy
     for Part := Low(TContextPart) to High(TContextPart) do

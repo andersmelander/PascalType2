@@ -355,6 +355,7 @@ end;
 
 destructor TOpenTypeSubstitutionSubTableContextClass.Destroy;
 begin
+  FClassDefinitions.Free;
   inherited;
 end;
 
