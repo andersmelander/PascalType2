@@ -128,6 +128,8 @@ type
   protected
     procedure SetClassDefinitions(const Value: TCustomOpenTypeClassDefinitionTable);
   public
+    destructor Destroy; override;
+
     procedure Assign(Source: TPersistent); override;
 
     procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); override;
@@ -347,6 +349,12 @@ end;
 //              TOpenTypePositioningSubTableContextClass
 //
 //------------------------------------------------------------------------------
+destructor TOpenTypePositioningSubTableContextClass.Destroy;
+begin
+  FClassDefinitions.Free;;
+  inherited;
+end;
+
 procedure TOpenTypePositioningSubTableContextClass.Assign(Source: TPersistent);
 begin
   inherited;

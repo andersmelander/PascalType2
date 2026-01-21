@@ -3023,44 +3023,53 @@ begin
   end;
 {$ifend}
 
-  Reader := TBinaryReader.Create(Stream, nil, True);
   try
-    CodePoint := 0;
-    Size := Reader.ReadInteger;
 
-    for i := 0 to Size - 1 do
-    begin
-      Stream.ReadBuffer(CodePoint, 3);
-      Assert(CodePoint <= PascalTypeUnicode.MaximumUTF16);
+    Reader := TBinaryReader.Create(Stream, nil, True);
+    try
+      Stream := nil; // Reader now owns the stream
 
-      Size := Reader.ReadByte;
-      if Size > 0 then
+      CodePoint := 0;
+      Size := Reader.ReadInteger;
+
+      for i := 0 to Size - 1 do
       begin
-        if (TCompatibilityFormattingTag(Reader.ReadByte) = cftCanonical) then
-          Decomposition := CanonicalDecompositions.GetPointer(CodePoint, True)
-        else
-          Decomposition := CompatibleDecompositions.GetPointer(CodePoint, True);
+        Reader.BaseStream.ReadBuffer(CodePoint, 3);
+        Assert(CodePoint <= PascalTypeUnicode.MaximumUTF16);
 
-        // Decomposition should never have more than one canonical mapping and
-        // one composite mapping.
-        Assert(Length(Decomposition^) = 0);
-
-        SetLength(Decomposition^, Size);
-
-        // Note:
-        // Max length of a canonical decomposition is 2.
-        // Max length of a compatible decomposition is 18.
-
-        for j := 0 to Size - 1 do
+        Size := Reader.ReadByte;
+        if Size > 0 then
         begin
-          Stream.ReadBuffer(CodePoint, 3);
-          Assert(CodePoint <= PascalTypeUnicode.MaximumUTF16);
+          if (TCompatibilityFormattingTag(Reader.ReadByte) = cftCanonical) then
+            Decomposition := CanonicalDecompositions.GetPointer(CodePoint, True)
+          else
+            Decomposition := CompatibleDecompositions.GetPointer(CodePoint, True);
 
-          Decomposition^[j] := CodePoint;
+          // Decomposition should never have more than one canonical mapping and
+          // one composite mapping.
+          Assert(Length(Decomposition^) = 0);
+
+          SetLength(Decomposition^, Size);
+
+          // Note:
+          // Max length of a canonical decomposition is 2.
+          // Max length of a compatible decomposition is 18.
+
+          for j := 0 to Size - 1 do
+          begin
+            Reader.BaseStream.ReadBuffer(CodePoint, 3);
+            Assert(CodePoint <= PascalTypeUnicode.MaximumUTF16);
+
+            Decomposition^[j] := CodePoint;
+          end;
         end;
       end;
+
+      Assert(Reader.BaseStream.Position = Reader.BaseStream.Size);
+
+    finally
+      Reader.Free;
     end;
-    Assert(Stream.Position = Stream.Size);
   finally
     Stream.Free;
   end;
