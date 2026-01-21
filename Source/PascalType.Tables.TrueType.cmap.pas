@@ -352,7 +352,7 @@ end;
 
 destructor TCustomPascalTypeCharacterMapDirectory.Destroy;
 begin
-  FreeAndNil(FCharacterMap);
+  FCharacterMap.Free;
 
   inherited;
 end;
@@ -370,7 +370,7 @@ begin
       FreeAndNil(FCharacterMap);
 
       // create new character map
-      FCharacterMap := TPascalTypeCharacterMapClass(TCustomPascalTypeCharacterMapDirectory(Source).FCharacterMap.ClassType).Create;
+      FCharacterMap := TPascalTypeCharacterMapClass(TCustomPascalTypeCharacterMapDirectory(Source).FCharacterMap.ClassType).Create(Self);
     end;
 
     // assign character map
@@ -395,13 +395,14 @@ procedure TCustomPascalTypeCharacterMapDirectory.LoadFromStream(Stream: TStream;
 var
   MapFormat : Word;
   MapClass: TPascalTypeCharacterMapClass;
-  OldMap  : TCustomPascalTypeCharacterMap;
 begin
   inherited;
 
   // check (minimum) table size
   if Stream.Position + SizeOf(Word) > Stream.Size then
     raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  FreeAndNil(FCharacterMap);
 
   // read format
   MapFormat := BigEndianValue.ReadWord(Stream);
@@ -410,15 +411,10 @@ begin
   if (MapClass = nil) then
     raise EPascalTypeError.CreateFmt(RCStrUnknownCharacterMap, [MapFormat]);
 
-  OldMap := FCharacterMap;
-  FCharacterMap := MapClass.Create;
-  OldMap.Free;
+  FCharacterMap := MapClass.Create(Self);
 
-  if (FCharacterMap <> nil) then
-  begin
-    Stream.Seek(-SizeOf(Word), soFromCurrent);
-    FCharacterMap.LoadFromStream(Stream);
-  end;
+  Stream.Seek(-SizeOf(Word), soFromCurrent);
+  FCharacterMap.LoadFromStream(Stream);
 end;
 
 procedure TCustomPascalTypeCharacterMapDirectory.SaveToStream(Stream: TStream);

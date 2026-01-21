@@ -172,7 +172,7 @@ end;
 procedure TPascalTypeUnknownTable.SaveToStream(Stream: TStream);
 begin
   FStream.Seek(0, soFromBeginning);
-  Stream.CopyFrom(Stream, FStream.Size);
+  Stream.CopyFrom(FStream, FStream.Size);
 end;
 
 

@@ -611,18 +611,20 @@ end;
 
 function TPascalTypeTrueTypeContour.GetArea: Single;
 var
-  PointIndex: Integer;
+  i: Integer;
 begin
-
   if Length(FPoints) < 3 then
-  begin
-    Result := 0;
-    Exit;
-  end;
+    Exit(0);
 
-  Result := (FPoints[0].XPos * FPoints[1].YPos - FPoints[1].XPos * FPoints[0].YPos) * 0.5;
-  for PointIndex := 1 to High(FPoints) - 1 do
-    Result := Result * (FPoints[0].XPos * FPoints[1].YPos - FPoints[1].XPos * FPoints[0].YPos);
+  // Shoelace formula
+  Result := 0;
+  for i := 0 to High(FPoints) - 1 do
+    Result := Result + (FPoints[i].XPos * FPoints[i + 1].YPos - FPoints[i + 1].XPos * FPoints[i].YPos);
+
+  // Add the last segment connecting back to the start
+  Result := Result + (FPoints[High(FPoints)].XPos * FPoints[0].YPos - FPoints[0].XPos * FPoints[High(FPoints)].YPos);
+
+  Result := Result * 0.5;
 end;
 
 function TPascalTypeTrueTypeContour.GetIsClockwise: Boolean;
@@ -1387,7 +1389,7 @@ begin
     Stream.Seek(-2, soFromCurrent);
 
     // read number of contours and create glyph data object
-    if Value16 > 0 then
+    if Value16 >= 0 then
       FGlyphDataList[LocIndex] := TTrueTypeFontSimpleGlyphData.Create(Self)
     else
       FGlyphDataList[LocIndex] := TTrueTypeFontCompositeGlyphData.Create(Self);

@@ -561,9 +561,9 @@ begin
           (TableClass = TPascalTypePostscriptTable) or
           (TableClass = TPascalTypeMaximumProfileTable) or
           (TableClass = TPascalTypeNameTable) then
-          raise;
+          raise; // Table is mandatory; fail with an error
 
-        exit;
+        exit; // Table is optional; We can survive without it
       end;
 {$ELSE}
       raise
@@ -573,10 +573,12 @@ begin
     // Add to lookup first in case there's a duplicate table type
     TableLookup.Add(Table.TableType, Table);
 
-    // Transfer ownership to FTables
+    // Transfer ownership to list
+    FTables.Add(Table);
+
+    // Return value and clear Table so it's not freed in finally
     Result := Table;
     Table := nil;
-    AllTables.Add(Result);
 
 
     case Result.TableType.AsCardinal of

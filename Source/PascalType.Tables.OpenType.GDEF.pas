@@ -119,26 +119,28 @@ begin
 
     if (TOpenTypeGlyphDefinitionTable(Source).FMarkGlyphSetsDef <> nil) then
     begin
-      FMarkGlyphSetsDef := TOpenTypeMarkGlyphSetTable.Create(Self);
+      if (FMarkGlyphSetsDef = nil) then
+        FMarkGlyphSetsDef := TOpenTypeMarkGlyphSetTable.Create(Self);
       FMarkGlyphSetsDef.Assign(TOpenTypeGlyphDefinitionTable(Source).FMarkGlyphSetsDef);
     end else
-      FMarkGlyphSetsDef.Free;
+      FreeAndNil(FMarkGlyphSetsDef);
 
     if (TOpenTypeGlyphDefinitionTable(Source).FGlyphClassDef <> nil) then
     begin
-      if (FGlyphClassDef <> nil) and (FGlyphClassDef.ClassType <>  TOpenTypeGlyphDefinitionTable(Source).FGlyphClassDef.ClassType) then
+      if (FGlyphClassDef <> nil) and (FGlyphClassDef.ClassType <> TOpenTypeGlyphDefinitionTable(Source).FGlyphClassDef.ClassType) then
         FreeAndNil(FGlyphClassDef);
-      FGlyphClassDef := TOpenTypeClassDefinitionTableClass(TOpenTypeGlyphDefinitionTable(Source).FGlyphClassDef.ClassType).Create;
+      if (FGlyphClassDef = nil) then
+        FGlyphClassDef := TOpenTypeClassDefinitionTableClass(TOpenTypeGlyphDefinitionTable(Source).FGlyphClassDef.ClassType).Create(Self);
       FGlyphClassDef.Assign(TOpenTypeGlyphDefinitionTable(Source).FGlyphClassDef);
     end else
       FreeAndNil(FGlyphClassDef);
 
     if (TOpenTypeGlyphDefinitionTable(Source).FMarkAttachClassDef <> nil) then
     begin
-      if (FMarkAttachClassDef <> nil) and (FMarkAttachClassDef.ClassType <>  TOpenTypeGlyphDefinitionTable(Source).FMarkAttachClassDef.ClassType) then
+      if (FMarkAttachClassDef <> nil) and (FMarkAttachClassDef.ClassType <> TOpenTypeGlyphDefinitionTable(Source).FMarkAttachClassDef.ClassType) then
         FreeAndNil(FMarkAttachClassDef);
-
-      FMarkAttachClassDef := TOpenTypeClassDefinitionTableClass(TOpenTypeGlyphDefinitionTable(Source).FMarkAttachClassDef.ClassType).Create;
+      if (FMarkAttachClassDef = nil) then
+        FMarkAttachClassDef := TOpenTypeClassDefinitionTableClass(TOpenTypeGlyphDefinitionTable(Source).FMarkAttachClassDef.ClassType).Create(Self);
       FMarkAttachClassDef.Assign(TOpenTypeGlyphDefinitionTable(Source).FMarkAttachClassDef);
     end else
       FreeAndNil(FMarkAttachClassDef);
@@ -199,9 +201,9 @@ begin
     Value16 := BigEndianValue.ReadWord(Stream);
     case Value16 of
       1:
-        FGlyphClassDef := TOpenTypeClassDefinitionFormat1Table.Create;
+        FGlyphClassDef := TOpenTypeClassDefinitionFormat1Table.Create(Self);
       2:
-        FGlyphClassDef := TOpenTypeClassDefinitionFormat2Table.Create;
+        FGlyphClassDef := TOpenTypeClassDefinitionFormat2Table.Create(Self);
     else
       raise EPascalTypeError.Create(RCStrUnknownClassDefinition);
     end;
@@ -219,9 +221,9 @@ begin
     Value16 := BigEndianValue.ReadWord(Stream);
     case Value16 of
       1:
-        FMarkAttachClassDef := TOpenTypeClassDefinitionFormat1Table.Create;
+        FMarkAttachClassDef := TOpenTypeClassDefinitionFormat1Table.Create(Self);
       2:
-        FMarkAttachClassDef := TOpenTypeClassDefinitionFormat2Table.Create;
+        FMarkAttachClassDef := TOpenTypeClassDefinitionFormat2Table.Create(Self);
     else
       raise EPascalTypeError.Create(RCStrUnknownClassDefinition);
     end;

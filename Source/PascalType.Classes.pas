@@ -80,9 +80,9 @@ type
 
     // Most tables don't need to know the size of the data being loaded, but
     // a few do (e.g. 'cvt') so we have to pass the size along if it's known.
-    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); virtual; abstract;
+    procedure LoadFromStream(Stream: TStream; Size: Cardinal = 0); virtual;
 
-    procedure SaveToStream(Stream: TStream); virtual; abstract;
+    procedure SaveToStream(Stream: TStream); virtual;
 
     property Parent: TCustomPascalTypeTable read FParent;
     property FontFace: IPascalTypeFontFace read GetFontFace;
@@ -278,6 +278,14 @@ begin
     Result := Parent.FontFace
   else
     Result := nil;
+end;
+
+procedure TCustomPascalTypeTable.LoadFromStream(Stream: TStream; Size: Cardinal);
+begin
+end;
+
+procedure TCustomPascalTypeTable.SaveToStream(Stream: TStream);
+begin
 end;
 
 procedure TCustomPascalTypeTable.Assign(Source: TPersistent);
@@ -615,7 +623,7 @@ var
   Value: UInt24;
 begin
   ReadUInt24(AStream, Value);
-  Result := Value[2] or (Value[1] shl 8) or (Value[0] shl 16);
+  Result := Value[0] or (Value[1] shl 8) or (Value[2] shl 16);
 end;
 
 end.

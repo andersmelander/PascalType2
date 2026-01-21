@@ -291,7 +291,7 @@ var
   Index: Integer;
 begin
   Pair.Left := LeftGlyphIndex;
-  Pair.Right := LeftGlyphIndex;
+  Pair.Right := RightGlyphIndex;
   if (TArray.BinarySearch<TKerningFormat0SubTable>(FPairs, Pair, Index,
     TComparer<TKerningFormat0SubTable>.Construct(
       function(const A, B: TKerningFormat0SubTable): integer
