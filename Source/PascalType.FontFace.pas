@@ -313,14 +313,9 @@ procedure TCustomPascalTypeFontFacePersistent.SaveToFile(const FileName: TFileNa
 var
   Stream: TStream;
 begin
-  if FileExists(FileName) then
-    Stream := TFileStream.Create(FileName, fmCreate)
-  else
-    Stream := TFileStream.Create(FileName, fmOpenWrite);
+  Stream := TFileStream.Create(FileName, fmCreate);
   try
-
     SaveToStream(Stream);
-
   finally
     Stream.Free;
   end;
