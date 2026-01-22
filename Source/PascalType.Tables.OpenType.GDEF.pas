@@ -252,74 +252,71 @@ var
 begin
   inherited;
 
-  with Stream do
+  // remember start position as position minus version aready written
+  StartPos := Stream.Position - 4;
+
+  // reset offset array to zero
+  FillChar(Offsets[0], 5 * SizeOf(Word), 0);
+
+  // skip directory for now
+  Stream.Seek(SizeOf(Offsets), soCurrent);
+
+  // write glyph class definition
+  if (FGlyphClassDef <> nil) then
   begin
-    // remember start position as position minus version aready written
-    StartPos := Position - 4;
+    Offsets[0] := Word(Stream.Position - StartPos);
+    FGlyphClassDef.SaveToStream(Stream);
+  end;
 
-    // reset offset array to zero
-    FillChar(Offsets[0], 5 * SizeOf(Word), 0);
-
-    // skip directory for now
-    Seek(SizeOf(Offsets), soCurrent);
-
-    // write glyph class definition
-    if (FGlyphClassDef <> nil) then
+  (*
+    // write attachment list
+    if (FAttachmentListOffset <> nil) then
     begin
-      Offsets[0] := Word(Position - StartPos);
-      FGlyphClassDef.SaveToStream(Stream);
+    Offsets[1] := Word(Stream.Position - StartPos);
+    FAttachmentListOffset.SaveToStream(Stream);
     end;
-
-    (*
-      // write attachment list
-      if (FAttachmentListOffset <> nil) then
-      begin
-      Offsets[1] := Word(Position - StartPos);
-      FAttachmentListOffset.SaveToStream(Stream);
-      end;
-
-      // write ligature caret list
-      if (FLigatureCaretListOffset <> nil) then
-      begin
-      Offsets[2] := Word(Position - StartPos);
-      FLigatureCaretListOffset.SaveToStream(Stream);
-      end;
-    *)
-
-    // write mark attachment class definition
-    if (FMarkAttachClassDef <> nil) then
-    begin
-      Offsets[3] := Word(Position - StartPos);
-      FMarkAttachClassDef.SaveToStream(Stream);
-    end;
-
-    // write mark glyph set definition
-    if (FMarkGlyphSetsDef <> nil) then
-    begin
-      Offsets[4] := Word(Position - StartPos);
-      FMarkGlyphSetsDef.SaveToStream(Stream);
-    end;
-
-    // skip directory for now
-    Position := StartPos + SizeOf(TFixedPoint);
-
-    // write directory
-
-    // write glyph class definition
-    BigEndianValue.WriteWord(Stream, Offsets[0]);
-
-    // write attach list
-    BigEndianValue.WriteWord(Stream, Offsets[1]);
 
     // write ligature caret list
-    BigEndianValue.WriteWord(Stream, Offsets[2]);
+    if (FLigatureCaretListOffset <> nil) then
+    begin
+    Offsets[2] := Word(Stream.Position - StartPos);
+    FLigatureCaretListOffset.SaveToStream(Stream);
+    end;
+  *)
 
-    // write mark attach class definition
-    BigEndianValue.WriteWord(Stream, Offsets[3]);
-
-    // write mark glyph set
-    BigEndianValue.WriteWord(Stream, Offsets[4]);
+  // write mark attachment class definition
+  if (FMarkAttachClassDef <> nil) then
+  begin
+    Offsets[3] := Word(Stream.Position - StartPos);
+    FMarkAttachClassDef.SaveToStream(Stream);
   end;
+
+  // write mark glyph set definition
+  if (FMarkGlyphSetsDef <> nil) then
+  begin
+    Offsets[4] := Word(Stream.Position - StartPos);
+    FMarkGlyphSetsDef.SaveToStream(Stream);
+  end;
+
+  // skip directory for now
+  Stream.Position := StartPos + SizeOf(TFixedPoint);
+
+  // write directory
+
+  // write glyph class definition
+  BigEndianValue.WriteWord(Stream, Offsets[0]);
+
+  // write attach list
+  BigEndianValue.WriteWord(Stream, Offsets[1]);
+
+  // write ligature caret list
+  BigEndianValue.WriteWord(Stream, Offsets[2]);
+
+  // write mark attach class definition
+  BigEndianValue.WriteWord(Stream, Offsets[3]);
+
+  // write mark glyph set
+  BigEndianValue.WriteWord(Stream, Offsets[4]);
 end;
 
 //------------------------------------------------------------------------------

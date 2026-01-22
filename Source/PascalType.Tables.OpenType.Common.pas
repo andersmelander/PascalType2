@@ -213,30 +213,27 @@ var
 begin
   inherited;
 
-  with Stream do
-  begin
-    StartPos := Position;
+  StartPos := Stream.Position;
 
-    // write version
-    BigEndianValue.WriteCardinal(Stream, Cardinal(FVersion));
+  // write version
+  BigEndianValue.WriteCardinal(Stream, Cardinal(FVersion));
 
-    // write script list offset (fixed!)
-    BigEndianValue.WriteWord(Stream, 10);
+  // write script list offset (fixed!)
+  BigEndianValue.WriteWord(Stream, 10);
 
-    Position := StartPos + 10;
-    FScriptListTable.SaveToStream(Stream);
+  Stream.Position := StartPos + 10;
+  FScriptListTable.SaveToStream(Stream);
 
-    (*
-      // write script list offset
-      BigEndianValue.WriteWord(Stream, FScriptListOffset);
+  (*
+    // write script list offset
+    BigEndianValue.WriteWord(Stream, FScriptListOffset);
 
-      // write feature list offset
-      BigEndianValue.WriteWord(Stream, FFeatureListOffset);
+    // write feature list offset
+    BigEndianValue.WriteWord(Stream, FFeatureListOffset);
 
-      // write lookup list offset
-      BigEndianValue.WriteWord(Stream, FLookupListOffset);
-    *)
-  end;
+    // write lookup list offset
+    BigEndianValue.WriteWord(Stream, FLookupListOffset);
+  *)
 end;
 
 procedure TCustomOpenTypeCommonTable.SetVersion(const Value: TFixedPoint);

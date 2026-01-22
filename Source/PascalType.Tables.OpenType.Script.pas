@@ -366,54 +366,49 @@ var
 begin
   inherited;
 
-  with Stream do
+  // remember start position of the stream
+  StartPos := Stream.Position;
+
+  // write default language system offset
+  if (FDefaultLangSys <> nil) then
+    Value16 := 4 + 6 * FLanguageSystemTables.Count
+  else
+    Value16 := 0;
+  Stream.Write(Value16, SizeOf(Word));
+
+  // write feature list count
+  BigEndianValue.WriteWord(Stream, FLanguageSystemTables.Count);
+
+  // leave space for feature directory
+  Stream.Seek(6 * FLanguageSystemTables.Count, soCurrent);
+
+  // eventually write default language system
+  if (FDefaultLangSys <> nil) then
+    FDefaultLangSys.SaveToStream(Stream);
+
+  // build directory (to be written later) and write data
+  SetLength(LangSysRecords, FLanguageSystemTables.Count);
+  for LangSysIndex := 0 to High(LangSysRecords) do
   begin
-    // remember start position of the stream
-    StartPos := Position;
+    var LTable := TCustomOpenTypeLanguageSystemTable(FLanguageSystemTables[LangSysIndex]);
+    // get table type
+    LangSysRecords[LangSysIndex].Tag := LTable.TableType;
+    LangSysRecords[LangSysIndex].Offset := Stream.Position;
 
-    // write default language system offset
-    if (FDefaultLangSys <> nil) then
-      Value16 := 4 + 6 * FLanguageSystemTables.Count
-    else
-      Value16 := 0;
-    Write(Value16, SizeOf(Word));
+    // write feature to stream
+    LTable.SaveToStream(Stream);
+  end;
 
-    // write feature list count
-    BigEndianValue.WriteWord(Stream, FLanguageSystemTables.Count);
+  // write directory
+  Stream.Position := StartPos + 4;
 
-    // leave space for feature directory
-    Seek(6 * FLanguageSystemTables.Count, soCurrent);
+  for LangSysIndex := 0 to High(LangSysRecords) do
+  begin
+    // write tag
+    Stream.Write(LangSysRecords[LangSysIndex].Tag, SizeOf(TTableType));
 
-    // eventually write default language system
-    if (FDefaultLangSys <> nil) then
-      FDefaultLangSys.SaveToStream(Stream);
-
-    // build directory (to be written later) and write data
-    SetLength(LangSysRecords, FLanguageSystemTables.Count);
-    for LangSysIndex := 0 to High(LangSysRecords) do
-      with TCustomOpenTypeLanguageSystemTable
-        (FLanguageSystemTables[LangSysIndex]) do
-      begin
-        // get table type
-        LangSysRecords[LangSysIndex].Tag := TableType;
-        LangSysRecords[LangSysIndex].Offset := Position;
-
-        // write feature to stream
-        SaveToStream(Stream);
-      end;
-
-    // write directory
-    Position := StartPos + 4;
-
-    for LangSysIndex := 0 to High(LangSysRecords) do
-      with LangSysRecords[LangSysIndex] do
-      begin
-        // write tag
-        Write(Tag, SizeOf(TTableType));
-
-        // write offset
-        BigEndianValue.WriteWord(Stream, Offset);
-      end;
+    // write offset
+    BigEndianValue.WriteWord(Stream, LangSysRecords[LangSysIndex].Offset);
   end;
 end;
 

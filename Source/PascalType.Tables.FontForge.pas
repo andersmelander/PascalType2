@@ -174,32 +174,26 @@ procedure TPascalTypeFontForgeX11BDFTable.LoadFromStream(Stream: TStream; Size: 
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check if table is complete
-    if Position + 8 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check if table is complete
+  if Stream.Position + 8 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read version
-    FVersion := BigEndianValue.ReadWord(Stream);
-  end;
+  // read version
+  FVersion := BigEndianValue.ReadWord(Stream);
 end;
 
 procedure TPascalTypeFontForgeX11BDFTable.SaveToStream(Stream: TStream);
 begin
   inherited;
 
-  with Stream do
-  begin
-    // write version
-    BigEndianValue.WriteWord(Stream, FVersion);
+  // write version
+  BigEndianValue.WriteWord(Stream, FVersion);
 
-    // write strike-count
-    BigEndianValue.WriteWord(Stream, 0);
+  // write strike-count
+  BigEndianValue.WriteWord(Stream, 0);
 
-    // write offset
-    BigEndianValue.WriteCardinal(Stream, 0);
-  end;
+  // write offset
+  BigEndianValue.WriteCardinal(Stream, 0);
 end;
 
 procedure TPascalTypeFontForgeX11BDFTable.SetVersion(const Value: Word);
@@ -246,48 +240,42 @@ procedure TPascalTypeFontForgeTimeStampTable.LoadFromStream(Stream: TStream; Siz
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check if table is complete
-    if Position + 28 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check if table is complete
+  if Stream.Position + 28 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read version
-    FVersion := BigEndianValue.ReadCardinal(Stream);
+  // read version
+  FVersion := BigEndianValue.ReadCardinal(Stream);
 
-    // read time stamp
-    FTimeStamp := BigEndianValue.ReadInt64(Stream);
+  // read time stamp
+  FTimeStamp := BigEndianValue.ReadInt64(Stream);
 
-    // read creation date
-    FCreation := BigEndianValue.ReadInt64(Stream);
+  // read creation date
+  FCreation := BigEndianValue.ReadInt64(Stream);
 
-    // read last modified date
-    FLastMod := BigEndianValue.ReadInt64(Stream);
-  end;
+  // read last modified date
+  FLastMod := BigEndianValue.ReadInt64(Stream);
 end;
 
 procedure TPascalTypeFontForgeTimeStampTable.SaveToStream(Stream: TStream);
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check if table is complete
-    if Position + 28 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check if table is complete
+  if Stream.Position + 28 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // write version
-    BigEndianValue.WriteInt64(Stream, FVersion);
+  // write version
+  BigEndianValue.WriteInt64(Stream, FVersion);
 
-    // write time stamp
-    BigEndianValue.WriteInt64(Stream, FTimeStamp);
+  // write time stamp
+  BigEndianValue.WriteInt64(Stream, FTimeStamp);
 
-    // write creation date
-    BigEndianValue.WriteInt64(Stream, FCreation);
+  // write creation date
+  BigEndianValue.WriteInt64(Stream, FCreation);
 
-    // write last modified date
-    BigEndianValue.WriteInt64(Stream, FLastMod);
-  end;
+  // write last modified date
+  BigEndianValue.WriteInt64(Stream, FLastMod);
 end;
 
 procedure TPascalTypeFontForgeTimeStampTable.SetCreation(const Value: Int64);
@@ -371,29 +359,23 @@ procedure TPascalTypeFontForgeExtensionTable.LoadFromStream(Stream: TStream; Siz
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check if table is complete
-    if Position + 8 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check if table is complete
+  if Stream.Position + 8 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read version
-    FVersion.Fixed := BigEndianValue.ReadInteger(Stream);
-  end;
+  // read version
+  FVersion.Fixed := BigEndianValue.ReadInteger(Stream);
 end;
 
 procedure TPascalTypeFontForgeExtensionTable.SaveToStream(Stream: TStream);
 begin
   inherited;
 
-  with Stream do
-  begin
-    // write version
-    BigEndianValue.WriteCardinal(Stream, Cardinal(FVersion));
+  // write version
+  BigEndianValue.WriteCardinal(Stream, Cardinal(FVersion));
 
-    // write count
-    BigEndianValue.WriteCardinal(Stream, 0);
-  end;
+  // write count
+  BigEndianValue.WriteCardinal(Stream, 0);
 end;
 
 procedure TPascalTypeFontForgeExtensionTable.SetVersion
@@ -436,29 +418,23 @@ procedure TPascalTypeFontForgeTexTable.LoadFromStream(Stream: TStream; Size: Car
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check if table is complete
-    if Position + 8 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check if table is complete
+  if Stream.Position + 8 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read version
-    FVersion.Fixed := BigEndianValue.ReadInteger(Stream);
-  end;
+  // read version
+  FVersion.Fixed := BigEndianValue.ReadInteger(Stream);
 end;
 
 procedure TPascalTypeFontForgeTexTable.SaveToStream(Stream: TStream);
 begin
   inherited;
 
-  with Stream do
-  begin
-    // write version
-    BigEndianValue.WriteCardinal(Stream, Cardinal(FVersion));
+  // write version
+  BigEndianValue.WriteCardinal(Stream, Cardinal(FVersion));
 
-    // write count
-    BigEndianValue.WriteCardinal(Stream, 0);
-  end;
+  // write count
+  BigEndianValue.WriteCardinal(Stream, 0);
 end;
 
 procedure TPascalTypeFontForgeTexTable.SetVersion(const Value: TFixedPoint);
