@@ -187,18 +187,15 @@ procedure TCustomPascalTypeEmbeddedBitmapTable.LoadFromStream(Stream: TStream; S
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 4 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read version
-    FVersion.Fixed := BigEndianValue.ReadInteger(Stream);
+  // read version
+  FVersion.Fixed := BigEndianValue.ReadInteger(Stream);
 
-    if FVersion.Value < 2 then
-      raise EPascalTypeError.Create(RCStrUnknownVersion);
-  end;
+  if FVersion.Value < 2 then
+    raise EPascalTypeError.Create(RCStrUnknownVersion);
 end;
 
 procedure TCustomPascalTypeEmbeddedBitmapTable.SaveToStream(Stream: TStream);
@@ -254,9 +251,6 @@ procedure TPascalTypeEmbeddedBitmapDataTable.LoadFromStream(Stream: TStream; Siz
 begin
   inherited;
 
-  with Stream do
-  begin
-  end;
 end;
 
 procedure TPascalTypeEmbeddedBitmapDataTable.SaveToStream(Stream: TStream);
@@ -312,25 +306,22 @@ var
 begin
   inherited;
 
-  with Stream do
+  // check (minimum) table size
+  if Stream.Position + 4 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  // read number of BitmapSize tables
+  BitmapSizeCount := BigEndianValue.ReadCardinal(Stream);
+
+  // read bitmap size tables
+  for BitmapSizeIndex := 0 to BitmapSizeCount - 1 do
   begin
-    // check (minimum) table size
-    if Position + 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+    // create bitmap size table
+    // add bitmap size table
+    BitmapSizeTable := FBitmapSizeList.Add;
 
-    // read number of BitmapSize tables
-    BitmapSizeCount := BigEndianValue.ReadCardinal(Stream);
-
-    // read bitmap size tables
-    for BitmapSizeIndex := 0 to BitmapSizeCount - 1 do
-    begin
-      // create bitmap size table
-      // add bitmap size table
-      BitmapSizeTable := FBitmapSizeList.Add;
-
-      // load bitmap size table
-      BitmapSizeTable.LoadFromStream(Stream);
-    end;
+    // load bitmap size table
+    BitmapSizeTable.LoadFromStream(Stream);
   end;
 end;
 
@@ -385,56 +376,50 @@ procedure TPascalTypeBitmapScaleTable.LoadFromStream(Stream: TStream; Size: Card
 begin
   inherited;
 
-  with Stream do
-  begin
-    // load horizontal metrics from stream
-    FHorizontalMetrics.LoadFromStream(Stream);
+  // load horizontal metrics from stream
+  FHorizontalMetrics.LoadFromStream(Stream);
 
-    // load vertical metrics from stream
-    FVerticalMetrics.LoadFromStream(Stream);
+  // load vertical metrics from stream
+  FVerticalMetrics.LoadFromStream(Stream);
 
-    // check (minimum) table size
-    if Position + 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 4 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read horizontal pixels per Em
-    Read(FPpemX, 1);
+  // read horizontal pixels per Em
+  Stream.Read(FPpemX, 1);
 
-    // read vertical pixels per Em
-    Read(FPpemY, 1);
+  // read vertical pixels per Em
+  Stream.Read(FPpemY, 1);
 
-    // read horizontal substitute ppem
-    Read(FSubstitutePpemX, 1);
+  // read horizontal substitute ppem
+  Stream.Read(FSubstitutePpemX, 1);
 
-    // read vertical substitute ppem
-    Read(FSubstitutePpemY, 1);
-  end;
+  // read vertical substitute ppem
+  Stream.Read(FSubstitutePpemY, 1);
 end;
 
 procedure TPascalTypeBitmapScaleTable.SaveToStream(Stream: TStream);
 begin
   inherited;
 
-  with Stream do
-  begin
-    // save horizontal metrics to stream
-    FHorizontalMetrics.SaveToStream(Stream);
+  // save horizontal metrics to stream
+  FHorizontalMetrics.SaveToStream(Stream);
 
-    // save vertical metrics to stream
-    FVerticalMetrics.SaveToStream(Stream);
+  // save vertical metrics to stream
+  FVerticalMetrics.SaveToStream(Stream);
 
-    // write horizontal pixels per Em
-    Write(FPpemX, 1);
+  // write horizontal pixels per Em
+  Stream.Write(FPpemX, 1);
 
-    // write vertical pixels per Em
-    Write(FPpemY, 1);
+  // write vertical pixels per Em
+  Stream.Write(FPpemY, 1);
 
-    // write horizontal substitute ppem
-    Write(FSubstitutePpemX, 1);
+  // write horizontal substitute ppem
+  Stream.Write(FSubstitutePpemX, 1);
 
-    // write vertical substitute ppem
-    Write(FSubstitutePpemY, 1);
-  end;
+  // write vertical substitute ppem
+  Stream.Write(FSubstitutePpemY, 1);
 end;
 
 procedure TPascalTypeBitmapScaleTable.SetPpemX(const Value: Byte);
@@ -540,26 +525,23 @@ var
 begin
   inherited;
 
-  with Stream do
+  // check (minimum) table size
+  if Stream.Position + 4 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  // read number of bitmap scale tables
+  BitmapScaleCount := BigEndianValue.ReadCardinal(Stream);
+
+  // read bitmap size tables
+  for BitmapScaleIndex := 0 to BitmapScaleCount - 1 do
   begin
-    // check (minimum) table size
-    if Position + 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+    // create bitmap size table
+    // add bitmap size table
+    BitmapScaleTable := FBitmapScaleList.Add;
 
-    // read number of bitmap scale tables
-    BitmapScaleCount := BigEndianValue.ReadCardinal(Stream);
+    // load bitmap size table
+    BitmapScaleTable.LoadFromStream(Stream);
 
-    // read bitmap size tables
-    for BitmapScaleIndex := 0 to BitmapScaleCount - 1 do
-    begin
-      // create bitmap size table
-      // add bitmap size table
-      BitmapScaleTable := FBitmapScaleList.Add;
-
-      // load bitmap size table
-      BitmapScaleTable.LoadFromStream(Stream);
-
-    end;
   end;
 end;
 
@@ -569,16 +551,13 @@ var
 begin
   inherited;
 
-  with Stream do
-  begin
-    // write number of BitmapScale tables
-    BigEndianValue.WriteCardinal(Stream, FBitmapScaleList.Count);
+  // write number of BitmapScale tables
+  BigEndianValue.WriteCardinal(Stream, FBitmapScaleList.Count);
 
-    // write bitmap size tables
-    for i := 0 to FBitmapScaleList.Count - 1 do
-      // save bitmap size table to stream
-      FBitmapScaleList[i].SaveToStream(Stream);
-  end;
+  // write bitmap size tables
+  for i := 0 to FBitmapScaleList.Count - 1 do
+    // save bitmap size table to stream
+    FBitmapScaleList[i].SaveToStream(Stream);
 end;
 
 initialization

@@ -269,22 +269,19 @@ var
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 4 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 4 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
 
-    // read start glyph
-    FStartGlyph := BigEndianValue.ReadWord(Stream);
+  // read start glyph
+  FStartGlyph := BigEndianValue.ReadWord(Stream);
 
-    // read ClassValueArray length
-    SetLength(FClassValueArray, BigEndianValue.ReadWord(Stream));
+  // read ClassValueArray length
+  SetLength(FClassValueArray, BigEndianValue.ReadWord(Stream));
 
-    // read ClassValueArray
-    for ArrayIndex := 0 to High(FClassValueArray) do
-      FClassValueArray[ArrayIndex] := BigEndianValue.ReadWord(Stream);
-  end;
+  // read ClassValueArray
+  for ArrayIndex := 0 to High(FClassValueArray) do
+    FClassValueArray[ArrayIndex] := BigEndianValue.ReadWord(Stream);
 end;
 
 procedure TOpenTypeClassDefinitionFormat1Table.SaveToStream(Stream: TStream);
@@ -372,28 +369,24 @@ var
 begin
   inherited;
 
-  with Stream do
+  // check (minimum) table size
+  if Stream.Position + 2 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  // read ClassRangeRecords length
+  SetLength(FClassRangeRecords, BigEndianValue.ReadWord(Stream));
+
+  // read ClassRangeRecords
+  for ArrayIndex := 0 to High(FClassRangeRecords) do
   begin
-    // check (minimum) table size
-    if Position + 2 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+    // read start glyph
+    FClassRangeRecords[ArrayIndex].StartGlyph := BigEndianValue.ReadWord(Stream);
 
-    // read ClassRangeRecords length
-    SetLength(FClassRangeRecords, BigEndianValue.ReadWord(Stream));
+    // read end glyph
+    FClassRangeRecords[ArrayIndex].EndGlyph := BigEndianValue.ReadWord(Stream);
 
-    // read ClassRangeRecords
-    for ArrayIndex := 0 to High(FClassRangeRecords) do
-      with FClassRangeRecords[ArrayIndex] do
-      begin
-        // read start glyph
-        StartGlyph := BigEndianValue.ReadWord(Stream);
-
-        // read end glyph
-        EndGlyph := BigEndianValue.ReadWord(Stream);
-
-        // read glyph class
-        GlyphClass := BigEndianValue.ReadWord(Stream);
-      end;
+    // read glyph class
+    FClassRangeRecords[ArrayIndex].GlyphClass := BigEndianValue.ReadWord(Stream);
   end;
 end;
 

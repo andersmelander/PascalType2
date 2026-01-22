@@ -1790,42 +1790,39 @@ var
 begin
   inherited;
 
-  with Stream do
-  begin
-    // remember stream start position
-    StartPos := Position;
+  // remember stream start position
+  StartPos := Stream.Position;
 
-    // read major version number
-    Read(FVersionMajor, 1);
+  // read major version number
+  Stream.Read(FVersionMajor, 1);
 
-    // check major version
-    if FVersionMajor > 1 then
-      raise EPascalTypeError.Create(RCStrUnknownVersion);
+  // check major version
+  if FVersionMajor > 1 then
+    raise EPascalTypeError.Create(RCStrUnknownVersion);
 
-    // read minor version number
-    Read(FVersionMinor, 1);
+  // read minor version number
+  Stream.Read(FVersionMinor, 1);
 
-    // read header size
-    Read(HeaderSize, 1);
+  // read header size
+  Stream.Read(HeaderSize, 1);
 
-    // read offset size
-    Read(FOffSize, 1);
+  // read offset size
+  Stream.Read(FOffSize, 1);
 
-    // go to name table position
-    Position := StartPos + HeaderSize;
+  // go to name table position
+  Stream.Position := StartPos + HeaderSize;
 
-    // read name table from stream
-    FNameTable.LoadFromStream(Stream);
+  // read name table from stream
+  FNameTable.LoadFromStream(Stream);
 
-    // read top dict table from stream
-    FTopDictTable.LoadFromStream(Stream);
+  // read top dict table from stream
+  FTopDictTable.LoadFromStream(Stream);
 
-    // read string table from stream
-    FStringTable.LoadFromStream(Stream);
+  // read string table from stream
+  FStringTable.LoadFromStream(Stream);
 
-    // read global sub-string table from stream
-    FGlobalTable.LoadFromStream(Stream);
-  end;
+  // read global sub-string table from stream
+  FGlobalTable.LoadFromStream(Stream);
 end;
 
 procedure TPascalTypeCompactFontFormatTable.SaveToStream(Stream: TStream);
@@ -1834,23 +1831,20 @@ var
 begin
   inherited;
 
-  with Stream do
-  begin
-    // read major version number
-    Write(FVersionMajor, 1);
+  // read major version number
+  Stream.Write(FVersionMajor, 1);
 
-    // read minor version number
-    Write(FVersionMinor, 1);
+  // read minor version number
+  Stream.Write(FVersionMinor, 1);
 
-    // read header size
-    HeaderSize := 4;
-    Write(HeaderSize, 1);
+  // read header size
+  HeaderSize := 4;
+  Stream.Write(HeaderSize, 1);
 
-    // read offset size
-    Write(FOffSize, 1);
+  // read offset size
+  Stream.Write(FOffSize, 1);
 
-    raise EPascalTypeError.Create(RCStrNotImplemented);
-  end;
+  raise EPascalTypeError.Create(RCStrNotImplemented);
 end;
 
 procedure TPascalTypeCompactFontFormatTable.SetVersionMajor(const Value: Byte);
@@ -1908,29 +1902,25 @@ var
 begin
   inherited;
 
-  with Stream do
+  // read major version
+  FMajorVersion := BigEndianValue.ReadWord(Stream);
+
+  // read minor version
+  FMinorVersion := BigEndianValue.ReadWord(Stream);
+
+  // read default vertical origin
+  FDefaultVertOriginY := BigEndianValue.ReadWord(Stream);
+
+  // read vertical origin y-metrics
+  SetLength(FVertOriginYMetrics, BigEndianValue.ReadWord(Stream));
+
+  for Index := 0 to High(FVertOriginYMetrics) do
   begin
-    // read major version
-    FMajorVersion := BigEndianValue.ReadWord(Stream);
+    // read glyph index
+    FVertOriginYMetrics[Index].GlyphIndex := BigEndianValue.ReadWord(Stream);
 
-    // read minor version
-    FMinorVersion := BigEndianValue.ReadWord(Stream);
-
-    // read default vertical origin
-    FDefaultVertOriginY := BigEndianValue.ReadWord(Stream);
-
-    // read vertical origin y-metrics
-    SetLength(FVertOriginYMetrics, BigEndianValue.ReadWord(Stream));
-
-    for Index := 0 to High(FVertOriginYMetrics) do
-      with FVertOriginYMetrics[Index] do
-      begin
-        // read glyph index
-        GlyphIndex := BigEndianValue.ReadWord(Stream);
-
-        // read vertical y origin
-        VertOriginY := BigEndianValue.ReadWord(Stream);
-      end;
+    // read vertical y origin
+    FVertOriginYMetrics[Index].VertOriginY := BigEndianValue.ReadWord(Stream);
   end;
 end;
 
@@ -1940,29 +1930,25 @@ var
 begin
   inherited;
 
-  with Stream do
+  // write major version
+  BigEndianValue.WriteWord(Stream, FMajorVersion);
+
+  // write minor version
+  BigEndianValue.WriteWord(Stream, FMinorVersion);
+
+  // write default vertical origin
+  BigEndianValue.WriteWord(Stream, FDefaultVertOriginY);
+
+  // write vertical origin y-metrics
+  BigEndianValue.WriteWord(Stream, Length(FVertOriginYMetrics));
+
+  for Index := 0 to High(FVertOriginYMetrics) do
   begin
-    // write major version
-    BigEndianValue.WriteWord(Stream, FMajorVersion);
+    // write glyph index
+    BigEndianValue.WriteWord(Stream, FVertOriginYMetrics[Index].GlyphIndex);
 
-    // write minor version
-    BigEndianValue.WriteWord(Stream, FMinorVersion);
-
-    // write default vertical origin
-    BigEndianValue.WriteWord(Stream, FDefaultVertOriginY);
-
-    // write vertical origin y-metrics
-    BigEndianValue.WriteWord(Stream, Length(FVertOriginYMetrics));
-
-    for Index := 0 to High(FVertOriginYMetrics) do
-      with FVertOriginYMetrics[Index] do
-      begin
-        // write glyph index
-        BigEndianValue.WriteWord(Stream, GlyphIndex);
-
-        // write vertical y origin
-        BigEndianValue.WriteWord(Stream, VertOriginY);
-      end;
+    // write vertical y origin
+    BigEndianValue.WriteWord(Stream, FVertOriginYMetrics[Index].VertOriginY);
   end;
 end;
 

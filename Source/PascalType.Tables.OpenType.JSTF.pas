@@ -274,12 +274,9 @@ procedure TCustomOpenTypeJustificationLanguageSystemTable.LoadFromStream(Stream:
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 2 > Size then
-      raise EPascalTypeError.Create(RCStrTableIncomplete);
-  end;
+  // check (minimum) table size
+  if Stream.Position + 2 > Stream.Size then
+    raise EPascalTypeError.Create(RCStrTableIncomplete);
 end;
 
 procedure TCustomOpenTypeJustificationLanguageSystemTable.SaveToStream
@@ -324,19 +321,16 @@ var
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 2 > Size then
-      raise EPascalTypeError.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 2 > Stream.Size then
+    raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-    // set length of glyphID array
-    SetLength(FGlyphID, BigEndianValue.ReadWord(Stream));
+  // set length of glyphID array
+  SetLength(FGlyphID, BigEndianValue.ReadWord(Stream));
 
-    // read glyph IDs from stream
-    for GlyphIdIndex := 0 to High(FGlyphID) do
-      FGlyphID[GlyphIdIndex] := BigEndianValue.ReadWord(Stream)
-  end;
+  // read glyph IDs from stream
+  for GlyphIdIndex := 0 to High(FGlyphID) do
+    FGlyphID[GlyphIdIndex] := BigEndianValue.ReadWord(Stream)
 end;
 
 procedure TOpenTypeExtenderGlyphTable.SaveToStream(Stream: TStream);
@@ -345,15 +339,12 @@ var
 begin
   inherited;
 
-  with Stream do
-  begin
-    // write length of glyphID array to stream
-    BigEndianValue.WriteWord(Stream, Length(FGlyphID));
+  // write length of glyphID array to stream
+  BigEndianValue.WriteWord(Stream, Length(FGlyphID));
 
-    // write glyph IDs to stream
-    for GlyphIdIndex := 0 to High(FGlyphID) do
-      BigEndianValue.WriteWord(Stream, FGlyphID[GlyphIdIndex]);
-  end;
+  // write glyph IDs to stream
+  for GlyphIdIndex := 0 to High(FGlyphID) do
+    BigEndianValue.WriteWord(Stream, FGlyphID[GlyphIdIndex]);
 end;
 
 
@@ -440,75 +431,72 @@ var
 begin
   inherited;
 
-  with Stream do
+  StartPos := Stream.Position;
+
+  // check (minimum) table size
+  if Stream.Position + 6 > Stream.Size then
+    raise EPascalTypeError.Create(RCStrTableIncomplete);
+
+  // read extender glyph offset
+  ExtenderGlyph := BigEndianValue.ReadWord(Stream);
+
+  // read default language system offset
+  DefaultLangSys := BigEndianValue.ReadWord(Stream);
+
+  // read language system record count
+  SetLength(LangSysRecords, BigEndianValue.ReadWord(Stream));
+
+  for LangSysIndex := 0 to High(LangSysRecords) do
   begin
-    StartPos := Position;
+    // read table type
+    Stream.Read(LangSysRecords[LangSysIndex].Tag, SizeOf(TTableType));
 
-    // check (minimum) table size
-    if Position + 6 > Size then
-      raise EPascalTypeError.Create(RCStrTableIncomplete);
+    // read offset
+    LangSysRecords[LangSysIndex].Offset := BigEndianValue.ReadWord(Stream);
+  end;
 
-    // read extender glyph offset
-    ExtenderGlyph := BigEndianValue.ReadWord(Stream);
+  // load default language system
+  if ExtenderGlyph <> 0 then
+  begin
+    Stream.Position := StartPos + ExtenderGlyph;
 
-    // read default language system offset
-    DefaultLangSys := BigEndianValue.ReadWord(Stream);
+    if (FExtenderGlyphTable = nil) then
+      FExtenderGlyphTable := TOpenTypeExtenderGlyphTable.Create;
 
-    // read language system record count
-    SetLength(LangSysRecords, BigEndianValue.ReadWord(Stream));
+    FExtenderGlyphTable.LoadFromStream(Stream);
+  end else
+    FreeAndNil(FExtenderGlyphTable);
 
-    for LangSysIndex := 0 to High(LangSysRecords) do
+  // load default language system
+  if DefaultLangSys <> 0 then
+  begin
+    Stream.Position := StartPos + DefaultLangSys;
+
+    if (FDefaultLangSys = nil) then
+      FDefaultLangSys := TOpenTypeJustificationLanguageSystemTable.Create(Self);
+
+    FDefaultLangSys.LoadFromStream(Stream);
+  end else
+    FreeAndNil(FDefaultLangSys);
+
+  // clear existing language tables
+  FLanguageSystemTables.Clear;
+
+  for LangSysIndex := 0 to High(LangSysRecords) do
+  begin
+    LangTableClass := FindJustificationLanguageSystemByType(LangSysRecords[LangSysIndex].Tag);
+
+    if (LangTableClass <> nil) then
     begin
-      // read table type
-      Read(LangSysRecords[LangSysIndex].Tag, SizeOf(TTableType));
+      // create language table entry
+      // add to language system tables
+      LangTable := FLanguageSystemTables.Add(LangTableClass);
 
-      // read offset
-      LangSysRecords[LangSysIndex].Offset := BigEndianValue.ReadWord(Stream);
-    end;
+      // set position
+      Stream.Position := StartPos + LangSysRecords[LangSysIndex].Offset;
 
-    // load default language system
-    if ExtenderGlyph <> 0 then
-    begin
-      Position := StartPos + ExtenderGlyph;
-
-      if (FExtenderGlyphTable = nil) then
-        FExtenderGlyphTable := TOpenTypeExtenderGlyphTable.Create;
-
-      FExtenderGlyphTable.LoadFromStream(Stream);
-    end else
-      FreeAndNil(FExtenderGlyphTable);
-
-    // load default language system
-    if DefaultLangSys <> 0 then
-    begin
-      Position := StartPos + DefaultLangSys;
-
-      if (FDefaultLangSys = nil) then
-        FDefaultLangSys := TOpenTypeJustificationLanguageSystemTable.Create(Self);
-
-      FDefaultLangSys.LoadFromStream(Stream);
-    end else
-      FreeAndNil(FDefaultLangSys);
-
-    // clear existing language tables
-    FLanguageSystemTables.Clear;
-
-    for LangSysIndex := 0 to High(LangSysRecords) do
-    begin
-      LangTableClass := FindJustificationLanguageSystemByType(LangSysRecords[LangSysIndex].Tag);
-
-      if (LangTableClass <> nil) then
-      begin
-        // create language table entry
-        // add to language system tables
-        LangTable := FLanguageSystemTables.Add(LangTableClass);
-
-        // set position
-        Position := StartPos + LangSysRecords[LangSysIndex].Offset;
-
-        // read language system table entry from stream
-        LangTable.LoadFromStream(Stream);
-      end;
+      // read language system table entry from stream
+      LangTable.LoadFromStream(Stream);
     end;
   end;
 end;
@@ -524,68 +512,64 @@ var
 begin
   inherited;
 
-  with Stream do
+  // remember start position of the stream
+  StartPos := Stream.Position;
+
+  // find offset for data
+  if (FDefaultLangSys <> nil) then
+    Value16 := 2 + 4 * FLanguageSystemTables.Count
+  else
+    Value16 := 0;
+  if (FExtenderGlyphTable <> nil) then
+    Value16 := Value16 + 2;
+
+  Stream.Position := StartPos + Value16;
+
+  // write extender glyph table
+  if (FExtenderGlyphTable <> nil) then
   begin
-    // remember start position of the stream
-    StartPos := Position;
+    ExtGlyphOff := Word(Stream.Position - StartPos);
+    FExtenderGlyphTable.SaveToStream(Stream);
+  end else
+    ExtGlyphOff := 0;
 
-    // find offset for data
-    if (FDefaultLangSys <> nil) then
-      Value16 := 2 + 4 * FLanguageSystemTables.Count
-    else
-      Value16 := 0;
-    if (FExtenderGlyphTable <> nil) then
-      Value16 := Value16 + 2;
+  // write default language system table
+  if (FDefaultLangSys <> nil) then
+  begin
+    DefLangSysOff := Word(Stream.Position - StartPos);
+    FDefaultLangSys.SaveToStream(Stream);
+  end else
+    DefLangSysOff := 0;
 
-    Position := StartPos + Value16;
+  // build directory (to be written later) and write data
+  SetLength(LangSysRecords, FLanguageSystemTables.Count);
+  for LangSysIndex := 0 to High(LangSysRecords) do
+  begin
+    var LTable := FLanguageSystemTables[LangSysIndex];
+    // get table type
+    LangSysRecords[LangSysIndex].Tag := LTable.TableType;
+    LangSysRecords[LangSysIndex].Offset := Stream.Position;
 
-    // write extender glyph table
-    if (FExtenderGlyphTable <> nil) then
-    begin
-      ExtGlyphOff := Word(Position - StartPos);
-      FExtenderGlyphTable.SaveToStream(Stream);
-    end else
-      ExtGlyphOff := 0;
+    // write feature to stream
+    LTable.SaveToStream(Stream);
+  end;
 
-    // write default language system table
-    if (FDefaultLangSys <> nil) then
-    begin
-      DefLangSysOff := Word(Position - StartPos);
-      FDefaultLangSys.SaveToStream(Stream);
-    end else
-      DefLangSysOff := 0;
+  // write extender glyph offset
+  BigEndianValue.WriteWord(Stream, ExtGlyphOff);
 
-    // build directory (to be written later) and write data
-    SetLength(LangSysRecords, FLanguageSystemTables.Count);
-    for LangSysIndex := 0 to High(LangSysRecords) do
-      with FLanguageSystemTables[LangSysIndex] do
-      begin
-        // get table type
-        LangSysRecords[LangSysIndex].Tag := TableType;
-        LangSysRecords[LangSysIndex].Offset := Position;
+  // write default language system offset
+  BigEndianValue.WriteWord(Stream, DefLangSysOff);
 
-        // write feature to stream
-        SaveToStream(Stream);
-      end;
+  // write directory
+  Stream.Position := StartPos;
 
-    // write extender glyph offset
-    BigEndianValue.WriteWord(Stream, ExtGlyphOff);
+  for LangSysIndex := 0 to High(LangSysRecords) do
+  begin
+    // write tag
+    Stream.Write(LangSysRecords[LangSysIndex].Tag, SizeOf(TTableType));
 
-    // write default language system offset
-    BigEndianValue.WriteWord(Stream, DefLangSysOff);
-
-    // write directory
-    Position := StartPos;
-
-    for LangSysIndex := 0 to High(LangSysRecords) do
-      with LangSysRecords[LangSysIndex] do
-      begin
-        // write tag
-        Write(Tag, SizeOf(TTableType));
-
-        // write offset
-        BigEndianValue.WriteWord(Stream, Offset);
-      end;
+    // write offset
+    BigEndianValue.WriteWord(Stream, LangSysRecords[LangSysIndex].Offset);
   end;
 end;
 
@@ -653,53 +637,48 @@ var
 begin
   inherited;
 
-  with Stream do
+  StartPos := Stream.Position;
+
+  if Stream.Position + 6 > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  // read version
+  FVersion.Fixed := BigEndianValue.ReadInteger(Stream);
+
+  if Version.Value <> 1 then
+    raise EPascalTypeError.Create(RCStrUnsupportedVersion);
+
+  // read Justification Script Count
+  SetLength(Directory, BigEndianValue.ReadWord(Stream));
+
+  // check if table is complete
+  if Stream.Position + Length(Directory) * SizeOf(TJustificationScriptDirectoryEntry) > Stream.Size then
+    raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+
+  // read directory entry
+  for DirIndex := 0 to High(Directory) do
   begin
-    StartPos := Position;
+    // read tag
+    Stream.Read(Directory[DirIndex].Tag, SizeOf(Cardinal));
 
-    if Position + 6 > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
+    // read offset
+    Directory[DirIndex].Offset := BigEndianValue.ReadWord(Stream);
+  end;
 
-    // read version
-    FVersion.Fixed := BigEndianValue.ReadInteger(Stream);
+  // clear existing scripts
+  FScripts.Clear;
 
-    if Version.Value <> 1 then
-      raise EPascalTypeError.Create(RCStrUnsupportedVersion);
+  // read digital scripts
+  for DirIndex := 0 to High(Directory) do
+  begin
+    // TODO: Find matching justification script by tag!!!
+    Script := FScripts.Add;
 
-    // read Justification Script Count
-    SetLength(Directory, BigEndianValue.ReadWord(Stream));
+    // jump to the right position
+    Stream.Position := StartPos + Directory[DirIndex].Offset;
 
-    // check if table is complete
-    if Position + Length(Directory) * SizeOf(TJustificationScriptDirectoryEntry) > Size then
-      raise EPascalTypeTableIncomplete.Create(RCStrTableIncomplete);
-
-    // read directory entry
-    for DirIndex := 0 to High(Directory) do
-      with Directory[DirIndex] do
-      begin
-        // read tag
-        Read(Tag, SizeOf(Cardinal));
-
-        // read offset
-        Offset := BigEndianValue.ReadWord(Stream);
-      end;
-
-    // clear existing scripts
-    FScripts.Clear;
-
-    // read digital scripts
-    for DirIndex := 0 to High(Directory) do
-      with Directory[DirIndex] do
-      begin
-        // TODO: Find matching justification script by tag!!!
-        Script := FScripts.Add;
-
-        // jump to the right position
-        Position := StartPos + Offset;
-
-        // load digital signature from stream
-        Script.LoadFromStream(Stream);
-      end;
+    // load digital signature from stream
+    Script.LoadFromStream(Stream);
   end;
 end;
 
@@ -711,43 +690,40 @@ var
 begin
   inherited;
 
-  with Stream do
+  // store stream start position
+  StartPos := Stream.Position;
+
+  // write version
+  BigEndianValue.WriteCardinal(Stream, Cardinal(FVersion));
+
+  // write Justification Script Count
+  BigEndianValue.WriteWord(Stream, Length(Directory));
+
+  // set directory length
+  SetLength(Directory, FScripts.Count);
+
+  // offset directory
+  Stream.Seek(soFromCurrent, FScripts.Count * 3 * SizeOf(Word));
+
+  // build directory and store signature
+  for DirIndex := 0 to FScripts.Count - 1 do
   begin
-    // store stream start position
-    StartPos := Position;
+    Directory[DirIndex].Offset := Stream.Position - StartPos;
+    Directory[DirIndex].Tag := FScripts[DirIndex].TableType;
+    SaveToStream(Stream);
+  end;
 
-    // write version
-    BigEndianValue.WriteCardinal(Stream, Cardinal(FVersion));
+  // locate directory
+  Stream.Position := StartPos + 3 * SizeOf(Word);
 
-    // write Justification Script Count
-    BigEndianValue.WriteWord(Stream, Length(Directory));
+  // write directory entries
+  for DirIndex := 0 to High(Directory) do
+  begin
+    // write tag
+    Stream.Write(Directory[DirIndex].Tag, SizeOf(Cardinal));
 
-    // set directory length
-    SetLength(Directory, FScripts.Count);
-
-    // offset directory
-    Seek(soFromCurrent, FScripts.Count * 3 * SizeOf(Word));
-
-    // build directory and store signature
-    for DirIndex := 0 to FScripts.Count - 1 do
-    begin
-      Directory[DirIndex].Offset := Position - StartPos;
-      Directory[DirIndex].Tag := FScripts[DirIndex].TableType;
-      SaveToStream(Stream);
-    end;
-
-    // locate directory
-    Position := StartPos + 3 * SizeOf(Word);
-
-    // write directory entries
-    for DirIndex := 0 to High(Directory) do
-      begin
-        // write tag
-        Write(Directory[DirIndex].Tag, SizeOf(Cardinal));
-
-        // write offset
-        BigEndianValue.WriteWord(Stream, Directory[DirIndex].Offset);
-      end;
+    // write offset
+    BigEndianValue.WriteWord(Stream, Directory[DirIndex].Offset);
   end;
 end;
 

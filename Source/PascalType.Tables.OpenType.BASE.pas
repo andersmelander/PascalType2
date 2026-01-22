@@ -157,23 +157,20 @@ var
 begin
   inherited;
 
-  with Stream do
-  begin
-    // check (minimum) table size
-    if Position + 2 > Size then
-      raise EPascalTypeError.Create(RCStrTableIncomplete);
+  // check (minimum) table size
+  if Stream.Position + 2 > Stream.Size then
+    raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-    // read baseline tag list array length
-    SetLength(FBaseLineTags, BigEndianValue.ReadWord(Stream));
+  // read baseline tag list array length
+  SetLength(FBaseLineTags, BigEndianValue.ReadWord(Stream));
 
-    // check if table is complete
-    if Position + 4 * Length(FBaseLineTags) > Size then
-      raise EPascalTypeError.Create(RCStrTableIncomplete);
+  // check if table is complete
+  if Stream.Position + 4 * Length(FBaseLineTags) > Stream.Size then
+    raise EPascalTypeError.Create(RCStrTableIncomplete);
 
-    // read baseline array data
-    for TagIndex := 0 to High(FBaseLineTags) do
-      Read(FBaseLineTags[TagIndex], SizeOf(TTableType));
-  end;
+  // read baseline array data
+  for TagIndex := 0 to High(FBaseLineTags) do
+    Stream.Read(FBaseLineTags[TagIndex], SizeOf(TTableType));
 end;
 
 procedure TOpenTypeBaselineTagListTable.SaveToStream(Stream: TStream);
@@ -182,15 +179,12 @@ var
 begin
   inherited;
 
-  with Stream do
-  begin
-    // write baseline tag list array length
-    BigEndianValue.WriteWord(Stream, Length(FBaseLineTags));
+  // write baseline tag list array length
+  BigEndianValue.WriteWord(Stream, Length(FBaseLineTags));
 
-    // write baseline array data
-    for TagIndex := 0 to High(FBaseLineTags) do
-      Write(FBaseLineTags[TagIndex], SizeOf(TTableType));
-  end;
+  // write baseline array data
+  for TagIndex := 0 to High(FBaseLineTags) do
+    Stream.Write(FBaseLineTags[TagIndex], SizeOf(TTableType));
 end;
 
 
@@ -212,28 +206,25 @@ var
 begin
   inherited;
 
-  with Stream do
+  // check (minimum) table size
+  if Stream.Position + 2 > Stream.Size then
+    raise EPascalTypeError.Create(RCStrTableIncomplete);
+
+  // read baseline stript list array length
+  SetLength(FBaseLineScript, BigEndianValue.ReadWord(Stream));
+
+  // check if table is complete
+  if Stream.Position + 6 * Length(FBaseLineScript) > Stream.Size then
+    raise EPascalTypeError.Create(RCStrTableIncomplete);
+
+  // read baseline array data
+  for ScriptIndex := 0 to High(FBaseLineScript) do
   begin
-    // check (minimum) table size
-    if Position + 2 > Size then
-      raise EPascalTypeError.Create(RCStrTableIncomplete);
+    // read tag
+    Stream.Read(FBaseLineScript[ScriptIndex].Tag, SizeOf(TTableType));
 
-    // read baseline stript list array length
-    SetLength(FBaseLineScript, BigEndianValue.ReadWord(Stream));
-
-    // check if table is complete
-    if Position + 6 * Length(FBaseLineScript) > Size then
-      raise EPascalTypeError.Create(RCStrTableIncomplete);
-
-    // read baseline array data
-    for ScriptIndex := 0 to High(FBaseLineScript) do
-    begin
-      // read tag
-      Read(FBaseLineScript[ScriptIndex].Tag, SizeOf(TTableType));
-
-      // read script offset
-      FBaseLineScript[ScriptIndex].ScriptOffset := BigEndianValue.ReadWord(Stream);
-    end;
+    // read script offset
+    FBaseLineScript[ScriptIndex].ScriptOffset := BigEndianValue.ReadWord(Stream);
   end;
 end;
 

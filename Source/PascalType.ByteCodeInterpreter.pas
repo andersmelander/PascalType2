@@ -58,127 +58,126 @@ var
   ParamValue8: Byte;
   ParamValue16: Word;
 begin
-  with ByteCodeStream do
-    while Position < Size do
-    begin
-      // read instruction
-      Read(Instruction, 1);
+  while ByteCodeStream.Position < ByteCodeStream.Size do
+  begin
+    // read instruction
+    ByteCodeStream.Read(Instruction, 1);
 
-      // Instruction taking data from the instruction stream
-      TempStr := InstructionByteToString(Instruction);
+    // Instruction taking data from the instruction stream
+    TempStr := InstructionByteToString(Instruction);
 
-      case Instruction of
-        $40:
-          begin
-            // read parameter count
-            Read(ParamCount, 1);
+    case Instruction of
+      $40:
+        begin
+          // read parameter count
+          ByteCodeStream.Read(ParamCount, 1);
 
-            // check if parameter count is valid
-            if not(Position + ParamCount <= Size) then
-              raise Exception.Create(RCStrInvalidInstruction);
+          // check if parameter count is valid
+          if not(ByteCodeStream.Position + ParamCount <= ByteCodeStream.Size) then
+            raise Exception.Create(RCStrInvalidInstruction);
 
-            if ParamCount > 0 then
-            begin
-              // read first parameter value
-              Read(ParamValue8, 1);
-
-              // add parameter value to temporary string
-              TempStr := TempStr + ' ' + IntToStr(ParamValue8);
-
-              for ParamIndex := 1 to ParamCount - 1 do
-              begin
-                // read next parameter value
-                Read(ParamValue8, 1);
-
-                // add parameter value to temporary string
-                TempStr := TempStr + ', ' + IntToStr(ParamValue8);
-              end;
-            end;
-          end;
-        $41:
-          begin
-            // read parameter count
-            Read(ParamCount, 1);
-
-            // check if parameter count is valid
-            if not(Position + ParamCount <= Size) then
-              raise Exception.Create(RCStrInvalidInstruction);
-
-            if ParamCount > 0 then
-            begin
-              // read first parameter value
-              Read(ParamValue16, 2);
-
-              // add parameter value to temporary string
-              TempStr := TempStr + ' ' + IntToStr(Swap16(ParamValue16));
-
-              for ParamIndex := 1 to ParamCount - 1 do
-              begin
-                // read next parameter value
-                Read(ParamValue16, 2);
-
-                // add parameter value to temporary string
-                TempStr := TempStr + ', ' + IntToStr(Swap16(ParamValue16));
-              end;
-            end;
-          end;
-        $B0:
-          begin
-            // read parameter value
-            Read(ParamValue8, 1);
-
-            // add parameter value to temporary string
-            TempStr := TempStr + ' ' + IntToStr(ParamValue8);
-          end;
-        $B1..$B7:
+          if ParamCount > 0 then
           begin
             // read first parameter value
-            Read(ParamValue8, 1);
+            ByteCodeStream.Read(ParamValue8, 1);
 
             // add parameter value to temporary string
             TempStr := TempStr + ' ' + IntToStr(ParamValue8);
 
-            for ParamIndex := 0 to (Instruction - $B0) - 1 do
+            for ParamIndex := 1 to ParamCount - 1 do
             begin
               // read next parameter value
-              Read(ParamValue8, 1);
+              ByteCodeStream.Read(ParamValue8, 1);
 
               // add parameter value to temporary string
               TempStr := TempStr + ', ' + IntToStr(ParamValue8);
             end;
           end;
-        $B8:
-          begin
-            // read parameter value
-            Read(ParamValue16, 2);
+        end;
+      $41:
+        begin
+          // read parameter count
+          ByteCodeStream.Read(ParamCount, 1);
 
-            // add parameter value to temporary string
-            TempStr := TempStr + ' ' + IntToStr(Swap16(ParamValue16));
-          end;
-        $B9..$BF:
+          // check if parameter count is valid
+          if not(ByteCodeStream.Position + ParamCount <= ByteCodeStream.Size) then
+            raise Exception.Create(RCStrInvalidInstruction);
+
+          if ParamCount > 0 then
           begin
             // read first parameter value
-            Read(ParamValue16, 2);
+            ByteCodeStream.Read(ParamValue16, 2);
 
             // add parameter value to temporary string
             TempStr := TempStr + ' ' + IntToStr(Swap16(ParamValue16));
 
-            for ParamIndex := 0 to (Instruction - $B8) - 1 do
+            for ParamIndex := 1 to ParamCount - 1 do
             begin
               // read next parameter value
-              Read(ParamValue16, 2);
+              ByteCodeStream.Read(ParamValue16, 2);
 
               // add parameter value to temporary string
               TempStr := TempStr + ', ' + IntToStr(Swap16(ParamValue16));
             end;
           end;
-        $28, $83..$84, $8F..$AF:
-          raise EPascalTypeError.CreateFmt(RCStrUnknownOpcode, [Instruction]);
-      end;
+        end;
+      $B0:
+        begin
+          // read parameter value
+          ByteCodeStream.Read(ParamValue8, 1);
 
-      // add instruction to stream
-      Strings.Add(TempStr);
+          // add parameter value to temporary string
+          TempStr := TempStr + ' ' + IntToStr(ParamValue8);
+        end;
+      $B1..$B7:
+        begin
+          // read first parameter value
+          ByteCodeStream.Read(ParamValue8, 1);
+
+          // add parameter value to temporary string
+          TempStr := TempStr + ' ' + IntToStr(ParamValue8);
+
+          for ParamIndex := 0 to (Instruction - $B0) - 1 do
+          begin
+            // read next parameter value
+            ByteCodeStream.Read(ParamValue8, 1);
+
+            // add parameter value to temporary string
+            TempStr := TempStr + ', ' + IntToStr(ParamValue8);
+          end;
+        end;
+      $B8:
+        begin
+          // read parameter value
+          ByteCodeStream.Read(ParamValue16, 2);
+
+          // add parameter value to temporary string
+          TempStr := TempStr + ' ' + IntToStr(Swap16(ParamValue16));
+        end;
+      $B9..$BF:
+        begin
+          // read first parameter value
+          ByteCodeStream.Read(ParamValue16, 2);
+
+          // add parameter value to temporary string
+          TempStr := TempStr + ' ' + IntToStr(Swap16(ParamValue16));
+
+          for ParamIndex := 0 to (Instruction - $B8) - 1 do
+          begin
+            // read next parameter value
+            ByteCodeStream.Read(ParamValue16, 2);
+
+            // add parameter value to temporary string
+            TempStr := TempStr + ', ' + IntToStr(Swap16(ParamValue16));
+          end;
+        end;
+      $28, $83..$84, $8F..$AF:
+        raise EPascalTypeError.CreateFmt(RCStrUnknownOpcode, [Instruction]);
     end;
+
+    // add instruction to stream
+    Strings.Add(TempStr);
+  end;
 end;
 
 type
